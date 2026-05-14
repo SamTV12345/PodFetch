@@ -1,4 +1,4 @@
-import { FC } from 'react'
+import { FC, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TFunction } from 'i18next'
 import {
@@ -32,6 +32,18 @@ type CustomSelectProps = {
 export const CustomSelect: FC<CustomSelectProps> = ({ className = '', defaultValue, iconName, id, name, onChange, options, placeholder, value, disabled }) => {
     const { t } = useTranslation()
 
+    // Base UI's `SelectValue` renders the LABEL of the currently selected
+    // item by looking it up in `items` on the root. Without this map the
+    // trigger falls back to the raw `value` string (e.g. "de-DE" or
+    // "TITLE"), bypassing i18n. Memoised so changing language re-translates.
+    const itemsMap = useMemo(() => {
+        const out: Record<string, string> = {}
+        for (const opt of options) {
+            out[opt.value] = opt.translationKey ? t(opt.translationKey) : (opt.label ?? opt.value)
+        }
+        return out
+    }, [options, t])
+
     return (
         <Select
             disabled={disabled}
@@ -39,6 +51,7 @@ export const CustomSelect: FC<CustomSelectProps> = ({ className = '', defaultVal
             name={name}
             onValueChange={(v) => onChange?.(v ?? '')}
             value={value}
+            items={itemsMap}
         >
             <SelectTrigger
                 id={id}
@@ -60,7 +73,7 @@ export const CustomSelect: FC<CustomSelectProps> = ({ className = '', defaultVal
                     <SelectItem
                         key={option.value}
                         value={option.value}
-                        className="relative pl-6 pr-4 py-1.5 rounded-sm text-sm text-(--select-text-color) hover:ui-bg-accent hover:ui-text-inverse"
+                        className="relative pl-6 pr-4 py-1.5 rounded-sm text-sm text-(--select-text-color)"
                     >
                         {option.translationKey ? t(option.translationKey) : option.label}
                     </SelectItem>

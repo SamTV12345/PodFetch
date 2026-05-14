@@ -1,6 +1,7 @@
 import { FC, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Toggle } from '@base-ui/react/toggle'
+import { ToggleGroup } from '@base-ui/react/toggle-group'
 import 'material-symbols/outlined.css'
 import { applyThemeToDOM, getStoredThemePreference, onSystemThemeChange, setThemePreference, ThemePreference } from '../utils/theme'
 
@@ -10,6 +11,13 @@ const THEMES: ReadonlyArray<{ icon: string, translationKey: string, value: Theme
     { icon: 'dark_mode', translationKey: 'dark', value: 'dark' },
 ]
 
+/**
+ * Three-way theme switcher. Uses Base UI primitives directly instead of
+ * the shadcn ToggleGroupItem wrapper because the shadcn wrapper enforces
+ * a "segmented pill" look (data-spacing=0 → rounded-none on inner items,
+ * only first/last get rounded ends, fixed h-8 size). That collides with
+ * the round icon-button look we want for theme picking.
+ */
 export const ThemeSelector: FC = () => {
     const [theme, setTheme] = useState<ThemePreference>(getStoredThemePreference())
     const { t } = useTranslation()
@@ -28,9 +36,9 @@ export const ThemeSelector: FC = () => {
 
     return (
         <ToggleGroup
-            // Base UI ToggleGroup is multi-select by default and exchanges an
-            // array of selected values. `multiple={false}` constrains to a
-            // single selection; we still wrap value/onValueChange in arrays.
+            // Base UI ToggleGroup is multi-select by default and exchanges
+            // an array of selected values. `multiple={false}` constrains to
+            // a single selection; value/onValueChange wrap in arrays.
             multiple={false}
             value={[theme]}
             onValueChange={(values) => {
@@ -43,14 +51,14 @@ export const ThemeSelector: FC = () => {
             aria-label={t('theme')}
         >
             {THEMES.map((entry) => (
-                <ToggleGroupItem
+                <Toggle
                     key={entry.value}
                     value={entry.value}
                     aria-label={t(entry.translationKey)}
-                    className="aspect-square p-2 rounded-full ui-text hover:ui-text-hover data-[pressed]:ui-surface-muted data-[pressed]:ui-text"
+                    className="grid place-items-center w-9 h-9 rounded-full ui-text hover:ui-text-hover data-[pressed]:ui-surface-muted data-[pressed]:ui-text outline-none transition-colors"
                 >
                     <span className="material-symbols-outlined leading-none text-xl">{entry.icon}</span>
-                </ToggleGroupItem>
+                </Toggle>
             ))}
         </ToggleGroup>
     )
