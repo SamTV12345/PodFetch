@@ -1,283 +1,205 @@
-# Audiobookshelf integration
+# Audiobookshelf API
 
-PodFetch speaks the audiobookshelf REST API and socket.io protocol. The
-official [audiobookshelf mobile apps](https://www.audiobookshelf.org/)
-(Android + iOS) and the audiobookshelf web client can connect to PodFetch
-as if it were an audiobookshelf server — list your podcasts, stream them,
-sync listening progress and aggregate listening statistics.
+PodFetch can answer to the audiobookshelf protocol. That means the official
+[audiobookshelf mobile apps](https://www.audiobookshelf.org/) (Android and
+iOS) and the audiobookshelf web client connect to your PodFetch server,
+list your podcasts and play episodes with progress sync.
 
-> Audiobooks themselves are not yet exposed through the mobile app; the
-> Phase B scanner is in place but the mobile clients consume the podcast
-> library first. See [Roadmap](#roadmap--limitations) below.
+This page walks you through enabling the integration and pairing the apps.
 
-## Why bother
+## 1. Enable the integration
 
-Building and maintaining a first-class PodFetch mobile app (background
-playback, offline downloads, lock-screen controls, Android Auto, CarPlay)
-is months of work for a side project. The audiobookshelf community has
-already solved that, and their apps are open-source. Hosting PodFetch
-behind an audiobookshelf-compatible API gives you their app
-ecosystem for free — without bundling audiobookshelf-server.
-
-## Enable it
-
-Set the environment flag and restart the server:
+Set the environment variable and restart the server:
 
 ```bash
 AUDIOBOOKSHELF_INTEGRATION_ENABLED=true
 ```
 
-That mounts the audiobookshelf-shaped routes at the root paths the
-mobile apps hardcode: `/login`, `/api/...`, `/public/...`, `/hls/...`,
-`/socket.io/`. They run alongside PodFetch's own UI and gpodder API.
+In `docker-compose.yml`:
 
-Optional knobs:
+```yaml
+services:
+  podfetch:
+    image: samuel19982/podfetch:latest
+    environment:
+      AUDIOBOOKSHELF_INTEGRATION_ENABLED: "true"
+      # … your other variables …
+```
+
+On startup PodFetch mounts the audiobookshelf-shaped routes at the root
+paths the mobile apps hardcode (`/login`, `/api/...`, `/public/...`,
+`/hls/...`, `/socket.io/`) and creates a default *Podcasts* library
+containing every podcast you have already subscribed to in PodFetch.
+
+> **HTTPS is mandatory.** The audiobookshelf apps refuse plain-HTTP
+> servers. If you already host PodFetch behind a TLS-terminating reverse
+> proxy (Caddy, nginx, Traefik) you're done. For a quick local test use
+> a [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
+> or `tailscale serve` — both give you a valid certificate without
+> opening ports.
+
+## 2. Optional configuration
+
+All of these have sensible defaults; only set them if you need to tweak
+the behaviour.
 
 | Variable | Default | What it does |
 |---|---|---|
-| `AUDIOBOOKSHELF_DATA_DIR` | `<podfetch_data>/audiobookshelf` | Working dir for HLS segments & co. |
-| `AUDIOBOOKSHELF_HLS_CACHE_MAX_MB` | `2048` | LRU cap for transcoded HLS segments. |
-| `AUDIOBOOKSHELF_TRANSCODER_MAX_CONCURRENT` | `2` | ffmpeg processes running in parallel. |
-| `AUDIOBOOKSHELF_ROTATE_API_KEY_ON_LOGOUT` | `false` | Generate a fresh `users.api_key` on `/logout`. |
+| `AUDIOBOOKSHELF_DATA_DIR` | `<podfetch_data>/audiobookshelf` | Working dir for the HLS segment cache. Point this at fast local storage if you transcode a lot. |
+| `AUDIOBOOKSHELF_HLS_CACHE_MAX_MB` | `2048` | Hard cap on the HLS segment cache (LRU eviction). Raise on big servers, lower on Raspberry Pis. |
+| `AUDIOBOOKSHELF_TRANSCODER_MAX_CONCURRENT` | `2` | Maximum ffmpeg processes that may run in parallel. One per concurrent transcoding listener. |
+| `AUDIOBOOKSHELF_ROTATE_API_KEY_ON_LOGOUT` | `false` | When `true`, signing out from the mobile app rotates `users.api_key`, immediately invalidating any other device still logged in with the old token. |
 
-## Connecting the official mobile app
+`ffmpeg` must be on `PATH` for HLS transcoding to work. The Docker image
+ships with it; on a manual install verify with `ffmpeg -version`.
 
-Install the audiobookshelf app
-([Play Store](https://play.google.com/store/apps/details?id=com.audiobookshelf.app),
-[F-Droid](https://f-droid.org/packages/com.audiobookshelf.app/),
-[App Store](https://apps.apple.com/us/app/audiobookshelf/id1631241544)).
+## 3. Install the mobile app
 
-1. Open the app, pick **Connect to server**.
-2. Enter your PodFetch URL (e.g. `https://podcasts.example.com`).
-3. Sign in with your normal PodFetch username / password — PodFetch's
-   `/login` endpoint validates against the same user store that the web
-   UI uses, no separate account needed.
-4. After login the app sees one library called `Podcasts` containing
-   every podcast you have subscribed to in PodFetch.
+Pick the store that matches your phone:
 
-The session token the app stores is your `users.api_key`. PodFetch
-re-uses the existing column instead of issuing a separate
-audiobookshelf token — so resetting the key in *Profile → API key*
-also invalidates the app session.
+- Android: [Play Store](https://play.google.com/store/apps/details?id=com.audiobookshelf.app),
+  [F-Droid](https://f-droid.org/packages/com.audiobookshelf.app/) or
+  the [APK from the project's releases page](https://github.com/advplyr/audiobookshelf-app/releases).
+- iOS: [App Store](https://apps.apple.com/us/app/audiobookshelf/id1631241544).
 
-> **HTTPS is required.** The mobile app rejects plain-HTTP servers.
-> Behind a reverse proxy that terminates TLS this works out of the box;
-> for local dev, a Cloudflare Tunnel or `tailscale serve` is the
-> easiest way to get a real cert.
+## 4. Connect to PodFetch
 
-## Authentication
+1. Open the app and pick **Connect to server**.
+2. Enter your PodFetch URL — the same URL you use for the web UI,
+   including the scheme: `https://podcasts.example.com`. Do **not**
+   append `/ui/` or any path.
+3. Enter your PodFetch **username** and **password**. The same
+   credentials the web UI uses; the app does not need a separate
+   account.
+4. Tap **Connect**.
 
-PodFetch accepts the bearer token the audiobookshelf clients send:
+After a successful login the app shows a single library called
+**Podcasts**. Open it to see every podcast you have subscribed to in
+PodFetch. Tap an episode to start playback.
 
-```
-Authorization: Bearer <users.api_key>
-```
+The token the app stores after login is your PodFetch `users.api_key`.
+You can rotate it from the PodFetch web UI in *Profile → API key* — the
+app will be signed out the next time it tries to sync.
 
-Streaming endpoints additionally accept `?token=<api_key>` as a query
-parameter because the `<audio>` element can't send custom headers from
-the browser/mobile player.
+## 5. Verify it works
 
-The `/login` response is shaped exactly like upstream audiobookshelf's,
-so the mobile app accepts PodFetch as a legitimate server without any
-client-side patches:
+Quick smoke test, in order:
 
-```json
-{
-  "user": {
-    "id": "1",
-    "username": "samuel",
-    "token": "abs_...",
-    "mediaProgress": [...],
-    "permissions": { ... },
-    "librariesAccessible": [],
-    "isActive": true,
-    "type": "root"
-  },
-  "userDefaultLibraryId": "lib_default_podcasts",
-  "serverSettings": { ... }
+1. **Listing:** every podcast you subscribed to in PodFetch shows up.
+2. **Playback:** tap an episode. The player should open at the saved
+   position (or 0 for the first play) and start within a few seconds.
+   FLAC episodes take longer the first time because they are transcoded
+   per segment.
+3. **Progress sync:** play 30 seconds, pause, force-close the app,
+   re-open. The episode should resume at roughly where you stopped.
+   Cross-check in the PodFetch web UI under *Home → Continue listening*.
+4. **Stats:** browse to *Stats* in the mobile app. After at least one
+   played episode you should see a non-zero total and today's listening
+   time.
+
+## 6. Adding new podcasts from the app
+
+In the app, tap **+** and either
+
+- type a search term (the app calls iTunes through PodFetch and shows
+  matching podcasts), or
+- paste an RSS feed URL directly.
+
+Pick a podcast and confirm. PodFetch subscribes it the same way the web
+UI's *Add Podcast* dialog does, so the new feed appears in PodFetch as
+well as in the app.
+
+> PodFetch has no concept of library folders, so the *Library* and
+> *Folder* dropdowns in the audiobookshelf "New Podcast" form are
+> ignored. The podcast always lands in the default *Podcasts* library.
+
+## 7. Reverse proxy notes
+
+If you front PodFetch with a reverse proxy, two things matter:
+
+- Pass through `/socket.io/` with WebSocket upgrade. The app uses
+  socket.io for real-time progress and notification events; without it
+  multi-device sync still works (over HTTP polling) but with a 5–10
+  second delay.
+- Forward the `Authorization` header. PodFetch reads the bearer token
+  from it; some default proxy configs strip unknown headers.
+
+Sample Caddy snippet:
+
+```caddy
+podcasts.example.com {
+    reverse_proxy localhost:8000
 }
 ```
 
-## Streaming
+Sample nginx snippet (the important parts):
 
-When the mobile app hits `POST /api/items/<id>/play/<episodeId>`,
-PodFetch decides per request whether to direct-stream the file or
-transcode it on the fly to HLS:
-
-* **`playMethod=0` (direct)** — used when the source codec is in the
-  client's `supportedMimeTypes` (mp3, aac, m4a, opus, …). The track URL
-  is `/api/items/<itemId>/file/<ino>` and supports HTTP Range, so the
-  player can seek without downloading the whole episode.
-* **`playMethod=1` (HLS transcode)** — used for FLAC, OGG with
-  unsupported codecs, or when the client passes `forceTranscode: true`.
-  PodFetch spawns ffmpeg per segment, AAC-encodes to a mpegts segment
-  and caches the output under `<AUDIOBOOKSHELF_DATA_DIR>/hls/<sid>/`
-  bounded by the LRU cap above.
-
-A `Semaphore` keeps `AUDIOBOOKSHELF_TRANSCODER_MAX_CONCURRENT` ffmpeg
-processes running at most.
-
-## Progress sync
-
-The mobile app calls `POST /api/session/<sid>/sync` every ~10 s with
-`{ currentTime, timeListened, duration }`. PodFetch:
-
-1. Updates `playback_sessions.current_time / time_listening_total`.
-2. Mirrors the position into `media_progress` (the per-libraryItem
-   table that drives the "Continue listening" shelf).
-3. Emits `user_item_progress_updated` over socket.io so any second
-   logged-in client (web UI, second phone) refreshes immediately.
-
-On session close (`POST /api/session/<sid>/close`) PodFetch finalises
-the row, copies the snapshot into `audiobookshelf_listening_sessions`
-for history, and marks the episode finished when
-`current_time / duration > 0.95`.
-
-## Listening statistics
-
-`GET /api/me/listening-stats` aggregates everything in
-`audiobookshelf_listening_sessions` into the shape the upstream web
-dashboard expects:
-
-```json
-{
-  "totalTime": <seconds>,
-  "today": <seconds>,
-  "items": { "li_pod_<id>": { "timeListening": ..., "mediaMetadata": ..., "lastUpdate": ... } },
-  "days":      { "2026-05-14": <seconds>, ... },
-  "dayOfWeek": { "Monday": <seconds>, ... },
-  "recentSessions": [ ... last 10 ... ]
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:8000;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header Authorization $http_authorization;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
 }
 ```
 
-`date` / `dayOfWeek` / `mediaMetadata` are derived per request from
-`started_at` and `display_title/displayAuthor`; PodFetch doesn't store
-them as separate columns.
+`$connection_upgrade` requires the standard nginx upgrade map:
 
-## Playlists
-
-PodFetch's existing playlist domain is exposed via the audiobookshelf
-playlist surface so the mobile app's playlist tab works end-to-end:
-
+```nginx
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
 ```
-GET    /api/playlists                              # list
-GET    /api/playlists/:id                          # detail
-POST   /api/playlists                              # create
-PATCH  /api/playlists/:id                          # rename + reorder
-DELETE /api/playlists/:id
-POST   /api/playlists/:id/item                     # add one
-DELETE /api/playlists/:id/item/:liId[/:episodeId]
-POST   /api/playlists/:id/batch/{add,remove}
-GET    /api/libraries/:id/playlists                # per-library, paginated
-```
-
-PodFetch playlists are podcast-episode-only — the request grammar
-still mirrors upstream's `{ libraryItemId, episodeId? }` pairs, but
-`episodeId` is required server-side.
-
-## Search & adding podcasts
-
-When the user taps **+ Add podcast** in the mobile app:
-
-* `GET /api/search/podcast?term=...&country=us` runs an iTunes Search
-  via PodFetch's existing `PodcastService::find_podcast` and returns
-  the audiobookshelf-shaped result array (`title`, `artistName`,
-  `feedUrl`, `cover`, `explicit`, ...).
-* `POST /api/podcasts/feed { rssFeed }` fetches the RSS feed and
-  returns a `{ podcast: { metadata, episodes } }` preview — also used
-  when the user pastes a feed URL directly.
-* `POST /api/podcasts { media: { metadata: { feedUrl } }, libraryId, … }`
-  actually subscribes via `PodcastService::handle_insert_of_podcast`
-  (dedup by feedUrl, spawn episode discovery, schedule downloads) and
-  returns the new `LibraryItem`. PodFetch has no library-folder
-  concept yet, so `libraryId / folderId / path` on the request body
-  are accepted-and-ignored — the podcast lands in the single default
-  `Podcasts` library.
-
-## Socket.io events
-
-The mobile app and web client subscribe to socket.io for real-time
-updates. PodFetch broadcasts the same events upstream emits, scoped
-per-user where appropriate:
-
-| Event | Payload | When |
-|---|---|---|
-| `init` | `{ user, libraries, serverSettings }` | After client `auth` event |
-| `user_item_progress_updated` | progress row | On every sync / close |
-| `user_updated` | full user | After progress patch |
-| `library_updated` | library | On scan complete |
-| `scan_progress` / `scan_complete` | scan id + ratio | Scanner phases |
-
-The handshake auth supports both query token (`?token=...`) and the
-audiobookshelf-app's `socket.emit('auth', <token>)` event-based flow.
-
-## API surface in one glance
-
-| Group | Endpoints |
-|---|---|
-| Auth | `POST /login`, `POST /api/authorize`, `POST /logout` |
-| Server | `GET /ping`, `GET /status`, `GET /api/server-settings` |
-| Libraries | `GET /api/libraries`, `GET /api/libraries/:id`, `GET /api/libraries/:id/items`, `GET /api/libraries/:id/recent-episodes`, `GET /api/libraries/:id/personalized`, `POST /api/libraries/:id/scan` |
-| Items | `GET /api/items/:id`, `GET /api/items/:id/cover`, `GET /api/items/:id/file/:ino`, `GET /api/items/:id/episode/:epId` |
-| Me | `GET /api/me`, `GET /api/me/items-in-progress`, `GET /api/me/listening-sessions`, `GET /api/me/listening-stats`, `PATCH /api/me/progress/:liId[/:epId]`, `PATCH /api/me/progress/batch/update` |
-| Sessions | `POST /api/items/:id/play[/:epId]`, `GET /api/session/:id`, `POST /api/session/:id/sync`, `POST /api/session/:id/close` |
-| Streaming | `GET /public/session/:sid/track/:idx` (direct + Range), `GET /hls/:sid/master.m3u8`, `GET /hls/:sid/index.m3u8`, `GET /hls/:sid/seg-:n.ts` |
-| Search | `GET /api/search/podcast?term=...` |
-| Podcasts | `POST /api/podcasts/feed`, `POST /api/podcasts` |
-| Playlists | see above |
-| Uploads | `POST /api/upload` (multipart, for audiobook drops) |
-| Socket | `GET /socket.io/` |
-
-## Roadmap & limitations
-
-**Working today**
-
-* Full podcast browse / play / progress / playlists / stats from the
-  mobile app and audiobookshelf web client.
-* Direct streaming + HLS transcoding both engaged automatically based
-  on client `supportedMimeTypes`.
-* Multi-device progress sync via socket.io.
-
-**Planned**
-
-* Audiobook scanner (`AUDIOBOOKSHELF_INTEGRATION_ENABLED`-gated tables
-  exist, watched-folder discovery + ffprobe + chapter extraction +
-  metadata precedence chain are in tree) needs the corresponding
-  mobile-app library-type wiring once we surface a Books library.
-* Manual audiobook upload (`POST /api/upload` multipart) accepts files
-  and triggers a single-folder scan; mobile-app UI for browsing the
-  resulting Books library is the next step.
-
-**Won't fix** for now
-
-* PodFetch playlists are podcast-only. Audiobook playlists will land
-  with the Books library.
-* Library folders: PodFetch uses a single root dir. Library/folder/
-  path fields on `POST /api/podcasts` are accepted-and-ignored so the
-  mobile app doesn't error.
 
 ## Troubleshooting
 
-**App accepts login but never lists podcasts**
-The default `Podcasts` library is created at server startup. Restart
-PodFetch once after enabling the integration; the
-`AudiobookshelfLibraryService` runs its bootstrap on boot, not lazily.
+**The app accepts login but the library list is empty.**
+The default *Podcasts* library is created during server startup. If you
+enabled the integration on a running server, restart PodFetch once. After
+restart, the library appears even if you don't have any subscribed
+podcasts yet — but it will be empty until you add some.
 
-**`MissingKotlinParameterException` in `adb logcat` after tapping Play**
-Means an upstream non-null field is missing in PodFetch's play
-response. Open an issue with the stack trace — these have been
-caught one by one (audioFile.relPath, deviceInfo, genres, …) and the
-test pin in `audiobookshelf_api::tests::play_response_passes_android_kotlin_required_fields`
-guards each.
+**Login fails with "Unexpected error".**
+Most often the URL is wrong: the app's *Server URL* field expects the
+root (`https://podcasts.example.com`), not a path. Strip `/ui/`,
+`/login` or any other suffix. Double-check the scheme — `http://`
+fails because the app requires TLS.
 
-**Sync logs "Invalid JSON response End of input"**
-Every audiobookshelf sync / close / progress endpoint must return a
-JSON body — sonner's `makeRequest` parses the body and treats an
-empty 200 as an error. PodFetch returns `{ "success": true }` for the
-non-content endpoints; if you see this, something is short-circuiting
-the response builder.
+**Playback button shows a spinner forever.**
+Check the server log for a line like `POST /api/items/.../play …`. If
+it never appears, the bearer token did not reach PodFetch — your
+reverse proxy is dropping the `Authorization` header. See section 7.
 
-**Casting / Chromecast**
-The audiobookshelf app's casting works only against shared HLS
-streams. Direct casting from the app is on the audiobookshelf
-roadmap, not PodFetch's.
+**Progress does not sync between devices.**
+The socket.io connection is probably blocked. Check
+`https://your-server/socket.io/?EIO=4&transport=polling` in the browser
+— it should return a JSON handshake. If it returns a 502 or 404 your
+proxy is not forwarding `/socket.io/`; add it to the proxy config.
+
+**FLAC / OGG episode stutters or won't play.**
+PodFetch transcodes those to HLS/AAC via ffmpeg. Make sure ffmpeg is
+on `PATH`. If transcoding is slow, raise
+`AUDIOBOOKSHELF_TRANSCODER_MAX_CONCURRENT` (more parallel ffmpegs) or
+point `AUDIOBOOKSHELF_DATA_DIR` at faster storage.
+
+**Cover images don't appear.**
+The app caches covers per server. After a server restart or an HTTPS
+certificate change, force-refresh once (pull-to-refresh on the
+library screen).
+
+**I want to sign all devices out at once.**
+Set `AUDIOBOOKSHELF_ROTATE_API_KEY_ON_LOGOUT=true` and log out from
+one device. PodFetch generates a new `users.api_key` and every other
+device drops to the login screen on its next sync. Alternatively,
+rotate the key manually in *Profile → API key* in the web UI.
+
+## Disabling the integration
+
+Set `AUDIOBOOKSHELF_INTEGRATION_ENABLED=false` (or remove the variable)
+and restart PodFetch. The audiobookshelf routes disappear from the
+server; the rest of PodFetch keeps working unchanged. Existing user
+data (subscribed podcasts, listening history, playlists) stays — the
+audiobookshelf endpoints just expose them in a different format.
