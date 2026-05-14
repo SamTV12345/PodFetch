@@ -1,10 +1,12 @@
 use podfetch_domain::audiobookshelf::playback_session::PlaybackSession;
 use serde::{Deserialize, Serialize};
 
-/// Audiobookshelf audio-track payload. Field set mirrors upstream
-/// `PodcastEpisode.getAudioTrack` / `AudioFile.toJSON` (structuredClone +
-/// startOffset/title/index/contentUrl). Mobile-app players read `ino`,
-/// `mimeType` and `contentUrl` mandatorily.
+/// Audiobookshelf audio-track payload. Mirrors upstream
+/// `PodcastEpisode.getAudioTrack` / `AudioFile.toJSON` plus the fields the
+/// **Android-app's Kotlin AudioTrack data class** requires non-null
+/// (`isLocal`). Missing `isLocal` makes Jackson throw
+/// `MissingKotlinParameterException` and the play silently dies in the
+/// OkHttp callback - that's the "spinner forever" symptom.
 #[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PlaybackAudioTrackDto {
@@ -27,6 +29,10 @@ pub struct PlaybackAudioTrackDto {
     pub manually_verified: bool,
     pub invalid: bool,
     pub exclude: bool,
+    /// Required non-null by the Android-app Kotlin AudioTrack data class.
+    pub is_local: bool,
+    pub local_file_id: Option<String>,
+    pub server_index: Option<i32>,
 }
 
 #[derive(Serialize, utoipa::ToSchema)]
@@ -65,11 +71,15 @@ pub struct PlaybackSessionDto {
     pub duration: f64,
     pub play_method: i32,
     pub media_player: String,
-    pub device_info: Option<serde_json::Value>,
+    /// Required non-null by the Android-app Kotlin `DeviceInfo` data class
+    /// (deviceId / manufacturer / model / sdkVersion / clientVersion).
+    /// Null here would make Jackson abort PlaybackSession deserialisation.
+    pub device_info: serde_json::Value,
     pub server_version: String,
     pub date: String,
     pub day_of_week: String,
-    pub time_listening: f64,
+    /// Kotlin expects this as `Long` - send an integer JSON literal, not 0.0.
+    pub time_listening: i64,
     pub start_time: f64,
     pub current_time: f64,
     pub started_at: i64,
@@ -110,14 +120,19 @@ impl PlaybackSessionDto {
             duration: session.duration,
             play_method: session.play_method.as_i32(),
             media_player: "unknown".to_string(),
+            // Echo back what the client sent (it includes its own deviceId
+            // etc.) or fall back to a fully-populated stub so Jackson never
+            // has to deserialize null into the non-null DeviceInfo class.
             device_info: session
                 .device_info_json
                 .as_deref()
-                .and_then(|s| serde_json::from_str(s).ok()),
+                .and_then(|s| serde_json::from_str::<serde_json::Value>(s).ok())
+                .map(merge_device_info_defaults)
+                .unwrap_or_else(default_device_info),
             server_version: env!("CARGO_PKG_VERSION").to_string(),
             date,
             day_of_week,
-            time_listening: session.time_listening_total,
+            time_listening: session.time_listening_total.round() as i64,
             start_time: 0.0,
             current_time: session.current_time,
             started_at: session.started_at.and_utc().timestamp_millis(),
@@ -126,6 +141,33 @@ impl PlaybackSessionDto {
             library_item: None,
         }
     }
+}
+
+/// Minimal `DeviceInfo` matching the Kotlin data class field set so Jackson
+/// is happy. Used when the client doesn't send its own `deviceInfo` in the
+/// play request body.
+fn default_device_info() -> serde_json::Value {
+    serde_json::json!({
+        "deviceId": "podfetch",
+        "manufacturer": "podfetch",
+        "model": "podfetch",
+        "sdkVersion": 0,
+        "clientVersion": env!("CARGO_PKG_VERSION"),
+    })
+}
+
+/// If the client supplied a partial `deviceInfo`, fill any missing
+/// required fields so the response still deserialises on the Android side.
+fn merge_device_info_defaults(client: serde_json::Value) -> serde_json::Value {
+    let mut merged = default_device_info();
+    if let (Some(target), Some(source)) = (merged.as_object_mut(), client.as_object()) {
+        for (key, value) in source {
+            if !value.is_null() {
+                target.insert(key.clone(), value.clone());
+            }
+        }
+    }
+    merged
 }
 
 #[derive(Deserialize, utoipa::ToSchema)]

@@ -236,6 +236,9 @@ async fn start_session(
         manually_verified: false,
         invalid: false,
         exclude: false,
+        is_local: false,
+        local_file_id: None,
+        server_index: None,
     }];
 
     let mut response = PlaybackSessionDto::from_domain(&session_with_progress, audio_tracks);
@@ -508,6 +511,9 @@ async fn start_book_session(
             manually_verified: false,
             invalid: false,
             exclude: false,
+            is_local: false,
+            local_file_id: None,
+            server_index: None,
         }]
     } else {
         aggregate
@@ -554,6 +560,9 @@ async fn start_book_session(
                     manually_verified: false,
                     invalid: false,
                     exclude: false,
+                    is_local: false,
+                    local_file_id: None,
+                    server_index: None,
                 })
             })
             .collect()

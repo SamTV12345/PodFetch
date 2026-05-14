@@ -915,6 +915,55 @@ async fn playback_session_shape_matches_upstream() {
 
 #[tokio::test]
 #[serial]
+async fn play_response_passes_android_kotlin_required_fields() {
+    // Android app's AbsAudioPlayer deserialises via Jackson into Kotlin
+    // data classes where these fields are NON-NULL. Sending null or
+    // omitting them makes Jackson throw MissingKotlinParameterException;
+    // the OkHttp callback never fires → playback spinner forever. Found
+    // by reading C:\Users\samue\RustroverProjects\audiobookshelf-app\
+    // android\app\src\main\java\com\audiobookshelf\app\data\.
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    let podcast = insert_test_podcast("Android compat pod", &state, user.id);
+    let episode = insert_test_episode(podcast.id, "Compat ep");
+    login_audiobookshelf(&mut server, &user).await;
+    let resp = server
+        .test_server
+        .post(&format!(
+            "/api/items/li_pod_{}/play/ep_{}",
+            podcast.id, episode.id
+        ))
+        .json(&json!({}))
+        .await;
+    let body: Value = resp.json();
+
+    let track = &body["audioTracks"][0];
+    assert_eq!(
+        track["isLocal"], json!(false),
+        "audioTracks[0].isLocal must be a boolean (Kotlin AudioTrack.isLocal is non-null)"
+    );
+
+    let device_info = &body["deviceInfo"];
+    assert!(
+        device_info.is_object(),
+        "deviceInfo must be an object, not null (Kotlin DeviceInfo is non-null). Got: {device_info:#?}"
+    );
+    for field in ["deviceId", "manufacturer", "model", "sdkVersion", "clientVersion"] {
+        assert!(
+            device_info.get(field).is_some() && !device_info[field].is_null(),
+            "deviceInfo.{field} must be non-null"
+        );
+    }
+
+    assert!(
+        body["timeListening"].is_i64(),
+        "timeListening must be an integer JSON literal (Kotlin Long type)"
+    );
+}
+
+#[tokio::test]
+#[serial]
 async fn book_playback_session_carries_book_id() {
     let mut server = handle_test_startup().await;
     let state = AppState::new();
