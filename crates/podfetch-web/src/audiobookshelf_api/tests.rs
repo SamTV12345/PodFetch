@@ -643,6 +643,48 @@ fn generate_pseudo_audio_bytes(len: usize) -> Vec<u8> {
     (0..len).map(|i| (i % 251) as u8).collect()
 }
 
+// ── Cover-redirect: real podcasts have remote artwork in the RSS feed ──────
+
+#[tokio::test]
+#[serial]
+async fn podcast_cover_redirects_to_remote_url_when_no_local_file() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    // Use the repository directly so we can set original_image_url to a
+    // proper https URL (the test podcast helper uses fake bookkeeping).
+    use podfetch_domain::podcast::{NewPodcast, PodcastRepository};
+    use podfetch_persistence::db::database;
+    use podfetch_persistence::podcast::DieselPodcastRepository;
+    let repo = DieselPodcastRepository::new(database());
+    let created = repo
+        .create(NewPodcast {
+            name: "Remote Cover Pod".to_string(),
+            directory_id: "remote-cover".to_string(),
+            rssfeed: "https://example.com/feed.rss".to_string(),
+            image_url: "podcasts/remote-cover/missing-local.jpg".to_string(),
+            directory_name: "/tmp/podcasts/does-not-exist".to_string(),
+            added_by: Some(user.id),
+        })
+        .expect("create podcast");
+    // Backfill original_image_url to a real https URL via update_original_image_url.
+    repo.update_original_image_url(created.id, "https://example.com/cover.png")
+        .expect("set original_image_url");
+
+    login_audiobookshelf(&mut server, &user).await;
+    let resp = server
+        .test_server
+        .get(&format!("/api/items/li_pod_{}/cover", created.id))
+        .await;
+    assert_eq!(resp.status_code().as_u16(), 302, "expected redirect");
+    let location = resp
+        .headers()
+        .get("location")
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or_default();
+    assert_eq!(location, "https://example.com/cover.png");
+}
+
 // ── Phase E: audiobookshelf compat fixes ────────────────────────────────────
 
 #[tokio::test]

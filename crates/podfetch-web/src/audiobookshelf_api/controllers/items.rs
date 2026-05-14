@@ -158,27 +158,7 @@ pub async fn get_item_cover(
         LibraryItemId::Podcast(pid) => {
             let podcast_entity = PodcastService::get_podcast(pid)?;
             let podcast: podfetch_domain::podcast::Podcast = podcast_entity.into();
-            // Prefer a local file on disk; if image_url is actually a remote
-            // URL (most podcasts: image lives in the RSS feed), redirect the
-            // client there so the mobile app's image loader handles it.
-            let candidate = PathBuf::from(&podcast.image_url);
-            if candidate.is_file() {
-                return serve_file(candidate).await;
-            }
-            let local_in_dir = PathBuf::from(&podcast.directory_name).join("cover.jpg");
-            if local_in_dir.is_file() {
-                return serve_file(local_in_dir).await;
-            }
-            if podcast.image_url.starts_with("http://")
-                || podcast.image_url.starts_with("https://")
-            {
-                let mut headers = HeaderMap::new();
-                if let Ok(loc) = HeaderValue::from_str(&podcast.image_url) {
-                    headers.insert(header::LOCATION, loc);
-                }
-                return Ok((StatusCode::FOUND, headers, Body::empty()).into_response());
-            }
-            Err(CustomErrorInner::NotFound(Debug).into())
+            serve_podcast_cover(&podcast).await
         }
         LibraryItemId::Book(_) => {
             let book = state
@@ -194,6 +174,47 @@ pub async fn get_item_cover(
             Err(CustomErrorInner::NotFound(Debug).into())
         }
     }
+}
+
+/// Cover-Suche analog zu PodFetch's eigener Cover-Auslieferung:
+/// 1. `podcast.image_url` als Pfad (absolut oder relativ zum cwd)
+/// 2. `podcast.directory_name/cover.jpg`
+/// 3. `podcast.image_url` als URL (redirect)
+/// 4. `podcast.original_image_url` als URL (redirect) — RSS-Feed-Cover
+async fn serve_podcast_cover(
+    podcast: &podfetch_domain::podcast::Podcast,
+) -> Result<Response, CustomError> {
+    for candidate in [
+        PathBuf::from(&podcast.image_url),
+        PathBuf::from(&podcast.directory_name).join("cover.jpg"),
+        PathBuf::from(&podcast.directory_name).join("cover.png"),
+        PathBuf::from(&podcast.directory_name).join("folder.jpg"),
+    ] {
+        if candidate.is_file() {
+            return serve_file(candidate).await;
+        }
+    }
+    for url_candidate in [&podcast.image_url, &podcast.original_image_url] {
+        if url_candidate.starts_with("http://") || url_candidate.starts_with("https://") {
+            return redirect(url_candidate);
+        }
+    }
+    tracing::debug!(
+        "cover lookup miss for podcast {} (image_url='{}', original_image_url='{}', dir='{}')",
+        podcast.id,
+        podcast.image_url,
+        podcast.original_image_url,
+        podcast.directory_name
+    );
+    Err(CustomErrorInner::NotFound(Debug).into())
+}
+
+fn redirect(target: &str) -> Result<Response, CustomError> {
+    let mut headers = HeaderMap::new();
+    let value = HeaderValue::from_str(target)
+        .map_err(|_| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
+    headers.insert(header::LOCATION, value);
+    Ok((StatusCode::FOUND, headers, Body::empty()).into_response())
 }
 
 async fn serve_file(path: PathBuf) -> Result<Response, CustomError> {
