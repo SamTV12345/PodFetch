@@ -1,6 +1,5 @@
 import { FC, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AnimatePresence, motion } from 'framer-motion'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Bell, BellOff, CheckCircle2, CircleAlert, RotateCw, X } from 'lucide-react'
 import { useQueryClient } from "@tanstack/react-query";
@@ -214,15 +213,15 @@ export const Notifications: FC = () => {
                         )}
 
                         {!notificationsQuery.isLoading && !notificationsQuery.isError && orderedNotifications.length > 0 && (
-                            <AnimatePresence initial={false}>
+                            <>
                                 {orderedNotifications.map((notification) => (
-                                    <motion.div
+                                    // Entry-only animation via tw-animate-css. The previous
+                                    // framer-motion exit animation (height collapse + fade)
+                                    // is dropped - the dismiss button is explicit, so an
+                                    // instant remove is acceptable and saves a 140 KB dep.
+                                    <div
                                         key={notification.id}
-                                        className="grid grid-cols-[auto_1fr_auto] items-start gap-3 px-4 py-3 border-b ui-border-b last:border-b-0"
-                                        initial={{ opacity: 0, y: -6 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -4, height: 0, paddingTop: 0, paddingBottom: 0 }}
-                                        transition={{ duration: 0.14, ease: 'easeOut' }}
+                                        className="grid grid-cols-[auto_1fr_auto] items-start gap-3 px-4 py-3 border-b ui-border-b last:border-b-0 animate-in fade-in slide-in-from-top-2 duration-150"
                                     >
                                         <span className="mt-0.5">
                                             {notificationIcon(notification.typeOfMessage)}
@@ -247,9 +246,9 @@ export const Notifications: FC = () => {
                                         >
                                             <X size={18} />
                                         </button>
-                                    </motion.div>
+                                    </div>
                                 ))}
-                            </AnimatePresence>
+                            </>
                         )}
                     </div>
 
