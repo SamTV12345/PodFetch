@@ -100,7 +100,13 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
                                         </div>
                                     )}/>
                     </div>
-                    <CustomButtonPrimary disabled={user.data?.readOnly || user.isLoading} type="submit" className="float-right">{t('save')}</CustomButtonPrimary>
+                    {/* `float-right` would take the button out of flow, so
+                        the next section's border-t would slide underneath
+                        it. Wrap in a flex row instead so the form has real
+                        height. */}
+                    <div className="flex justify-end">
+                        <CustomButtonPrimary disabled={user.data?.readOnly || user.isLoading} type="submit">{t('save')}</CustomButtonPrimary>
+                    </div>
                 </form>
             </div>
 
