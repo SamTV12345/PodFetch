@@ -3,3 +3,23 @@ authors = ["SamTV12345"]
 language = "en"
 src = "src"
 title = "PodFetch Documentation"
+
+[output.html]
+default-theme = "navy"
+preferred-dark-theme = "navy"
+# Drop the PodFetch skin on top of mdbook's built-ins. Pure additive
+# CSS so future mdbook upgrades keep working unmodified.
+additional-css = ["theme/podfetch.css"]
+git-repository-url = "https://github.com/SamTV12345/PodFetch"
+edit-url-template = "https://github.com/SamTV12345/PodFetch/edit/main/docs/{path}"
+
+[output.html.fold]
+enable = true
+level = 1
+
+[output.html.search]
+limit-results = 30
+use-boolean-and = true
+
+[output.html.print]
+enable = true
