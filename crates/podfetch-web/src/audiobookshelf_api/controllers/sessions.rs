@@ -256,9 +256,6 @@ async fn start_session(
     // `session.libraryItem` (audiobookshelf-app v0.12+) can finish
     // prepareLibraryItem without a second round trip.
     response.library_item = Some(map_podcast(&podcast, &episodes, &library.id));
-    if let Ok(s) = serde_json::to_string(&response) {
-        tracing::info!("audiobookshelf play response (podcast ep_{}): {}", episode.id, s);
-    }
     Ok(Json(response))
 }
 
