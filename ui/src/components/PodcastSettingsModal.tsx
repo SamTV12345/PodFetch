@@ -1,4 +1,11 @@
-import * as Dialog from '@radix-ui/react-dialog'
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog'
 import { FC, useEffect, useState } from 'react'
 import { Switcher } from './Switcher'
 import { PodcastSetting } from '../models/PodcastSetting'
@@ -99,36 +106,25 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
     }
 
     return (
-        <Dialog.Root>
-            <Dialog.Trigger asChild>
-                <button className="material-symbols-outlined inline cursor-pointer align-middle ui-icon hover:ui-icon-hover">
-                    settings
-                </button>
-            </Dialog.Trigger>
+        <Dialog>
+            <DialogTrigger
+                render={
+                    <button className="material-symbols-outlined inline cursor-pointer align-middle ui-icon hover:ui-icon-hover">
+                        settings
+                    </button>
+                }
+            />
 
-            <Dialog.Portal>
-                <Dialog.Overlay className="fixed inset-0 grid place-items-center bg-[rgba(0,0,0,0.5)] backdrop-blur-sm z-30" />
+            <DialogContent className="max-w-2xl sm:max-w-2xl">
+                <DialogTitle className="ui-text-accent text-2xl">
+                    {t('settings')}
+                </DialogTitle>
 
-                <Dialog.Content className="fixed inset-0 z-40 flex items-center justify-center p-4">
-                    <div
-                        onClick={(e) => e.stopPropagation()}
-                        className="relative ui-surface max-w-2xl p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))]"
-                    >
-                        <Dialog.Title className="ui-text-accent text-2xl">
-                            {t('settings')}
-                        </Dialog.Title>
+                <DialogDescription className="ui-text">
+                    {t('settings-configure')}
+                </DialogDescription>
 
-                        <Dialog.Description className="ui-text">
-                            {t('settings-configure')}
-                        </Dialog.Description>
-
-                        <Dialog.Close className="top-5 absolute right-5">
-                            <span className="material-symbols-outlined">
-                                close
-                            </span>
-                        </Dialog.Close>
-
-                        <hr className="mb-5 mt-1 ui-border" />
+                <hr className="mb-5 mt-1 ui-border" />
 
                         <div className="flex gap-2 mb-5 border-b ui-border" role="tablist">
                             <button
@@ -406,22 +402,22 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                             />
                         )}
 
-                        <div className="mt-6 flex justify-end gap-3">
-                            <Dialog.Close asChild>
-                                <button className="ui-text">
-                                    {t('cancel')}
-                                </button>
-                            </Dialog.Close>
+                <div className="mt-6 flex justify-end gap-3">
+                    <DialogClose
+                        render={
+                            <button className="ui-text">
+                                {t('cancel')}
+                            </button>
+                        }
+                    />
 
-                            {activeTab === 'settings' && (
-                                <CustomButtonPrimary onClick={save}>
-                                    {t('save')}
-                                </CustomButtonPrimary>
-                            )}
-                        </div>
-                    </div>
-                </Dialog.Content>
-            </Dialog.Portal>
-        </Dialog.Root>
+                    {activeTab === 'settings' && (
+                        <CustomButtonPrimary onClick={save}>
+                            {t('save')}
+                        </CustomButtonPrimary>
+                    )}
+                </div>
+            </DialogContent>
+        </Dialog>
     )
 }

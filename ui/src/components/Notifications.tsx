@@ -1,7 +1,7 @@
 import { FC, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AnimatePresence, motion } from 'framer-motion'
-import * as Popover from '@radix-ui/react-popover'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import 'material-symbols/outlined.css'
 import { useQueryClient } from "@tanstack/react-query";
 import { components } from "../../schema";
@@ -126,39 +126,40 @@ export const Notifications: FC = () => {
     }
 
     return (
-        <Popover.Root open={open} onOpenChange={setOpen}>
-            <Popover.Trigger asChild>
-                <button
-                    type="button"
-                    className={cn(
-                        "relative grid h-10 w-10 place-items-center rounded-full border ui-border ui-surface ui-text transition-all",
-                        "hover:ui-text-accent hover:shadow-[0_0_0_4px_rgba(0,0,0,0.05)]",
-                        "focus-visible:outline-none focus-visible:ring-2 ui-ring-accent",
-                        unreadCount > 0 && "ui-text-accent ui-border-accent"
-                    )}
-                    aria-label={t('notifications-open')}
-                    title={t('notifications-open') as string}
-                >
-                    <span className={cn("material-symbols-outlined leading-none", unreadCount > 0 && "filled")}>notifications</span>
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger
+                render={
+                    <button
+                        type="button"
+                        className={cn(
+                            "relative grid h-10 w-10 place-items-center rounded-full border ui-border ui-surface ui-text transition-all",
+                            "hover:ui-text-accent hover:shadow-[0_0_0_4px_rgba(0,0,0,0.05)]",
+                            "focus-visible:outline-none focus-visible:ring-2 ui-ring-accent",
+                            unreadCount > 0 && "ui-text-accent ui-border-accent"
+                        )}
+                        aria-label={t('notifications-open')}
+                        title={t('notifications-open') as string}
+                    >
+                        <span className={cn("material-symbols-outlined leading-none", unreadCount > 0 && "filled")}>notifications</span>
 
-                    {bellPulse && unreadCount > 0 && (
-                        <span className="pointer-events-none absolute inset-0 rounded-full border-2 ui-border-accent animate-ping" />
-                    )}
+                        {bellPulse && unreadCount > 0 && (
+                            <span className="pointer-events-none absolute inset-0 rounded-full border-2 ui-border-accent animate-ping" />
+                        )}
 
-                    {unreadCount > 0 && (
-                        <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full px-1 text-[0.625rem] font-semibold text-white ui-bg-accent">
-                            {unreadCountLabel}
-                        </span>
-                    )}
-                </button>
-            </Popover.Trigger>
+                        {unreadCount > 0 && (
+                            <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full px-1 text-[0.625rem] font-semibold text-white ui-bg-accent">
+                                {unreadCountLabel}
+                            </span>
+                        )}
+                    </button>
+                }
+            />
 
-            <Popover.Portal>
-                <Popover.Content
-                    align="end"
-                    sideOffset={12}
-                    className="relative z-30 w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border ui-border ui-surface shadow-[0_12px_36px_rgba(0,0,0,var(--shadow-opacity))]"
-                >
+            <PopoverContent
+                align="end"
+                sideOffset={12}
+                className="w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border ui-border ui-surface shadow-[0_12px_36px_rgba(0,0,0,var(--shadow-opacity))] p-0"
+            >
                     <div className="border-b ui-border-b px-4 py-3">
                         <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
@@ -252,9 +253,7 @@ export const Notifications: FC = () => {
                         )}
                     </div>
 
-                    <Popover.Arrow className="ui-fill-inverse" />
-                </Popover.Content>
-            </Popover.Portal>
-        </Popover.Root>
+            </PopoverContent>
+        </Popover>
     )
 }

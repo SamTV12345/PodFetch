@@ -1,7 +1,12 @@
 import { FC, ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 type CustomDropdownMenuProps = {
     menuItems: Array<MenuItem>,
@@ -19,35 +24,30 @@ export const CustomDropdownMenu: FC<CustomDropdownMenuProps> = ({ menuItems, tri
     const { t } = useTranslation()
 
     return (
-        <DropdownMenu.Root>
-            <DropdownMenu.Trigger className="flex items-center">
+        <DropdownMenu>
+            <DropdownMenuTrigger className="flex items-center">
                 {trigger}
-            </DropdownMenu.Trigger>
+            </DropdownMenuTrigger>
 
-            <DropdownMenu.Portal>
-                <DropdownMenu.Content className="ui-surface py-3 rounded-lg shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] z-30">
-
-                    {menuItems.map((menuItem) => (
-                        <DropdownMenu.Item key={menuItem.translationKey}>
-                            {menuItem.onClick ?
-                                <span className="flex items-center gap-2 cursor-pointer px-6 py-2 text-sm ui-text hover:ui-text-hover" onClick={menuItem.onClick}>
-                                    <span className="material-symbols-outlined">{menuItem.iconName}</span> {t(menuItem.translationKey)}
-                                </span>
-                            : menuItem.path ?
-                                <NavLink className="flex items-center gap-2 cursor-pointer px-6 py-2 text-sm ui-text hover:ui-text-hover" to={menuItem.path}>
-                                    <span className="material-symbols-outlined">{menuItem.iconName}</span> {t(menuItem.translationKey)}
-                                </NavLink>
-                            :
-                                <span className="flex items-center gap-2 cursor-pointer px-6 py-2 text-sm ui-text hover:ui-text-hover">
-                                    <span className="material-symbols-outlined">{menuItem.iconName}</span> {t(menuItem.translationKey)}
-                                </span>
-                            }
-                        </DropdownMenu.Item>
-                    ))}
-
-                    <DropdownMenu.Arrow className="ui-fill-inverse" />
-                </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-        </DropdownMenu.Root>
+            <DropdownMenuContent className="py-3 rounded-lg shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))]">
+                {menuItems.map((menuItem) => (
+                    <DropdownMenuItem
+                        key={menuItem.translationKey}
+                        onClick={menuItem.onClick}
+                        className="flex items-center gap-2 cursor-pointer px-6 py-2 text-sm ui-text hover:ui-text-hover"
+                    >
+                        {menuItem.path ? (
+                            <NavLink className="flex items-center gap-2 w-full" to={menuItem.path}>
+                                <span className="material-symbols-outlined">{menuItem.iconName}</span> {t(menuItem.translationKey)}
+                            </NavLink>
+                        ) : (
+                            <>
+                                <span className="material-symbols-outlined">{menuItem.iconName}</span> {t(menuItem.translationKey)}
+                            </>
+                        )}
+                    </DropdownMenuItem>
+                ))}
+            </DropdownMenuContent>
+        </DropdownMenu>
     )
 }
