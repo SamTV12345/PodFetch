@@ -1,7 +1,7 @@
 import { FC, useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { useTranslation } from 'react-i18next'
-import { enqueueSnackbar } from 'notistack'
+import { enqueueSnackbar } from '@/utils/toast'
 import { User } from '../models/User'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
 import { CustomSelect } from './CustomSelect'

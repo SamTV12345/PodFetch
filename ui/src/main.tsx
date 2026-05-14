@@ -3,18 +3,11 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { I18nextProvider } from 'react-i18next'
 import { RouterProvider } from 'react-router-dom'
-import {enqueueSnackbar, SnackbarProvider} from 'notistack'
+import {enqueueSnackbar} from '@/utils/toast'
+import {Toaster} from '@/components/ui/sonner'
 import { router } from './App'
 import i18n from './language/i18n'
-import '@fontsource-variable/inter'
-import '@fontsource/roboto'
-import '@fontsource/anton'
-import '@fontsource/poppins/400.css'
-import '@fontsource/poppins/400-italic.css'
-import '@fontsource/poppins/500.css'
-import '@fontsource/poppins/500-italic.css'
-import '@fontsource/poppins/700.css'
-import '@fontsource/poppins/700-italic.css'
+import '@fontsource-variable/geist'
 import './index.css'
 import {$api} from "./utils/http";
 import {QueryClientProvider} from "@tanstack/react-query";
@@ -157,9 +150,8 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <React.StrictMode>
         <QueryClientProvider client={queryClient}>
         <I18nextProvider i18n={i18n}>
-            <SnackbarProvider maxSnack={4} >
-                <RouterProvider router={router} />
-            </SnackbarProvider>
+            <RouterProvider router={router} />
+            <Toaster position="bottom-right" richColors closeButton />
         </I18nextProvider>
         </QueryClientProvider>
     </React.StrictMode>

@@ -7,7 +7,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { useTranslation } from "react-i18next"
-import { enqueueSnackbar } from "notistack"
+import { enqueueSnackbar } from "@/utils/toast"
 import usePlaylist from "../store/PlaylistSlice"
 import { PlaylistData } from "./PlaylistData"
 import { PlaylistSearchEpisode } from "./PlaylistSearchEpisode"

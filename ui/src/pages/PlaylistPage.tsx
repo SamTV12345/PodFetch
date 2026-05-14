@@ -1,7 +1,7 @@
 import {useEffect, useState} from "react";
 import {useTranslation} from "react-i18next";
 import {Plus, Trash2} from "lucide-react";
-import {enqueueSnackbar} from "notistack";
+import {enqueueSnackbar} from "@/utils/toast";
 import {useNavigate} from "react-router-dom";
 import {CustomButtonPrimary} from "../components/CustomButtonPrimary";
 import {CustomButtonSecondary} from "../components/CustomButtonSecondary";

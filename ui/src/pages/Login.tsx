@@ -64,7 +64,7 @@ export const Login = () => {
         <div className="flex flex-col items-center xs:justify-center ui-surface h-full w-full">
             <span className="flex items-center gap-2 xs:mb-10 px-4 py-3 ui-text">
                 <Mic className="ui-text-accent" size={22} />
-                <span className="font-bold font-['Inter_variable']">Podfetch</span>
+                <span className="font-bold">Podfetch</span>
             </span>
 
             <div className="ui-surface max-w-sm p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] w-full">

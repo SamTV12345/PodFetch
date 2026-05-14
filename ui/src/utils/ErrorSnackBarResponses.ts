@@ -1,4 +1,4 @@
-import {enqueueSnackbar} from "notistack";
+import {enqueueSnackbar} from "@/utils/toast";
 import {TFunction} from "i18next";
 
 export const handleAddPodcast = (resp: number|null, podcast: string, t: TFunction)=>{

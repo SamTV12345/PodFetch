@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useSnackbar } from 'notistack'
+import { useSnackbar } from '@/utils/toast'
 import useCommon from '../store/CommonSlice'
 import {formatTime } from '../utils/Utilities'
 import { CreateInviteModal } from './CreateInviteModal'

@@ -1,7 +1,7 @@
 import {FC, Fragment, useEffect, useState} from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus } from 'lucide-react'
-import { enqueueSnackbar } from 'notistack'
+import { enqueueSnackbar } from '@/utils/toast'
 import { CustomButtonSecondary } from './CustomButtonSecondary'
 import {CustomButtonPrimary} from "./CustomButtonPrimary";
 import {CustomCheckbox} from "./CustomCheckbox";

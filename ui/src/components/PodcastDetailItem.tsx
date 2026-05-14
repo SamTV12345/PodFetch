@@ -1,7 +1,7 @@
 import {FC, Fragment, useMemo, useRef} from 'react'
 import {useParams} from 'react-router-dom'
 import {useTranslation} from 'react-i18next'
-import {useSnackbar} from 'notistack'
+import {useSnackbar} from '@/utils/toast'
 import {formatTime, removeHTML} from '../utils/Utilities'
 import { Check, CirclePlay, CloudDownload, Heart } from 'lucide-react'
 import useCommon from "../store/CommonSlice";

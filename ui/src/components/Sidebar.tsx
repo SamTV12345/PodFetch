@@ -21,7 +21,7 @@ export const Sidebar = () => {
 
             <span className="flex item-center gap-2 mb-10 px-4 py-3 opacity-0 md:opacity-100 transition-opacity">
                 <Mic className="ui-text-accent" size={22} />
-                <span className="font-bold font-['Inter_variable']">Podfetch</span>
+                <span className="font-bold">Podfetch</span>
             </span>
 
             <ul className="flex flex-col gap-2">

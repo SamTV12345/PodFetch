@@ -1,7 +1,7 @@
 import { FC, useState } from 'react'
 import { Cast } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useSnackbar } from 'notistack'
+import { useSnackbar } from '@/utils/toast'
 import { $api } from '../utils/http'
 import { components } from '../../schema'
 import { ADMIN_ROLE } from '../models/constants'

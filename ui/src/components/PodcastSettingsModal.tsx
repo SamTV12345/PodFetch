@@ -20,7 +20,7 @@ import { $api } from '../utils/http'
 import { generatePodcastDefaultSettings } from '../models/PodcastDefaultSettings'
 import {CustomButtonPrimary} from "./CustomButtonPrimary";
 import { ConfirmModal } from './ConfirmModal'
-import { enqueueSnackbar } from 'notistack'
+import { enqueueSnackbar } from '@/utils/toast'
 import { Settings } from 'lucide-react'
 
 type PodcastSettingsModalProps = {

@@ -57,10 +57,11 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  /* Match the rest of the app: shadcn components inherit Poppins so
-     headings/body stay visually consistent with everything outside ui/. */
-  --font-heading: 'Poppins', sans-serif;
-  --font-sans: 'Poppins', sans-serif;
+  /* Geist Variable (Vercel) is the single typeface across the app -
+     shadcn components inherit it via font-sans / font-heading, and the
+     '*' rule below applies it to everything else. */
+  --font-heading: 'Geist Variable', sans-serif;
+  --font-sans: 'Geist Variable', sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -291,7 +292,7 @@
 }
 
 * {
-    font-family: 'Poppins', sans-serif;
+    font-family: 'Geist Variable', sans-serif;
 }
 
 html {
@@ -439,13 +440,6 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     background-repeat: no-repeat;
 	background-size: 100% 40px, 100% 40px, 100% 14px, 100% 14px;
     overflow-y: auto;
-}
-
-.movie-text{
-    font-family: anton, serif;
-    font-weight: 800;
-    font-size: 50px;
-    color: var(--fg-color);
 }
 
 .overlay {

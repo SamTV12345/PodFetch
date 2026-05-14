@@ -2,7 +2,7 @@ import createClient, {Middleware} from "openapi-fetch";
 import createTanstackQueryClient from "openapi-react-query";
 import {components, paths} from "../../schema";
 import {APIError} from "./ErrorDefinition";
-import { enqueueSnackbar } from "notistack";
+import { enqueueSnackbar } from "@/utils/toast";
 import i18n from "../language/i18n";
 import {getLogin} from "./login";
 import {getConfigFromHtmlFile} from "./config";
