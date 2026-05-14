@@ -151,9 +151,19 @@ async fn start_session(
     };
 
     // mediaMetadata snapshot - upstream PlaybackSession.mediaMetadata.
-    // Mobile-app player UIs read this for the now-playing screen
-    // (title, author, image, description). Empty {} can make some
-    // players refuse to start.
+    // Android-app Kotlin PodcastMetadata declares `title`, `explicit` and
+    // `genres` non-null - omitting `genres` makes Jackson throw
+    // MissingKotlinParameterException and playback dies silently.
+    let genres: Vec<String> = podcast
+        .keywords
+        .as_deref()
+        .map(|k| {
+            k.split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect()
+        })
+        .unwrap_or_default();
     let media_metadata = serde_json::json!({
         "title": podcast.name,
         "author": podcast.author,
@@ -167,6 +177,7 @@ async fn start_session(
         ),
         "language": podcast.language,
         "type": "episodic",
+        "genres": genres,
     });
 
     let session = PlaybackSession {

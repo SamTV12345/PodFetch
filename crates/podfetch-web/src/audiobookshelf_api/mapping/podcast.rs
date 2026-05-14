@@ -114,7 +114,10 @@ pub fn map_podcast(
         "ino": format!("ino_pod_{}", podcast.id),
         "oldLibraryItemId": Value::Null,
         "libraryId": library_id,
-        "folderId": Value::Null,
+        // Android-app Kotlin LibraryItem.folderId is non-null String; we
+        // don't model library folders separately yet, so re-use the
+        // library id as a stable synthetic folder id.
+        "folderId": library_id,
         "path": podcast.directory_name,
         "relPath": podcast.directory_name,
         "isFile": false,

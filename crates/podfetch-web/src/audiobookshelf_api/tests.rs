@@ -960,6 +960,23 @@ async fn play_response_passes_android_kotlin_required_fields() {
         body["timeListening"].is_i64(),
         "timeListening must be an integer JSON literal (Kotlin Long type)"
     );
+
+    // Kotlin PodcastMetadata.genres is non-null MutableList<String>.
+    let genres = &body["mediaMetadata"]["genres"];
+    assert!(
+        genres.is_array(),
+        "mediaMetadata.genres must be a (possibly empty) array. Got: {genres:#?}"
+    );
+
+    // Kotlin LibraryItem.folderId is non-null String. The play response
+    // embeds the LibraryItem.
+    let library_item = &body["libraryItem"];
+    assert!(library_item.is_object(), "libraryItem must be an object");
+    let folder_id = &library_item["folderId"];
+    assert!(
+        folder_id.is_string() && !folder_id.as_str().unwrap().is_empty(),
+        "libraryItem.folderId must be a non-empty string. Got: {folder_id:#?}"
+    );
 }
 
 #[tokio::test]
