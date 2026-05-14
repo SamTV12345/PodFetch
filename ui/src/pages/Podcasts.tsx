@@ -37,7 +37,7 @@ const orderOptions = [
 ]
 
 const allTags: Option = {
-    label: 'All',
+    translationKey: 'all',
     value: 'all'
 }
 
@@ -116,10 +116,21 @@ export const Podcasts: FC<PodcastsProps> = ({onlyFavorites}) => {
                         }}
                     />
                     <div>
-                        <CustomSelect className="bg-mustard-600 text-black" options={mappedTagsOptions}
-                                      value={tagsVal.value} onChange={(v) => {
-                            setTagVal(mappedTagsOptions.filter(e => e.value === v)[0]!)
-                        }}/>
+                        {/* dark:bg-mustard-600 / dark:text-stone-900 are
+                            duplicated explicitly because CustomSelect's
+                            internal `dark:bg-transparent` (added to kill
+                            shadcn's default dark:bg-input/30 wash) lives
+                            in a dark: variant group and twMerge won't let
+                            the caller's unprefixed bg-mustard-600 win over
+                            it without a matching dark: variant. */}
+                        <CustomSelect
+                            className="bg-mustard-600 dark:bg-mustard-600 text-stone-900 dark:text-stone-900"
+                            options={mappedTagsOptions}
+                            value={tagsVal.value}
+                            onChange={(v) => {
+                                setTagVal(mappedTagsOptions.filter(e => e.value === v)[0]!)
+                            }}
+                        />
                     </div>
                 </div>
 
