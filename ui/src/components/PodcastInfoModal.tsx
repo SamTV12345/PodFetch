@@ -55,8 +55,16 @@ export const PodcastInfoModal: FC<PodcastInfoModalProps> = ({ open, onOpenChange
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="w-full max-w-2xl max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-2xl">
-                <div className="mb-4">
+            {/*
+              Layout note: shadcn's DialogContent defaults to `grid`; for a
+              scrolling tab body we need a flex column with a real height
+              budget. `max-h-[85vh]` gives the chapter table somewhere to
+              live, and `min-h-0` on the flex-1 child lets it shrink below
+              its content (so overflow-y-auto actually engages instead of
+              the dialog growing past the viewport).
+            */}
+            <DialogContent className="w-full max-w-2xl sm:max-w-2xl max-h-[85vh] flex flex-col">
+                <div className="mb-4 shrink-0">
                     <DialogTitle render={<Heading2 className="inline align-middle mr-2 break-all">{episode?.name || ''}</Heading2>} />
                     <DialogDescription className="sr-only">
                         {t('podcast-episode-details')}
@@ -80,7 +88,7 @@ export const PodcastInfoModal: FC<PodcastInfoModalProps> = ({ open, onOpenChange
                         >delete</span>
                     }
                 </div>
-                <ul className="flex flex-wrap gap-2 border-b ui-border mb-6 ui-text-muted">
+                <ul className="flex flex-wrap gap-2 border-b ui-border mb-4 ui-text-muted shrink-0">
                     <li
                         onClick={() => setSelectedTab('description')}
                         className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'description' && 'border-b-2 ui-border-accent ui-text-accent'}`}
@@ -95,13 +103,13 @@ export const PodcastInfoModal: FC<PodcastInfoModalProps> = ({ open, onOpenChange
                     </li>
                 </ul>
                 {episode &&
-                    <>
+                    <div className="flex-1 min-h-0 overflow-y-auto pr-1">
                         {selectedTab === 'description' ? (
                             <p className="leading-[1.75] text-sm ui-text" dangerouslySetInnerHTML={removeHTML(episode.description)} />
                         ) : (
-                            <PodcastEpisodeChapterTable podcastEpisode={episode} className="overflow-auto max-h-1/2" />
+                            <PodcastEpisodeChapterTable podcastEpisode={episode} />
                         )}
-                    </>
+                    </div>
                 }
             </DialogContent>
         </Dialog>
