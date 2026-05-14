@@ -57,6 +57,27 @@ use crate::services::user_auth::service::UserAuthService;
 use common_infrastructure::error::ErrorSeverity::Warning;
 use std::sync::Arc;
 
+static AUDIOBOOKSHELF_FILE_WATCHER: std::sync::OnceLock<
+    Arc<crate::services::audiobookshelf::file_watcher::AudiobookFileWatcher>,
+> = std::sync::OnceLock::new();
+
+fn start_audiobookshelf_file_watcher(state: &AppState) {
+    if AUDIOBOOKSHELF_FILE_WATCHER.get().is_some() {
+        return;
+    }
+    let watcher = Arc::new(
+        crate::services::audiobookshelf::file_watcher::AudiobookFileWatcher::new(
+            state.audiobookshelf_library_service.clone(),
+            state.audiobookshelf_scanner.clone(),
+        ),
+    );
+    if let Err(e) = watcher.start() {
+        tracing::warn!("audiobookshelf file_watcher: failed to start: {e:?}");
+        return;
+    }
+    let _ = AUDIOBOOKSHELF_FILE_WATCHER.set(watcher);
+}
+
 fn is_socket_authenticated(socket: &SocketRef, auth_service: &Arc<UserAuthService>) -> bool {
     let req_parts = socket.req_parts();
     let query = req_parts.uri.query().unwrap_or("");
@@ -419,6 +440,7 @@ pub fn build_server_router() -> Router {
             &io,
             state.audiobookshelf_login_service.clone(),
         );
+        start_audiobookshelf_file_watcher(&state);
     }
     SOCKET_IO_LAYER.get_or_init(|| io);
 

@@ -155,3 +155,4 @@ utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
 uuid = { version = "1.23.1", features = ["v4", "serde"] }
 xml-builder = "0.6.0"
 quick-xml = "0.40"
+notify = "8.2"

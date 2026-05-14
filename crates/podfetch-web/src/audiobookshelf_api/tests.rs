@@ -643,6 +643,54 @@ fn generate_pseudo_audio_bytes(len: usize) -> Vec<u8> {
     (0..len).map(|i| (i % 251) as u8).collect()
 }
 
+// ── Phase D3: file_watcher ─────────────────────────────────────────────────
+
+#[tokio::test]
+#[serial]
+async fn file_watcher_starts_clean_when_no_book_library_has_folders() {
+    use crate::services::audiobookshelf::file_watcher::AudiobookFileWatcher;
+    let _server = handle_test_startup().await;
+    let state = AppState::new();
+    let watcher = AudiobookFileWatcher::new(
+        state.audiobookshelf_library_service.clone(),
+        state.audiobookshelf_scanner.clone(),
+    );
+    assert!(watcher.start().is_ok());
+}
+
+#[tokio::test]
+#[serial]
+async fn file_watcher_attaches_to_existing_folder_without_panicking() {
+    use crate::services::audiobookshelf::file_watcher::AudiobookFileWatcher;
+    let _server = handle_test_startup().await;
+    let state = AppState::new();
+
+    let tmp = std::env::temp_dir()
+        .join("podfetch-abs-watcher")
+        .join(uuid::Uuid::new_v4().simple().to_string());
+    std::fs::create_dir_all(&tmp).unwrap();
+    let lib = state
+        .audiobookshelf_library_service
+        .list()
+        .unwrap()
+        .into_iter()
+        .find(|l| matches!(l.media_type, podfetch_domain::audiobookshelf::library::MediaType::Book))
+        .unwrap();
+    let mut updated = lib.clone();
+    updated.folder_paths = vec![tmp.to_string_lossy().to_string()];
+    use podfetch_domain::audiobookshelf::library::LibraryRepository;
+    use podfetch_persistence::adapters::LibraryRepositoryImpl;
+    use podfetch_persistence::db::database;
+    LibraryRepositoryImpl::new(database()).upsert(updated).unwrap();
+
+    let watcher = AudiobookFileWatcher::new(
+        state.audiobookshelf_library_service.clone(),
+        state.audiobookshelf_scanner.clone(),
+    );
+    assert!(watcher.start().is_ok());
+    let _ = std::fs::remove_dir_all(&tmp);
+}
+
 // ── Phase D: upload + scan reporting ────────────────────────────────────────
 
 #[tokio::test]
