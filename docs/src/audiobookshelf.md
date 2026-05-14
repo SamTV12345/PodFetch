@@ -31,13 +31,6 @@ paths the mobile apps hardcode (`/login`, `/api/...`, `/public/...`,
 `/hls/...`, `/socket.io/`) and creates a default *Podcasts* library
 containing every podcast you have already subscribed to in PodFetch.
 
-> **HTTPS is mandatory.** The audiobookshelf apps refuse plain-HTTP
-> servers. If you already host PodFetch behind a TLS-terminating reverse
-> proxy (Caddy, nginx, Traefik) you're done. For a quick local test use
-> a [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
-> or `tailscale serve` — both give you a valid certificate without
-> opening ports.
-
 ## 2. Optional configuration
 
 All of these have sensible defaults; only set them if you need to tweak
@@ -165,8 +158,7 @@ podcasts yet — but it will be empty until you add some.
 **Login fails with "Unexpected error".**
 Most often the URL is wrong: the app's *Server URL* field expects the
 root (`https://podcasts.example.com`), not a path. Strip `/ui/`,
-`/login` or any other suffix. Double-check the scheme — `http://`
-fails because the app requires TLS.
+`/login` or any other suffix and include the scheme.
 
 **Playback button shows a spinner forever.**
 Check the server log for a line like `POST /api/items/.../play …`. If
