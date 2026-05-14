@@ -119,8 +119,12 @@
     --secondary-foreground: var(--color-stone-900);
     --muted: var(--color-stone-100);
     --muted-foreground: var(--color-stone-500);
-    --accent: var(--color-mustard-100);
-    --accent-foreground: var(--color-mustard-900);
+    /* Highlight tokens (hover/focused dropdown items, ...). shadcn's
+       convention has --accent as a subtle wash, but PodFetch reads as a
+       gold-accented product, so we use the full mustard brand color here
+       to keep dropdown highlights, select items etc. clearly gold. */
+    --accent: var(--color-mustard-500);
+    --accent-foreground: var(--color-white);
     --destructive: var(--color-red-700);
     --destructive-foreground: var(--color-white);
     --border: var(--color-stone-200);
@@ -210,8 +214,9 @@
     --secondary-foreground: var(--color-stone-100);
     --muted: var(--color-stone-800);
     --muted-foreground: var(--color-stone-400);
-    --accent: var(--color-mustard-900);
-    --accent-foreground: var(--color-mustard-100);
+    /* See light root: full mustard for highlight (not the subtle wash). */
+    --accent: var(--color-mustard-600);
+    --accent-foreground: var(--color-stone-100);
     --destructive: var(--color-red-600);
     --destructive-foreground: var(--color-stone-100);
     --border: var(--color-stone-700);
