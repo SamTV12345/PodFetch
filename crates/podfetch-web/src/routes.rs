@@ -8,6 +8,7 @@ use crate::audiobookshelf_api::controllers::hls::get_hls_router as get_audiobook
 use crate::audiobookshelf_api::controllers::items::get_items_router as get_audiobookshelf_items_router;
 use crate::audiobookshelf_api::controllers::libraries::get_libraries_router as get_audiobookshelf_libraries_router;
 use crate::audiobookshelf_api::controllers::me::get_me_router as get_audiobookshelf_me_router;
+use crate::audiobookshelf_api::controllers::playlists::get_playlists_router as get_audiobookshelf_playlists_router;
 use crate::audiobookshelf_api::controllers::podcasts::get_podcasts_router as get_audiobookshelf_podcasts_router;
 use crate::audiobookshelf_api::controllers::public_session::get_public_session_router as get_audiobookshelf_public_session_router;
 use crate::audiobookshelf_api::controllers::search::get_search_router as get_audiobookshelf_search_router;
@@ -115,6 +116,7 @@ pub fn global_routes(state: AppState, api_config: OpenApiRouter) -> OpenApiRoute
             .merge(get_audiobookshelf_authorize_router().with_state(state.clone()))
             .merge(get_audiobookshelf_search_router().with_state(state.clone()))
             .merge(get_audiobookshelf_podcasts_router().with_state(state.clone()))
+            .merge(get_audiobookshelf_playlists_router().with_state(state.clone()))
             .layer(abs_bearer);
 
         router = router.merge(abs_unauth).merge(abs_auth);

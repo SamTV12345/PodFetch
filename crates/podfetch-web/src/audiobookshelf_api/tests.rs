@@ -2286,6 +2286,235 @@ fn map_itunes_result_pins_audiobookshelf_shape() {
     assert_eq!(v["explicit"], json!(true));
 }
 
+// ── /api/playlists ──────────────────────────────────────────────────────────
+
+#[tokio::test]
+#[serial]
+async fn list_playlists_starts_empty() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    login_audiobookshelf(&mut server, &user).await;
+
+    let resp = server.test_server.get("/api/playlists").await;
+    assert_eq!(resp.status_code().as_u16(), 200);
+    let body: Value = resp.json();
+    assert!(body["playlists"].is_array());
+    assert_eq!(body["playlists"].as_array().unwrap().len(), 0);
+}
+
+#[tokio::test]
+#[serial]
+async fn create_playlist_returns_audiobookshelf_shape() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    let podcast = insert_test_podcast("Playlist Podcast", &state, user.id);
+    let episode = insert_test_episode(podcast.id, "Playlist Episode");
+    login_audiobookshelf(&mut server, &user).await;
+
+    let create = server
+        .test_server
+        .post("/api/playlists")
+        .json(&json!({
+            "name": "My Listening Queue",
+            "libraryId": "lib_default_podcasts",
+            "items": [
+                { "libraryItemId": format!("li_pod_{}", podcast.id),
+                  "episodeId": format!("ep_{}", episode.id) }
+            ]
+        }))
+        .await;
+    assert_eq!(create.status_code().as_u16(), 200);
+    let body: Value = create.json();
+    // Pin shape used by audiobookshelf-web's playlist UI + Vue client.
+    assert!(body["id"].as_str().is_some_and(|s| !s.is_empty()));
+    assert_eq!(body["name"], json!("My Listening Queue"));
+    assert_eq!(body["libraryId"], json!("lib_default_podcasts"));
+    assert_eq!(body["userId"], json!(user.id.to_string()));
+    let items = body["items"].as_array().expect("items array");
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0]["episodeId"], json!(format!("ep_{}", episode.id)));
+    assert_eq!(
+        items[0]["libraryItemId"],
+        json!(format!("li_pod_{}", podcast.id))
+    );
+    assert!(items[0]["episode"].is_object());
+    assert_eq!(items[0]["libraryItem"]["mediaType"], json!("podcast"));
+}
+
+#[tokio::test]
+#[serial]
+async fn create_playlist_rejects_missing_episode_id() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    login_audiobookshelf(&mut server, &user).await;
+    let resp = server
+        .test_server
+        .post("/api/playlists")
+        .json(&json!({
+            "name": "Only Books",
+            "items": [{ "libraryItemId": "li_book_xyz" }]
+        }))
+        .await;
+    assert!(
+        resp.status_code().is_client_error(),
+        "expected 4xx without episodeId, got {}",
+        resp.status_code()
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn batch_add_and_remove_round_trip() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    let podcast = insert_test_podcast("Batch Podcast", &state, user.id);
+    let ep1 = insert_test_episode(podcast.id, "Episode 1");
+    let ep2 = insert_test_episode(podcast.id, "Episode 2");
+    login_audiobookshelf(&mut server, &user).await;
+
+    let created = server
+        .test_server
+        .post("/api/playlists")
+        .json(&json!({ "name": "Empty", "items": [] }))
+        .await;
+    let playlist_id = created.json::<Value>()["id"]
+        .as_str()
+        .expect("playlist id")
+        .to_string();
+
+    let add = server
+        .test_server
+        .post(&format!("/api/playlists/{playlist_id}/batch/add"))
+        .json(&json!({
+            "items": [
+                { "libraryItemId": format!("li_pod_{}", podcast.id),
+                  "episodeId": format!("ep_{}", ep1.id) },
+                { "libraryItemId": format!("li_pod_{}", podcast.id),
+                  "episodeId": format!("ep_{}", ep2.id) }
+            ]
+        }))
+        .await;
+    assert_eq!(add.status_code().as_u16(), 200);
+    let body: Value = add.json();
+    assert_eq!(body["items"].as_array().map(|a| a.len()), Some(2));
+
+    let remove = server
+        .test_server
+        .post(&format!("/api/playlists/{playlist_id}/batch/remove"))
+        .json(&json!({
+            "items": [
+                { "libraryItemId": format!("li_pod_{}", podcast.id),
+                  "episodeId": format!("ep_{}", ep1.id) }
+            ]
+        }))
+        .await;
+    assert_eq!(remove.status_code().as_u16(), 200);
+    let after_remove: Value = remove.json();
+    assert_eq!(after_remove["items"].as_array().map(|a| a.len()), Some(1));
+    assert_eq!(
+        after_remove["items"][0]["episodeId"],
+        json!(format!("ep_{}", ep2.id))
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn delete_playlist_removes_it() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    login_audiobookshelf(&mut server, &user).await;
+
+    let created = server
+        .test_server
+        .post("/api/playlists")
+        .json(&json!({ "name": "Doomed", "items": [] }))
+        .await;
+    let playlist_id = created.json::<Value>()["id"]
+        .as_str()
+        .expect("playlist id")
+        .to_string();
+
+    let del = server
+        .test_server
+        .delete(&format!("/api/playlists/{playlist_id}"))
+        .await;
+    assert_eq!(del.status_code().as_u16(), 200);
+
+    let list = server.test_server.get("/api/playlists").await;
+    assert_eq!(
+        list.json::<Value>()["playlists"]
+            .as_array()
+            .map(|a| a.len()),
+        Some(0)
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn playlist_belongs_only_to_owner() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let alice = create_user_for_audiobookshelf(&state);
+    let bob = create_user_for_audiobookshelf(&state);
+    login_audiobookshelf(&mut server, &alice).await;
+    let created = server
+        .test_server
+        .post("/api/playlists")
+        .json(&json!({ "name": "Alice only", "items": [] }))
+        .await;
+    let playlist_id = created.json::<Value>()["id"]
+        .as_str()
+        .expect("playlist id")
+        .to_string();
+
+    login_audiobookshelf(&mut server, &bob).await;
+    let bob_view = server
+        .test_server
+        .get(&format!("/api/playlists/{playlist_id}"))
+        .await;
+    assert!(
+        bob_view.status_code().is_client_error(),
+        "bob must not see alice's playlist, got {}",
+        bob_view.status_code()
+    );
+    let bob_list = server.test_server.get("/api/playlists").await;
+    assert_eq!(
+        bob_list.json::<Value>()["playlists"]
+            .as_array()
+            .map(|a| a.len()),
+        Some(0)
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn library_playlists_endpoint_paginates() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    login_audiobookshelf(&mut server, &user).await;
+    for n in 0..3 {
+        server
+            .test_server
+            .post("/api/playlists")
+            .json(&json!({ "name": format!("PL {n}"), "items": [] }))
+            .await;
+    }
+    let resp = server
+        .test_server
+        .get("/api/libraries/lib_default_podcasts/playlists")
+        .await;
+    assert_eq!(resp.status_code().as_u16(), 200);
+    let body: Value = resp.json();
+    assert_eq!(body["total"], json!(3));
+    assert_eq!(body["results"].as_array().map(|a| a.len()), Some(3));
+}
+
 fn write_temp_audio_file(bytes: &[u8], filename: &str) -> String {
     let dir = std::env::temp_dir().join("podfetch-abs-tests");
     std::fs::create_dir_all(&dir).expect("create temp dir");

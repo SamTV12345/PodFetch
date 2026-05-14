@@ -3,6 +3,7 @@ pub mod hls;
 pub mod items;
 pub mod libraries;
 pub mod me;
+pub mod playlists;
 pub mod podcasts;
 pub mod public_session;
 pub mod scan;
