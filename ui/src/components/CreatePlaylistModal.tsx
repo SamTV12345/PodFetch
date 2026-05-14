@@ -1,9 +1,13 @@
 import { FC, useEffect, useRef, useState } from "react"
-import * as Dialog from '@radix-ui/react-dialog'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
 import { useTranslation } from "react-i18next"
 import { enqueueSnackbar } from "notistack"
-import { Heading2 } from "./Heading2"
-import "material-symbols/outlined.css"
 import usePlaylist from "../store/PlaylistSlice"
 import { PlaylistData } from "./PlaylistData"
 import { PlaylistSearchEpisode } from "./PlaylistSearchEpisode"
@@ -152,120 +156,107 @@ export const CreatePlaylistModal: FC<CreatePlaylistModalProps> = ({ open, onOpen
     }
 
     return (
-        <Dialog.Root open={open} onOpenChange={onOpenChange}>
-            <Dialog.Portal>
-                <Dialog.Overlay className="fixed inset-0 bg-[rgba(0,0,0,0.5)] backdrop-blur-sm overflow-y-auto p-3 md:p-6 z-[70]" />
-                <Dialog.Content
-                    className="fixed inset-0 z-[71] flex justify-center items-start md:items-center p-3 md:p-6"
-                    onOpenAutoFocus={(e) => e.preventDefault()}
-                    onInteractOutside={() => closeModal()}
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent
+                className="max-w-5xl w-full md:w-[70%] max-h-[92vh] overflow-hidden sm:max-w-5xl"
+                onInteractOutside={() => closeModal()}
+            >
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault()
+                        if (stage < 2) {
+                            return
+                        }
+                        void handlePlaylistCreateOrUpdate()
+                    }}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter" && stage < 2) {
+                            e.preventDefault()
+                        }
+                    }}
+                    className="flex flex-col"
                 >
-                    <div className="relative mx-auto ui-surface ui-text max-w-5xl w-full md:w-[70%] p-6 md:p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.2)] max-h-[92vh] overflow-hidden">
-                        <Dialog.Close className="absolute top-4 right-4 bg-transparent">
-                            <span className="material-symbols-outlined ui-modal-close hover:ui-modal-close-hover">close</span>
-                            <span className="sr-only">{t('closeModal')}</span>
-                        </Dialog.Close>
+                    <DialogHeader>
+                        <DialogTitle>{t('add-playlist')}</DialogTitle>
+                        <DialogDescription className="sr-only">
+                            {t('add-playlist')}
+                        </DialogDescription>
+                        <div className="text-xs text-muted-foreground">{stage + 1} / 3</div>
+                    </DialogHeader>
 
-                        <form
-                            onSubmit={(e) => {
-                                e.preventDefault()
-                                if (stage < 2) {
-                                    return
-                                }
-                                void handlePlaylistCreateOrUpdate()
-                            }}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter" && stage < 2) {
-                                    e.preventDefault()
-                                }
-                            }}
-                            className="flex flex-col"
-                        >
-                            <div className="mt-5 mb-5">
-                                <Dialog.Title asChild>
-                                    <Heading2 className="mb-2 ui-text">{t('add-playlist')}</Heading2>
-                                </Dialog.Title>
-                                <Dialog.Description className="sr-only">
-                                    {t('add-playlist')}
-                                </Dialog.Description>
-                                <div className="text-xs ui-text-muted">{stage + 1} / 3</div>
-                            </div>
-
-                            <div className="overflow-y-auto pr-1 max-h-[62vh] md:max-h-[58vh]">
-                                {stage === 0 && (
-                                    <Controller
-                                        name="name"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <PlaylistData
-                                                name={field.value ?? ""}
-                                                onNameChange={(name) => {
-                                                    field.onChange(name)
-                                                    if (name.trim().length > 0) {
-                                                        clearErrors("name")
-                                                    }
-                                                }}
-                                            />
-                                        )}
+                    <div className="overflow-y-auto pr-1 max-h-[62vh] md:max-h-[58vh] mt-4">
+                        {stage === 0 && (
+                            <Controller
+                                name="name"
+                                control={control}
+                                render={({ field }) => (
+                                    <PlaylistData
+                                        name={field.value ?? ""}
+                                        onNameChange={(name) => {
+                                            field.onChange(name)
+                                            if (name.trim().length > 0) {
+                                                clearErrors("name")
+                                            }
+                                        }}
                                     />
                                 )}
-                                {stage === 1 && (
-                                    <Controller
-                                        name="items"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <PlaylistSearchEpisode
-                                                items={field.value ?? []}
-                                                setItems={(items) => {
-                                                    field.onChange(items)
-                                                    if (items.length > 0) {
-                                                        clearErrors("items")
-                                                    }
-                                                }}
-                                            />
-                                        )}
+                            />
+                        )}
+                        {stage === 1 && (
+                            <Controller
+                                name="items"
+                                control={control}
+                                render={({ field }) => (
+                                    <PlaylistSearchEpisode
+                                        items={field.value ?? []}
+                                        setItems={(items) => {
+                                            field.onChange(items)
+                                            if (items.length > 0) {
+                                                clearErrors("items")
+                                            }
+                                        }}
                                     />
                                 )}
-                                {stage === 2 && <PlaylistSubmitViewer playlistName={watchedName?.trim() ?? ""} episodeCount={watchedItems?.length ?? 0} />}
-                                {(errors.name?.message || errors.items?.message) && (
-                                    <div className="mt-3 text-xs ui-text-danger">{errors.name?.message || errors.items?.message}</div>
-                                )}
-                            </div>
-
-                            <div className="mt-4 pt-3 flex items-center justify-between border-t ui-border">
-                                {stage === 0 ? (
-                                    <CustomButtonSecondary type="button" onClick={closeModal}>
-                                        {t('cancel')}
-                                    </CustomButtonSecondary>
-                                ) : (
-                                    <CustomButtonSecondary type="button" onClick={goBack}>
-                                        <span className="inline-flex items-center gap-1">
-                                            <span className="material-symbols-outlined !text-base leading-none">arrow_back</span>
-                                            <span>{t('back')}</span>
-                                        </span>
-                                    </CustomButtonSecondary>
-                                )}
-                                {stage < 2 ? (
-                                    <CustomButtonPrimary
-                                        type="button"
-                                        onClick={goNext}
-                                        disabled={stage === 0 && !canMoveToStageTwo}
-                                    >
-                                        <span className="inline-flex items-center gap-1">
-                                            <span>{t('next')}</span>
-                                            <span className="material-symbols-outlined !text-base leading-none">arrow_forward</span>
-                                        </span>
-                                    </CustomButtonPrimary>
-                                ) : (
-                                    <CustomButtonPrimary type="submit" loading={isSubmitting} disabled={!canSubmit}>
-                                        {watchedId === "-1" ? t('create-playlist') : t('update-playlist')}
-                                    </CustomButtonPrimary>
-                                )}
-                            </div>
-                        </form>
+                            />
+                        )}
+                        {stage === 2 && <PlaylistSubmitViewer playlistName={watchedName?.trim() ?? ""} episodeCount={watchedItems?.length ?? 0} />}
+                        {(errors.name?.message || errors.items?.message) && (
+                            <div className="mt-3 text-xs text-destructive">{errors.name?.message || errors.items?.message}</div>
+                        )}
                     </div>
-                </Dialog.Content>
-            </Dialog.Portal>
-        </Dialog.Root>
+
+                    <div className="mt-4 pt-3 flex items-center justify-between border-t border-border">
+                        {stage === 0 ? (
+                            <CustomButtonSecondary type="button" onClick={closeModal}>
+                                {t('cancel')}
+                            </CustomButtonSecondary>
+                        ) : (
+                            <CustomButtonSecondary type="button" onClick={goBack}>
+                                <span className="inline-flex items-center gap-1">
+                                    <span className="material-symbols-outlined !text-base leading-none">arrow_back</span>
+                                    <span>{t('back')}</span>
+                                </span>
+                            </CustomButtonSecondary>
+                        )}
+                        {stage < 2 ? (
+                            <CustomButtonPrimary
+                                type="button"
+                                onClick={goNext}
+                                disabled={stage === 0 && !canMoveToStageTwo}
+                            >
+                                <span className="inline-flex items-center gap-1">
+                                    <span>{t('next')}</span>
+                                    <span className="material-symbols-outlined !text-base leading-none">arrow_forward</span>
+                                </span>
+                            </CustomButtonPrimary>
+                        ) : (
+                            <CustomButtonPrimary type="submit" loading={isSubmitting} disabled={!canSubmit}>
+                                {watchedId === "-1" ? t('create-playlist') : t('update-playlist')}
+                            </CustomButtonPrimary>
+                        )}
+                    </div>
+                </form>
+            </DialogContent>
+        </Dialog>
     )
 }

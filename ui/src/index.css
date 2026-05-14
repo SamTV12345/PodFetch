@@ -24,6 +24,42 @@
 }
 
 /*
+  shadcn design tokens. Mapped onto the project's existing mustard/stone
+  palette so generated shadcn components inherit the PodFetch look out
+  of the box (mustard accent on stone background).
+*/
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/*
   The default border color has changed to `currentColor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still
   looks the same as it did with Tailwind CSS v3.
@@ -44,6 +80,33 @@
 :root {
     color-scheme: light;
     --date-picker-indicator-filter: none;
+
+    /* shadcn tokens (light) - mapped onto existing palette */
+    --radius: 0.5rem;
+    --background: var(--color-white);
+    --foreground: var(--color-stone-900);
+    --card: var(--color-white);
+    --card-foreground: var(--color-stone-900);
+    --popover: var(--color-white);
+    --popover-foreground: var(--color-stone-900);
+    --primary: var(--color-mustard-600);
+    --primary-foreground: var(--color-white);
+    --secondary: var(--color-stone-100);
+    --secondary-foreground: var(--color-stone-900);
+    --muted: var(--color-stone-100);
+    --muted-foreground: var(--color-stone-500);
+    --accent: var(--color-mustard-100);
+    --accent-foreground: var(--color-mustard-900);
+    --destructive: var(--color-red-700);
+    --destructive-foreground: var(--color-white);
+    --border: var(--color-stone-200);
+    --input: var(--color-stone-200);
+    --ring: var(--color-mustard-500);
+    --chart-1: var(--color-mustard-600);
+    --chart-2: var(--color-sky-600);
+    --chart-3: var(--color-emerald-600);
+    --chart-4: var(--color-orange-600);
+    --chart-5: var(--color-indigo-600);
 
     --bg-color: var(--color-white);
     --fg-color: var(--color-stone-900);
@@ -101,6 +164,32 @@
 :root.dark {
     color-scheme: dark;
     --date-picker-indicator-filter: invert(1) brightness(0.5);
+
+    /* shadcn tokens (dark) */
+    --background: var(--color-stone-900);
+    --foreground: var(--color-stone-100);
+    --card: var(--color-stone-900);
+    --card-foreground: var(--color-stone-100);
+    --popover: var(--color-stone-800);
+    --popover-foreground: var(--color-stone-100);
+    --primary: var(--color-mustard-500);
+    --primary-foreground: var(--color-stone-900);
+    --secondary: var(--color-stone-800);
+    --secondary-foreground: var(--color-stone-100);
+    --muted: var(--color-stone-800);
+    --muted-foreground: var(--color-stone-400);
+    --accent: var(--color-mustard-900);
+    --accent-foreground: var(--color-mustard-100);
+    --destructive: var(--color-red-600);
+    --destructive-foreground: var(--color-stone-100);
+    --border: var(--color-stone-700);
+    --input: var(--color-stone-700);
+    --ring: var(--color-mustard-400);
+    --chart-1: var(--color-mustard-500);
+    --chart-2: var(--color-sky-500);
+    --chart-3: var(--color-emerald-500);
+    --chart-4: var(--color-orange-500);
+    --chart-5: var(--color-indigo-500);
 
     --bg-color: var(--color-stone-900);
     --fg-color: var(--color-stone-300);

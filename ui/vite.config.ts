@@ -2,6 +2,10 @@ import {defineConfig, PluginOption} from 'vite'
 import react from '@vitejs/plugin-react'
 import {Browser} from "happy-dom";
 import type {IncomingMessage} from "node:http";
+import path from "node:path";
+import {fileURLToPath} from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const ReactCompilerConfig = {
 
@@ -88,6 +92,11 @@ export default defineConfig(({command}) => ({
         : undefined,
     }),
   ],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
   build: {
     // Default 500 kB is conservative for an SPA with ~30 routes. Our
     // entry chunk is ~528 kB / 165 kB gzipped which is healthy.
