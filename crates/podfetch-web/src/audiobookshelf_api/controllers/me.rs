@@ -5,7 +5,6 @@ use crate::audiobookshelf_api::dto::user::AbsUserDto;
 use crate::audiobookshelf_api::socket_io::broadcaster;
 use axum::Json;
 use axum::extract::{Path, Query, State};
-use axum::http::StatusCode;
 use chrono::Utc;
 use common_infrastructure::error::CustomError;
 use podfetch_domain::audiobookshelf::library_item_id::LibraryItemId;
@@ -116,9 +115,9 @@ pub async fn patch_progress_item(
     AuthenticatedUser(user): AuthenticatedUser,
     Path(library_item_id): Path<String>,
     Json(payload): Json<ProgressUpdatePayload>,
-) -> Result<StatusCode, CustomError> {
+) -> Result<Json<Value>, CustomError> {
     upsert_progress_from_payload(&state, &user, &library_item_id, None, payload)?;
-    Ok(StatusCode::OK)
+    Ok(Json(json!({ "success": true })))
 }
 
 #[utoipa::path(
@@ -137,7 +136,7 @@ pub async fn patch_progress_item_episode(
     AuthenticatedUser(user): AuthenticatedUser,
     Path((library_item_id, episode_id)): Path<(String, String)>,
     Json(payload): Json<ProgressUpdatePayload>,
-) -> Result<StatusCode, CustomError> {
+) -> Result<Json<Value>, CustomError> {
     upsert_progress_from_payload(
         &state,
         &user,
@@ -145,7 +144,7 @@ pub async fn patch_progress_item_episode(
         Some(episode_id),
         payload,
     )?;
-    Ok(StatusCode::OK)
+    Ok(Json(json!({ "success": true })))
 }
 
 #[utoipa::path(
@@ -162,7 +161,7 @@ pub async fn patch_progress_batch(
     State(state): State<AppState>,
     AuthenticatedUser(user): AuthenticatedUser,
     Json(payloads): Json<Vec<Value>>,
-) -> Result<StatusCode, CustomError> {
+) -> Result<Json<Value>, CustomError> {
     if payloads.is_empty() {
         return Err(common_infrastructure::error::CustomErrorInner::Conflict(
             "Missing request payload".to_string(),
@@ -194,7 +193,7 @@ pub async fn patch_progress_batch(
         };
         let _ = upsert_progress_from_payload(&state, &user, item_id, episode_id, payload);
     }
-    Ok(StatusCode::OK)
+    Ok(Json(json!({ "success": true })))
 }
 
 fn upsert_progress_from_payload(

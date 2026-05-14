@@ -13,7 +13,6 @@ use crate::services::podcast::service::PodcastService;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use axum::Json;
 use axum::extract::{Path, State};
-use axum::http::StatusCode;
 use chrono::Utc;
 use common_infrastructure::error::ErrorSeverity::Debug;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
@@ -298,7 +297,7 @@ pub async fn sync_session(
     AuthenticatedUser(user): AuthenticatedUser,
     Path(id): Path<String>,
     Json(body): Json<SyncRequestBody>,
-) -> Result<StatusCode, CustomError> {
+) -> Result<Json<serde_json::Value>, CustomError> {
     let mut session = state
         .audiobookshelf_playback_session_service
         .find_by_id(&id)?
@@ -328,7 +327,10 @@ pub async fn sync_session(
             .as_deref()
             .unwrap_or("audiobookshelf-mobile"),
     );
-    Ok(StatusCode::OK)
+    // Mobile-app ApiHandler.makeRequest expects either "OK" or a JSON body —
+    // an empty 200 trips JSONException → "Invalid response body" and the
+    // syncer treats it as a failed sync.
+    Ok(Json(serde_json::json!({ "success": true })))
 }
 
 #[utoipa::path(
@@ -344,7 +346,7 @@ pub async fn close_session(
     AuthenticatedUser(user): AuthenticatedUser,
     Path(id): Path<String>,
     body: Option<Json<SyncRequestBody>>,
-) -> Result<StatusCode, CustomError> {
+) -> Result<Json<serde_json::Value>, CustomError> {
     let mut session = state
         .audiobookshelf_playback_session_service
         .find_by_id(&id)?
@@ -401,7 +403,7 @@ pub async fn close_session(
     let _ = state
         .audiobookshelf_playback_session_service
         .delete(&session.id);
-    Ok(StatusCode::OK)
+    Ok(Json(serde_json::json!({ "success": true })))
 }
 
 async fn start_book_session(

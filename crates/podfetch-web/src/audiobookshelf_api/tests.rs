@@ -366,6 +366,11 @@ async fn play_sync_close_updates_media_progress() {
         }))
         .await;
     assert_eq!(sync_resp.status_code().as_u16(), 200);
+    // Body must be a JSON object: audiobookshelf-app's ApiHandler.makeRequest
+    // parses the body as JSON and treats an empty body as "Invalid response
+    // body", which turns every sync into a failed sync on the client.
+    let sync_body: Value = sync_resp.json();
+    assert!(sync_body.is_object(), "sync body must be a JSON object, got {sync_body}");
 
     // Close session
     let close_resp = server
@@ -378,6 +383,8 @@ async fn play_sync_close_updates_media_progress() {
         }))
         .await;
     assert_eq!(close_resp.status_code().as_u16(), 200);
+    let close_body: Value = close_resp.json();
+    assert!(close_body.is_object(), "close body must be a JSON object, got {close_body}");
 
     // Verify media_progress row was written
     let lib_item_id = format!("li_pod_{}", podcast.id);
