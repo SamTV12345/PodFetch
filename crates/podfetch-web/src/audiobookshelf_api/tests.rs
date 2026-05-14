@@ -693,6 +693,96 @@ async fn login_response_shape_matches_upstream_payload() {
 
 #[tokio::test]
 #[serial]
+async fn playback_session_shape_matches_upstream() {
+    // Pins PlaybackSession.toJSONForClient() so the mobile apps can read
+    // the session payload off /api/items/.../play without crashing.
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    let podcast = insert_test_podcast("Shape session pod", &state, user.id);
+    let episode = insert_test_episode(podcast.id, "Shape ep");
+    login_audiobookshelf(&mut server, &user).await;
+    let resp = server
+        .test_server
+        .post(&format!(
+            "/api/items/li_pod_{}/play/ep_{}",
+            podcast.id, episode.id
+        ))
+        .json(&json!({}))
+        .await;
+    assert_eq!(resp.status_code().as_u16(), 200);
+    let body: Value = resp.json();
+    for field in [
+        "id",
+        "userId",
+        "libraryId",
+        "libraryItemId",
+        "bookId",
+        "episodeId",
+        "mediaType",
+        "mediaMetadata",
+        "chapters",
+        "displayTitle",
+        "displayAuthor",
+        "coverPath",
+        "duration",
+        "playMethod",
+        "mediaPlayer",
+        "deviceInfo",
+        "serverVersion",
+        "date",
+        "dayOfWeek",
+        "timeListening",
+        "startTime",
+        "currentTime",
+        "startedAt",
+        "updatedAt",
+        "audioTracks",
+        "libraryItem",
+    ] {
+        assert!(
+            body.get(field).is_some(),
+            "playback-session payload missing field {field}"
+        );
+    }
+    // Podcast sessions have a null bookId, episodeId set
+    assert_eq!(body["bookId"], Value::Null);
+    assert!(body["episodeId"].is_string());
+    // date matches YYYY-MM-DD
+    let date = body["date"].as_str().unwrap();
+    assert_eq!(date.len(), 10, "expected YYYY-MM-DD, got {date}");
+}
+
+#[tokio::test]
+#[serial]
+async fn book_playback_session_carries_book_id() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    let lib = state
+        .audiobookshelf_library_service
+        .list()
+        .unwrap()
+        .into_iter()
+        .find(|l| matches!(l.media_type, podfetch_domain::audiobookshelf::library::MediaType::Book))
+        .unwrap();
+    let book = insert_test_book(&lib.id, "Session book", "Author");
+    insert_test_audio_file_row(&book.id, 0, "/tmp/x.mp3", 60.0);
+    login_audiobookshelf(&mut server, &user).await;
+    let resp = server
+        .test_server
+        .post(&format!("/api/items/{}/play", book.id))
+        .json(&json!({}))
+        .await;
+    let body: Value = resp.json();
+    // For books, bookId equals the library item id and episodeId is null.
+    assert_eq!(body["bookId"], json!(book.id));
+    assert_eq!(body["episodeId"], Value::Null);
+    assert_eq!(body["mediaType"], json!("book"));
+}
+
+#[tokio::test]
+#[serial]
 async fn status_carries_app_audiobookshelf_marker() {
     // Mobile apps probe /status and verify `app == "audiobookshelf"` before
     // committing to the server. Omitting it makes them refuse the connection.
