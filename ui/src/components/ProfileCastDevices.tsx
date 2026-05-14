@@ -93,11 +93,15 @@ export const ProfileCastDevices: FC = () => {
 
             {isAdmin && (
                 <div className="flex flex-col gap-3">
-                    <div className="flex items-center gap-2">
-                        <CustomButtonPrimary loading={discoverMutation.isPending} onClick={runDiscover}>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <CustomButtonPrimary
+                            loading={discoverMutation.isPending}
+                            onClick={runDiscover}
+                            className="shrink-0 whitespace-nowrap"
+                        >
                             {t('cast-discover')}
                         </CustomButtonPrimary>
-                        <span className="text-xs ui-text-muted">{t('cast-discover-informational')}</span>
+                        <span className="text-xs ui-text-muted flex-1 min-w-0">{t('cast-discover-informational')}</span>
                     </div>
                     {discovered !== null && (
                         <div className="ui-surface rounded-md p-3">
