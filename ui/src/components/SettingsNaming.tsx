@@ -1,5 +1,6 @@
 import { FC, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Info } from 'lucide-react'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
 import { enqueueSnackbar } from 'notistack'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
@@ -173,12 +174,13 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                         <label className="ui-text flex gap-1"
                                htmlFor="episode-format">{t('standard-episode-format')}
                             <button type="button">
-                                    <span
-                                        className="material-symbols-outlined pointer active:scale-95"
+                                    <Info
+                                        size={16}
+                                        className="cursor-pointer active:scale-95"
                                         onClick={() => {
                                             setInfoEpisodeModalOpen(true)
                                         }}
-                                    >info</span>
+                                    />
                             </button>
                         </label>
 
@@ -199,10 +201,11 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                         <label className="ui-text flex gap-1"
                                htmlFor="podcast-format">{t('standard-podcast-format')}
                             <button type="button">
-                                    <span
-                                        className="material-symbols-outlined pointer active:scale-95"
+                                    <Info
+                                        size={16}
+                                        className="cursor-pointer active:scale-95"
                                         onClick={() => setInfoPodcastModalOpen(true)}
-                                    >info</span>
+                                    />
                             </button>
                         </label>
 

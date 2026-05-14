@@ -1,6 +1,6 @@
 import {FC, useMemo, useRef, useState} from 'react'
 import {Link} from 'react-router-dom'
-import 'material-symbols/outlined.css'
+import {Heart, Plus, Tag} from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {CustomInput} from "./CustomInput";
 import {CustomCheckbox} from "./CustomCheckbox";
@@ -16,7 +16,7 @@ type PodcastCardProps = {
 const MAX_VISIBLE_TAGS = 3
 
 export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
-    const likeButton = useRef<HTMLSpanElement>(null)
+    const likeButton = useRef<SVGSVGElement>(null)
     const tags = $api.useQuery('get', '/api/v1/tags')
     const queryClient = useQueryClient()
     const toggleFavoriteMutation = $api.useMutation('put', '/api/v1/podcasts/favored')
@@ -142,15 +142,19 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                         className={`rounded-xl transition-shadow group-hover:shadow-[0_4px_32px_rgba(0,0,0,var(--shadow-opacity))] ${!podcast.active ? 'opacity-20' : ''}`}
                         src={podcast.image_url} alt=""/>
 
-                    <span ref={likeButton}
-                          className={`material-symbols-outlined filled absolute top-2 right-2 h-6 w-6 filled ${podcast.favorites ? 'text-rose-700 hover:text-rose-600' : 'ui-text-muted hover:ui-text-hover'}`}
-                          onClick={(e) => {
-                              // Prevent icon click from triggering link to podcast detail
-                              e.preventDefault()
+                    <Heart
+                        ref={likeButton}
+                        size={20}
+                        fill="currentColor"
+                        className={`absolute top-2 right-2 cursor-pointer ${podcast.favorites ? 'text-rose-700 hover:text-rose-600' : 'ui-text-muted hover:ui-text-hover'}`}
+                        onClick={(e) => {
+                            // Prevent icon click from triggering link to podcast detail
+                            e.preventDefault()
 
-                              likeButton.current?.classList.toggle('fill-amber-400')
-                              likePodcast()
-                          }}>favorite</span>
+                            likeButton.current?.classList.toggle('fill-amber-400')
+                            likePodcast()
+                        }}
+                    />
                 </div>
 
                 <div>
@@ -184,7 +188,7 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                     <PopoverTrigger
                         render={
                             <button className="inline-flex shrink-0 items-center gap-1 rounded-md border ui-border px-2 py-1 text-xs ui-text hover:ui-input-surface hover:ui-text-hover" type="button">
-                                <span className="material-symbols-outlined text-sm leading-none">sell</span>
+                                <Tag size={14} />
                                 {t('tag_other')}
                             </button>
                         }
@@ -235,7 +239,7 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                                 onClick={createAndAssignTag}
                                 disabled={createTagMutation.isPending || !newTag.trim() || tagNameAlreadyExists}
                             >
-                                <span className="material-symbols-outlined text-sm ui-text-inverse">add</span>
+                                <Plus size={16} className="ui-text-inverse" />
                             </button>
                         </div>
                     </PopoverContent>

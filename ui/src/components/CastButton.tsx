@@ -1,6 +1,6 @@
 import { FC, useMemo } from 'react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import 'material-symbols/outlined.css'
+import { Cast } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useSnackbar } from 'notistack'
 import useAudioPlayer from '../store/AudioPlayerSlice'
@@ -121,11 +121,11 @@ export const CastButton: FC = () => {
                         aria-label={triggerLabel}
                         title={triggerLabel}
                         className={cn(
-                            'material-symbols-outlined cursor-pointer text-2xl ui-text hover:ui-text-hover',
+                            'cursor-pointer ui-text hover:ui-text-hover',
                             activeSession ? 'ui-text-accent' : '',
                         )}
                     >
-                        {activeSession ? 'cast_connected' : 'cast'}
+                        <Cast size={22} fill={activeSession ? 'currentColor' : 'transparent'} />
                     </button>
                 }
             />
@@ -159,7 +159,7 @@ export const CastButton: FC = () => {
                                     className="flex items-center gap-2 w-full text-left px-2 py-2 rounded-md text-sm ui-text hover:ui-text-hover hover:bg-(--surface-hover)"
                                     onClick={() => handlePickDevice(device)}
                                 >
-                                    <span className="material-symbols-outlined">cast</span>
+                                    <Cast size={18} />
                                     <span className="grow truncate">{device.name}</span>
                                     <span className="text-xs ui-text-muted">
                                         {device.kind === 'chromecast_shared' ? t('cast-kind-shared') : t('cast-kind-personal')}

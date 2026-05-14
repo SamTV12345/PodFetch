@@ -1,5 +1,6 @@
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
+import { Mic } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { enqueueSnackbar } from 'notistack'
 import { formatTime } from '../utils/Utilities'
@@ -52,7 +53,7 @@ export const AcceptInvite = () => {
     return (
         <div className="flex flex-col items-center xs:justify-center ui-surface h-full w-full">
             <span className="flex items-center gap-2 xs:mb-10 px-4 py-3 ui-text">
-                <span className="material-symbols-outlined ui-text-accent">auto_detect_voice</span>
+                <Mic className="ui-text-accent" size={22} />
                 <span className="font-bold font-['Inter_variable']">Podfetch</span>
             </span>
 

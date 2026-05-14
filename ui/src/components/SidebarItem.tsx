@@ -1,17 +1,16 @@
-import { FC } from 'react'
+import { FC, ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import useCommon from '../store/CommonSlice'
-import 'material-symbols/outlined.css'
 
 type SidebarItemProps = {
     path: string,
     translationKey: string,
-    iconName: string,
+    icon: ReactNode,
     spaceBefore?: boolean
 }
 
-export const SidebarItem: FC<SidebarItemProps> = ({ path, translationKey, iconName, spaceBefore }) => {
+export const SidebarItem: FC<SidebarItemProps> = ({ path, translationKey, icon, spaceBefore }) => {
     const setSidebarCollapsed = useCommon(state => state.setSidebarCollapsed)
     const { t } = useTranslation()
 
@@ -24,7 +23,7 @@ export const SidebarItem: FC<SidebarItemProps> = ({ path, translationKey, iconNa
     return (
         <li onClick={() => minimizeOnMobile()} className={spaceBefore ? "space-before" : ""}>
             <NavLink className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm transition-colors [&.active]:ui-text-accent hover:bg-[rgba(192,124,3,0.1)] [&.active]:bg-[rgba(192,124,3,0.1)]" to={path}>
-                <span className="material-symbols-outlined">{iconName}</span>
+                {icon}
                 <span>{t(translationKey)}</span>
             </NavLink>
         </li>

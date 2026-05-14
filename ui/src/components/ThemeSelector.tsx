@@ -1,14 +1,16 @@
-import { FC, useEffect, useState } from 'react'
+import { FC, ReactNode, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Toggle } from '@base-ui/react/toggle'
 import { ToggleGroup } from '@base-ui/react/toggle-group'
-import 'material-symbols/outlined.css'
+import { Monitor, Moon, Sun } from 'lucide-react'
 import { applyThemeToDOM, getStoredThemePreference, onSystemThemeChange, setThemePreference, ThemePreference } from '../utils/theme'
 
-const THEMES: ReadonlyArray<{ icon: string, translationKey: string, value: ThemePreference }> = [
-    { icon: 'desktop_windows', translationKey: 'system', value: 'system' },
-    { icon: 'light_mode', translationKey: 'light', value: 'light' },
-    { icon: 'dark_mode', translationKey: 'dark', value: 'dark' },
+const ICON_SIZE = 18
+
+const THEMES: ReadonlyArray<{ icon: ReactNode, translationKey: string, value: ThemePreference }> = [
+    { icon: <Monitor size={ICON_SIZE} />, translationKey: 'system', value: 'system' },
+    { icon: <Sun size={ICON_SIZE} />, translationKey: 'light', value: 'light' },
+    { icon: <Moon size={ICON_SIZE} />, translationKey: 'dark', value: 'dark' },
 ]
 
 /**
@@ -36,9 +38,6 @@ export const ThemeSelector: FC = () => {
 
     return (
         <ToggleGroup
-            // Base UI ToggleGroup is multi-select by default and exchanges
-            // an array of selected values. `multiple={false}` constrains to
-            // a single selection; value/onValueChange wrap in arrays.
             multiple={false}
             value={[theme]}
             onValueChange={(values) => {
@@ -57,7 +56,7 @@ export const ThemeSelector: FC = () => {
                     aria-label={t(entry.translationKey)}
                     className="grid place-items-center w-9 h-9 rounded-full ui-text hover:ui-text-hover data-[pressed]:ui-surface-muted data-[pressed]:ui-text outline-none transition-colors"
                 >
-                    <span className="material-symbols-outlined leading-none text-xl">{entry.icon}</span>
+                    {entry.icon}
                 </Toggle>
             ))}
         </ToggleGroup>

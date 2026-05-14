@@ -1,4 +1,5 @@
 import {FC, useMemo} from 'react'
+import {CirclePlay} from 'lucide-react'
 import {handlePlayofEpisode} from "../utils/PlayHandler";
 import {components} from "../../schema";
 import useCommon from "../store/CommonSlice";
@@ -40,7 +41,7 @@ export const EpisodeCard: FC<EpisodeCardProps> = ({ podcast, podcastEpisode,  po
                         play icon must always be white. `ui-text-inverse` maps
                         to --bg-color which goes stone-900 in dark mode and
                         disappeared on the scrim. */}
-                    <span className="material-symbols-outlined text-7xl! text-white group-active:scale-90" key={podcastEpisode.episode_id+"icon"}>play_circle</span>
+                    <CirclePlay size={72} fill="currentColor" className="text-white group-active:scale-90" key={podcastEpisode.episode_id+"icon"} />
                 </div>
 
                 {/* Progress bar */

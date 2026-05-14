@@ -2,7 +2,7 @@ import { FC, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import 'material-symbols/outlined.css'
+import { Bell, BellOff, CheckCircle2, CircleAlert, RotateCw, X } from 'lucide-react'
 import { useQueryClient } from "@tanstack/react-query";
 import { components } from "../../schema";
 import { cn } from "../lib/utils";
@@ -18,9 +18,9 @@ const maxBadgeCount = 99
 const notificationIcon = (type: string) => {
     switch (type) {
         case "Download":
-            return 'download_done'
+            return <CheckCircle2 size={18} className="ui-text-accent" />
         default:
-            return 'notifications'
+            return <Bell size={18} className="ui-text-accent" />
     }
 }
 
@@ -140,7 +140,7 @@ export const Notifications: FC = () => {
                         aria-label={t('notifications-open')}
                         title={t('notifications-open') as string}
                     >
-                        <span className={cn("material-symbols-outlined leading-none", unreadCount > 0 && "filled")}>notifications</span>
+                        <Bell size={20} className={cn(unreadCount > 0 && "fill-current")} />
 
                         {bellPulse && unreadCount > 0 && (
                             <span className="pointer-events-none absolute inset-0 rounded-full border-2 ui-border-accent animate-ping" />
@@ -177,7 +177,7 @@ export const Notifications: FC = () => {
                                     aria-label={t('notifications-refresh')}
                                     title={t('notifications-refresh') as string}
                                 >
-                                    <span className={cn("material-symbols-outlined leading-none text-lg", notificationsQuery.isFetching && "animate-spin")}>refresh</span>
+                                    <RotateCw size={18} className={cn(notificationsQuery.isFetching && "animate-spin")} />
                                 </button>
 
                                 <button
@@ -200,14 +200,14 @@ export const Notifications: FC = () => {
 
                         {notificationsQuery.isError && (
                             <div className="px-4 py-8 text-center">
-                                <span className="material-symbols-outlined text-2xl ui-text-danger mb-2">error</span>
+                                <CircleAlert size={24} className="ui-text-danger mb-2 inline-block" />
                                 <p className="text-sm ui-text">{t('error-occured')}</p>
                             </div>
                         )}
 
                         {!notificationsQuery.isLoading && !notificationsQuery.isError && orderedNotifications.length === 0 && (
                             <div className="px-4 py-10 text-center">
-                                <span className="material-symbols-outlined text-3xl ui-icon-muted mb-1">notifications_off</span>
+                                <BellOff size={32} className="ui-icon-muted mb-1 inline-block" />
                                 <p className="text-sm ui-text">{t('no-notifications')}</p>
                                 <p className="text-xs ui-text-muted mt-1">{t('notifications-empty-description')}</p>
                             </div>
@@ -224,7 +224,7 @@ export const Notifications: FC = () => {
                                         exit={{ opacity: 0, y: -4, height: 0, paddingTop: 0, paddingBottom: 0 }}
                                         transition={{ duration: 0.14, ease: 'easeOut' }}
                                     >
-                                        <span className="material-symbols-outlined text-[1.1rem] leading-none mt-0.5 ui-text-accent">
+                                        <span className="mt-0.5">
                                             {notificationIcon(notification.typeOfMessage)}
                                         </span>
 
@@ -245,7 +245,7 @@ export const Notifications: FC = () => {
                                             aria-label={t('notifications-dismiss')}
                                             title={t('notifications-dismiss') as string}
                                         >
-                                            <span className="material-symbols-outlined text-lg leading-none">close</span>
+                                            <X size={18} />
                                         </button>
                                     </motion.div>
                                 ))}

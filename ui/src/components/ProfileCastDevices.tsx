@@ -1,4 +1,5 @@
 import { FC, useState } from 'react'
+import { Cast } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useSnackbar } from 'notistack'
 import { $api } from '../utils/http'
@@ -69,7 +70,7 @@ export const ProfileCastDevices: FC = () => {
                             key={device.chromecast_uuid}
                             className="ui-surface rounded-md p-3 grid grid-cols-[auto_1fr_auto] items-center gap-3"
                         >
-                            <span className="material-symbols-outlined text-2xl">cast</span>
+                            <Cast size={22} />
                             <div className="flex flex-col">
                                 <span className="font-medium">{device.name}</span>
                                 <span className="text-xs ui-text-muted">

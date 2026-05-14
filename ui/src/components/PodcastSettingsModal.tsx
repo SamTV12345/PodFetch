@@ -21,6 +21,7 @@ import { generatePodcastDefaultSettings } from '../models/PodcastDefaultSettings
 import {CustomButtonPrimary} from "./CustomButtonPrimary";
 import { ConfirmModal } from './ConfirmModal'
 import { enqueueSnackbar } from 'notistack'
+import { Settings } from 'lucide-react'
 
 type PodcastSettingsModalProps = {
     podcast: components['schemas']['PodcastDto']
@@ -109,8 +110,8 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
         <Dialog>
             <DialogTrigger
                 render={
-                    <button className="material-symbols-outlined inline cursor-pointer align-middle ui-icon hover:ui-icon-hover">
-                        settings
+                    <button className="inline cursor-pointer align-middle ui-icon hover:ui-icon-hover">
+                        <Settings size={20} />
                     </button>
                 }
             />

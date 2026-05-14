@@ -5,7 +5,6 @@ import { enqueueSnackbar } from 'notistack'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
 import { CustomSelect } from './CustomSelect'
 import { Switcher } from './Switcher'
-import 'material-symbols/outlined.css'
 import { $api } from '../utils/http'
 import { components } from '../../schema'
 

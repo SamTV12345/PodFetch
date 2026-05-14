@@ -1,4 +1,4 @@
-import { FC, useMemo } from 'react'
+import { FC, ReactNode, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TFunction } from 'i18next'
 import {
@@ -8,7 +8,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import 'material-symbols/outlined.css'
 
 export type Option = {
     label?: string,
@@ -19,7 +18,7 @@ export type Option = {
 type CustomSelectProps = {
     className?: string,
     defaultValue?: string,
-    iconName?: string,
+    icon?: ReactNode,
     id?: string,
     name?: string,
     onChange?: (v: string) => void,
@@ -29,7 +28,7 @@ type CustomSelectProps = {
     disabled?: boolean
 }
 
-export const CustomSelect: FC<CustomSelectProps> = ({ className = '', defaultValue, iconName, id, name, onChange, options, placeholder, value, disabled }) => {
+export const CustomSelect: FC<CustomSelectProps> = ({ className = '', defaultValue, icon, id, name, onChange, options, placeholder, value, disabled }) => {
     const { t } = useTranslation()
 
     // Base UI's `SelectValue` renders the LABEL of the currently selected
@@ -60,8 +59,8 @@ export const CustomSelect: FC<CustomSelectProps> = ({ className = '', defaultVal
                 // gray wash in dark mode and made it blend into the surface.
                 className={`flex items-center border ui-border bg-transparent dark:bg-transparent pl-6 pr-2 py-2 rounded-full text-sm text-(--select-text-color) ${className}`}
             >
-                {iconName && (
-                    <span className="icon material-symbols-outlined align-middle leading-[1.25rem]! -ml-2 mr-1 text-(--select-icon-color)">{iconName}</span>
+                {icon && (
+                    <span className="icon align-middle leading-[1.25rem]! -ml-2 mr-1 text-(--select-icon-color)">{icon}</span>
                 )}
                 <span className="value grow">
                     <SelectValue placeholder={placeholder as string} />

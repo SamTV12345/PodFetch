@@ -8,7 +8,7 @@ import { AgnosticPodcastDataModel, GeneralModel, PodIndexModel } from '../models
 import { CustomButtonSecondary } from './CustomButtonSecondary'
 import { CustomInput } from './CustomInput'
 import { Spinner } from './Spinner'
-import 'material-symbols/outlined.css'
+import { Plus, Search } from 'lucide-react'
 import {$api} from "../utils/http";
 
 type ProviderImportComponent = {
@@ -121,7 +121,7 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
             <span className="relative">
                 <CustomInput type="text" value={searchText} placeholder={t('search-podcast')!} className="pl-10 w-full" onChange={(v) => setSearchText(v.target.value)} />
 
-                <span className="material-symbols-outlined absolute left-2 top-2 ui-input-icon">search</span>
+                <Search size={16} className="absolute left-2 top-2.5 ui-input-icon" />
             </span>
 
             {loading ? (
@@ -143,7 +143,7 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
                                             trackId: podcast.id,
                                             userId:1
                                         })
-                                    }}><span className="material-symbols-outlined leading-[0.875rem]">add</span></CustomButtonSecondary>
+                                    }}><Plus size={16} /></CustomButtonSecondary>
                                 </div>
                             </li>
                         )

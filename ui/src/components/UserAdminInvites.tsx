@@ -8,7 +8,7 @@ import { CustomButtonPrimary } from './CustomButtonPrimary'
 import { CustomSelect, Option } from './CustomSelect'
 import { Loading } from './Loading'
 import { ErrorIcon } from '../icons/ErrorIcon'
-import 'material-symbols/outlined.css'
+import { Link as LinkIcon, Plus, Trash2 } from 'lucide-react'
 import copy from 'copy-text-to-clipboard'
 import {$api} from "../utils/http";
 
@@ -108,7 +108,7 @@ export const UserAdminInvites = () => {
             <CustomButtonPrimary className="flex items-center xs:float-right mb-4 xs:mb-10" onClick={() => {
                 setInviteModalOpen(true)
             }}>
-                <span className="material-symbols-outlined leading-[0.875rem]">add</span> {t('add-new')}
+                <Plus size={16} /> {t('add-new')}
             </CustomButtonPrimary>
 
             <div className={`
@@ -166,7 +166,7 @@ export const UserAdminInvites = () => {
                                         })
                                     }} title={t('copy-link')}>
                                         {i.id}
-                                        <span className="material-symbols-outlined align-middle ml-1">link</span>
+                                        <LinkIcon size={16} className="inline-block align-middle ml-1" />
                                     </button>
                                 </td>
                                 <td className="px-2 py-4">
@@ -198,7 +198,7 @@ export const UserAdminInvites = () => {
                                             setInvites(invites.filter(v => v.id !== i.id))
                                         })
                                     }}>
-                                        <span className="material-symbols-outlined mr-1">delete</span>
+                                        <Trash2 size={16} className="mr-1" />
                                         {t('delete')}
                                     </button>
                                 </td>

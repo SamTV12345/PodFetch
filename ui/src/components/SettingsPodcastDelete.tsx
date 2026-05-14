@@ -1,5 +1,6 @@
 import {FC, Fragment, useEffect, useState} from 'react'
 import { useTranslation } from 'react-i18next'
+import { Plus } from 'lucide-react'
 import { enqueueSnackbar } from 'notistack'
 import { CustomButtonSecondary } from './CustomButtonSecondary'
 import {CustomButtonPrimary} from "./CustomButtonPrimary";
@@ -54,7 +55,7 @@ export const SettingsPodcastDelete: FC = () => {
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-lg font-semibold ui-text">{t('manage-podcasts')}</h2>
                 <CustomButtonPrimary className="flex items-center" onClick={() => setAddModalOpen(true)}>
-                    <span className="material-symbols-outlined leading-[0.875rem] mr-1">add</span>
+                    <Plus size={16} className="mr-1" />
                     {t('add-podcast')}
                 </CustomButtonPrimary>
             </div>

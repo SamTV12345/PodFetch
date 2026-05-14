@@ -9,7 +9,7 @@ import { CustomInput } from '../components/CustomInput'
 import { Heading2 } from '../components/Heading2'
 import { Loading } from '../components/Loading'
 import { OIDCButton } from '../components/OIDCButton'
-import 'material-symbols/outlined.css'
+import { Mic } from 'lucide-react'
 import {$api} from "../utils/http";
 import {setAuth, setLogin} from "../utils/login";
 
@@ -63,7 +63,7 @@ export const Login = () => {
     return (
         <div className="flex flex-col items-center xs:justify-center ui-surface h-full w-full">
             <span className="flex items-center gap-2 xs:mb-10 px-4 py-3 ui-text">
-                <span className="material-symbols-outlined ui-text-accent">auto_detect_voice</span>
+                <Mic className="ui-text-accent" size={22} />
                 <span className="font-bold font-['Inter_variable']">Podfetch</span>
             </span>
 

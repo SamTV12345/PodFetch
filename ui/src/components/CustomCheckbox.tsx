@@ -1,6 +1,6 @@
 import { FC } from 'react'
 import { Checkbox as BaseCheckbox } from '@base-ui/react/checkbox'
-import 'material-symbols/outlined.css'
+import { Check } from 'lucide-react'
 
 type CustomCheckboxProps = {
     className?: string,
@@ -20,7 +20,7 @@ export const CustomCheckbox: FC<CustomCheckboxProps> = ({ className = '', id, na
             name={name}
         >
             <BaseCheckbox.Indicator>
-                <span className="material-symbols-outlined ui-text-inverse">check</span>
+                <Check size={18} className="ui-text-inverse" />
             </BaseCheckbox.Indicator>
         </BaseCheckbox.Root>
     )

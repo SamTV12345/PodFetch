@@ -1,7 +1,6 @@
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import {Trans, useTranslation} from 'react-i18next'
 import useCommon from '../store/CommonSlice'
-import 'material-symbols/outlined.css'
 import {CustomButtonPrimary} from "./CustomButtonPrimary";
 import {CustomButtonSecondary} from "./CustomButtonSecondary";
 import {useMemo} from "react";

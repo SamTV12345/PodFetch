@@ -1,5 +1,6 @@
 import {useEffect, useState} from "react";
 import {useTranslation} from "react-i18next";
+import {Plus, Trash2} from "lucide-react";
 import {enqueueSnackbar} from "notistack";
 import {useNavigate} from "react-router-dom";
 import {CustomButtonPrimary} from "../components/CustomButtonPrimary";
@@ -42,7 +43,7 @@ export const PlaylistPage = () => {
                         setCreatePlaylistOpen(true)
                     }}
                 >
-                    <span className="material-symbols-outlined leading-[0.875rem] mr-1">add</span>
+                    <Plus size={16} className="mr-1" />
                     {t('add-new')}
                 </CustomButtonPrimary>
             </div>
@@ -113,7 +114,7 @@ export const PlaylistPage = () => {
                                     setPlaylist(playlist.filter(v => v.id !== item.id))
                                 }}
                             >
-                                <span className="material-symbols-outlined mr-1">delete</span>
+                                <Trash2 size={16} className="mr-1" />
                                 {t('delete')}
                             </button>
                         </div>

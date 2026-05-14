@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { useTranslation } from 'react-i18next'
 import { removeHTML } from '../utils/Utilities'
 import { Heading2 } from './Heading2'
-import 'material-symbols/outlined.css'
+import { Download, Trash2 } from 'lucide-react'
 import { $api } from '../utils/http'
 import { PodcastEpisodeChapterTable } from './PodcastEpisodeChapterTable'
 import { components } from '../../schema'
@@ -69,9 +69,10 @@ export const PodcastInfoModal: FC<PodcastInfoModalProps> = ({ open, onOpenChange
                     <DialogDescription className="sr-only">
                         {t('podcast-episode-details')}
                     </DialogDescription>
-                    <span
-                        className={`material-symbols-outlined align-middle ${episode ? 'cursor-pointer ui-icon hover:ui-icon-hover' : 'ui-text-disabled'}`}
-                        title={t('download-computer') as string}
+                    <Download
+                        size={20}
+                        className={`inline-block align-middle ${episode ? 'cursor-pointer ui-icon hover:ui-icon-hover' : 'ui-text-disabled'}`}
+                        aria-label={t('download-computer') as string}
                         onClick={() => {
                             if (episode) {
                                 const extension = inferExtension(episode.local_url || episode.url)
@@ -79,13 +80,14 @@ export const PodcastInfoModal: FC<PodcastInfoModalProps> = ({ open, onOpenChange
                                 download(downloadUrl, `${episode.name}.${extension}`)
                             }
                         }}
-                    >save</span>
+                    />
                     {episode?.status &&
-                        <span
+                        <Trash2
+                            size={20}
                             onClick={() => deleteEpisodeDownloadOnServer(episode?.episode_id)}
-                            className="material-symbols-outlined align-middle cursor-pointer ui-text-danger hover:ui-text-danger-hover"
-                            title={t('delete') as string}
-                        >delete</span>
+                            className="inline-block align-middle ml-2 cursor-pointer ui-text-danger hover:ui-text-danger-hover"
+                            aria-label={t('delete') as string}
+                        />
                     }
                 </div>
                 <ul className="flex flex-wrap gap-2 border-b ui-border mb-4 ui-text-muted shrink-0">

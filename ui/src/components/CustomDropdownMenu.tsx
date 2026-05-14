@@ -14,7 +14,7 @@ type CustomDropdownMenuProps = {
 }
 
 export type MenuItem = {
-    iconName?: string,
+    icon?: ReactNode,
     translationKey: string,
     onClick?: () => void,
     path?: string
@@ -31,12 +31,6 @@ export const CustomDropdownMenu: FC<CustomDropdownMenuProps> = ({ menuItems, tri
 
             <DropdownMenuContent
                 align="end"
-                // shadcn's DropdownMenuContent forces `w-(--anchor-width)` -
-                // the popup ends up exactly as wide as the trigger (e.g. the
-                // username + avatar), which clips longer item labels
-                // ('System-Info', 'Administration', ...) via the also-default
-                // overflow-x-hidden. !w-auto + min-w-max lets the menu size
-                // itself to its widest item.
                 className="!w-auto min-w-max py-3 rounded-lg shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))]"
             >
                 {menuItems.map((menuItem) => (
@@ -47,11 +41,11 @@ export const CustomDropdownMenu: FC<CustomDropdownMenuProps> = ({ menuItems, tri
                     >
                         {menuItem.path ? (
                             <NavLink className="flex items-center gap-2 w-full" to={menuItem.path}>
-                                <span className="material-symbols-outlined">{menuItem.iconName}</span> {t(menuItem.translationKey)}
+                                {menuItem.icon}<span>{t(menuItem.translationKey)}</span>
                             </NavLink>
                         ) : (
                             <>
-                                <span className="material-symbols-outlined">{menuItem.iconName}</span> {t(menuItem.translationKey)}
+                                {menuItem.icon}<span>{t(menuItem.translationKey)}</span>
                             </>
                         )}
                     </DropdownMenuItem>

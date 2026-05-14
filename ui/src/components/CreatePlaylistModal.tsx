@@ -17,6 +17,7 @@ import { $api } from "../utils/http"
 import { CustomButtonSecondary } from "./CustomButtonSecondary"
 import { CustomButtonPrimary } from "./CustomButtonPrimary"
 import { Controller, useForm } from "react-hook-form"
+import { ArrowLeft, ArrowRight } from "lucide-react"
 
 type PlaylistFormValues = {
     id: string
@@ -238,7 +239,7 @@ export const CreatePlaylistModal: FC<CreatePlaylistModalProps> = ({ open, onOpen
                         ) : (
                             <CustomButtonSecondary type="button" onClick={goBack}>
                                 <span className="inline-flex items-center gap-1">
-                                    <span className="material-symbols-outlined !text-base leading-none">arrow_back</span>
+                                    <ArrowLeft size={16} />
                                     <span>{t('back')}</span>
                                 </span>
                             </CustomButtonSecondary>
@@ -251,7 +252,7 @@ export const CreatePlaylistModal: FC<CreatePlaylistModalProps> = ({ open, onOpen
                             >
                                 <span className="inline-flex items-center gap-1">
                                     <span>{t('next')}</span>
-                                    <span className="material-symbols-outlined !text-base leading-none">arrow_forward</span>
+                                    <ArrowRight size={16} />
                                 </span>
                             </CustomButtonPrimary>
                         ) : (

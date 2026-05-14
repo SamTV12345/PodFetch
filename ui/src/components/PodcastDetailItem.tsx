@@ -3,7 +3,7 @@ import {useParams} from 'react-router-dom'
 import {useTranslation} from 'react-i18next'
 import {useSnackbar} from 'notistack'
 import {formatTime, removeHTML} from '../utils/Utilities'
-import 'material-symbols/outlined.css'
+import { Check, CirclePlay, CloudDownload, Heart } from 'lucide-react'
 import useCommon from "../store/CommonSlice";
 import {handlePlayofEpisode} from "../utils/PlayHandler";
 import {components, operations} from "../../schema";
@@ -167,29 +167,26 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                     <span className="text-sm ui-text-muted">{playedTime}</span>
 
                     <span className="flex gap-5">
-                    <span title={t('download-to-server') as string} className={`material-symbols-outlined ui-icon
-                     ${episode.podcastEpisode.status ? 'cursor-auto filled' : 'cursor-pointer hover:ui-icon-hover'}`} onClick={(e)=>{
-                        // Prevent icon click from triggering info modal
-                        e.stopPropagation()
-
-                        // Prevent another download if already downloaded
-                        if (episode.podcastEpisode.status) {
-                            return
-                        }
-
-                        downloadEpisodeMutation.mutateAsync({
-                            params: {
-                                path: {
-                                    id: episode.podcastEpisode.episode_id
-                                }
+                    <CloudDownload
+                        size={20}
+                        aria-label={t('download-to-server') as string}
+                        fill={episode.podcastEpisode.status ? 'currentColor' : 'transparent'}
+                        className={`ui-icon ${episode.podcastEpisode.status ? 'cursor-auto' : 'cursor-pointer hover:ui-icon-hover'}`}
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            if (episode.podcastEpisode.status) {
+                                return
                             }
-                        }).then(async ()=>{
-                            enqueueSnackbar(t('episode-downloaded-to-server'), {variant: "success"})
-                            await waitForDownloadCompletion(episode.podcastEpisode.episode_id)
-                        })
-                    }}>cloud_download</span>
+                            downloadEpisodeMutation.mutateAsync({
+                                params: { path: { id: episode.podcastEpisode.episode_id } }
+                            }).then(async () => {
+                                enqueueSnackbar(t('episode-downloaded-to-server'), { variant: "success" })
+                                await waitForDownloadCompletion(episode.podcastEpisode.episode_id)
+                            })
+                        }}
+                    />
                         {/* Check icon */}
-                        <span className="material-symbols-outlined ui-icon active:scale-95" onClick={(e)=>{
+                        <Check size={20} className="cursor-pointer ui-icon active:scale-95" onClick={(e)=>{
                             // Prevent icon click from triggering info modal
                             e.stopPropagation()
                             logCurrentPlaybackTime(episode.podcastEpisode.episode_id, episode.podcastHistoryItem?.total || 0)
@@ -215,9 +212,12 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                                 return s
                             })
                             setSelectedEpisodes(mappedEpisodes)
-                        }}>check</span>
-                        <span className={"material-symbols-outlined ui-text " + (episode.podcastEpisode.favored && 'filled')}
-                              onClick={async () => {
+                        }} />
+                        <Heart
+                            size={20}
+                            fill={episode.podcastEpisode.favored ? 'currentColor' : 'transparent'}
+                            className="cursor-pointer ui-text"
+                            onClick={async () => {
                                   await favorEpisodeMutation.mutateAsync({
                                       params: {
                                           path: {
@@ -251,8 +251,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                                       }
                                   }
                               }}
-
-                        >favorite</span>
+                        />
                     </span>
                 </div>
 
@@ -276,10 +275,13 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                 }} dangerouslySetInnerHTML={removeHTML(episode.podcastEpisode.description)}></div>
 
                 {/* Play button */}
-                <span className={`${percentagePlayed >=95  && episode.podcastEpisode.total_time > 0 && 'ui-text-muted'}
+                <CirclePlay
+                    size={48}
+                    fill="currentColor"
+                    className={`${percentagePlayed >=95  && episode.podcastEpisode.total_time > 0 && 'ui-text-muted'}
                     col-start-2 col-end-3 row-start-2 row-end-3
                     xs:col-start-3 xs:col-end-4 xs:row-start-1 xs:row-end-4
-                    self-center material-symbols-outlined cursor-pointer !text-5xl ui-text hover:ui-text-hover active:scale-90
+                    self-center cursor-pointer ui-text hover:ui-text-hover active:scale-90
                 `} key={episode.podcastEpisode.episode_id + 'icon'} onClick={async (e) => {
                     // Prevent icon click from triggering info modal
                     e.stopPropagation()
@@ -301,7 +303,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                     })
 
                     await startAudioPlayer(selectedEpisode.podcastEpisode.local_url, startPosition)
-                }}>play_circle</span>
+                }} />
             </div>
 
             {/* Infinite scroll */

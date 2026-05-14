@@ -8,7 +8,6 @@ import { CustomButtonPrimary } from '../components/CustomButtonPrimary'
 import { CustomSelect, Option } from '../components/CustomSelect'
 import { handleAddPodcast } from '../utils/ErrorSnackBarResponses'
 import type { components } from '../../schema'
-import 'material-symbols/outlined.css'
 
 type Tab = 'for-you' | 'trending' | 'charts' | 'categories'
 const TABS: Tab[] = ['for-you', 'trending', 'charts', 'categories']

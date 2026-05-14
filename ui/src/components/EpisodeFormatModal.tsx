@@ -1,7 +1,6 @@
 import { FC, ReactNode } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Heading2 } from './Heading2'
-import 'material-symbols/outlined.css'
 
 type EpisodeFormatModalProps = {
     open: boolean
