@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { useSnackbar } from 'notistack'
+import { useSnackbar } from '@/utils/toast'
 import { Setting } from '../models/Setting'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
 import { CustomButtonSecondary } from './CustomButtonSecondary'

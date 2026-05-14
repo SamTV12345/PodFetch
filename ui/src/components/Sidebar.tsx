@@ -1,7 +1,9 @@
 import useCommon from '../store/CommonSlice'
 import { useTranslation } from 'react-i18next'
 import { SidebarItem } from './SidebarItem'
-import 'material-symbols/outlined.css'
+import { BarChart2, Compass, Heart, Home, Menu as MenuIcon, Mic, Podcast, Search, Sparkles, Tag, X } from 'lucide-react'
+
+const ICON_SIZE = 18
 
 export const Sidebar = () => {
     const sidebarCollapsed = useCommon(state => state.sidebarCollapsed)
@@ -14,29 +16,25 @@ export const Sidebar = () => {
             {/* Burger menu */}
             <div className="flex items-center justify-center fixed left-0 md:-left-16 top-0 ui-bg-accent hover:ui-bg-accent-hover cursor-pointer text-white h-16 w-16 rounded-br-lg shadow-[0_4px_16px_rgba(0,0,0,0.2)] hover:shadow-[0_4px_16px_var(--color-mustard-500)] transition-all z-10"
                  onClick={()=>{setSidebarCollapsed(!sidebarCollapsed)}}>
-                {sidebarCollapsed ?
-                    <span className="material-symbols-outlined text-4xl!">menu</span>
-                :
-                    <span className="material-symbols-outlined text-4xl!">close</span>
-                }
+                {sidebarCollapsed ? <MenuIcon size={32} /> : <X size={32} />}
             </div>
 
             <span className="flex item-center gap-2 mb-10 px-4 py-3 opacity-0 md:opacity-100 transition-opacity">
-                <span className="material-symbols-outlined ui-text-accent">auto_detect_voice</span>
-                <span className="font-bold font-['Inter_variable']">Podfetch</span>
+                <Mic className="ui-text-accent" size={22} />
+                <span className="font-bold">Podfetch</span>
             </span>
 
             <ul className="flex flex-col gap-2">
-                <SidebarItem iconName="home" path="./home" translationKey="homepage"/>
-                <SidebarItem iconName="podcasts" path="podcasts" translationKey="all-subscriptions"/>
-                <SidebarItem iconName="explore" path="discover" translationKey="discover"/>
-                <SidebarItem iconName="favorite" path="favorites" translationKey="favorites"/>
-                <SidebarItem iconName="magic_button" path="timeline" translationKey="timeline"/>
-                <SidebarItem iconName="query_stats" path="stats" translationKey="stats-title"/>
-                <SidebarItem path="tags" translationKey="tag_other" iconName="sell"/>
+                <SidebarItem icon={<Home size={ICON_SIZE} />} path="./home" translationKey="homepage"/>
+                <SidebarItem icon={<Podcast size={ICON_SIZE} />} path="podcasts" translationKey="all-subscriptions"/>
+                <SidebarItem icon={<Compass size={ICON_SIZE} />} path="discover" translationKey="discover"/>
+                <SidebarItem icon={<Heart size={ICON_SIZE} />} path="favorites" translationKey="favorites"/>
+                <SidebarItem icon={<Sparkles size={ICON_SIZE} />} path="timeline" translationKey="timeline"/>
+                <SidebarItem icon={<BarChart2 size={ICON_SIZE} />} path="stats" translationKey="stats-title"/>
+                <SidebarItem icon={<Tag size={ICON_SIZE} />} path="tags" translationKey="tag_other"/>
 
                 <span className="display-only-mobile">
-                    <SidebarItem iconName="search" path="/podcasts/search" translationKey="search-episodes"/>
+                    <SidebarItem icon={<Search size={ICON_SIZE} />} path="/podcasts/search" translationKey="search-episodes"/>
                 </span>
             </ul>
 

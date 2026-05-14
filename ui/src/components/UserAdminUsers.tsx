@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useSnackbar } from 'notistack'
+import { useSnackbar } from '@/utils/toast'
 import useCommon from '../store/CommonSlice'
 import { formatTime} from '../utils/Utilities'
 import { User } from '../models/User'
 import { ChangeRoleModal } from './ChangeRoleModal'
 import { Loading } from './Loading'
 import { ErrorIcon } from '../icons/ErrorIcon'
-import 'material-symbols/outlined.css'
+import { Pencil, Trash2 } from 'lucide-react'
 import {$api} from "../utils/http";
 import {components} from "../../schema";
 
@@ -102,7 +102,7 @@ export const UserAdminUsers = () => {
 
                                         setChangeRoleOpen(true)
                                     }} title={t('change-role') || ''}>
-                                        <span className="material-symbols-outlined ui-text hover:ui-text-hover">edit</span>
+                                        <Pencil size={18} className="ui-text hover:ui-text-hover" />
                                     </button>
                                 </td>
                                 <td className="px-2 py-4">
@@ -112,7 +112,7 @@ export const UserAdminUsers = () => {
                                     <button className="flex items-center float-right ui-text-danger hover:ui-text-danger-hover" onClick={() => {
                                         deleteUser(v)
                                     }}>
-                                        <span className="material-symbols-outlined mr-1">delete</span>
+                                        <Trash2 size={16} className="mr-1" />
                                         {t('delete')}
                                     </button>
                                 </td>

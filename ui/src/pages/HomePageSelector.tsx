@@ -1,7 +1,7 @@
 import {useTranslation} from "react-i18next";
-import {useState} from "react";
 import {Heading1} from "../components/Heading1";
-import {NavLink, Outlet, useNavigate} from "react-router-dom";
+import {NavLink, Outlet} from "react-router-dom";
+import {Home, ListVideo} from "lucide-react";
 
 export const HomePageSelector = ()=>{
     const {t} = useTranslation()
@@ -14,12 +14,12 @@ export const HomePageSelector = ()=>{
                 <ul className="flex gap-2 border-b lg:border-none ui-border text-sm ui-text-muted w-full lg:w-auto home-page-selector">
                     <NavLink className={`cursor-pointer inline-block px-2 py-3`} to={"/home/view"}>
                         <span className="flex items-center gap-2">
-                            <span className="material-symbols-outlined filled leading-5">home</span> {t('homepage')}
+                            <Home size={18} /> {t('homepage')}
                         </span>
                     </NavLink>
                     <NavLink className={`cursor-pointer inline-block px-2 py-3`} to={'/home/playlist'}>
                         <span className="flex items-center gap-2">
-                            <span className="material-symbols-outlined filled leading-5 text-xl">playlist_play</span> {t('playlists')}
+                            <ListVideo size={18} /> {t('playlists')}
                         </span>
                     </NavLink>
                 </ul>

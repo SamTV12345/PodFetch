@@ -547,9 +547,11 @@ mod tests {
 
     #[test]
     fn test_generate_itunes_extension_conditionally_prefers_image_url() {
-        let mut podcast = Podcast::default();
-        podcast.image_url = "ui/custom.png".to_string();
-        podcast.original_image_url = "ui/original.png".to_string();
+        let podcast = Podcast {
+            image_url: "ui/custom.png".to_string(),
+            original_image_url: "ui/original.png".to_string(),
+            ..Default::default()
+        };
 
         let itunes_ext = super::ITunesChannelExtensionBuilder::default().build();
         let channel_builder = super::ChannelBuilder::default()
@@ -574,9 +576,11 @@ mod tests {
 
     #[test]
     fn test_generate_itunes_extension_conditionally_falls_back_to_original_image_url() {
-        let mut podcast = Podcast::default();
-        podcast.image_url = "".to_string();
-        podcast.original_image_url = "ui/original.png".to_string();
+        let podcast = Podcast {
+            image_url: String::new(),
+            original_image_url: "ui/original.png".to_string(),
+            ..Default::default()
+        };
 
         let itunes_ext = super::ITunesChannelExtensionBuilder::default().build();
         let channel_builder = super::ChannelBuilder::default()

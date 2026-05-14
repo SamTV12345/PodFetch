@@ -1,8 +1,8 @@
 import { FC, useMemo } from 'react'
-import * as Popover from '@radix-ui/react-popover'
-import 'material-symbols/outlined.css'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Cast } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useSnackbar } from 'notistack'
+import { useSnackbar } from '@/utils/toast'
 import useAudioPlayer from '../store/AudioPlayerSlice'
 import useCast from '../store/CastSlice'
 import { $api } from '../utils/http'
@@ -114,63 +114,62 @@ export const CastButton: FC = () => {
         : t('cast')
 
     return (
-        <Popover.Root>
-            <Popover.Trigger asChild>
-                <button
-                    aria-label={triggerLabel}
-                    title={triggerLabel}
-                    className={cn(
-                        'material-symbols-outlined cursor-pointer text-2xl ui-text hover:ui-text-hover',
-                        activeSession ? 'ui-text-accent' : '',
-                    )}
-                >
-                    {activeSession ? 'cast_connected' : 'cast'}
-                </button>
-            </Popover.Trigger>
+        <Popover>
+            <PopoverTrigger
+                render={
+                    <button
+                        aria-label={triggerLabel}
+                        title={triggerLabel}
+                        className={cn(
+                            'cursor-pointer ui-text hover:ui-text-hover',
+                            activeSession ? 'ui-text-accent' : '',
+                        )}
+                    >
+                        <Cast size={22} fill={activeSession ? 'currentColor' : 'transparent'} />
+                    </button>
+                }
+            />
 
-            <Popover.Portal>
-                <Popover.Content
-                    sideOffset={6}
-                    align="end"
-                    className="ui-surface rounded-lg shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] z-50 min-w-[16rem] p-3"
-                >
-                    {activeSession ? (
-                        <div className="flex flex-col gap-3">
-                            <div className="text-sm ui-text">
-                                {t('casting-on', { name: activeDeviceName, defaultValue: `Casting on ${activeDeviceName}` })}
-                            </div>
-                            <button
-                                className="ui-bg-accent hover:ui-bg-accent-hover px-3 py-2 rounded-md text-sm ui-text-inverse"
-                                onClick={handleStop}
-                            >
-                                {t('stop-casting')}
-                            </button>
+            <PopoverContent
+                sideOffset={6}
+                align="end"
+                className="min-w-[16rem] p-3"
+            >
+                {activeSession ? (
+                    <div className="flex flex-col gap-3">
+                        <div className="text-sm ui-text">
+                            {t('casting-on', { name: activeDeviceName, defaultValue: `Casting on ${activeDeviceName}` })}
                         </div>
-                    ) : devicesQuery.isLoading ? (
-                        <div className="text-sm ui-text-muted px-2 py-1">{t('loading')}</div>
-                    ) : devices.length === 0 ? (
-                        <div className="text-sm ui-text-muted px-2 py-2">{t('cast-no-devices-visible')}</div>
-                    ) : (
-                        <ul className="flex flex-col">
-                            {devices.map((device) => (
-                                <li key={device.chromecast_uuid}>
-                                    <button
-                                        className="flex items-center gap-2 w-full text-left px-2 py-2 rounded-md text-sm ui-text hover:ui-text-hover hover:bg-(--surface-hover)"
-                                        onClick={() => handlePickDevice(device)}
-                                    >
-                                        <span className="material-symbols-outlined">cast</span>
-                                        <span className="grow truncate">{device.name}</span>
-                                        <span className="text-xs ui-text-muted">
-                                            {device.kind === 'chromecast_shared' ? t('cast-kind-shared') : t('cast-kind-personal')}
-                                        </span>
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                    <Popover.Arrow className="ui-fill-inverse" />
-                </Popover.Content>
-            </Popover.Portal>
-        </Popover.Root>
+                        <button
+                            className="ui-bg-accent hover:ui-bg-accent-hover px-3 py-2 rounded-md text-sm ui-text-inverse"
+                            onClick={handleStop}
+                        >
+                            {t('stop-casting')}
+                        </button>
+                    </div>
+                ) : devicesQuery.isLoading ? (
+                    <div className="text-sm ui-text-muted px-2 py-1">{t('loading')}</div>
+                ) : devices.length === 0 ? (
+                    <div className="text-sm ui-text-muted px-2 py-2">{t('cast-no-devices-visible')}</div>
+                ) : (
+                    <ul className="flex flex-col">
+                        {devices.map((device) => (
+                            <li key={device.chromecast_uuid}>
+                                <button
+                                    className="flex items-center gap-2 w-full text-left px-2 py-2 rounded-md text-sm ui-text hover:ui-text-hover hover:bg-(--surface-hover)"
+                                    onClick={() => handlePickDevice(device)}
+                                >
+                                    <Cast size={18} />
+                                    <span className="grow truncate">{device.name}</span>
+                                    <span className="text-xs ui-text-muted">
+                                        {device.kind === 'chromecast_shared' ? t('cast-kind-shared') : t('cast-kind-personal')}
+                                    </span>
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </PopoverContent>
+        </Popover>
     )
 }

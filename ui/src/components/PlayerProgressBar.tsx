@@ -52,9 +52,21 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ className, curre
         return convertToMinutes(metadata?.duration)
     }, [metadata?.duration])
 
+    // While the user is dragging the thumb we want the time readout to
+    // reflect where the thumb sits, not where the audio is still playing.
+    // Without this the timestamp stays frozen at the actual currentTime
+    // until mouseup, so dragging blindly to "exactly 10 minutes" is
+    // impossible.
+    const displayedSeconds = useMemo(() => {
+        if (isDragging && dragPercentage !== null && metadata?.duration) {
+            return (dragPercentage / 100) * metadata.duration
+        }
+        return minute
+    }, [isDragging, dragPercentage, metadata?.duration, minute])
+
     const currentTime = useMemo(() => {
-        return convertToMinutes(minute)
-    }, [minute])
+        return convertToMinutes(displayedSeconds)
+    }, [displayedSeconds])
 
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
         e.preventDefault()

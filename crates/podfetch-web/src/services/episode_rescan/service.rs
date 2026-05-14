@@ -103,15 +103,16 @@ impl EpisodeRescanService {
         }
 
         let podcast = PodcastService::get_podcast_by_id(episode.podcast_id);
-        let settings = SettingsService::shared()
-            .get_settings()?
-            .ok_or_else(|| -> CustomError {
-                CustomErrorInner::Conflict(
-                    "settings row missing".to_string(),
-                    ErrorSeverity::Error,
-                )
-                .into()
-            })?;
+        let settings =
+            SettingsService::shared()
+                .get_settings()?
+                .ok_or_else(|| -> CustomError {
+                    CustomErrorInner::Conflict(
+                        "settings row missing".to_string(),
+                        ErrorSeverity::Error,
+                    )
+                    .into()
+                })?;
 
         let mut working_audio_path = current_audio_path.clone();
 
@@ -218,7 +219,8 @@ impl EpisodeRescanService {
         // Persist the new paths whenever they changed (either from
         // transcode or rename).
         if final_audio_path != current_audio_path
-            || (!final_image_path.is_empty() && Some(&final_image_path) != episode.file_image_path.as_ref())
+            || (!final_image_path.is_empty()
+                && Some(&final_image_path) != episode.file_image_path.as_ref())
         {
             PodcastEpisodeService::update_local_paths(
                 &episode.episode_id,
@@ -232,7 +234,8 @@ impl EpisodeRescanService {
         // `image_filename` to embed a cover when one isn't already present,
         // so we run this BEFORE cover consolidation.
         if opts.apply_metadata {
-            let paths = FilenameBuilderReturn::new(final_audio_path.clone(), final_image_path.clone());
+            let paths =
+                FilenameBuilderReturn::new(final_audio_path.clone(), final_image_path.clone());
             // Only attempt embedding if the cover file we'd read actually
             // exists; the downloader's helper unwraps on File::open.
             let cover_ok = final_image_path.is_empty()
@@ -305,8 +308,7 @@ impl EpisodeRescanService {
                             final_image_path,
                             episode.episode_id
                         );
-                        let new_image_db_value =
-                            shared_cover_fs_path.as_deref().unwrap_or("");
+                        let new_image_db_value = shared_cover_fs_path.as_deref().unwrap_or("");
                         if let Err(err) = PodcastEpisodeService::update_local_paths(
                             &episode.episode_id,
                             new_image_db_value,
@@ -413,10 +415,7 @@ impl EpisodeRescanService {
                 break;
             }
             if let Err(err) = std::fs::remove_dir(&current) {
-                tracing::debug!(
-                    "Could not remove empty dir {}: {err}",
-                    current.display()
-                );
+                tracing::debug!("Could not remove empty dir {}: {err}", current.display());
                 break;
             }
             tracing::info!("Removed empty episode directory {}", current.display());
@@ -479,10 +478,8 @@ mod tests {
 
     #[test]
     fn rescan_options_deserialize_camel_case() {
-        let parsed: RescanOptions = serde_json::from_str(
-            r#"{"applyFilenames": true, "applyTranscode": true}"#,
-        )
-        .unwrap();
+        let parsed: RescanOptions =
+            serde_json::from_str(r#"{"applyFilenames": true, "applyTranscode": true}"#).unwrap();
         assert!(parsed.apply_filenames);
         assert!(parsed.apply_transcode);
         assert!(!parsed.apply_covers);
@@ -540,10 +537,8 @@ mod tests {
 
     #[test]
     fn remove_empty_dir_up_to_walks_up_to_podcast_root() {
-        let tmp = std::env::temp_dir().join(format!(
-            "podfetch-rescan-cleanup-{}",
-            std::process::id()
-        ));
+        let tmp =
+            std::env::temp_dir().join(format!("podfetch-rescan-cleanup-{}", std::process::id()));
         let root = tmp.join("podcast-root");
         let level1 = root.join("episode-1");
         let level2 = level1.join("sub");

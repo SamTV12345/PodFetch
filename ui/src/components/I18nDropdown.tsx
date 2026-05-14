@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import i18n from '../language/i18n'
 import { CustomSelect } from './CustomSelect'
-import 'material-symbols/outlined.css'
+import { Languages } from 'lucide-react'
 
 const languageOptions = [
     { value: 'da', label: 'Dansk' },
@@ -16,5 +16,5 @@ export const LanguageDropdown = () => {
     const [language, setLanguage] = useState<string>(i18n.language)
 
     /* Responsiveness handled via stylesheet */
-    return <CustomSelect className="i18n-dropdown" iconName="translate" onChange={(v)=>{setLanguage(v); i18n.changeLanguage(v)}} options={languageOptions} value={language}/>
+    return <CustomSelect className="i18n-dropdown" icon={<Languages size={16} />} onChange={(v)=>{setLanguage(v); i18n.changeLanguage(v)}} options={languageOptions} value={language}/>
 }

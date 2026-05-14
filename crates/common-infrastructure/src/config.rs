@@ -32,6 +32,15 @@ pub const POLLING_INTERVAL: &str = "POLLING_INTERVAL";
 pub const PODINDEX_API_KEY: &str = "PODINDEX_API_KEY";
 pub const PODINDEX_API_SECRET: &str = "PODINDEX_API_SECRET";
 pub const GPODDER_INTEGRATION_ENABLED: &str = "GPODDER_INTEGRATION_ENABLED";
+pub const AUDIOBOOKSHELF_INTEGRATION_ENABLED: &str = "AUDIOBOOKSHELF_INTEGRATION_ENABLED";
+pub const AUDIOBOOKSHELF_DATA_DIR: &str = "AUDIOBOOKSHELF_DATA_DIR";
+pub const AUDIOBOOKSHELF_HLS_CACHE_MAX_MB: &str = "AUDIOBOOKSHELF_HLS_CACHE_MAX_MB";
+pub const AUDIOBOOKSHELF_TRANSCODER_MAX_CONCURRENT: &str =
+    "AUDIOBOOKSHELF_TRANSCODER_MAX_CONCURRENT";
+pub const AUDIOBOOKSHELF_ROTATE_API_KEY_ON_LOGOUT: &str = "AUDIOBOOKSHELF_ROTATE_API_KEY_ON_LOGOUT";
+pub const DEFAULT_AUDIOBOOKSHELF_DATA_DIR: &str = "audiobookshelf";
+pub const DEFAULT_AUDIOBOOKSHELF_HLS_CACHE_MAX_MB: u64 = 2048;
+pub const DEFAULT_AUDIOBOOKSHELF_TRANSCODER_MAX_CONCURRENT: u32 = 2;
 pub const DATABASE_URL: &str = "DATABASE_URL";
 pub const DATABASE_URL_DEFAULT_SQLITE: &str = "sqlite://./podcast.db";
 pub const OIDC_JWKS: &str = "OIDC_JWKS";
@@ -125,6 +134,11 @@ pub struct EnvironmentService {
     pub reverse_proxy: bool,
     pub reverse_proxy_config: Option<ReverseProxyConfig>,
     pub gpodder_integration_enabled: bool,
+    pub audiobookshelf_integration_enabled: bool,
+    pub audiobookshelf_data_dir: String,
+    pub audiobookshelf_hls_cache_max_mb: u64,
+    pub audiobookshelf_transcoder_max_concurrent: u32,
+    pub audiobookshelf_rotate_api_key_on_logout: bool,
     pub database_url: String,
     pub telegram_api: Option<TelegramConfig>,
     pub any_auth_enabled: bool,
@@ -219,6 +233,7 @@ impl EnvironmentService {
         environment.password =
             Some("a942b37ccfaf5a813b1432caa209a43b9d144e47ad0de1549c289c253e556cd5".to_string());
         environment.gpodder_integration_enabled = true;
+        environment.audiobookshelf_integration_enabled = true;
         environment
     }
 
@@ -298,6 +313,22 @@ impl EnvironmentService {
             oidc_config: oidc_configured,
             reverse_proxy_config,
             gpodder_integration_enabled: is_env_var_present_and_true(GPODDER_INTEGRATION_ENABLED),
+            audiobookshelf_integration_enabled: is_env_var_present_and_true(
+                AUDIOBOOKSHELF_INTEGRATION_ENABLED,
+            ),
+            audiobookshelf_data_dir: var(AUDIOBOOKSHELF_DATA_DIR)
+                .unwrap_or(DEFAULT_AUDIOBOOKSHELF_DATA_DIR.to_string()),
+            audiobookshelf_hls_cache_max_mb: var(AUDIOBOOKSHELF_HLS_CACHE_MAX_MB)
+                .ok()
+                .and_then(|v| v.parse::<u64>().ok())
+                .unwrap_or(DEFAULT_AUDIOBOOKSHELF_HLS_CACHE_MAX_MB),
+            audiobookshelf_transcoder_max_concurrent: var(AUDIOBOOKSHELF_TRANSCODER_MAX_CONCURRENT)
+                .ok()
+                .and_then(|v| v.parse::<u32>().ok())
+                .unwrap_or(DEFAULT_AUDIOBOOKSHELF_TRANSCODER_MAX_CONCURRENT),
+            audiobookshelf_rotate_api_key_on_logout: is_env_var_present_and_true(
+                AUDIOBOOKSHELF_ROTATE_API_KEY_ON_LOGOUT,
+            ),
             database_url: var(DATABASE_URL).unwrap_or(DATABASE_URL_DEFAULT_SQLITE.to_string()),
             telegram_api,
             sub_directory: opt_sub_dir,
@@ -395,6 +426,10 @@ impl EnvironmentService {
         tracing::info!(
             "GPodder integration enabled: {}",
             self.gpodder_integration_enabled
+        );
+        tracing::info!(
+            "Audiobookshelf integration enabled: {}",
+            self.audiobookshelf_integration_enabled
         );
         tracing::debug!("Database url is set to: {}", &self.database_url);
         tracing::info!(

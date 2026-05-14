@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Heading1 } from '../components/Heading1'
-import 'material-symbols/outlined.css'
+import { Mail, Users } from 'lucide-react'
 import {NavLink, Outlet} from "react-router-dom";
 
 export const UserAdminPage = () => {
@@ -12,18 +12,18 @@ export const UserAdminPage = () => {
                 <Heading1 className="">{t('administration')}</Heading1>
 
                 {/* Tabs */}
-                <ul className="flex gap-2 border-b lg:border-none ui-border text-sm ui-text-muted w-full lg:w-auto  settings-selector">
-                    <li className={`cursor-pointer inline-block px-2 py-3`}>
+                <ul className="flex gap-2 border-b lg:border-none ui-border text-sm ui-text-muted w-full lg:w-auto settings-selector">
+                    <li className="cursor-pointer inline-block px-2 py-3">
                         <NavLink to="users" className="block pb-1">
-                                <span className="flex items-center gap-2">
-                                    <span className="material-symbols-outlined filled leading-5">groups</span> {t('users')}
-                                </span>
+                            <span className="flex items-center gap-2">
+                                <Users size={18} /> {t('users')}
+                            </span>
                         </NavLink>
                     </li>
-                    <li className={`cursor-pointer inline-block px-2 py-3`}>
+                    <li className="cursor-pointer inline-block px-2 py-3">
                         <NavLink to="invites" className="block pb-1">
                             <span className="flex items-center gap-2">
-                                <span className="material-symbols-outlined filled leading-5 text-xl">mail</span> {t('invites')}
+                                <Mail size={18} /> {t('invites')}
                             </span>
                         </NavLink>
                     </li>

@@ -1,5 +1,6 @@
 import {FC, useEffect} from "react";
 import {useTranslation} from "react-i18next";
+import {RefreshCw} from "lucide-react";
 import {Heading1} from "../components/Heading1";
 import {Heading2} from "../components/Heading2";
 import {CustomInput} from "../components/CustomInput";
@@ -93,13 +94,19 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
                                             <CustomInput disabled={true} loading={user.isLoading} className="w-full" id="apiKey" name={name}
                                                      onChange={onChange} readOnly={user.data?.readOnly}
                                                      value={value ?? ""}/>
-                                            <button disabled={user.data?.readOnly} hidden={user.isLoading} type="button" className="material-symbols-outlined absolute right-2 top-1.5 ui-text" onClick={()=>{
+                                            <button disabled={user.data?.readOnly} hidden={user.isLoading} type="button" className="absolute right-2 top-1.5 ui-text" onClick={()=>{
                                                 setValue("apiKey", v4().replace(/-/g, ''))
-                                            }}>cached</button>
+                                            }}><RefreshCw size={18} /></button>
                                         </div>
                                     )}/>
                     </div>
-                    <CustomButtonPrimary disabled={user.data?.readOnly || user.isLoading} type="submit" className="float-right">{t('save')}</CustomButtonPrimary>
+                    {/* `float-right` would take the button out of flow, so
+                        the next section's border-t would slide underneath
+                        it. Wrap in a flex row instead so the form has real
+                        height. */}
+                    <div className="flex justify-end">
+                        <CustomButtonPrimary disabled={user.data?.readOnly || user.isLoading} type="submit">{t('save')}</CustomButtonPrimary>
+                    </div>
                 </form>
             </div>
 

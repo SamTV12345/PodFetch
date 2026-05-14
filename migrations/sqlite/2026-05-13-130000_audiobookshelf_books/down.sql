@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS audiobookshelf_book_chapters;
+DROP TABLE IF EXISTS audiobookshelf_book_audio_files;
+DROP TABLE IF EXISTS audiobookshelf_book_series;
+DROP TABLE IF EXISTS audiobookshelf_series;
+DROP TABLE IF EXISTS audiobookshelf_book_narrators;
+DROP TABLE IF EXISTS audiobookshelf_narrators;
+DROP TABLE IF EXISTS audiobookshelf_book_authors;
+DROP TABLE IF EXISTS audiobookshelf_authors;
+DROP TABLE IF EXISTS audiobookshelf_books;

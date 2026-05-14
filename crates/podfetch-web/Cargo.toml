@@ -73,6 +73,8 @@ uuid = { workspace = true }
 url = { workspace = true }
 urlencoding = { workspace = true }
 regex = { workspace = true }
+quick-xml = { workspace = true }
+notify = { workspace = true }
 strfmt = { workspace = true }
 tracing = { workspace = true }
 thiserror = { workspace = true }

@@ -6,7 +6,7 @@ import { AudioAmplifier } from '../models/AudioAmplifier'
 import { PlayerTimeControls } from './PlayerTimeControls'
 import { PlayerProgressBar } from './PlayerProgressBar'
 import { PlayerVolumeSlider } from './PlayerVolumeSlider'
-import 'material-symbols/outlined.css'
+import { Minimize2 } from 'lucide-react'
 import useAudioPlayer from "../store/AudioPlayerSlice";
 import {PodcastEpisodeChapterTable} from "./PodcastEpisodeChapterTable";
 import {useTranslation} from "react-i18next";
@@ -82,8 +82,8 @@ export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ audioAmplifi
 
     return createPortal(
         <div tabIndex={-1} aria-hidden="true" className="grid grid-rows-[1fr_auto] fixed inset-0 ui-surface md:h-full overflow-x-hidden overflow-y-auto z-30" onClick={event => event.stopPropagation()}>
-        <span className="material-symbols-outlined absolute top-2 left-2 cursor-pointer text-4xl ui-text hover:ui-text-hover"
-              onClick={() => setDetailedAudioPlayerOpen(false)}>close_fullscreen</span>
+        <Minimize2 size={28} className="absolute top-2 left-2 cursor-pointer ui-text hover:ui-text-hover"
+              onClick={() => setDetailedAudioPlayerOpen(false)} />
 
             {/* Episode information */}
             <div className="

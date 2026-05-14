@@ -3,7 +3,7 @@ import {
     SKIPPED_TIME
 } from '../utils/Utilities'
 import useAudioPlayer, {type AudioPlayerPlay} from '../store/AudioPlayerSlice'
-import 'material-symbols/outlined.css'
+import { Pause, Play, RotateCcw, RotateCw, SkipBack, SkipForward } from 'lucide-react'
 import { useKeyDown } from '../hooks/useKeyDown'
 import useCommon from "../store/CommonSlice";
 import {getAudioPlayer, startAudioPlayer} from "../utils/audioPlayer";
@@ -177,27 +177,48 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ currentPodcast
 
     useKeyDown(handleButton, ['k', ' '], false)
 
+    const isCurrentlyPlaying = cast.isCasting
+        ? (cast.state === 'playing' || cast.state === 'buffering')
+        : isPlaying
+
     return (
         <div className="flex items-center justify-center gap-6">
-            {/* Skip back */}
-            <span className="material-symbols-outlined cursor-pointer text-2xl lg:text-3xl ui-text hover:ui-text-hover active:scale-90 " onClick={() => seekBackward()}>replay_30</span>
+            {/* Skip back 30s */}
+            <button
+                onClick={() => seekBackward()}
+                className="relative cursor-pointer ui-text hover:ui-text-hover active:scale-90"
+                aria-label="Skip back 30 seconds"
+            >
+                <RotateCcw size={26} />
+                <span className="absolute inset-0 grid place-items-center text-[8px] font-bold mt-0.5">30</span>
+            </button>
 
             {/* Previous */}
-            <button disabled={!hasPrevious} className={cn("material-symbols-outlined filled text-3xl lg:text-4xl ui-text hover:ui-text-hover active:scale-90", hasPrevious ? '':'opacity-10')} onClick={() => skipToPreviousEpisode()}>skip_previous</button>
+            <button disabled={!hasPrevious} className={cn("cursor-pointer ui-text hover:ui-text-hover active:scale-90", hasPrevious ? '' : 'opacity-10')} onClick={() => skipToPreviousEpisode()}>
+                <SkipBack size={30} fill="currentColor" />
+            </button>
 
             {/* Play/pause */}
             <span className="flex items-center justify-center ui-bg-foreground hover:bg-(--fg-color-hover) cursor-pointer h-10 w-10 lg:h-12 lg:w-12 rounded-full active:scale-90" onClick={() => handleButton()}>
-                {(cast.isCasting ? (cast.state === 'playing' || cast.state === 'buffering') : isPlaying)?
-                    <span className="material-symbols-outlined filled text-2xl lg:text-4xl ui-text-inverse">pause</span>:
-                    <span className="material-symbols-outlined filled text-2xl lg:text-4xl ui-text-inverse">play_arrow</span>
-                }
+                {isCurrentlyPlaying
+                    ? <Pause size={22} fill="currentColor" className="ui-text-inverse" />
+                    : <Play size={22} fill="currentColor" className="ui-text-inverse ml-0.5" />}
             </span>
 
             {/* Next */}
-            <button disabled={!hasNext} className={cn("material-symbols-outlined filled text-3xl lg:text-4xl ui-text hover:ui-text-hover active:scale-90", hasNext ? '':'opacity-10')} onClick={() => skipToNextEpisode()}>skip_next</button>
+            <button disabled={!hasNext} className={cn("cursor-pointer ui-text hover:ui-text-hover active:scale-90", hasNext ? '' : 'opacity-10')} onClick={() => skipToNextEpisode()}>
+                <SkipForward size={30} fill="currentColor" />
+            </button>
 
-            {/* Skip forward */}
-            <span className="material-symbols-outlined cursor-pointer text-2xl lg:text-3xl ui-text hover:ui-text-hover active:scale-90" onClick={() => seekForward()}>forward_30</span>
+            {/* Skip forward 30s */}
+            <button
+                onClick={() => seekForward()}
+                className="relative cursor-pointer ui-text hover:ui-text-hover active:scale-90"
+                aria-label="Skip forward 30 seconds"
+            >
+                <RotateCw size={26} />
+                <span className="absolute inset-0 grid place-items-center text-[8px] font-bold mt-0.5">30</span>
+            </button>
 
             {/* Speed fixed width to prevent layout shift when value changes */}
             <span className="cursor-pointer text-sm ui-text hover:ui-text-hover w-8" onClick={() => changeSpeed()}>{speed}x</span>

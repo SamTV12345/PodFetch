@@ -1,6 +1,14 @@
 use crate::cast::ServerCastOrchestrator;
 use crate::services::agent::dispatcher::AgentDispatcher;
 use crate::services::agent::registry::AgentRegistry;
+use crate::services::audiobookshelf::audiobook_scanner::AudiobookScanner;
+use crate::services::audiobookshelf::book_service::AudiobookshelfBookService;
+use crate::services::audiobookshelf::hls_transcoder::HlsTranscoder;
+use crate::services::audiobookshelf::library_service::AudiobookshelfLibraryService;
+use crate::services::audiobookshelf::listening_session_service::AudiobookshelfListeningSessionService;
+use crate::services::audiobookshelf::login_service::AudiobookshelfLoginService;
+use crate::services::audiobookshelf::media_progress_service::AudiobookshelfMediaProgressService;
+use crate::services::audiobookshelf::playback_session_service::AudiobookshelfPlaybackSessionService;
 use crate::services::cast::service::CastOrchestrator;
 use crate::services::device::service::DeviceService;
 use crate::services::device_sync_group::service::DeviceSyncGroupService;
@@ -25,17 +33,27 @@ use crate::usecases::watchtime::WatchtimeUseCase;
 use common_infrastructure::config::EnvironmentService;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use podfetch_cast::StubCastDriver;
+use podfetch_persistence::adapters::AuthorRepositoryImpl;
+use podfetch_persistence::adapters::BookAudioFileRepositoryImpl;
+use podfetch_persistence::adapters::BookChapterRepositoryImpl;
+use podfetch_persistence::adapters::BookRepositoryImpl;
 use podfetch_persistence::adapters::DeviceRepositoryImpl;
 use podfetch_persistence::adapters::DeviceSyncGroupRepositoryImpl;
 use podfetch_persistence::adapters::FavoritePodcastEpisodeRepositoryImpl;
 use podfetch_persistence::adapters::FilterRepositoryImpl;
 use podfetch_persistence::adapters::GpodderSettingRepositoryImpl;
 use podfetch_persistence::adapters::InviteRepositoryImpl;
+use podfetch_persistence::adapters::LibraryRepositoryImpl;
 use podfetch_persistence::adapters::ListeningEventRepositoryImpl;
+use podfetch_persistence::adapters::ListeningSessionRepositoryImpl;
+use podfetch_persistence::adapters::MediaProgressRepositoryImpl;
+use podfetch_persistence::adapters::NarratorRepositoryImpl;
 use podfetch_persistence::adapters::NotificationRepositoryImpl;
+use podfetch_persistence::adapters::PlaybackSessionRepositoryImpl;
 use podfetch_persistence::adapters::PlaylistRepositoryImpl;
 use podfetch_persistence::adapters::PodcastEpisodeChapterRepositoryImpl;
 use podfetch_persistence::adapters::PodcastSettingsRepositoryImpl;
+use podfetch_persistence::adapters::SeriesRepositoryImpl;
 use podfetch_persistence::adapters::SessionRepositoryImpl;
 use podfetch_persistence::adapters::SettingsRepositoryImpl;
 use podfetch_persistence::adapters::SubscriptionRepositoryImpl;
@@ -47,6 +65,14 @@ use std::sync::Arc;
 pub struct AppState {
     pub agent_dispatcher: Arc<AgentDispatcher>,
     pub agent_registry: Arc<AgentRegistry>,
+    pub audiobookshelf_book_service: Arc<AudiobookshelfBookService>,
+    pub audiobookshelf_hls_transcoder: Arc<HlsTranscoder>,
+    pub audiobookshelf_library_service: Arc<AudiobookshelfLibraryService>,
+    pub audiobookshelf_listening_session_service: Arc<AudiobookshelfListeningSessionService>,
+    pub audiobookshelf_login_service: Arc<AudiobookshelfLoginService>,
+    pub audiobookshelf_media_progress_service: Arc<AudiobookshelfMediaProgressService>,
+    pub audiobookshelf_playback_session_service: Arc<AudiobookshelfPlaybackSessionService>,
+    pub audiobookshelf_scanner: Arc<AudiobookScanner>,
     pub cast_orchestrator: Arc<ServerCastOrchestrator>,
     pub device_service: Arc<DeviceService>,
     pub device_sync_group_service: Arc<DeviceSyncGroupService>,
@@ -150,12 +176,70 @@ impl AppState {
         ));
         let user_onboarding_service = Arc::new(UserOnboardingService::new(
             invite_service.clone(),
-            Arc::new(UserAdminRepositoryImpl::new(database)),
+            Arc::new(UserAdminRepositoryImpl::new(database.clone())),
         ));
+
+        let audiobookshelf_book_repository = Arc::new(BookRepositoryImpl::new(database.clone()));
+        let audiobookshelf_author_repository =
+            Arc::new(AuthorRepositoryImpl::new(database.clone()));
+        let audiobookshelf_narrator_repository =
+            Arc::new(NarratorRepositoryImpl::new(database.clone()));
+        let audiobookshelf_series_repository =
+            Arc::new(SeriesRepositoryImpl::new(database.clone()));
+        let audiobookshelf_audio_file_repository =
+            Arc::new(BookAudioFileRepositoryImpl::new(database.clone()));
+        let audiobookshelf_chapter_repository =
+            Arc::new(BookChapterRepositoryImpl::new(database.clone()));
+        let audiobookshelf_library_service = Arc::new(AudiobookshelfLibraryService::new(Arc::new(
+            LibraryRepositoryImpl::new(database.clone()),
+        )));
+        let audiobookshelf_book_service = Arc::new(AudiobookshelfBookService {
+            book_repository: audiobookshelf_book_repository.clone(),
+            author_repository: audiobookshelf_author_repository.clone(),
+            narrator_repository: audiobookshelf_narrator_repository.clone(),
+            series_repository: audiobookshelf_series_repository.clone(),
+            audio_file_repository: audiobookshelf_audio_file_repository.clone(),
+            chapter_repository: audiobookshelf_chapter_repository.clone(),
+        });
+        let audiobookshelf_scanner = Arc::new(AudiobookScanner {
+            library_service: audiobookshelf_library_service.clone(),
+            book_repository: audiobookshelf_book_repository,
+            audio_file_repository: audiobookshelf_audio_file_repository,
+            chapter_repository: audiobookshelf_chapter_repository,
+            author_repository: audiobookshelf_author_repository,
+            narrator_repository: audiobookshelf_narrator_repository,
+            series_repository: audiobookshelf_series_repository,
+            environment: environment.clone(),
+        });
+        let audiobookshelf_media_progress_service =
+            Arc::new(AudiobookshelfMediaProgressService::new(Arc::new(
+                MediaProgressRepositoryImpl::new(database.clone()),
+            )));
+        let audiobookshelf_playback_session_service =
+            Arc::new(AudiobookshelfPlaybackSessionService::new(Arc::new(
+                PlaybackSessionRepositoryImpl::new(database.clone()),
+            )));
+        let audiobookshelf_listening_session_service =
+            Arc::new(AudiobookshelfListeningSessionService::new(Arc::new(
+                ListeningSessionRepositoryImpl::new(database),
+            )));
+        let audiobookshelf_login_service = Arc::new(AudiobookshelfLoginService::new(
+            user_auth_service.clone(),
+            user_admin_service.clone(),
+        ));
+        let audiobookshelf_hls_transcoder = Arc::new(HlsTranscoder::new(environment.clone()));
 
         Self {
             agent_dispatcher,
             agent_registry,
+            audiobookshelf_book_service,
+            audiobookshelf_hls_transcoder,
+            audiobookshelf_library_service,
+            audiobookshelf_listening_session_service,
+            audiobookshelf_login_service,
+            audiobookshelf_media_progress_service,
+            audiobookshelf_playback_session_service,
+            audiobookshelf_scanner,
             cast_orchestrator,
             device_service,
             device_sync_group_service,

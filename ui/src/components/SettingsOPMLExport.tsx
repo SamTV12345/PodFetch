@@ -1,7 +1,7 @@
 import { FC } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CustomButtonSecondary } from './CustomButtonSecondary'
-import 'material-symbols/outlined.css'
+import { Download } from 'lucide-react'
 import {$api} from "../utils/http";
 
 export const SettingsOPMLExport: FC = () => {
@@ -39,14 +39,14 @@ export const SettingsOPMLExport: FC = () => {
             <CustomButtonSecondary className="flex items-center" onClick={() => {
                 downloadOPML('local')
             }}>
-                <span className="material-symbols-outlined leading-[0.875rem]">download</span> {t('download')}
+                <Download size={16} /> {t('download')}
             </CustomButtonSecondary>
 
             <span>{t('export-with-online-urls')}</span>
             <CustomButtonSecondary className="flex items-center" onClick={() => {
                 downloadOPML('online')
             }}>
-                <span className="material-symbols-outlined leading-[0.875rem]">download</span> {t('download')}
+                <Download size={16} /> {t('download')}
             </CustomButtonSecondary>
         </div>
     )

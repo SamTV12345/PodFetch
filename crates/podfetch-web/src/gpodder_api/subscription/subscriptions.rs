@@ -542,7 +542,7 @@ mod tests {
                 user.username, device_post.caption
             ))
             .text(
-                &serde_json::json!([
+                serde_json::json!([
                     "https://example.com/feed2.xml",
                     "https://example.com/feed3.xml"
                 ])

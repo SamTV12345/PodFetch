@@ -1,7 +1,7 @@
 import {FC, useMemo, useRef, useState} from 'react'
 import {Link} from 'react-router-dom'
-import 'material-symbols/outlined.css'
-import * as Popover from '@radix-ui/react-popover'
+import {Heart, Plus, Tag} from 'lucide-react'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {CustomInput} from "./CustomInput";
 import {CustomCheckbox} from "./CustomCheckbox";
 import {useTranslation} from "react-i18next";
@@ -16,7 +16,7 @@ type PodcastCardProps = {
 const MAX_VISIBLE_TAGS = 3
 
 export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
-    const likeButton = useRef<HTMLSpanElement>(null)
+    const likeButton = useRef<SVGSVGElement>(null)
     const tags = $api.useQuery('get', '/api/v1/tags')
     const queryClient = useQueryClient()
     const toggleFavoriteMutation = $api.useMutation('put', '/api/v1/podcasts/favored')
@@ -142,15 +142,19 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                         className={`rounded-xl transition-shadow group-hover:shadow-[0_4px_32px_rgba(0,0,0,var(--shadow-opacity))] ${!podcast.active ? 'opacity-20' : ''}`}
                         src={podcast.image_url} alt=""/>
 
-                    <span ref={likeButton}
-                          className={`material-symbols-outlined filled absolute top-2 right-2 h-6 w-6 filled ${podcast.favorites ? 'text-rose-700 hover:text-rose-600' : 'ui-text-muted hover:ui-text-hover'}`}
-                          onClick={(e) => {
-                              // Prevent icon click from triggering link to podcast detail
-                              e.preventDefault()
+                    <Heart
+                        ref={likeButton}
+                        size={20}
+                        fill="currentColor"
+                        className={`absolute top-2 right-2 cursor-pointer ${podcast.favorites ? 'text-rose-700 hover:text-rose-600' : 'ui-text-muted hover:ui-text-hover'}`}
+                        onClick={(e) => {
+                            // Prevent icon click from triggering link to podcast detail
+                            e.preventDefault()
 
-                              likeButton.current?.classList.toggle('fill-amber-400')
-                              likePodcast()
-                          }}>favorite</span>
+                            likeButton.current?.classList.toggle('fill-amber-400')
+                            likePodcast()
+                        }}
+                    />
                 </div>
 
                 <div>
@@ -175,74 +179,71 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                     )}
                 </div>
 
-                <Popover.Root modal={true} open={tagEditorOpen} onOpenChange={(open) => {
+                <Popover modal open={tagEditorOpen} onOpenChange={(open) => {
                     setTagEditorOpen(open)
                     if (!open) {
                         setNewTag('')
                     }
                 }}>
-                    <Popover.Trigger asChild>
-                        <button className="inline-flex shrink-0 items-center gap-1 rounded-md border ui-border px-2 py-1 text-xs ui-text hover:ui-input-surface hover:ui-text-hover" type="button">
-                            <span className="material-symbols-outlined text-sm leading-none">sell</span>
-                            {t('tag_other')}
-                        </button>
-                    </Popover.Trigger>
+                    <PopoverTrigger
+                        render={
+                            <button className="inline-flex shrink-0 items-center gap-1 rounded-md border ui-border px-2 py-1 text-xs ui-text hover:ui-input-surface hover:ui-text-hover" type="button">
+                                <Tag size={14} />
+                                {t('tag_other')}
+                            </button>
+                        }
+                    />
 
-                    <Popover.Portal>
-                        <Popover.Content align="end" side="top" sideOffset={8}
-                                         className="w-72 ui-surface p-4 rounded-lg shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] z-30">
-                            <div className="mb-3 flex items-center justify-between">
-                                <h3 className="font-semibold ui-text">{t('tag_other')}</h3>
-                                <span className="text-xs ui-text-muted">{podcast.tags.length}</span>
-                            </div>
+                    <PopoverContent align="end" side="top" sideOffset={8} className="w-72 p-4">
+                        <div className="mb-3 flex items-center justify-between">
+                            <h3 className="font-semibold ui-text">{t('tag_other')}</h3>
+                            <span className="text-xs ui-text-muted">{podcast.tags.length}</span>
+                        </div>
 
-                            <div className="max-h-48 overflow-y-auto pr-1">
-                                {availableTags.length === 0 ? (
-                                    <p className="text-sm ui-text-muted">{t('no')}</p>
-                                ) : (
-                                    <div className="flex flex-col gap-1">
-                                        {availableTags.map((tag) => (
-                                            <label key={tag.id}
-                                                   className="grid grid-cols-[auto_1fr] items-center gap-3 rounded-md px-2 py-1 hover:ui-input-surface cursor-pointer">
-                                                <CustomCheckbox
-                                                    value={selectedTagIds.has(tag.id)}
-                                                    onChange={(checked) => togglePodcastTag(tag, checked === true)}
-                                                />
-                                                <span className="text-sm ui-text">{tag.name}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                        <div className="max-h-48 overflow-y-auto pr-1">
+                            {availableTags.length === 0 ? (
+                                <p className="text-sm ui-text-muted">{t('no')}</p>
+                            ) : (
+                                <div className="flex flex-col gap-1">
+                                    {availableTags.map((tag) => (
+                                        <label key={tag.id}
+                                               className="grid grid-cols-[auto_1fr] items-center gap-3 rounded-md px-2 py-1 hover:ui-input-surface cursor-pointer">
+                                            <CustomCheckbox
+                                                value={selectedTagIds.has(tag.id)}
+                                                onChange={(checked) => togglePodcastTag(tag, checked === true)}
+                                            />
+                                            <span className="text-sm ui-text">{tag.name}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
 
-                            <div className="mt-3 grid grid-cols-[1fr_auto] items-center gap-2">
-                                <CustomInput
-                                    className="py-1.5"
-                                    placeholder={t('tag-add-placeholder') as string}
-                                    value={newTag}
-                                    onChange={(event) => {
-                                        setNewTag(event.target.value)
-                                    }}
-                                    onKeyDown={(event) => {
-                                        if (event.key === 'Enter') {
-                                            createAndAssignTag()
-                                        }
-                                    }}
-                                />
-                                <button
-                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md ui-bg-accent hover:ui-bg-accent-hover disabled:opacity-50"
-                                    type="button"
-                                    onClick={createAndAssignTag}
-                                    disabled={createTagMutation.isPending || !newTag.trim() || tagNameAlreadyExists}
-                                >
-                                    <span className="material-symbols-outlined text-sm ui-text-inverse">add</span>
-                                </button>
-                            </div>
-
-                            <Popover.Arrow className="ui-fill-inverse"/>
-                        </Popover.Content>
-                    </Popover.Portal>
-                </Popover.Root>
+                        <div className="mt-3 grid grid-cols-[1fr_auto] items-center gap-2">
+                            <CustomInput
+                                className="py-1.5"
+                                placeholder={t('tag-add-placeholder') as string}
+                                value={newTag}
+                                onChange={(event) => {
+                                    setNewTag(event.target.value)
+                                }}
+                                onKeyDown={(event) => {
+                                    if (event.key === 'Enter') {
+                                        createAndAssignTag()
+                                    }
+                                }}
+                            />
+                            <button
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md ui-bg-accent hover:ui-bg-accent-hover disabled:opacity-50"
+                                type="button"
+                                onClick={createAndAssignTag}
+                                disabled={createTagMutation.isPending || !newTag.trim() || tagNameAlreadyExists}
+                            >
+                                <Plus size={16} className="ui-text-inverse" />
+                            </button>
+                        </div>
+                    </PopoverContent>
+                </Popover>
             </div>
         </div>
     )

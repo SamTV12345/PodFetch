@@ -1,4 +1,5 @@
 import {FC, useMemo} from "react";
+import {CirclePlay} from "lucide-react";
 import {$api} from "../utils/http";
 import {t} from "i18next";
 import {components} from "../../schema";
@@ -66,20 +67,20 @@ export const PodcastEpisodeChapterTable: FC<PodcastEpisodeChapterTableProps> = (
             {timeslotDisplay[index]}
         </td>
         <td className="pr-2 py-4">
-                            <span className={`
-                    col-start-2 col-end-3 row-start-2 row-end-3
-                    xs:col-start-3 xs:col-end-4 xs:row-start-1 xs:row-end-4
-                    self-center material-symbols-outlined cursor-pointer !text-5xl ui-text hover:ui-text-hover active:scale-90
-              `} onClick={async (e) => {
-                                // Prevent icon click from triggering info modal
-                                e.stopPropagation()
-                                setSelectedEpisodes([{
-                                    podcastEpisode,
-                                    podcastHistoryItem: null
-                                }])
-                                setCurrentEpisodeIndex(0)
-                                await startAudioPlayer(podcastEpisode.local_url, chapter.startTime ?? 0)
-                            }}>play_circle</span>
+            <CirclePlay
+                size={32}
+                strokeWidth={1.5}
+                className="cursor-pointer ui-text hover:ui-text-hover active:scale-90"
+                onClick={async (e) => {
+                    e.stopPropagation()
+                    setSelectedEpisodes([{
+                        podcastEpisode,
+                        podcastHistoryItem: null
+                    }])
+                    setCurrentEpisodeIndex(0)
+                    await startAudioPlayer(podcastEpisode.local_url, chapter.startTime ?? 0)
+                }}
+            />
         </td>
     </tr>)}
     </tbody>

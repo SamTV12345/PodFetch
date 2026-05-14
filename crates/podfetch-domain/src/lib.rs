@@ -1,3 +1,4 @@
+pub mod audiobookshelf;
 pub mod device;
 pub mod device_sync_group;
 pub mod episode;

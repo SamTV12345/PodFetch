@@ -1,7 +1,6 @@
 import {FC, useMemo} from 'react'
-import { CustomDropdownMenu } from './CustomDropdownMenu'
-import { MenuItem } from './CustomDropdownMenu'
-import 'material-symbols/outlined.css'
+import { CustomDropdownMenu, MenuItem } from './CustomDropdownMenu'
+import { CircleUserRound, Info, LogOut, Settings, Users } from 'lucide-react'
 import useCommon from "../store/CommonSlice";
 import {$api} from "../utils/http";
 import {removeLogin} from "../utils/login";
@@ -11,13 +10,15 @@ import {ADMIN_ROLE} from "../models/constants";
 const AccountTrigger = ()=>{
     const username = useCommon(state => state.loginData)
 
-    return <><span className="hidden md:block ui-text">{username?.username}</span><span
-        className="material-symbols-outlined ui-text hover:ui-text-hover">account_circle</span></>
+    return <>
+        <span className="hidden md:block ui-text">{username?.username}</span>
+        <CircleUserRound className="ui-text hover:ui-text-hover" size={20} />
+    </>
 }
 
 export const UserMenu: FC = () => {
     const configModel = $api.useQuery('get', '/api/v1/sys/config')
-    const {data, error, isLoading} = $api.useQuery('get', '/api/v1/users/{username}', {
+    const {data, isLoading} = $api.useQuery('get', '/api/v1/users/{username}', {
         params: {
             path: {
                 username: 'me'
@@ -38,19 +39,19 @@ export const UserMenu: FC = () => {
         }
 
         menuItems.push({
-            iconName: 'account_circle',
+            icon: <CircleUserRound size={16} />,
             translationKey: 'profile',
             path: 'profile'
         })
 
         if (data.role === 'admin') {
             menuItems.push({
-                iconName: 'settings',
+                icon: <Settings size={16} />,
                 translationKey: 'settings',
                 path: 'settings'
             })
             menuItems.push({
-                iconName: 'info',
+                icon: <Info size={16} />,
                 translationKey: 'system-info',
                 path: 'info'
             })
@@ -58,7 +59,7 @@ export const UserMenu: FC = () => {
 
         if (data.role === 'admin') {
             menuItems.push({
-                iconName: 'group',
+                icon: <Users size={16} />,
                 translationKey: 'administration',
                 path: 'administration'
             })
@@ -66,7 +67,7 @@ export const UserMenu: FC = () => {
 
         if (configModel?.data?.oidcConfigured || configModel?.data?.basicAuth) {
             menuItems.push({
-                iconName: 'logout',
+                icon: <LogOut size={16} />,
                 translationKey: 'logout',
                 onClick: () => {
                     removeLogin()
@@ -75,7 +76,7 @@ export const UserMenu: FC = () => {
             })
         }
         return menuItems
-    }, [configModel, data])
+    }, [configModel, data, isLoading])
 
 
     return (

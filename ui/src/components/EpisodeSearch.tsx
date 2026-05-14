@@ -1,5 +1,6 @@
 import { FC, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Search } from 'lucide-react'
 import {formatTime, removeHTML} from '../utils/Utilities'
 import { useDebounce } from '../utils/useDebounce'
 import { CustomInput } from './CustomInput'
@@ -65,7 +66,7 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', o
                 <CustomInput className="pl-10 w-full" id="search-input" onChange={(v) =>
                     setSearchName(v.target.value)} placeholder={t('search-episodes')!} type="text" value={searchName} />
 
-                <span className="material-symbols-outlined absolute left-2 ui-input-icon">search</span>
+                <Search size={16} className="absolute left-2 ui-input-icon" />
             </div>
 
             {/* Results */

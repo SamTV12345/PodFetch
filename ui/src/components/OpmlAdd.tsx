@@ -1,5 +1,6 @@
 import { FC, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Upload, X } from 'lucide-react'
 import { FileItem, readFile } from '../utils/FileUtils'
 import useOpmlImport from '../store/opmlImportSlice'
 import { AddTypes } from '../models/AddTypes'
@@ -110,7 +111,7 @@ export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
                         onDrop={handleDrop}
                         onClick={handleClick}
                     >
-                        <span className="material-symbols-outlined text-4xl! ui-icon-muted">upload</span>
+                        <Upload size={32} className="ui-icon-muted mx-auto" />
                         <span className="text-sm ui-text-muted">{t('drag-here')}</span>
                     </div>
                     <input type={'file'} ref={fileInputRef} accept="application/xml, .opml" hidden onChange={(e)=>{
@@ -123,7 +124,7 @@ export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
                 <div className="leading-[1.75] text-sm ui-text w-full">
                     {t('following-file-uploaded')}
                     <div className="" onClick={() => {setFiles([])}}>
-                        {files[0]?.name}<i className="ml-5 fa-solid cursor-pointer active:scale-90 fa-x text-red-700"></i>
+                        {files[0]?.name}<X size={16} className="ml-5 inline cursor-pointer active:scale-90 text-red-700" />
                     </div>
                 </div>
             }

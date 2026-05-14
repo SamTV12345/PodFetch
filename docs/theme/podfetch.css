@@ -1,0 +1,259 @@
+/* =============================================================
+   PodFetch mdbook skin
+   -------------------------------------------------------------
+   Layered on top of mdbook's built-in stylesheets via the
+   `additional-css` hook in book.toml. Overrides only what we
+   need to match the PodFetch UI palette (mustard accent, stone
+   surfaces, Geist typography). Keeping it additive means new
+   mdbook releases keep working - if a base token changes we
+   inherit it automatically.
+   ============================================================= */
+
+/* Web fonts - Geist Variable from fontsource CDN matches the
+   app's primary typeface. JetBrains Mono for code blocks. */
+@import url('https://cdn.jsdelivr.net/npm/@fontsource-variable/geist@5.2.8/index.css');
+@import url('https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono@5.2.8/index.css');
+
+/* ===== Shared palette =====
+   The full mustard scale + neutral surfaces. Mirrors
+   ui/src/index.css so the docs and the product visibly belong
+   together. */
+:root {
+    --pf-mustard-100: #fae5c0;
+    --pf-mustard-300: #fac463;
+    --pf-mustard-400: #f3ae34;
+    --pf-mustard-500: #e69a13;
+    --pf-mustard-600: #c07c03;
+    --pf-mustard-700: #855602;
+    --pf-mustard-900: #271901;
+    --pf-stone-50:   #fafaf9;
+    --pf-stone-100:  #f5f5f4;
+    --pf-stone-200:  #e7e5e4;
+    --pf-stone-700:  #44403c;
+    --pf-stone-800:  #292524;
+    --pf-stone-900:  #1c1917;
+    --pf-stone-950:  #0c0a09;
+}
+
+/* ===== Typography overrides =====
+   mdbook applies its own font stack via the `html` selector;
+   bump specificity by chaining the theme class so we win. */
+html.light,
+html.rust,
+html.coal,
+html.navy,
+html.ayu {
+    font-family: 'Geist Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --mono-font: 'Geist Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+code,
+pre,
+.hljs {
+    font-family: var(--mono-font);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+h1 {
+    font-size: 2.25rem;
+    line-height: 1.15;
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+    padding-bottom: 0.5rem;
+}
+
+h2 {
+    margin-top: 2.5rem;
+    font-size: 1.5rem;
+}
+
+h3 {
+    margin-top: 2rem;
+    font-size: 1.2rem;
+}
+
+p, li {
+    line-height: 1.7;
+}
+
+/* ===== Light theme overrides ===== */
+html.light {
+    --bg: var(--pf-stone-50);
+    --fg: var(--pf-stone-900);
+    --sidebar-bg: var(--pf-stone-100);
+    --sidebar-fg: var(--pf-stone-900);
+    --sidebar-non-existant: var(--pf-stone-700);
+    --sidebar-active: var(--pf-mustard-600);
+    --sidebar-spacer: var(--pf-stone-200);
+    --scrollbar: var(--pf-stone-200);
+    --icons: var(--pf-stone-700);
+    --icons-hover: var(--pf-mustard-600);
+    --links: var(--pf-mustard-600);
+    --inline-code-color: var(--pf-mustard-700);
+    --theme-popup-bg: var(--pf-stone-100);
+    --theme-popup-border: var(--pf-stone-200);
+    --theme-hover: var(--pf-stone-200);
+    --quote-bg: color-mix(in srgb, var(--pf-mustard-100) 50%, transparent);
+    --quote-border: var(--pf-mustard-400);
+    --table-border-color: var(--pf-stone-200);
+    --table-header-bg: var(--pf-stone-100);
+    --table-alternate-bg: var(--pf-stone-100);
+    --searchbar-border-color: var(--pf-stone-200);
+    --searchbar-bg: var(--pf-stone-100);
+    --searchbar-fg: var(--pf-stone-900);
+    --searchbar-shadow-color: rgba(0, 0, 0, 0.05);
+    --searchresults-header-fg: var(--pf-stone-700);
+    --searchresults-border-color: var(--pf-stone-200);
+    --searchresults-li-bg: var(--pf-stone-50);
+    --search-mark-bg: var(--pf-mustard-300);
+}
+
+/* ===== Dark themes — coal / navy / ayu / rust ===== */
+html.coal,
+html.navy,
+html.ayu,
+html.rust {
+    --bg: var(--pf-stone-900);
+    --fg: var(--pf-stone-100);
+    --sidebar-bg: var(--pf-stone-950);
+    --sidebar-fg: var(--pf-stone-100);
+    --sidebar-non-existant: var(--pf-stone-700);
+    --sidebar-active: var(--pf-mustard-400);
+    --sidebar-spacer: var(--pf-stone-800);
+    --scrollbar: var(--pf-stone-700);
+    --icons: var(--pf-stone-100);
+    --icons-hover: var(--pf-mustard-400);
+    --links: var(--pf-mustard-400);
+    --inline-code-color: var(--pf-mustard-300);
+    --theme-popup-bg: var(--pf-stone-800);
+    --theme-popup-border: var(--pf-stone-700);
+    --theme-hover: var(--pf-stone-800);
+    --quote-bg: color-mix(in srgb, var(--pf-mustard-900) 60%, transparent);
+    --quote-border: var(--pf-mustard-500);
+    --table-border-color: var(--pf-stone-800);
+    --table-header-bg: var(--pf-stone-800);
+    --table-alternate-bg: color-mix(in srgb, var(--pf-stone-800) 50%, transparent);
+    --searchbar-border-color: var(--pf-stone-700);
+    --searchbar-bg: var(--pf-stone-800);
+    --searchbar-fg: var(--pf-stone-100);
+    --searchbar-shadow-color: rgba(0, 0, 0, 0.5);
+    --searchresults-header-fg: var(--pf-stone-100);
+    --searchresults-border-color: var(--pf-stone-800);
+    --searchresults-li-bg: var(--pf-stone-800);
+    --search-mark-bg: var(--pf-mustard-500);
+}
+
+/* ===== Component touch-ups (theme-agnostic) ===== */
+
+/* Sidebar chapter dividers feel cooler with subtle uppercase. */
+.chapter li.part-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.7;
+    margin-top: 1.5rem;
+}
+
+/* Active sidebar item gets a mustard rail. */
+.chapter li.chapter-item a.active {
+    position: relative;
+    color: var(--sidebar-active);
+    font-weight: 500;
+}
+.chapter li.chapter-item a.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.25em;
+    bottom: 0.25em;
+    width: 3px;
+    background: var(--sidebar-active);
+    border-radius: 2px;
+}
+
+/* Inline code: rounded chip, muted background so it pops without
+   being noisy. */
+:not(pre) > code {
+    background: color-mix(in srgb, var(--inline-code-color) 12%, transparent);
+    padding: 0.1rem 0.4rem;
+    border-radius: 0.4rem;
+    font-size: 0.9em;
+}
+
+/* Code blocks - softer corners, breathing padding. */
+pre {
+    border-radius: 0.625rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid color-mix(in srgb, var(--fg) 8%, transparent);
+}
+
+/* Blockquotes turn into mustard-tinted callouts. */
+blockquote {
+    background: var(--quote-bg);
+    border-left: 3px solid var(--quote-border);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    margin: 1.25rem 0;
+}
+
+/* Tables get a soft border + zebra rows. */
+table {
+    border-collapse: collapse;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    margin: 1.25rem 0;
+    width: 100%;
+}
+table th,
+table td {
+    border: 1px solid var(--table-border-color);
+    padding: 0.5rem 0.75rem;
+}
+table th {
+    background: var(--table-header-bg);
+    font-weight: 600;
+    text-align: left;
+}
+table tbody tr:nth-child(2n) {
+    background: var(--table-alternate-bg);
+}
+
+/* Search hit highlight. */
+mark, .search-mark {
+    background: var(--search-mark-bg);
+    color: inherit;
+    border-radius: 0.25rem;
+    padding: 0 0.1rem;
+}
+
+/* Searchbar shadow + radius. */
+#searchbar {
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 16px var(--searchbar-shadow-color);
+}
+
+/* Nav buttons (prev / next) get a subtle hover ring. */
+.nav-chapters {
+    border-radius: 0.625rem;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+.nav-chapters:hover {
+    color: var(--pf-mustard-500);
+    background: color-mix(in srgb, var(--pf-mustard-500) 8%, transparent);
+}
+
+/* Top-bar icons row sits a hair lower for breathing space. */
+.menu-bar {
+    padding-top: 0.5rem;
+}
+
+/* Selection color matches the brand. */
+::selection {
+    background: color-mix(in srgb, var(--pf-mustard-400) 60%, transparent);
+    color: var(--pf-stone-900);
+}

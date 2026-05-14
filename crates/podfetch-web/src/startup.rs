@@ -57,12 +57,39 @@ use crate::services::user_auth::service::UserAuthService;
 use common_infrastructure::error::ErrorSeverity::Warning;
 use std::sync::Arc;
 
+static AUDIOBOOKSHELF_FILE_WATCHER: std::sync::OnceLock<
+    Arc<crate::services::audiobookshelf::file_watcher::AudiobookFileWatcher>,
+> = std::sync::OnceLock::new();
+
+fn start_audiobookshelf_file_watcher(state: &AppState) {
+    if AUDIOBOOKSHELF_FILE_WATCHER.get().is_some() {
+        return;
+    }
+    let watcher = Arc::new(
+        crate::services::audiobookshelf::file_watcher::AudiobookFileWatcher::new(
+            state.audiobookshelf_library_service.clone(),
+            state.audiobookshelf_scanner.clone(),
+        ),
+    );
+    if let Err(e) = watcher.start() {
+        tracing::warn!("audiobookshelf file_watcher: failed to start: {e:?}");
+        return;
+    }
+    let _ = AUDIOBOOKSHELF_FILE_WATCHER.set(watcher);
+}
+
 fn is_socket_authenticated(socket: &SocketRef, auth_service: &Arc<UserAuthService>) -> bool {
     let req_parts = socket.req_parts();
     let query = req_parts.uri.query().unwrap_or("");
     for param in query.split('&') {
-        if let Some(key) = param.strip_prefix("apiKey=") {
-            let decoded = urlencoding::decode(key).unwrap_or_default();
+        // Native PodFetch UI sends `apiKey=...`; audiobookshelf mobile apps send
+        // `token=...` (the apps fall back to query when handshake auth is
+        // unsupported by the transport).
+        let candidate = param
+            .strip_prefix("apiKey=")
+            .or_else(|| param.strip_prefix("token="));
+        if let Some(value) = candidate {
+            let decoded = urlencoding::decode(value).unwrap_or_default();
             if auth_service.is_api_key_valid(&decoded) {
                 return true;
             }
@@ -361,6 +388,12 @@ pub fn build_server_router() -> Router {
     insert_default_settings_if_not_present(state.settings_service.as_ref())
         .expect("Could not insert default settings");
 
+    if ENVIRONMENT_SERVICE.audiobookshelf_integration_enabled
+        && let Err(e) = state.audiobookshelf_library_service.bootstrap_defaults()
+    {
+        tracing::error!("Could not bootstrap audiobookshelf default libraries: {e:?}");
+    }
+
     let sub_dir = ENVIRONMENT_SERVICE
         .sub_directory
         .clone()
@@ -370,17 +403,38 @@ pub fn build_server_router() -> Router {
     let (layer, io) = SocketIoBuilder::new().build_layer();
     let auth_service = state.user_auth_service.clone();
     let auth_service_main = state.user_auth_service.clone();
+    let abs_login_service = state.audiobookshelf_login_service.clone();
     io.ns("/", move |socket: SocketRef| {
         let auth_service = auth_service.clone();
+        let abs_login_service = abs_login_service.clone();
         async move {
+            // Audiobookshelf mobile apps connect WITHOUT query auth and then
+            // emit `socket.emit('auth', <token>)`. We install that handler
+            // here so the default namespace serves both PodFetch's own UI
+            // (query-auth-based) and the audiobookshelf clients (event-auth).
+            if ENVIRONMENT_SERVICE.audiobookshelf_integration_enabled {
+                crate::audiobookshelf_api::socket_io::gateway::install_auth_handler(
+                    &socket,
+                    abs_login_service.clone(),
+                );
+            }
             if ENVIRONMENT_SERVICE.any_auth_enabled
                 && !is_socket_authenticated(&socket, &auth_service)
             {
-                tracing::warn!(
-                    "Rejecting unauthenticated WebSocket connection {}",
+                // Audiobookshelf clients arrive without query auth; give them a
+                // grace window to send the `auth` event before disconnecting.
+                if !ENVIRONMENT_SERVICE.audiobookshelf_integration_enabled {
+                    tracing::warn!(
+                        "Rejecting unauthenticated WebSocket connection {}",
+                        socket.id
+                    );
+                    let _ = socket.disconnect();
+                    return;
+                }
+                tracing::debug!(
+                    "Socket {} connected unauthenticated; awaiting audiobookshelf `auth` event",
                     socket.id
                 );
-                let _ = socket.disconnect();
                 return;
             }
             info!("Socket connected {}", socket.id);
@@ -402,6 +456,11 @@ pub fn build_server_router() -> Router {
             info!("Socket connected to main room");
         }
     });
+    if ENVIRONMENT_SERVICE.audiobookshelf_integration_enabled {
+        // Audiobookshelf event-based `auth` handler is installed in the `/`
+        // namespace handler above (mobile apps don't connect to custom NSs).
+        start_audiobookshelf_file_watcher(&state);
+    }
     SOCKET_IO_LAYER.get_or_init(|| io);
 
     let api_config = get_api_config(state.clone());
@@ -417,7 +476,36 @@ pub fn build_server_router() -> Router {
         .merge(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
         .merge(Scalar::with_url("/scalar", api))
         .layer(layer)
+        .layer(axum::middleware::from_fn(http_request_logger))
         .layer(tower_http::trace::TraceLayer::new_for_http())
+}
+
+/// Logs every HTTP request as one line with method + path + status + latency.
+/// Goes in front of `TraceLayer` so the message includes the path directly
+/// (TraceLayer puts the URI in a span; the default subscriber doesn't
+/// render span fields, so the message alone would be path-less).
+async fn http_request_logger(
+    req: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let method = req.method().clone();
+    let uri = req.uri().clone();
+    let started = std::time::Instant::now();
+    let response = next.run(req).await;
+    let elapsed_ms = started.elapsed().as_millis();
+    let status = response.status().as_u16();
+    let path_and_query = uri
+        .path_and_query()
+        .map(|p| p.as_str())
+        .unwrap_or(uri.path());
+    if status >= 500 {
+        tracing::error!("{method} {path_and_query} -> {status} in {elapsed_ms}ms");
+    } else if status >= 400 {
+        tracing::warn!("{method} {path_and_query} -> {status} in {elapsed_ms}ms");
+    } else {
+        tracing::info!("{method} {path_and_query} -> {status} in {elapsed_ms}ms");
+    }
+    response
 }
 
 /// Full server startup including background scheduler for polling and cleanup.

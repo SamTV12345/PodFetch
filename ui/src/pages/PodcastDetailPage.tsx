@@ -8,7 +8,7 @@ import {Heading2} from '../components/Heading2'
 import {PodcastDetailItem} from '../components/PodcastDetailItem'
 import {PodcastInfoModal} from '../components/PodcastInfoModal'
 import {Switcher} from '../components/Switcher'
-import 'material-symbols/outlined.css'
+import { Rss, RotateCw } from 'lucide-react'
 import {PodcastEpisodeAlreadyPlayed} from "../components/PodcastEpisodeAlreadyPlayed";
 import {PodcastSettingsModal} from "../components/PodcastSettingsModal";
 import {$api} from '../utils/http'
@@ -136,11 +136,10 @@ export const PodcastDetailPage = () => {
 
                         {currentPodcast.data && <EditableHeading podcastId={Number(currentDetailedPodcastId)} initialText={currentPodcast.data.name} allowedToEdit={data?.role == "admin"}></EditableHeading>}
 
-                        {currentPodcast.data && data?.role === ADMIN_ROLE && refreshPodcastEpisodes.isPending ? <Loading className="inline-block h-auto w-auto"/>:  <span
-                            className="material-symbols-outlined inline cursor-pointer align-middle ui-icon hover:ui-icon-hover"
+                        {currentPodcast.data && data?.role === ADMIN_ROLE && refreshPodcastEpisodes.isPending ? <Loading className="inline-block h-auto w-auto"/>:  <RotateCw
+                            size={20}
+                            className="inline cursor-pointer align-middle ui-icon hover:ui-icon-hover"
                             onClick={() => {
-
-
                                 refreshPodcastEpisodes.mutate({
                                     params: {
                                         path: {
@@ -148,7 +147,7 @@ export const PodcastDetailPage = () => {
                                         }
                                     }
                                 })
-                            }}>refresh</span> }
+                            }} /> }
                         <span>
                          {currentPodcast.data && data?.role === ADMIN_ROLE && <PodcastSettingsModal podcast={currentPodcast.data}/>}
                         </span>
@@ -172,15 +171,14 @@ export const PodcastDetailPage = () => {
                         <span className="grid grid-cols-2 md:grid-cols-3">
                         <a className="flex gap-4" rel="noopener noreferrer" href={currentPodcast.data?.podfetch_feed}
                            target="_blank">
-                            <span
-                               className="material-symbols-outlined cursor-pointer ui-icon hover:ui-icon-hover">rss_feed</span>
+                            <Rss size={20} className="cursor-pointer ui-icon hover:ui-icon-hover" />
                             <span className="ui-text">PodFetch</span>
                         </a>
 
                         <button className="flex gap-4" rel="noopener noreferrer"
                                 onClick={() => window.open(currentPodcast.data?.rssfeed)}>
-                            <a className="material-symbols-outlined cursor-pointer ui-icon hover:ui-icon-hover"
-                               target="_blank" rel="noopener noreferrer" href={currentPodcast.data?.rssfeed}>rss_feed</a>
+                            <a className="cursor-pointer ui-icon hover:ui-icon-hover inline-flex"
+                               target="_blank" rel="noopener noreferrer" href={currentPodcast.data?.rssfeed}><Rss size={20} /></a>
                             <span className="ui-text">{t('original-rss-feed')}</span>
                         </button>
                             <div className="flex gap-4 justify-end">

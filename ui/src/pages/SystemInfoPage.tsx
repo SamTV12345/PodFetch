@@ -4,7 +4,7 @@ import { CustomGaugeChart } from '../components/CustomGaugeChart'
 import { Heading1 } from '../components/Heading1'
 import { Heading3 } from '../components/Heading3'
 import { Loading } from '../components/Loading'
-import 'material-symbols/outlined.css'
+import { Ban, CheckCircle2, Cpu, HardDrive, MemoryStick } from 'lucide-react'
 import {$api} from "../utils/http";
 import {components} from "../../schema";
 import {LoadingSkeletonDD} from "../components/ui/LoadingSkeletonDD";
@@ -75,7 +75,7 @@ export const SystemInfoPage: FC = () => {
                 {/* CPU */}
                 <div className="p-8 rounded-xl shadow-[0_4px_32px_rgba(0,0,0,calc(var(--shadow-opacity)-0.1))]">
                     <span className="flex items-center gap-2 mb-2">
-                        <span className="material-symbols-outlined ui-icon">memory</span>
+                        <Cpu size={22} className="ui-icon" />
                         <Heading3>{t('cpu-usage')}</Heading3>
                     </span>
                     {
@@ -88,7 +88,7 @@ export const SystemInfoPage: FC = () => {
                 {/* Memory */}
                 <div className="p-8 rounded-xl shadow-[0_4px_32px_rgba(0,0,0,calc(var(--shadow-opacity)-0.1))]">
                     <span className="flex items-center gap-2 mb-2">
-                        <span className="material-symbols-outlined ui-icon">memory_alt</span>
+                        <MemoryStick size={22} className="ui-icon" />
                         <Heading3>{t('memory-usage')}</Heading3>
                     </span>
                     {
@@ -102,7 +102,7 @@ export const SystemInfoPage: FC = () => {
                 {/* Disk */}
                 <div className="p-8 rounded-xl shadow-[0_4px_32px_rgba(0,0,0,calc(var(--shadow-opacity)-0.1))]">
                     <span className="flex items-center gap-2 mb-2">
-                        <span className="material-symbols-outlined ui-icon">hard_drive</span>
+                        <HardDrive size={22} className="ui-icon" />
                         <Heading3>{t('disk-usage')}</Heading3>
                     </span>
                     {
@@ -137,9 +137,9 @@ export const SystemInfoPage: FC = () => {
                         <dt className="font-medium ui-text">{t('podindex-configured')}</dt>
                         <dd className="ui-text-muted">
                             {configModel?.data?.podindexConfigured ? (
-                                <span className="material-symbols-outlined text-(--success-fg-color)">check_circle</span>
+                                <CheckCircle2 size={20} className="text-(--success-fg-color) inline-block" />
                             ) : (
-                                <span className="material-symbols-outlined ui-text-danger">block</span>
+                                <Ban size={20} className="ui-text-danger inline-block" />
                             )}
                         </dd>
 

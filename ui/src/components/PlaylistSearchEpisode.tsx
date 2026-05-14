@@ -1,5 +1,6 @@
 import {DragEvent, useMemo, useState} from "react";
 import {useTranslation} from "react-i18next";
+import {ArrowDown, ArrowUp, Trash2} from "lucide-react";
 import {components} from "../../schema";
 import {EpisodeSearch} from "./EpisodeSearch";
 
@@ -83,35 +84,35 @@ export const PlaylistSearchEpisode = ({items, setItems}: PlaylistSearchEpisodePr
                             <div className="flex items-center gap-1 self-center">
                                 <button
                                     type="button"
-                                    className="h-7 w-7 grid place-items-center material-symbols-outlined leading-none ui-icon-muted hover:ui-text"
+                                    className="h-7 w-7 grid place-items-center ui-icon-muted hover:ui-text"
                                     onClick={(e) => {
                                         e.preventDefault()
                                         moveItem(index, index - 1)
                                     }}
                                     disabled={index === 0}
                                 >
-                                    arrow_upward
+                                    <ArrowUp size={16} />
                                 </button>
                                 <button
                                     type="button"
-                                    className="h-7 w-7 grid place-items-center material-symbols-outlined leading-none ui-icon-muted hover:ui-text"
+                                    className="h-7 w-7 grid place-items-center ui-icon-muted hover:ui-text"
                                     onClick={(e) => {
                                         e.preventDefault()
                                         moveItem(index, index + 1)
                                     }}
                                     disabled={index === items.length - 1}
                                 >
-                                    arrow_downward
+                                    <ArrowDown size={16} />
                                 </button>
                                 <button
                                     type="button"
-                                    className="h-7 w-7 grid place-items-center material-symbols-outlined leading-none ui-text-danger hover:ui-text-danger-hover"
+                                    className="h-7 w-7 grid place-items-center ui-text-danger hover:ui-text-danger-hover"
                                     onClick={(e) => {
                                         e.preventDefault()
                                         setItems(items.filter((_, i) => i !== index))
                                     }}
                                 >
-                                    delete
+                                    <Trash2 size={16} />
                                 </button>
                             </div>
                         </div>

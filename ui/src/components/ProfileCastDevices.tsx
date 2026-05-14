@@ -1,6 +1,7 @@
 import { FC, useState } from 'react'
+import { Cast } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useSnackbar } from 'notistack'
+import { useSnackbar } from '@/utils/toast'
 import { $api } from '../utils/http'
 import { components } from '../../schema'
 import { ADMIN_ROLE } from '../models/constants'
@@ -69,7 +70,7 @@ export const ProfileCastDevices: FC = () => {
                             key={device.chromecast_uuid}
                             className="ui-surface rounded-md p-3 grid grid-cols-[auto_1fr_auto] items-center gap-3"
                         >
-                            <span className="material-symbols-outlined text-2xl">cast</span>
+                            <Cast size={22} />
                             <div className="flex flex-col">
                                 <span className="font-medium">{device.name}</span>
                                 <span className="text-xs ui-text-muted">
@@ -92,11 +93,15 @@ export const ProfileCastDevices: FC = () => {
 
             {isAdmin && (
                 <div className="flex flex-col gap-3">
-                    <div className="flex items-center gap-2">
-                        <CustomButtonPrimary loading={discoverMutation.isPending} onClick={runDiscover}>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <CustomButtonPrimary
+                            loading={discoverMutation.isPending}
+                            onClick={runDiscover}
+                            className="shrink-0 whitespace-nowrap"
+                        >
                             {t('cast-discover')}
                         </CustomButtonPrimary>
-                        <span className="text-xs ui-text-muted">{t('cast-discover-informational')}</span>
+                        <span className="text-xs ui-text-muted flex-1 min-w-0">{t('cast-discover-informational')}</span>
                     </div>
                     {discovered !== null && (
                         <div className="ui-surface rounded-md p-3">

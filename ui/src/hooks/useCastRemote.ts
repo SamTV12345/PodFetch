@@ -1,4 +1,4 @@
-import { useSnackbar } from 'notistack'
+import { useSnackbar } from '@/utils/toast'
 import { useTranslation } from 'react-i18next'
 import { $api } from '../utils/http'
 import useCast from '../store/CastSlice'

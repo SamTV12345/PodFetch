@@ -4,7 +4,7 @@ import useCommon from "../store/CommonSlice";
 import useCast from "../store/CastSlice";
 import {components} from "../../schema";
 import {decodeHTMLEntities} from "./decodingUtilities";
-import {enqueueSnackbar} from "notistack";
+import {enqueueSnackbar} from "@/utils/toast";
 import {t} from "i18next";
 import {QueryClient} from "@tanstack/react-query";
 

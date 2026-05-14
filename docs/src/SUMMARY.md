@@ -4,6 +4,7 @@
 - [S3](./S3.md)
 - [Installation](./Installation.md)
 - [Mobile Apps](./Mobile.md)
+- [Audiobookshelf API](./audiobookshelf.md)
 - [Authorization](./AUTH.md)
 - [UI Walkthrough](./UIWalkthrough.md)
 - [Hosting](./HOSTING.md)

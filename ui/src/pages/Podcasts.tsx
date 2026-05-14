@@ -19,7 +19,7 @@ import {CustomInput} from '../components/CustomInput'
 import {CustomSelect, Option} from '../components/CustomSelect'
 import {Heading1} from '../components/Heading1'
 import {PodcastCard} from '../components/PodcastCard'
-import 'material-symbols/outlined.css'
+import { ArrowUpDown, Plus, RotateCw, Search } from 'lucide-react'
 
 import {$api} from "../utils/http";
 import {LoadingPodcastCard} from "../components/ui/LoadingPodcastCard";
@@ -37,7 +37,7 @@ const orderOptions = [
 ]
 
 const allTags: Option = {
-    label: 'All',
+    translationKey: 'all',
     value: 'all'
 }
 
@@ -108,16 +108,29 @@ export const Podcasts: FC<PodcastsProps> = ({onlyFavorites}) => {
                             <Heading1>{t('all-subscriptions')}</Heading1>
                     }
 
-                    <span
-                        className="material-symbols-outlined cursor-pointer ui-icon hover:ui-icon-hover"
+                    <RotateCw
+                        size={20}
+                        className="cursor-pointer ui-icon hover:ui-icon-hover"
                         onClick={() => {
                             refreshAllPodcasts.mutate({})
-                        }}>refresh</span>
+                        }}
+                    />
                     <div>
-                        <CustomSelect className="bg-mustard-600 text-black" options={mappedTagsOptions}
-                                      value={tagsVal.value} onChange={(v) => {
-                            setTagVal(mappedTagsOptions.filter(e => e.value === v)[0]!)
-                        }}/>
+                        {/* dark:bg-mustard-600 / dark:text-stone-900 are
+                            duplicated explicitly because CustomSelect's
+                            internal `dark:bg-transparent` (added to kill
+                            shadcn's default dark:bg-input/30 wash) lives
+                            in a dark: variant group and twMerge won't let
+                            the caller's unprefixed bg-mustard-600 win over
+                            it without a matching dark: variant. */}
+                        <CustomSelect
+                            className="bg-mustard-600 dark:bg-mustard-600 text-stone-900 dark:text-stone-900"
+                            options={mappedTagsOptions}
+                            value={tagsVal.value}
+                            onChange={(v) => {
+                                setTagVal(mappedTagsOptions.filter(e => e.value === v)[0]!)
+                            }}
+                        />
                     </div>
                 </div>
 
@@ -125,7 +138,7 @@ export const Podcasts: FC<PodcastsProps> = ({onlyFavorites}) => {
                 <CustomButtonPrimary className="flex items-center" onClick={() => {
                     setAddModalOpen(true)
                 }}>
-                    <span className="material-symbols-outlined leading-[0.875rem]">add</span> {t('add-new')}
+                    <Plus size={16} /> {t('add-new')}
                 </CustomButtonPrimary>
             </div>
 
@@ -138,11 +151,10 @@ export const Podcasts: FC<PodcastsProps> = ({onlyFavorites}) => {
                             title: v.target.value
                         })} placeholder={t('search')!} value={filters?.data?.title || ''}/>
 
-                    <span
-                        className="material-symbols-outlined absolute left-2 top-2 ui-input-icon">search</span>
+                    <Search size={16} className="absolute left-2 top-2.5 ui-input-icon" />
                 </span>
 
-                <CustomSelect iconName="sort" onChange={(v) => {
+                <CustomSelect icon={<ArrowUpDown size={16} />} onChange={(v) => {
                     let converted = JSON.parse(v) as OrderCriteriaSortingType
                     queryClient.setQueryData(['get', '/api/v1/podcasts/filter'], {
                         ...filters.data,

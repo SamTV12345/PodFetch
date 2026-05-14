@@ -1,5 +1,6 @@
 import {useEffect, useState} from "react";
 import {useTranslation} from "react-i18next";
+import {Play} from "lucide-react";
 import {useParams} from "react-router-dom";
 import {Heading2} from "../components/Heading2";
 import {PodcastDetailItem} from "../components/PodcastDetailItem";
@@ -72,7 +73,7 @@ export const PlaylistDetailPage = () => {
                         }}
                         disabled={selectedPlaylist.items.length === 0}
                     >
-                        <span className="material-symbols-outlined leading-[0.875rem] mr-1">play_arrow</span>
+                        <Play size={16} fill="currentColor" className="mr-1" />
                         {t('play-all')}
                     </CustomButtonPrimary>
                     <CustomButtonSecondary
