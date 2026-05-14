@@ -6,6 +6,7 @@ use crate::audiobookshelf_api::dto::playback_session::{
     AudioTrackMetadataDto, PlayRequestBody, PlaybackAudioTrackDto, PlaybackSessionDto,
     SyncRequestBody,
 };
+use crate::audiobookshelf_api::mapping::podcast::map_podcast;
 use crate::audiobookshelf_api::socket_io::broadcaster;
 use crate::services::audiobookshelf::hls_transcoder::should_use_hls;
 use crate::services::podcast::service::PodcastService;
@@ -149,6 +150,25 @@ async fn start_session(
         format!("/api/items/{item_id}/file/ino_ep_{}", episode.id)
     };
 
+    // mediaMetadata snapshot - upstream PlaybackSession.mediaMetadata.
+    // Mobile-app player UIs read this for the now-playing screen
+    // (title, author, image, description). Empty {} can make some
+    // players refuse to start.
+    let media_metadata = serde_json::json!({
+        "title": podcast.name,
+        "author": podcast.author,
+        "description": podcast.summary,
+        "releaseDate": podcast.last_build_date,
+        "feedUrl": podcast.rssfeed,
+        "imageUrl": podcast.image_url,
+        "explicit": matches!(
+            podcast.explicit.as_deref(),
+            Some("yes") | Some("true") | Some("1")
+        ),
+        "language": podcast.language,
+        "type": "episodic",
+    });
+
     let session = PlaybackSession {
         id: session_id.clone(),
         user_id: user.id,
@@ -166,7 +186,7 @@ async fn start_session(
         display_title: Some(episode.name.clone()),
         display_author: podcast.author.clone(),
         cover_path: Some(format!("/api/items/{item_id}/cover")),
-        media_metadata_json: None,
+        media_metadata_json: serde_json::to_string(&media_metadata).ok(),
         device_info_json: None,
     };
     let session = state
@@ -218,10 +238,15 @@ async fn start_session(
         exclude: false,
     }];
 
-    Ok(Json(PlaybackSessionDto::from_domain(
-        &session_with_progress,
-        audio_tracks,
-    )))
+    let mut response = PlaybackSessionDto::from_domain(&session_with_progress, audio_tracks);
+    // Embed the full LibraryItem so mobile players that consume
+    // `session.libraryItem` (audiobookshelf-app v0.12+) can finish
+    // prepareLibraryItem without a second round trip.
+    response.library_item = Some(map_podcast(&podcast, &episodes, &library.id));
+    if let Ok(s) = serde_json::to_string(&response) {
+        tracing::info!("audiobookshelf play response (podcast ep_{}): {}", episode.id, s);
+    }
+    Ok(Json(response))
 }
 
 #[utoipa::path(
