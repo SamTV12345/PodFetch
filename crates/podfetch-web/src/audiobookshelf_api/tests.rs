@@ -643,6 +643,277 @@ fn generate_pseudo_audio_bytes(len: usize) -> Vec<u8> {
     (0..len).map(|i| (i % 251) as u8).collect()
 }
 
+// ── Phase E: audiobookshelf compat fixes ────────────────────────────────────
+
+#[tokio::test]
+#[serial]
+async fn me_dto_includes_all_upstream_user_fields() {
+    // Pins the audiobookshelf User.toOldJSONForBrowser() shape so missing
+    // fields stop the mobile apps. If you ever change a field name here you
+    // are breaking the wire compat.
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    login_audiobookshelf(&mut server, &user).await;
+    let resp = server.test_server.get("/api/me").await;
+    assert_eq!(resp.status_code().as_u16(), 200);
+    let body: Value = resp.json();
+    for field in [
+        "id",
+        "username",
+        "email",
+        "type",
+        "token",
+        "isOldToken",
+        "isActive",
+        "isLocked",
+        "lastSeen",
+        "createdAt",
+        "permissions",
+        "librariesAccessible",
+        "itemTagsSelected",
+        "bookmarks",
+        "seriesHideFromContinueListening",
+        "hasOpenIDLink",
+        "mediaProgress",
+    ] {
+        assert!(body.get(field).is_some(), "user payload missing field {field}");
+    }
+    assert!(body["bookmarks"].is_array());
+    assert!(body["seriesHideFromContinueListening"].is_array());
+    assert!(body["itemTagsSelected"].is_array());
+    assert_eq!(body["isOldToken"], json!(false));
+    assert_eq!(body["isLocked"], json!(false));
+    assert_eq!(body["hasOpenIDLink"], json!(false));
+}
+
+#[tokio::test]
+#[serial]
+async fn podcast_episode_shape_matches_audiobookshelf() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    let podcast = insert_test_podcast("Shape pod", &state, user.id);
+    let episode = insert_test_episode(podcast.id, "Shape ep");
+    login_audiobookshelf(&mut server, &user).await;
+
+    let resp = server
+        .test_server
+        .get(&format!("/api/items/li_pod_{}", podcast.id))
+        .await;
+    let body: Value = resp.json();
+    let ep = &body["media"]["episodes"][0];
+    // All upstream-required keys must exist.
+    for field in [
+        "libraryItemId",
+        "podcastId",
+        "id",
+        "oldEpisodeId",
+        "index",
+        "season",
+        "episode",
+        "episodeType",
+        "title",
+        "subtitle",
+        "description",
+        "enclosure",
+        "guid",
+        "pubDate",
+        "chapters",
+        "audioFile",
+        "audioTrack",
+        "publishedAt",
+        "addedAt",
+        "updatedAt",
+        "duration",
+        "size",
+    ] {
+        assert!(
+            ep.get(field).is_some(),
+            "episode payload missing field {field}: {ep:#?}"
+        );
+    }
+    // podcastId is an i32, not a string
+    assert!(ep["podcastId"].is_i64());
+    assert_eq!(ep["podcastId"], json!(podcast.id));
+    // audioTrack.contentUrl matches upstream's /api/items/<id>/file/<ino>
+    let url = ep["audioTrack"]["contentUrl"].as_str().unwrap();
+    let expected = format!("/api/items/li_pod_{}/file/ino_ep_{}", podcast.id, episode.id);
+    assert_eq!(url, expected, "audioTrack.contentUrl mismatch");
+    // enclosure carries type + url + nullable length
+    let enc = &ep["enclosure"];
+    assert!(enc["url"].is_string());
+    assert!(enc["type"].is_string());
+    assert!(enc["length"].is_null() || enc["length"].is_string());
+}
+
+#[tokio::test]
+#[serial]
+async fn patch_me_progress_creates_progress_row_and_reflects_in_me() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    let podcast = insert_test_podcast("Patch pod", &state, user.id);
+    let episode = insert_test_episode(podcast.id, "Patch ep");
+    login_audiobookshelf(&mut server, &user).await;
+
+    let li_id = format!("li_pod_{}", podcast.id);
+    let ep_id = format!("ep_{}", episode.id);
+    let resp = server
+        .test_server
+        .patch(&format!("/api/me/progress/{}/{}", li_id, ep_id))
+        .json(&json!({
+            "currentTime": 123.5,
+            "duration": 300.0,
+            "isFinished": false
+        }))
+        .await;
+    assert_eq!(resp.status_code().as_u16(), 200);
+
+    // /api/me should now include the row
+    let me_resp = server.test_server.get("/api/me").await;
+    let body: Value = me_resp.json();
+    let progress = body["mediaProgress"].as_array().unwrap();
+    assert_eq!(progress.len(), 1);
+    assert_eq!(progress[0]["libraryItemId"], json!(li_id));
+    assert_eq!(progress[0]["episodeId"], json!(ep_id));
+    assert!((progress[0]["currentTime"].as_f64().unwrap() - 123.5).abs() < 0.01);
+}
+
+#[tokio::test]
+#[serial]
+async fn patch_me_progress_item_only_works_for_books() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    login_audiobookshelf(&mut server, &user).await;
+
+    let resp = server
+        .test_server
+        .patch("/api/me/progress/li_book_someid")
+        .json(&json!({ "currentTime": 50.0, "duration": 200.0 }))
+        .await;
+    assert_eq!(resp.status_code().as_u16(), 200);
+
+    let me_resp = server.test_server.get("/api/me").await;
+    let body: Value = me_resp.json();
+    let progress = body["mediaProgress"].as_array().unwrap();
+    assert_eq!(progress.len(), 1);
+    assert_eq!(progress[0]["libraryItemId"], json!("li_book_someid"));
+    assert!(progress[0]["episodeId"].is_null());
+    assert_eq!(progress[0]["mediaItemType"], json!("book"));
+}
+
+#[tokio::test]
+#[serial]
+async fn patch_me_progress_batch_upserts_multiple() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    let podcast = insert_test_podcast("Batch pod", &state, user.id);
+    let ep_a = insert_test_episode(podcast.id, "ep a");
+    let ep_b = insert_test_episode(podcast.id, "ep b");
+    login_audiobookshelf(&mut server, &user).await;
+
+    let body = json!([
+        {
+            "libraryItemId": format!("li_pod_{}", podcast.id),
+            "episodeId": format!("ep_{}", ep_a.id),
+            "currentTime": 5.0,
+            "duration": 100.0
+        },
+        {
+            "libraryItemId": format!("li_pod_{}", podcast.id),
+            "episodeId": format!("ep_{}", ep_b.id),
+            "currentTime": 50.0,
+            "duration": 100.0,
+            "isFinished": false
+        }
+    ]);
+    let resp = server
+        .test_server
+        .patch("/api/me/progress/batch/update")
+        .json(&body)
+        .await;
+    assert_eq!(resp.status_code().as_u16(), 200);
+
+    let me_resp = server.test_server.get("/api/me").await;
+    let body: Value = me_resp.json();
+    let progress = body["mediaProgress"].as_array().unwrap();
+    assert_eq!(progress.len(), 2);
+}
+
+#[tokio::test]
+#[serial]
+async fn patch_me_progress_batch_rejects_empty_payload() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    login_audiobookshelf(&mut server, &user).await;
+
+    let resp = server
+        .test_server
+        .patch("/api/me/progress/batch/update")
+        .json(&json!([]))
+        .await;
+    assert!(
+        resp.status_code().is_client_error(),
+        "expected 4xx for empty payload, got {}",
+        resp.status_code()
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn item_file_endpoint_streams_episode_audio() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+
+    let bytes = generate_pseudo_audio_bytes(2048);
+    let path = write_temp_audio_file(&bytes, "item-file.mp3");
+    let podcast = insert_test_podcast("Item file pod", &state, user.id);
+    let episode = insert_test_episode_with_path(podcast.id, "ep", &path);
+    login_audiobookshelf(&mut server, &user).await;
+
+    let resp = server
+        .test_server
+        .get(&format!(
+            "/api/items/li_pod_{}/file/ino_ep_{}",
+            podcast.id, episode.id
+        ))
+        .await;
+    assert_eq!(resp.status_code().as_u16(), 200);
+    assert_eq!(resp.as_bytes().as_ref(), bytes.as_slice());
+    let _ = std::fs::remove_file(&path);
+}
+
+#[tokio::test]
+#[serial]
+async fn item_file_endpoint_honors_range() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    let bytes = generate_pseudo_audio_bytes(4096);
+    let path = write_temp_audio_file(&bytes, "range-file.mp3");
+    let podcast = insert_test_podcast("Range item pod", &state, user.id);
+    let episode = insert_test_episode_with_path(podcast.id, "ep", &path);
+    login_audiobookshelf(&mut server, &user).await;
+    let resp = server
+        .test_server
+        .get(&format!(
+            "/api/items/li_pod_{}/file/ino_ep_{}",
+            podcast.id, episode.id
+        ))
+        .add_header("Range", "bytes=10-19")
+        .await;
+    assert_eq!(resp.status_code().as_u16(), 206);
+    let body = resp.as_bytes();
+    assert_eq!(body.len(), 10);
+    assert_eq!(body.as_ref(), &bytes[10..20]);
+    let _ = std::fs::remove_file(&path);
+}
+
 // ── Phase D3: file_watcher ─────────────────────────────────────────────────
 
 #[tokio::test]

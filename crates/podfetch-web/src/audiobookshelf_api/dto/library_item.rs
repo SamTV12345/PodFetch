@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-#[derive(Serialize, utoipa::ToSchema)]
+#[derive(Serialize, utoipa::ToSchema, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AudioFileMetadataDto {
     pub path: String,
@@ -35,32 +35,56 @@ pub struct ChapterDto {
     pub title: String,
 }
 
+/// 100 % audiobookshelf-shape per upstream `PodcastEpisode.toOldJSONExpanded()`
+/// (`server/models/PodcastEpisode.js`).
 #[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastEpisodeDto {
-    pub id: String,
     pub library_item_id: String,
+    pub podcast_id: i32,
+    pub id: String,
+    pub old_episode_id: Option<String>,
     pub index: i32,
+    pub season: Option<String>,
     pub episode: Option<String>,
+    pub episode_type: Option<String>,
     pub title: String,
     pub subtitle: Option<String>,
     pub description: Option<String>,
     pub enclosure: Option<EpisodeEnclosureDto>,
+    pub guid: Option<String>,
     pub pub_date: Option<String>,
+    pub chapters: Vec<ChapterDto>,
     pub audio_file: AudioFileDto,
+    pub audio_track: AudioTrackInlineDto,
     pub published_at: Option<i64>,
     pub added_at: i64,
     pub updated_at: i64,
     pub duration: f64,
     pub size: i64,
-    pub chapters: Vec<ChapterDto>,
 }
 
 #[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct EpisodeEnclosureDto {
     pub url: String,
+    #[serde(rename = "type")]
     pub r#type: String,
+    /// audiobookshelf serialises this as a string when set; null otherwise.
+    pub length: Option<String>,
+}
+
+#[derive(Serialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct AudioTrackInlineDto {
+    pub index: i32,
+    pub start_offset: f64,
+    pub duration: f64,
+    pub title: String,
+    pub content_url: String,
+    pub mime_type: String,
+    pub codec: String,
+    pub metadata: AudioFileMetadataDto,
 }
 
 #[derive(Serialize, utoipa::ToSchema)]

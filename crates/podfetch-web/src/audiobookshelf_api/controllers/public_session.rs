@@ -84,10 +84,19 @@ pub async fn serve_track(
         }
     };
     let path = PathBuf::from(&local);
+    serve_file_with_range(&path, &headers).await
+}
+
+/// Reusable HTTP Range-aware file server used by both /public/session/*/track
+/// and /api/items/*/file/*. Returns 206 with Content-Range when Range header
+/// is present, else full 200.
+pub async fn serve_file_with_range(
+    path: &std::path::Path,
+    headers: &HeaderMap,
+) -> Result<Response, CustomError> {
     if !path.is_file() {
         return Err(CustomErrorInner::NotFound(Debug).into());
     }
-
     let mut file = fs::File::open(&path)
         .await
         .map_err(|_| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
@@ -96,7 +105,6 @@ pub async fn serve_track(
         .await
         .map_err(|_| CustomError::from(CustomErrorInner::NotFound(Debug)))?
         .len();
-
     let mime = mime_guess::from_path(&path)
         .first_or_octet_stream()
         .to_string();
@@ -107,7 +115,7 @@ pub async fn serve_track(
         .and_then(parse_range)
         .and_then(|r| materialize_range(r, total))
     {
-        let (start, end) = range_header; // inclusive
+        let (start, end) = range_header;
         let len = end - start + 1;
         file.seek(SeekFrom::Start(start))
             .await
@@ -116,13 +124,9 @@ pub async fn serve_track(
         file.read_exact(&mut buf)
             .await
             .map_err(|_| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
-
         let mut out_headers = HeaderMap::new();
         out_headers.insert(header::CONTENT_TYPE, HeaderValue::from_str(&mime).unwrap());
-        out_headers.insert(
-            header::ACCEPT_RANGES,
-            HeaderValue::from_static("bytes"),
-        );
+        out_headers.insert(header::ACCEPT_RANGES, HeaderValue::from_static("bytes"));
         out_headers.insert(
             header::CONTENT_RANGE,
             HeaderValue::from_str(&format!("bytes {start}-{end}/{total}")).unwrap(),

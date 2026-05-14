@@ -29,17 +29,30 @@ impl PermissionsDto {
     }
 }
 
+/// 100 % audiobookshelf-shape user payload. Field set mirrors
+/// `User.toOldJSONForBrowser()` in `server/models/User.js` so the mobile
+/// apps don't crash on missing keys.
 #[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AbsUserDto {
     pub id: String,
     pub username: String,
+    pub email: Option<String>,
     #[serde(rename = "type")]
     pub user_type: String,
     pub token: String,
+    pub is_old_token: bool,
     pub is_active: bool,
+    pub is_locked: bool,
+    pub last_seen: i64,
+    pub created_at: i64,
     pub permissions: PermissionsDto,
     pub libraries_accessible: Vec<String>,
+    pub item_tags_selected: Vec<String>,
+    pub bookmarks: Vec<serde_json::Value>,
+    pub series_hide_from_continue_listening: Vec<String>,
+    #[serde(rename = "hasOpenIDLink")]
+    pub has_open_id_link: bool,
     pub media_progress: Vec<MediaProgressDto>,
 }
 
@@ -50,14 +63,24 @@ impl AbsUserDto {
         } else {
             "user"
         };
+        let now_ms = chrono::Utc::now().timestamp_millis();
         Self {
             id: user.id.to_string(),
             username: user.username.clone(),
+            email: None,
             user_type: user_type.to_string(),
             token: user.api_key.clone().unwrap_or_default(),
+            is_old_token: false,
             is_active: true,
+            is_locked: false,
+            last_seen: now_ms,
+            created_at: user.created_at.and_utc().timestamp_millis(),
             permissions: PermissionsDto::for_role(&user.role),
             libraries_accessible: Vec::new(),
+            item_tags_selected: Vec::new(),
+            bookmarks: Vec::new(),
+            series_hide_from_continue_listening: Vec::new(),
+            has_open_id_link: false,
             media_progress,
         }
     }

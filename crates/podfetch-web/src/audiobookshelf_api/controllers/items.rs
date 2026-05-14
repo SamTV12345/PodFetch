@@ -201,9 +201,71 @@ async fn serve_file(path: PathBuf) -> Result<Response, CustomError> {
     Ok((StatusCode::OK, headers, Body::from(bytes)).into_response())
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/items/{id}/file/{ino}",
+    params(
+        ("id" = String, Path, description = "Library item id"),
+        ("ino" = String, Path, description = "Audio file ino (ino_ep_<id> for podcasts, ino_book_<id> for books)")
+    ),
+    responses(
+        (status = 200, description = "Full file"),
+        (status = 206, description = "Range partial content")
+    ),
+    tag = "audiobookshelf"
+)]
+pub async fn get_item_file(
+    State(state): State<AppState>,
+    _user: AuthenticatedUser,
+    Path((id, ino)): Path<(String, String)>,
+    headers: HeaderMap,
+) -> Result<Response, CustomError> {
+    let parsed = LibraryItemId::parse(&id)
+        .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
+    let local_path: PathBuf = match parsed {
+        LibraryItemId::Podcast(podcast_id) => {
+            let episode_db_id = ino
+                .strip_prefix("ino_ep_")
+                .and_then(|s| s.parse::<i32>().ok())
+                .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
+            let _ = PodcastService::get_podcast(podcast_id)?;
+            let episode = PodcastEpisodeService::get_episodes_by_podcast_id(podcast_id)?
+                .into_iter()
+                .map(podfetch_domain::podcast_episode::PodcastEpisode::from)
+                .find(|e| e.id == episode_db_id)
+                .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
+            let local = episode
+                .file_episode_path
+                .clone()
+                .or_else(|| episode.download_location.clone())
+                .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
+            PathBuf::from(local)
+        }
+        LibraryItemId::Book(_) => {
+            let book = state
+                .audiobookshelf_book_service
+                .find_by_id(&id)?
+                .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
+            let aggregate = state.audiobookshelf_book_service.hydrate(book)?;
+            let file = aggregate
+                .audio_files
+                .iter()
+                .find(|af| af.id == ino || af.ino.as_deref() == Some(&ino))
+                .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
+            PathBuf::from(file.path.clone())
+        }
+    };
+    crate::audiobookshelf_api::controllers::public_session::serve_file_with_range(
+        &local_path,
+        &headers,
+    )
+    .await
+}
+
 pub fn get_items_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(list_library_items))
         .routes(routes!(get_library_item))
         .routes(routes!(get_item_cover))
+        .routes(routes!(get_item_file))
 }

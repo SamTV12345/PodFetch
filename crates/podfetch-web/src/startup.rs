@@ -403,17 +403,38 @@ pub fn build_server_router() -> Router {
     let (layer, io) = SocketIoBuilder::new().build_layer();
     let auth_service = state.user_auth_service.clone();
     let auth_service_main = state.user_auth_service.clone();
+    let abs_login_service = state.audiobookshelf_login_service.clone();
     io.ns("/", move |socket: SocketRef| {
         let auth_service = auth_service.clone();
+        let abs_login_service = abs_login_service.clone();
         async move {
+            // Audiobookshelf mobile apps connect WITHOUT query auth and then
+            // emit `socket.emit('auth', <token>)`. We install that handler
+            // here so the default namespace serves both PodFetch's own UI
+            // (query-auth-based) and the audiobookshelf clients (event-auth).
+            if ENVIRONMENT_SERVICE.audiobookshelf_integration_enabled {
+                crate::audiobookshelf_api::socket_io::gateway::install_auth_handler(
+                    &socket,
+                    abs_login_service.clone(),
+                );
+            }
             if ENVIRONMENT_SERVICE.any_auth_enabled
                 && !is_socket_authenticated(&socket, &auth_service)
             {
-                tracing::warn!(
-                    "Rejecting unauthenticated WebSocket connection {}",
+                // Audiobookshelf clients arrive without query auth; give them a
+                // grace window to send the `auth` event before disconnecting.
+                if !ENVIRONMENT_SERVICE.audiobookshelf_integration_enabled {
+                    tracing::warn!(
+                        "Rejecting unauthenticated WebSocket connection {}",
+                        socket.id
+                    );
+                    let _ = socket.disconnect();
+                    return;
+                }
+                tracing::debug!(
+                    "Socket {} connected unauthenticated; awaiting audiobookshelf `auth` event",
                     socket.id
                 );
-                let _ = socket.disconnect();
                 return;
             }
             info!("Socket connected {}", socket.id);
@@ -436,10 +457,8 @@ pub fn build_server_router() -> Router {
         }
     });
     if ENVIRONMENT_SERVICE.audiobookshelf_integration_enabled {
-        crate::audiobookshelf_api::socket_io::gateway::register(
-            &io,
-            state.audiobookshelf_login_service.clone(),
-        );
+        // Audiobookshelf event-based `auth` handler is installed in the `/`
+        // namespace handler above (mobile apps don't connect to custom NSs).
         start_audiobookshelf_file_watcher(&state);
     }
     SOCKET_IO_LAYER.get_or_init(|| io);

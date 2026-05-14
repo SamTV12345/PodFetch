@@ -2,8 +2,8 @@
 //! audiobookshelf-shaped `LibraryItem` DTO.
 
 use crate::audiobookshelf_api::dto::library_item::{
-    AudioFileDto, AudioFileMetadataDto, EpisodeEnclosureDto, LibraryItemDto, PodcastEpisodeDto,
-    PodcastMediaDto, PodcastMetadataDto,
+    AudioFileDto, AudioFileMetadataDto, AudioTrackInlineDto, EpisodeEnclosureDto, LibraryItemDto,
+    PodcastEpisodeDto, PodcastMediaDto, PodcastMetadataDto,
 };
 use chrono::{NaiveDateTime, Utc};
 use podfetch_domain::audiobookshelf::library_item_id::{EpisodeId, LibraryItemId};
@@ -100,7 +100,11 @@ pub fn map_podcast(
     }
 }
 
-fn map_episode(episode: &PodcastEpisode, library_item_id: &str, index: i32) -> PodcastEpisodeDto {
+fn map_episode(
+    episode: &PodcastEpisode,
+    library_item_id: &str,
+    index: i32,
+) -> PodcastEpisodeDto {
     let published_at_naive: Option<NaiveDateTime> =
         chrono::DateTime::parse_from_rfc3339(&episode.date_of_recording)
             .ok()
@@ -137,44 +141,69 @@ fn map_episode(episode: &PodcastEpisode, library_item_id: &str, index: i32) -> P
     let codec = codec_for_ext(&ext);
     let duration = episode.total_time as f64;
 
+    let audio_metadata = AudioFileMetadataDto {
+        path: local_path.clone(),
+        filename: filename.clone(),
+        ext: ext.clone(),
+    };
+    let enclosure = if episode.url.is_empty() {
+        None
+    } else {
+        Some(EpisodeEnclosureDto {
+            url: episode.url.clone(),
+            r#type: mime_type.clone(),
+            length: None,
+        })
+    };
     PodcastEpisodeDto {
-        id: EpisodeId(episode.id).as_string(),
         library_item_id: library_item_id.to_string(),
+        podcast_id: episode.podcast_id,
+        id: EpisodeId(episode.id).as_string(),
+        old_episode_id: None,
         index,
+        season: None,
         episode: None,
+        episode_type: Some("full".to_string()),
         title: episode.name.clone(),
         subtitle: None,
         description: Some(episode.description.clone()),
-        enclosure: Some(EpisodeEnclosureDto {
-            url: episode.url.clone(),
-            r#type: mime_type.clone(),
-        }),
+        enclosure,
+        guid: Some(episode.guid.clone()).filter(|s| !s.is_empty()),
         pub_date: Some(episode.date_of_recording.clone()),
+        chapters: Vec::new(),
         audio_file: AudioFileDto {
             index: 1,
             ino: format!("ino_ep_{}", episode.id),
-            metadata: AudioFileMetadataDto {
-                path: local_path,
-                filename,
-                ext,
-            },
+            metadata: audio_metadata.clone(),
             duration,
             bit_rate: 0,
             language: None,
-            codec,
+            codec: codec.clone(),
             time_base: "1/1000".to_string(),
             channels: 2,
             channel_layout: "stereo".to_string(),
             chapters: Vec::new(),
             embedded_cover_art: None,
+            mime_type: mime_type.clone(),
+        },
+        audio_track: AudioTrackInlineDto {
+            index: 1,
+            start_offset: 0.0,
+            duration,
+            title: episode.name.clone(),
+            content_url: format!(
+                "/api/items/{library_item_id}/file/ino_ep_{}",
+                episode.id
+            ),
             mime_type,
+            codec,
+            metadata: audio_metadata,
         },
         published_at: published_at_ms,
         added_at: download_ms,
         updated_at: download_ms,
         duration,
         size: 0,
-        chapters: Vec::new(),
     }
 }
 
