@@ -223,10 +223,15 @@ pub fn map_episode(
     let codec = codec_for_ext(&ext);
     let duration = episode.total_time as f64;
     let ino = format!("ino_ep_{}", episode.id);
+    // Android-app Kotlin FileMetadata has non-null `filename`, `ext`,
+    // `path`, `relPath` (only `size` is nullable). Missing any of them
+    // crashes Jackson on AudioFile["metadata"]["<field>"].
     let audio_file_metadata = json!({
-        "path": local_path,
         "filename": filename,
         "ext": ext,
+        "path": local_path,
+        "relPath": local_path,
+        "size": Value::Null,
     });
     let audio_file = json!({
         "index": 1,

@@ -977,6 +977,18 @@ async fn play_response_passes_android_kotlin_required_fields() {
         folder_id.is_string() && !folder_id.as_str().unwrap().is_empty(),
         "libraryItem.folderId must be a non-empty string. Got: {folder_id:#?}"
     );
+
+    // Kotlin FileMetadata has non-null filename/ext/path/relPath. Jackson
+    // walks libraryItem.media.episodes[0].audioFile.metadata and crashes
+    // if any of these are null.
+    let ep_meta = &library_item["media"]["episodes"][0]["audioFile"]["metadata"];
+    for field in ["filename", "ext", "path", "relPath"] {
+        let value = &ep_meta[field];
+        assert!(
+            value.is_string(),
+            "libraryItem.media.episodes[0].audioFile.metadata.{field} must be a non-null string (Kotlin FileMetadata). Got: {value:#?}"
+        );
+    }
 }
 
 #[tokio::test]
