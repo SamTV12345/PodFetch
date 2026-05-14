@@ -2286,6 +2286,106 @@ fn map_itunes_result_pins_audiobookshelf_shape() {
     assert_eq!(v["explicit"], json!(true));
 }
 
+// ── /api/me/listening-stats ────────────────────────────────────────────────
+
+#[tokio::test]
+#[serial]
+async fn listening_stats_returns_empty_buckets_for_new_user() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    login_audiobookshelf(&mut server, &user).await;
+
+    let resp = server.test_server.get("/api/me/listening-stats").await;
+    assert_eq!(resp.status_code().as_u16(), 200);
+    let body: Value = resp.json();
+    // Pin every key the upstream Vue dashboard reads — missing any of these
+    // makes the chart panel throw on `undefined.totalTime` etc.
+    assert_eq!(body["totalTime"], json!(0.0));
+    assert_eq!(body["today"], json!(0.0));
+    assert!(body["items"].is_object());
+    assert!(body["days"].is_object());
+    assert!(body["dayOfWeek"].is_object());
+    assert!(body["recentSessions"].is_array());
+}
+
+#[tokio::test]
+#[serial]
+async fn listening_stats_aggregates_play_close_cycle() {
+    use chrono::{Datelike, Utc};
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    let podcast = insert_test_podcast("Stats Podcast", &state, user.id);
+    let episode = insert_test_episode(podcast.id, "Stats Episode");
+    login_audiobookshelf(&mut server, &user).await;
+
+    let play_resp = server
+        .test_server
+        .post(&format!(
+            "/api/items/li_pod_{}/play/ep_{}",
+            podcast.id, episode.id
+        ))
+        .json(&json!({ "mediaPlayer": "test", "supportedMimeTypes": ["audio/mpeg"] }))
+        .await;
+    let session_id = play_resp.json::<Value>()["id"].as_str().unwrap().to_string();
+    let close = server
+        .test_server
+        .post(&format!("/api/session/{session_id}/close"))
+        .json(&json!({
+            "currentTime": 90.0, "timeListened": 90.0, "duration": episode.total_time
+        }))
+        .await;
+    assert_eq!(close.status_code().as_u16(), 200);
+
+    let stats = server.test_server.get("/api/me/listening-stats").await;
+    assert_eq!(stats.status_code().as_u16(), 200);
+    let body: Value = stats.json();
+    assert!(
+        body["totalTime"].as_f64().unwrap() >= 89.0,
+        "totalTime should include the 90s close, got {}",
+        body["totalTime"]
+    );
+    let item_key = format!("li_pod_{}", podcast.id);
+    assert!(
+        body["items"][&item_key].is_object(),
+        "per-libraryItem bucket missing for {item_key}, items={}",
+        body["items"]
+    );
+    assert!(
+        body["items"][&item_key]["timeListening"]
+            .as_f64()
+            .unwrap()
+            >= 89.0
+    );
+    let today = Utc::now().format("%Y-%m-%d").to_string();
+    assert!(
+        body["days"][&today].is_number(),
+        "today's day bucket missing, days={}",
+        body["days"]
+    );
+    let weekday_key = match Utc::now().weekday() {
+        chrono::Weekday::Mon => "Monday",
+        chrono::Weekday::Tue => "Tuesday",
+        chrono::Weekday::Wed => "Wednesday",
+        chrono::Weekday::Thu => "Thursday",
+        chrono::Weekday::Fri => "Friday",
+        chrono::Weekday::Sat => "Saturday",
+        chrono::Weekday::Sun => "Sunday",
+    };
+    assert!(
+        body["dayOfWeek"][weekday_key].is_number(),
+        "weekday bucket missing for {weekday_key}, dayOfWeek={}",
+        body["dayOfWeek"]
+    );
+    assert_eq!(
+        body["recentSessions"].as_array().map(|a| a.len()),
+        Some(1),
+        "exactly one closed session, recent={}",
+        body["recentSessions"]
+    );
+}
+
 // ── /api/playlists ──────────────────────────────────────────────────────────
 
 #[tokio::test]

@@ -5,12 +5,13 @@ use crate::audiobookshelf_api::dto::user::AbsUserDto;
 use crate::audiobookshelf_api::socket_io::broadcaster;
 use axum::Json;
 use axum::extract::{Path, Query, State};
-use chrono::Utc;
+use chrono::{Datelike, Utc};
 use common_infrastructure::error::CustomError;
 use podfetch_domain::audiobookshelf::library_item_id::LibraryItemId;
+use podfetch_domain::audiobookshelf::listening_session::ListeningSession;
 use podfetch_domain::audiobookshelf::media_progress::MediaProgress;
 use serde::Deserialize;
-use serde_json::{Value, json};
+use serde_json::{Map, Value, json};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -54,28 +55,7 @@ pub async fn list_listening_sessions(
         .audiobookshelf_listening_session_service
         .list_for_user(user.id, limit)?;
     let total = sessions.len() as i64;
-    let entries: Vec<Value> = sessions
-        .iter()
-        .map(|s| {
-            json!({
-                "id": s.id,
-                "userId": s.user_id.to_string(),
-                "libraryId": s.library_id,
-                "libraryItemId": s.library_item_id,
-                "episodeId": s.episode_id,
-                "mediaType": s.media_type,
-                "playMethod": s.play_method,
-                "duration": s.duration,
-                "currentTime": s.current_time,
-                "timeListening": s.time_listening,
-                "startedAt": s.started_at.and_utc().timestamp_millis(),
-                "updatedAt": s.updated_at.and_utc().timestamp_millis(),
-                "displayTitle": s.display_title,
-                "displayAuthor": s.display_author,
-                "coverPath": s.cover_path,
-            })
-        })
-        .collect();
+    let entries: Vec<Value> = sessions.iter().map(session_to_value).collect();
     Ok(Json(json!({
         "total": total,
         "limit": limit,
@@ -84,6 +64,49 @@ pub async fn list_listening_sessions(
         "itemsPerPage": limit,
         "sessions": entries,
     })))
+}
+
+/// Audiobookshelf-shaped serialisation for one listening-session row.
+/// Includes `date`, `dayOfWeek` and a synthetic `mediaMetadata` snapshot
+/// because upstream's stats aggregator + Vue dashboard read them off
+/// each session, and PodFetch doesn't store them as separate columns.
+fn session_to_value(s: &ListeningSession) -> Value {
+    let started = s.started_at.and_utc();
+    let date_str = started.format("%Y-%m-%d").to_string();
+    let day_of_week = match started.weekday() {
+        chrono::Weekday::Mon => "Monday",
+        chrono::Weekday::Tue => "Tuesday",
+        chrono::Weekday::Wed => "Wednesday",
+        chrono::Weekday::Thu => "Thursday",
+        chrono::Weekday::Fri => "Friday",
+        chrono::Weekday::Sat => "Saturday",
+        chrono::Weekday::Sun => "Sunday",
+    };
+    json!({
+        "id": s.id,
+        "userId": s.user_id.to_string(),
+        "libraryId": s.library_id,
+        "libraryItemId": s.library_item_id,
+        "episodeId": s.episode_id,
+        "mediaType": s.media_type,
+        "playMethod": s.play_method,
+        "duration": s.duration,
+        "currentTime": s.current_time,
+        "timeListening": s.time_listening,
+        "startedAt": s.started_at.and_utc().timestamp_millis(),
+        "updatedAt": s.updated_at.and_utc().timestamp_millis(),
+        "lastUpdate": s.updated_at.and_utc().timestamp_millis(),
+        "displayTitle": s.display_title,
+        "displayAuthor": s.display_author,
+        "coverPath": s.cover_path,
+        "date": date_str,
+        "dayOfWeek": day_of_week,
+        "mediaMetadata": json!({
+            "title": s.display_title.clone().unwrap_or_default(),
+            "author": s.display_author.clone().unwrap_or_default(),
+            "coverPath": s.cover_path,
+        }),
+    })
 }
 
 /// Audiobookshelf-compatible progress update payload. Mobile apps send a
@@ -268,6 +291,110 @@ fn upsert_progress_from_payload(
     Ok(updated)
 }
 
+/// Mirrors upstream `GET /api/me/listening-stats`. Aggregates the closed
+/// listening sessions into the totals the web/mobile dashboards graph:
+/// `totalTime`, per-day, per-weekday and per-libraryItem buckets, plus
+/// the 10 most recent sessions. Exact key set is fixed by upstream's
+/// ApiRouter.getUserListeningStatsHelpers and Vue dashboard reads each
+/// key without a default.
+#[utoipa::path(
+    get,
+    path = "/api/me/listening-stats",
+    responses((status = 200, description = "Aggregated listening stats for the user")),
+    tag = "audiobookshelf"
+)]
+pub async fn get_listening_stats(
+    State(state): State<AppState>,
+    AuthenticatedUser(user): AuthenticatedUser,
+) -> Result<Json<Value>, CustomError> {
+    // Audit cap: the dashboard graphs the lifetime of stats; pull every
+    // session up to a generous safety limit so totals are correct.
+    let sessions = state
+        .audiobookshelf_listening_session_service
+        .list_for_user(user.id, 100_000)?;
+
+    let today = Utc::now().format("%Y-%m-%d").to_string();
+    let mut total_time: f64 = 0.0;
+    let mut today_time: f64 = 0.0;
+    let mut days: Map<String, Value> = Map::new();
+    let mut day_of_week: Map<String, Value> = Map::new();
+    let mut items: Map<String, Value> = Map::new();
+
+    for s in &sessions {
+        let listening = s.time_listening.max(0.0);
+        let started = s.started_at.and_utc();
+        let date_str = started.format("%Y-%m-%d").to_string();
+        let weekday = match started.weekday() {
+            chrono::Weekday::Mon => "Monday",
+            chrono::Weekday::Tue => "Tuesday",
+            chrono::Weekday::Wed => "Wednesday",
+            chrono::Weekday::Thu => "Thursday",
+            chrono::Weekday::Fri => "Friday",
+            chrono::Weekday::Sat => "Saturday",
+            chrono::Weekday::Sun => "Sunday",
+        };
+        let last_update_ms = s.updated_at.and_utc().timestamp_millis();
+
+        if listening > 0.0 {
+            let day = days
+                .get(&date_str)
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0)
+                + listening;
+            days.insert(date_str.clone(), json!(day));
+            if date_str == today {
+                today_time += listening;
+            }
+        }
+        let dow = day_of_week
+            .get(weekday)
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0)
+            + listening;
+        day_of_week.insert(weekday.to_string(), json!(dow));
+
+        let entry = items
+            .entry(s.library_item_id.clone())
+            .or_insert_with(|| {
+                json!({
+                    "id": s.library_item_id,
+                    "timeListening": 0.0,
+                    "mediaMetadata": {
+                        "title": s.display_title.clone().unwrap_or_default(),
+                        "author": s.display_author.clone().unwrap_or_default(),
+                        "coverPath": s.cover_path,
+                    },
+                    "lastUpdate": last_update_ms,
+                })
+            });
+        if let Some(obj) = entry.as_object_mut() {
+            let prev = obj
+                .get("timeListening")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0);
+            obj.insert("timeListening".to_string(), json!(prev + listening));
+            let prev_update = obj
+                .get("lastUpdate")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0);
+            if last_update_ms > prev_update {
+                obj.insert("lastUpdate".to_string(), json!(last_update_ms));
+            }
+        }
+        total_time += listening;
+    }
+
+    let recent: Vec<Value> = sessions.iter().take(10).map(session_to_value).collect();
+    Ok(Json(json!({
+        "totalTime": total_time,
+        "items": items,
+        "days": days,
+        "dayOfWeek": day_of_week,
+        "today": today_time,
+        "recentSessions": recent,
+    })))
+}
+
 /// Mirrors upstream `GET /api/me/items-in-progress`. The mobile apps
 /// poll this for the "Continue Listening" shelf. Returns a flat list of
 /// progress entries (we already build these for `/api/me`).
@@ -301,6 +428,7 @@ pub fn get_me_router() -> OpenApiRouter<AppState> {
         .routes(routes!(get_me))
         .routes(routes!(list_listening_sessions))
         .routes(routes!(list_items_in_progress))
+        .routes(routes!(get_listening_stats))
         .routes(routes!(patch_progress_item))
         .routes(routes!(patch_progress_item_episode))
         .routes(routes!(patch_progress_batch))
