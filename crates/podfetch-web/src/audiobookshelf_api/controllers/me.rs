@@ -34,7 +34,8 @@ pub async fn get_me(
         .audiobookshelf_media_progress_service
         .list_for_user(user.id)
         .unwrap_or_default();
-    let progress_dtos: Vec<MediaProgressDto> = progress.iter().map(MediaProgressDto::from).collect();
+    let progress_dtos: Vec<MediaProgressDto> =
+        progress.iter().map(MediaProgressDto::from).collect();
 
     Ok(Json(AbsUserDto::from_user(&user, progress_dtos)))
 }
@@ -160,13 +161,7 @@ pub async fn patch_progress_item_episode(
     Path((library_item_id, episode_id)): Path<(String, String)>,
     Json(payload): Json<ProgressUpdatePayload>,
 ) -> Result<Json<Value>, CustomError> {
-    upsert_progress_from_payload(
-        &state,
-        &user,
-        &library_item_id,
-        Some(episode_id),
-        payload,
-    )?;
+    upsert_progress_from_payload(&state, &user, &library_item_id, Some(episode_id), payload)?;
     Ok(Json(json!({ "success": true })))
 }
 
@@ -265,21 +260,23 @@ fn upsert_progress_from_payload(
             .unwrap_or(false),
     );
     let progress_id = MediaProgress::compose_id(library_item_id, episode_id.as_deref());
-    let updated = state.audiobookshelf_media_progress_service.upsert(MediaProgress {
-        id: progress_id,
-        user_id: user.id,
-        library_item_id: library_item_id.to_string(),
-        episode_id,
-        media_type,
-        duration,
-        current_time,
-        progress,
-        is_finished,
-        hide_from_continue_listening: hide,
-        last_update: now,
-        started_at,
-        finished_at,
-    })?;
+    let updated = state
+        .audiobookshelf_media_progress_service
+        .upsert(MediaProgress {
+            id: progress_id,
+            user_id: user.id,
+            library_item_id: library_item_id.to_string(),
+            episode_id,
+            media_type,
+            duration,
+            current_time,
+            progress,
+            is_finished,
+            hide_from_continue_listening: hide,
+            last_update: now,
+            started_at,
+            finished_at,
+        })?;
     // Mirror upstream: emit user_updated to all of the user's sockets after
     // a progress write. Mobile apps refresh the continue-listening list off
     // this event.
@@ -336,11 +333,7 @@ pub async fn get_listening_stats(
         let last_update_ms = s.updated_at.and_utc().timestamp_millis();
 
         if listening > 0.0 {
-            let day = days
-                .get(&date_str)
-                .and_then(|v| v.as_f64())
-                .unwrap_or(0.0)
-                + listening;
+            let day = days.get(&date_str).and_then(|v| v.as_f64()).unwrap_or(0.0) + listening;
             days.insert(date_str.clone(), json!(day));
             if date_str == today {
                 today_time += listening;
@@ -353,30 +346,25 @@ pub async fn get_listening_stats(
             + listening;
         day_of_week.insert(weekday.to_string(), json!(dow));
 
-        let entry = items
-            .entry(s.library_item_id.clone())
-            .or_insert_with(|| {
-                json!({
-                    "id": s.library_item_id,
-                    "timeListening": 0.0,
-                    "mediaMetadata": {
-                        "title": s.display_title.clone().unwrap_or_default(),
-                        "author": s.display_author.clone().unwrap_or_default(),
-                        "coverPath": s.cover_path,
-                    },
-                    "lastUpdate": last_update_ms,
-                })
-            });
+        let entry = items.entry(s.library_item_id.clone()).or_insert_with(|| {
+            json!({
+                "id": s.library_item_id,
+                "timeListening": 0.0,
+                "mediaMetadata": {
+                    "title": s.display_title.clone().unwrap_or_default(),
+                    "author": s.display_author.clone().unwrap_or_default(),
+                    "coverPath": s.cover_path,
+                },
+                "lastUpdate": last_update_ms,
+            })
+        });
         if let Some(obj) = entry.as_object_mut() {
             let prev = obj
                 .get("timeListening")
                 .and_then(|v| v.as_f64())
                 .unwrap_or(0.0);
             obj.insert("timeListening".to_string(), json!(prev + listening));
-            let prev_update = obj
-                .get("lastUpdate")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(0);
+            let prev_update = obj.get("lastUpdate").and_then(|v| v.as_i64()).unwrap_or(0);
             if last_update_ms > prev_update {
                 obj.insert("lastUpdate".to_string(), json!(last_update_ms));
             }

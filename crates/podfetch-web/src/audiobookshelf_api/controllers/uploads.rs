@@ -56,10 +56,7 @@ pub async fn upload(
                 title = Some(field.text().await.map_err(|e| bad_request(e.to_string()))?);
             }
             _ => {
-                let filename = field
-                    .file_name()
-                    .map(|f| sanitize_filename(f))
-                    .unwrap_or_default();
+                let filename = field.file_name().map(sanitize_filename).unwrap_or_default();
                 if filename.is_empty() {
                     continue;
                 }

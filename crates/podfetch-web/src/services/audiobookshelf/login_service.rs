@@ -79,10 +79,11 @@ impl AudiobookshelfLoginService {
     }
 
     pub fn require_user_for_token(&self, token: &str) -> Result<User, CustomError> {
-        self.user_from_token(token)?
-            .ok_or_else(|| CustomError::from(CustomErrorInner::UnAuthorized(
+        self.user_from_token(token)?.ok_or_else(|| {
+            CustomError::from(CustomErrorInner::UnAuthorized(
                 "Invalid token".to_string(),
                 Debug,
-            )))
+            ))
+        })
     }
 }

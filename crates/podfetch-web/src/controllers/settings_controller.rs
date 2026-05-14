@@ -52,8 +52,8 @@ pub async fn rescan_episodes(
     let opts = body.map(|Json(o)| o).unwrap_or_default();
 
     let scan_service = EpisodeScanServiceImpl::default_service();
-    let chapter_stats = settings::rescan_episodes(&scan_service, requester.is_admin())
-        .map_err(map_rescan_error)?;
+    let chapter_stats =
+        settings::rescan_episodes(&scan_service, requester.is_admin()).map_err(map_rescan_error)?;
 
     let apply_stats = if opts.any_enabled() {
         apply_settings_to_downloaded_episodes(&opts)?
@@ -96,10 +96,7 @@ fn apply_settings_to_downloaded_episodes(
             if let Err(err) =
                 EpisodeRescanService::apply_to_episode(episode, opts, &mut apply_stats)
             {
-                tracing::error!(
-                    "apply_to_episode failed for {}: {err}",
-                    episode.episode_id
-                );
+                tracing::error!("apply_to_episode failed for {}: {err}", episode.episode_id);
                 apply_stats.errors += 1;
             }
         }
@@ -413,7 +410,10 @@ mod tests {
             .await;
         assert_eq!(update_response.status_code(), 200);
         let updated = update_response.json::<Setting>();
-        assert!(updated.auto_transcode_opus, "autoTranscodeOpus should be true in PUT response");
+        assert!(
+            updated.auto_transcode_opus,
+            "autoTranscodeOpus should be true in PUT response"
+        );
         assert!(
             updated.use_one_cover_for_all_episodes,
             "useOneCoverForAllEpisodes should be true in PUT response"

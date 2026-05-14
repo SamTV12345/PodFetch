@@ -61,15 +61,15 @@ pub fn parse(json: &str) -> Option<MetadataPatch> {
     if let Some(b) = obj.get("explicit").and_then(|v| v.as_bool()) {
         patch.explicit = Some(b);
     }
-    if let Some(authors) = string_or_name_array(obj, "authors") {
-        if !authors.is_empty() {
-            patch.authors = Some(authors);
-        }
+    if let Some(authors) = string_or_name_array(obj, "authors")
+        && !authors.is_empty()
+    {
+        patch.authors = Some(authors);
     }
-    if let Some(narrators) = string_or_name_array(obj, "narrators") {
-        if !narrators.is_empty() {
-            patch.narrators = Some(narrators);
-        }
+    if let Some(narrators) = string_or_name_array(obj, "narrators")
+        && !narrators.is_empty()
+    {
+        patch.narrators = Some(narrators);
     }
     if let Some(series_value) = obj.get("series") {
         patch.series = parse_series(series_value);
@@ -78,10 +78,7 @@ pub fn parse(json: &str) -> Option<MetadataPatch> {
     Some(patch)
 }
 
-fn string_field(
-    obj: &serde_json::Map<String, Value>,
-    key: &str,
-) -> Option<String> {
+fn string_field(obj: &serde_json::Map<String, Value>, key: &str) -> Option<String> {
     obj.get(key)
         .and_then(|v| v.as_str())
         .map(str::trim)
@@ -89,10 +86,7 @@ fn string_field(
         .map(|s| s.to_string())
 }
 
-fn string_or_name_array(
-    obj: &serde_json::Map<String, Value>,
-    key: &str,
-) -> Option<Vec<String>> {
+fn string_or_name_array(obj: &serde_json::Map<String, Value>, key: &str) -> Option<Vec<String>> {
     let v = obj.get(key)?;
     if let Some(arr) = v.as_array() {
         let mut out = Vec::new();
@@ -147,10 +141,10 @@ fn parse_series(value: &Value) -> Option<(String, Option<String>)> {
             });
         return Some((name.to_string(), seq));
     }
-    if let Some(arr) = value.as_array() {
-        if let Some(first) = arr.first() {
-            return parse_series(first);
-        }
+    if let Some(arr) = value.as_array()
+        && let Some(first) = arr.first()
+    {
+        return parse_series(first);
     }
     None
 }
@@ -179,10 +173,7 @@ mod tests {
         let patch = parse(json).unwrap();
         assert_eq!(patch.title.as_deref(), Some("The Witcher"));
         assert_eq!(patch.subtitle.as_deref(), Some("The Last Wish"));
-        assert_eq!(
-            patch.authors,
-            Some(vec!["Andrzej Sapkowski".to_string()])
-        );
+        assert_eq!(patch.authors, Some(vec!["Andrzej Sapkowski".to_string()]));
         assert_eq!(patch.narrators, Some(vec!["Peter Kenny".to_string()]));
         assert_eq!(
             patch.series,
@@ -218,10 +209,7 @@ mod tests {
     fn series_can_be_object_or_plain_string() {
         let plain = parse(r#"{"title": "T", "series": "Just A Series"}"#).unwrap();
         assert_eq!(plain.series, Some(("Just A Series".to_string(), None)));
-        let object = parse(
-            r#"{"title": "T", "series": {"name": "X", "sequence": 3.5}}"#,
-        )
-        .unwrap();
+        let object = parse(r#"{"title": "T", "series": {"name": "X", "sequence": 3.5}}"#).unwrap();
         assert_eq!(
             object.series,
             Some(("X".to_string(), Some("3.5".to_string())))

@@ -23,10 +23,10 @@ impl LibraryItemId {
     pub fn parse(value: &str) -> Option<Self> {
         if let Some(rest) = value.strip_prefix("li_pod_") {
             rest.parse::<i32>().ok().map(Self::Podcast)
-        } else if let Some(rest) = value.strip_prefix("li_book_") {
-            Some(Self::Book(rest.to_string()))
         } else {
-            None
+            value
+                .strip_prefix("li_book_")
+                .map(|rest| Self::Book(rest.to_string()))
         }
     }
 

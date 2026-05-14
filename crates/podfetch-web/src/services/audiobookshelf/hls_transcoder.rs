@@ -74,7 +74,7 @@ pub fn build_media_playlist(stream_id: &str, duration_seconds: f64) -> String {
     for idx in 0..total_segments {
         let segment_dur = if idx == total_segments.saturating_sub(1) {
             let remainder = duration_seconds - SEGMENT_DURATION_SECONDS * (idx as f64);
-            remainder.max(0.0).min(SEGMENT_DURATION_SECONDS)
+            remainder.clamp(0.0, SEGMENT_DURATION_SECONDS)
         } else {
             SEGMENT_DURATION_SECONDS
         };
@@ -150,9 +150,7 @@ impl HlsTranscoder {
             .status()
             .map_err(|e| TranscodeError::Spawn(e.to_string()))?;
         if !status.success() {
-            return Err(TranscodeError::FfmpegFailed(
-                status.code().unwrap_or(-1),
-            ));
+            return Err(TranscodeError::FfmpegFailed(status.code().unwrap_or(-1)));
         }
         if !segment_file.is_file() {
             return Err(TranscodeError::Other(

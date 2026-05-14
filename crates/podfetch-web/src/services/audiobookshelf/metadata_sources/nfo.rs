@@ -62,8 +62,7 @@ pub fn parse(xml: &str) -> Option<MetadataPatch> {
                     let key = std::str::from_utf8(attr.key.as_ref())
                         .ok()?
                         .to_ascii_lowercase();
-                    let value =
-                        std::str::from_utf8(&attr.value).ok()?.to_string();
+                    let value = std::str::from_utf8(&attr.value).ok()?.to_string();
                     current_attrs.push((key, value));
                 }
                 if tag == "series" {
@@ -104,12 +103,10 @@ pub fn parse(xml: &str) -> Option<MetadataPatch> {
                     }
                     "language" => patch.language = Some(value.to_string()),
                     "explicit" => {
-                        patch.explicit = Some(
-                            matches!(
-                                value.to_ascii_lowercase().as_str(),
-                                "1" | "true" | "yes" | "explicit"
-                            ),
-                        );
+                        patch.explicit = Some(matches!(
+                            value.to_ascii_lowercase().as_str(),
+                            "1" | "true" | "yes" | "explicit"
+                        ));
                     }
                     _ => {}
                 }
@@ -186,8 +183,7 @@ mod tests {
 
     #[test]
     fn ignores_unknown_elements_gracefully() {
-        let xml =
-            r#"<doc><title>Only Title</title><random>ignored</random><authoradj>nope</authoradj></doc>"#;
+        let xml = r#"<doc><title>Only Title</title><random>ignored</random><authoradj>nope</authoradj></doc>"#;
         let patch = parse(xml).unwrap();
         assert_eq!(patch.title.as_deref(), Some("Only Title"));
         assert_eq!(patch.authors, None);
@@ -205,6 +201,9 @@ mod tests {
         "#;
         let patch = parse(xml).unwrap();
         assert_eq!(patch.authors, Some(vec!["A".to_string(), "B".to_string()]));
-        assert_eq!(patch.narrators, Some(vec!["X".to_string(), "Y".to_string()]));
+        assert_eq!(
+            patch.narrators,
+            Some(vec!["X".to_string(), "Y".to_string()])
+        );
     }
 }

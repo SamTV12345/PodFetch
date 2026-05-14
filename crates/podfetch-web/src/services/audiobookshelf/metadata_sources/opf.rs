@@ -77,7 +77,10 @@ pub fn parse(xml: &str) -> Option<MetadataPatch> {
                     }
                 } else if lower_tag == "meta" {
                     // Calibre-style series meta tags: <meta name="calibre:series" content="X"/>
-                    let name = attrs.iter().find(|(k, _)| k == "name").map(|(_, v)| v.clone());
+                    let name = attrs
+                        .iter()
+                        .find(|(k, _)| k == "name")
+                        .map(|(_, v)| v.clone());
                     let content = attrs
                         .iter()
                         .find(|(k, _)| k == "content")
@@ -179,14 +182,8 @@ mod tests {
         </package>"#;
         let patch = parse(xml).unwrap();
         assert_eq!(patch.title.as_deref(), Some("Mistborn"));
-        assert_eq!(
-            patch.authors,
-            Some(vec!["Brandon Sanderson".to_string()])
-        );
-        assert_eq!(
-            patch.narrators,
-            Some(vec!["Michael Kramer".to_string()])
-        );
+        assert_eq!(patch.authors, Some(vec!["Brandon Sanderson".to_string()]));
+        assert_eq!(patch.narrators, Some(vec!["Michael Kramer".to_string()]));
         assert_eq!(patch.isbn.as_deref(), Some("9780765350381"));
         assert_eq!(patch.language.as_deref(), Some("en"));
         assert_eq!(patch.publisher.as_deref(), Some("Tor Books"));
@@ -212,6 +209,8 @@ mod tests {
 
     #[test]
     fn malformed_xml_returns_none() {
-        assert!(parse("<unclosed").is_none() || parse("<unclosed").unwrap() == MetadataPatch::default());
+        assert!(
+            parse("<unclosed").is_none() || parse("<unclosed").unwrap() == MetadataPatch::default()
+        );
     }
 }

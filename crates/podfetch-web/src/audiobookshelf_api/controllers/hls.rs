@@ -46,7 +46,10 @@ pub async fn hls_dispatch(
         return Ok(m3u8_response(build_master_playlist(&stream_id)));
     }
     if file == "index.m3u8" {
-        return Ok(m3u8_response(build_media_playlist(&stream_id, session.duration)));
+        return Ok(m3u8_response(build_media_playlist(
+            &stream_id,
+            session.duration,
+        )));
     }
     if let Some(idx_str) = file
         .strip_prefix("seg-")
@@ -79,10 +82,7 @@ async fn serve_segment(
         .await
         .map_err(|_| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
     let mut headers = HeaderMap::new();
-    headers.insert(
-        header::CONTENT_TYPE,
-        HeaderValue::from_static("video/mp2t"),
-    );
+    headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("video/mp2t"));
     Ok((StatusCode::OK, headers, Body::from(bytes)).into_response())
 }
 

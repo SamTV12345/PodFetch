@@ -105,7 +105,7 @@ pub async fn serve_file_with_range(
         .await
         .map_err(|_| CustomError::from(CustomErrorInner::NotFound(Debug)))?
         .len();
-    let mime = mime_guess::from_path(&path)
+    let mime = mime_guess::from_path(path)
         .first_or_octet_stream()
         .to_string();
 

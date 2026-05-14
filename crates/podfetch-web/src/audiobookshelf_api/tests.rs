@@ -73,10 +73,7 @@ async fn login_happy_path_returns_bearer_and_libraries_bootstrap() {
         .audiobookshelf_library_service
         .list()
         .expect("list libraries");
-    let media_types: Vec<&str> = libraries
-        .iter()
-        .map(|l| l.media_type.as_str())
-        .collect();
+    let media_types: Vec<&str> = libraries.iter().map(|l| l.media_type.as_str()).collect();
     assert!(media_types.contains(&"podcast"));
     assert!(media_types.contains(&"book"));
 }
@@ -183,11 +180,12 @@ async fn list_libraries_returns_default_bootstrap() {
     assert_eq!(response.status_code().as_u16(), 200);
     let body: Value = response.json();
     let libraries = body["libraries"].as_array().expect("libraries array");
-    assert!(libraries.len() >= 2, "expected >=2 libraries, got {libraries:#?}");
     assert!(
-        libraries
-            .iter()
-            .any(|l| l["mediaType"] == json!("podcast")),
+        libraries.len() >= 2,
+        "expected >=2 libraries, got {libraries:#?}"
+    );
+    assert!(
+        libraries.iter().any(|l| l["mediaType"] == json!("podcast")),
         "no podcast library found in {libraries:#?}"
     );
 }
@@ -276,11 +274,18 @@ async fn list_library_items_lists_podcasts_as_library_items() {
     assert_eq!(response.status_code().as_u16(), 200);
     let body: Value = response.json();
     let results = body["results"].as_array().expect("results array");
-    assert_eq!(results.len(), 1, "expected one library item for inserted podcast");
+    assert_eq!(
+        results.len(),
+        1,
+        "expected one library item for inserted podcast"
+    );
     let expected_id = format!("li_pod_{}", podcast.id);
     assert_eq!(results[0]["id"], json!(expected_id));
     assert_eq!(results[0]["mediaType"], json!("podcast"));
-    assert_eq!(results[0]["media"]["metadata"]["title"], json!(podcast.name));
+    assert_eq!(
+        results[0]["media"]["metadata"]["title"],
+        json!(podcast.name)
+    );
 }
 
 #[tokio::test]
@@ -301,7 +306,9 @@ async fn get_item_by_id_returns_podcast_with_episodes() {
     assert_eq!(response.status_code().as_u16(), 200);
     let body: Value = response.json();
     assert_eq!(body["mediaType"], json!("podcast"));
-    let episodes = body["media"]["episodes"].as_array().expect("episodes array");
+    let episodes = body["media"]["episodes"]
+        .as_array()
+        .expect("episodes array");
     assert_eq!(episodes.len(), 1);
     assert_eq!(episodes[0]["title"], json!("Test Episode 1"));
     assert!(
@@ -370,7 +377,10 @@ async fn play_sync_close_updates_media_progress() {
     // parses the body as JSON and treats an empty body as "Invalid response
     // body", which turns every sync into a failed sync on the client.
     let sync_body: Value = sync_resp.json();
-    assert!(sync_body.is_object(), "sync body must be a JSON object, got {sync_body}");
+    assert!(
+        sync_body.is_object(),
+        "sync body must be a JSON object, got {sync_body}"
+    );
 
     // Close session
     let close_resp = server
@@ -384,7 +394,10 @@ async fn play_sync_close_updates_media_progress() {
         .await;
     assert_eq!(close_resp.status_code().as_u16(), 200);
     let close_body: Value = close_resp.json();
-    assert!(close_body.is_object(), "close body must be a JSON object, got {close_body}");
+    assert!(
+        close_body.is_object(),
+        "close body must be a JSON object, got {close_body}"
+    );
 
     // Verify media_progress row was written
     let lib_item_id = format!("li_pod_{}", podcast.id);
@@ -428,7 +441,10 @@ async fn session_cross_user_access_is_forbidden() {
         ))
         .json(&json!({}))
         .await;
-    let session_id = play_resp.json::<Value>()["id"].as_str().unwrap().to_string();
+    let session_id = play_resp.json::<Value>()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
 
     // User B tries to sync that session — must be rejected
     login_audiobookshelf(&mut server, &user_b).await;
@@ -469,7 +485,10 @@ async fn stream_track_serves_full_file_when_no_range() {
         ))
         .json(&json!({}))
         .await;
-    let session_id = play_resp.json::<Value>()["id"].as_str().unwrap().to_string();
+    let session_id = play_resp.json::<Value>()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
 
     // Clear bearer header — public endpoint must accept ?token=
     server.test_server.clear_headers();
@@ -507,7 +526,10 @@ async fn stream_track_honors_byte_range() {
         ))
         .json(&json!({}))
         .await;
-    let session_id = play_resp.json::<Value>()["id"].as_str().unwrap().to_string();
+    let session_id = play_resp.json::<Value>()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
 
     server.test_server.clear_headers();
     let response = server
@@ -553,7 +575,10 @@ async fn stream_track_without_token_is_unauthorized() {
         ))
         .json(&json!({}))
         .await;
-    let session_id = play_resp.json::<Value>()["id"].as_str().unwrap().to_string();
+    let session_id = play_resp.json::<Value>()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
 
     server.test_server.clear_headers();
     let response = server
@@ -639,7 +664,7 @@ fn insert_test_episode_with_path(
         guid: format!("guid-{}", uuid::Uuid::new_v4().simple()),
     };
     let mut domain_ep: podfetch_domain::podcast_episode::PodcastEpisode =
-        repo.create(new).expect("create episode").into();
+        repo.create(new).expect("create episode");
     domain_ep.file_episode_path = Some(file_path.to_string());
     domain_ep.download_location = Some(file_path.to_string());
     repo.update(&domain_ep).expect("update episode local path");
@@ -711,7 +736,13 @@ async fn login_response_shape_matches_upstream_payload() {
         .await;
     assert_eq!(resp.status_code().as_u16(), 200);
     let body: Value = resp.json();
-    for top_field in ["user", "userDefaultLibraryId", "serverSettings", "ereaderDevices", "Source"] {
+    for top_field in [
+        "user",
+        "userDefaultLibraryId",
+        "serverSettings",
+        "ereaderDevices",
+        "Source",
+    ] {
         assert!(
             body.get(top_field).is_some(),
             "login response missing top-level field {top_field}"
@@ -760,7 +791,10 @@ async fn recent_episodes_endpoint_returns_episodes_envelope() {
 
     let resp = server
         .test_server
-        .get(&format!("/api/libraries/{}/recent-episodes?limit=10", lib.id))
+        .get(&format!(
+            "/api/libraries/{}/recent-episodes?limit=10",
+            lib.id
+        ))
         .await;
     assert_eq!(resp.status_code().as_u16(), 200);
     let body: Value = resp.json();
@@ -770,13 +804,21 @@ async fn recent_episodes_endpoint_returns_episodes_envelope() {
     let episodes = body["episodes"].as_array().unwrap();
     assert_eq!(episodes.len(), 3, "expected 3 episodes, got {episodes:#?}");
     for ep in episodes {
-        assert!(ep["podcast"].is_object(), "episode missing podcast: {ep:#?}");
+        assert!(
+            ep["podcast"].is_object(),
+            "episode missing podcast: {ep:#?}"
+        );
         assert!(ep["libraryId"].is_string());
         assert!(ep["libraryItemId"].is_string());
         assert!(ep["title"].is_string());
         let pod = &ep["podcast"];
         assert!(pod["id"].as_str().unwrap().starts_with("pod_"));
-        assert!(pod["libraryItemId"].as_str().unwrap().starts_with("li_pod_"));
+        assert!(
+            pod["libraryItemId"]
+                .as_str()
+                .unwrap()
+                .starts_with("li_pod_")
+        );
         assert!(pod["metadata"].is_object());
     }
 }
@@ -792,7 +834,12 @@ async fn recent_episodes_rejects_non_podcast_library() {
         .list()
         .unwrap()
         .into_iter()
-        .find(|l| matches!(l.media_type, podfetch_domain::audiobookshelf::library::MediaType::Book))
+        .find(|l| {
+            matches!(
+                l.media_type,
+                podfetch_domain::audiobookshelf::library::MediaType::Book
+            )
+        })
         .unwrap();
     login_audiobookshelf(&mut server, &user).await;
     let resp = server
@@ -947,7 +994,8 @@ async fn play_response_passes_android_kotlin_required_fields() {
 
     let track = &body["audioTracks"][0];
     assert_eq!(
-        track["isLocal"], json!(false),
+        track["isLocal"],
+        json!(false),
         "audioTracks[0].isLocal must be a boolean (Kotlin AudioTrack.isLocal is non-null)"
     );
 
@@ -956,7 +1004,13 @@ async fn play_response_passes_android_kotlin_required_fields() {
         device_info.is_object(),
         "deviceInfo must be an object, not null (Kotlin DeviceInfo is non-null). Got: {device_info:#?}"
     );
-    for field in ["deviceId", "manufacturer", "model", "sdkVersion", "clientVersion"] {
+    for field in [
+        "deviceId",
+        "manufacturer",
+        "model",
+        "sdkVersion",
+        "clientVersion",
+    ] {
         assert!(
             device_info.get(field).is_some() && !device_info[field].is_null(),
             "deviceInfo.{field} must be non-null"
@@ -1009,7 +1063,12 @@ async fn book_playback_session_carries_book_id() {
         .list()
         .unwrap()
         .into_iter()
-        .find(|l| matches!(l.media_type, podfetch_domain::audiobookshelf::library::MediaType::Book))
+        .find(|l| {
+            matches!(
+                l.media_type,
+                podfetch_domain::audiobookshelf::library::MediaType::Book
+            )
+        })
         .unwrap();
     let book = insert_test_book(&lib.id, "Session book", "Author");
     insert_test_audio_file_row(&book.id, 0, "/tmp/x.mp3", 60.0);
@@ -1174,8 +1233,6 @@ fn insert_test_podcast_named(
     insert_test_podcast(name, state, user_id)
 }
 
-
-
 #[tokio::test]
 #[serial]
 async fn me_dto_includes_all_upstream_user_fields() {
@@ -1208,7 +1265,10 @@ async fn me_dto_includes_all_upstream_user_fields() {
         "hasOpenIDLink",
         "mediaProgress",
     ] {
-        assert!(body.get(field).is_some(), "user payload missing field {field}");
+        assert!(
+            body.get(field).is_some(),
+            "user payload missing field {field}"
+        );
     }
     assert!(body["bookmarks"].is_array());
     assert!(body["seriesHideFromContinueListening"].is_array());
@@ -1269,7 +1329,10 @@ async fn podcast_episode_shape_matches_audiobookshelf() {
     assert_eq!(ep["podcastId"], json!(podcast.id));
     // audioTrack.contentUrl matches upstream's /api/items/<id>/file/<ino>
     let url = ep["audioTrack"]["contentUrl"].as_str().unwrap();
-    let expected = format!("/api/items/li_pod_{}/file/ino_ep_{}", podcast.id, episode.id);
+    let expected = format!(
+        "/api/items/li_pod_{}/file/ino_ep_{}",
+        podcast.id, episode.id
+    );
     assert_eq!(url, expected, "audioTrack.contentUrl mismatch");
     // enclosure carries type + url + nullable length
     let enc = &ep["enclosure"];
@@ -1476,14 +1539,21 @@ async fn file_watcher_attaches_to_existing_folder_without_panicking() {
         .list()
         .unwrap()
         .into_iter()
-        .find(|l| matches!(l.media_type, podfetch_domain::audiobookshelf::library::MediaType::Book))
+        .find(|l| {
+            matches!(
+                l.media_type,
+                podfetch_domain::audiobookshelf::library::MediaType::Book
+            )
+        })
         .unwrap();
     let mut updated = lib.clone();
     updated.folder_paths = vec![tmp.to_string_lossy().to_string()];
     use podfetch_domain::audiobookshelf::library::LibraryRepository;
     use podfetch_persistence::adapters::LibraryRepositoryImpl;
     use podfetch_persistence::db::database;
-    LibraryRepositoryImpl::new(database()).upsert(updated).unwrap();
+    LibraryRepositoryImpl::new(database())
+        .upsert(updated)
+        .unwrap();
 
     let watcher = AudiobookFileWatcher::new(
         state.audiobookshelf_library_service.clone(),
@@ -1507,7 +1577,12 @@ async fn upload_writes_file_and_returns_target_dir() {
         .list()
         .unwrap()
         .into_iter()
-        .find(|l| matches!(l.media_type, podfetch_domain::audiobookshelf::library::MediaType::Book))
+        .find(|l| {
+            matches!(
+                l.media_type,
+                podfetch_domain::audiobookshelf::library::MediaType::Book
+            )
+        })
         .unwrap();
     let upload_root = std::env::temp_dir()
         .join("podfetch-abs-uploads")
@@ -1518,7 +1593,9 @@ async fn upload_writes_file_and_returns_target_dir() {
     use podfetch_domain::audiobookshelf::library::LibraryRepository;
     use podfetch_persistence::adapters::LibraryRepositoryImpl;
     use podfetch_persistence::db::database;
-    LibraryRepositoryImpl::new(database()).upsert(repo_lib).unwrap();
+    LibraryRepositoryImpl::new(database())
+        .upsert(repo_lib)
+        .unwrap();
 
     login_audiobookshelf(&mut server, &user).await;
 
@@ -1546,7 +1623,11 @@ async fn upload_writes_file_and_returns_target_dir() {
     assert_eq!(uploaded[0], json!("intro.mp3"));
     let target = body["targetDir"].as_str().unwrap();
     let intro_path = std::path::Path::new(target).join("intro.mp3");
-    assert!(intro_path.is_file(), "expected file at {}", intro_path.display());
+    assert!(
+        intro_path.is_file(),
+        "expected file at {}",
+        intro_path.display()
+    );
     let content = std::fs::read(&intro_path).unwrap();
     assert_eq!(content, b"fake-audio-bytes");
 
@@ -1591,7 +1672,12 @@ async fn upload_without_files_returns_4xx() {
         .list()
         .unwrap()
         .into_iter()
-        .find(|l| matches!(l.media_type, podfetch_domain::audiobookshelf::library::MediaType::Book))
+        .find(|l| {
+            matches!(
+                l.media_type,
+                podfetch_domain::audiobookshelf::library::MediaType::Book
+            )
+        })
         .unwrap();
     login_audiobookshelf(&mut server, &user).await;
 
@@ -1614,7 +1700,12 @@ async fn scan_report_exposes_added_updated_counters() {
         .list()
         .unwrap()
         .into_iter()
-        .find(|l| matches!(l.media_type, podfetch_domain::audiobookshelf::library::MediaType::Book))
+        .find(|l| {
+            matches!(
+                l.media_type,
+                podfetch_domain::audiobookshelf::library::MediaType::Book
+            )
+        })
         .unwrap();
     login_audiobookshelf(&mut server, &user).await;
 
@@ -1627,7 +1718,9 @@ async fn scan_report_exposes_added_updated_counters() {
     std::fs::create_dir_all(&empty).unwrap();
     let mut updated = lib.clone();
     updated.folder_paths = vec![empty.to_string_lossy().to_string()];
-    LibraryRepositoryImpl::new(database()).upsert(updated).unwrap();
+    LibraryRepositoryImpl::new(database())
+        .upsert(updated)
+        .unwrap();
 
     let resp = server
         .test_server
@@ -1651,11 +1744,7 @@ async fn play_chooses_hls_when_client_lacks_source_codec() {
     let user = create_user_for_audiobookshelf(&state);
 
     let podcast = insert_test_podcast("HLS podcast", &state, user.id);
-    let episode = insert_test_episode_with_path(
-        podcast.id,
-        "FLAC episode",
-        "/tmp/episode.flac",
-    );
+    let episode = insert_test_episode_with_path(podcast.id, "FLAC episode", "/tmp/episode.flac");
 
     login_audiobookshelf(&mut server, &user).await;
     let play_resp = server
@@ -1671,12 +1760,22 @@ async fn play_chooses_hls_when_client_lacks_source_codec() {
         .await;
     assert_eq!(play_resp.status_code().as_u16(), 200);
     let body: Value = play_resp.json();
-    assert_eq!(body["playMethod"], json!(1), "expected playMethod=1 (HLS), got body: {body}");
+    assert_eq!(
+        body["playMethod"],
+        json!(1),
+        "expected playMethod=1 (HLS), got body: {body}"
+    );
     let tracks = body["audioTracks"].as_array().unwrap();
     assert_eq!(tracks.len(), 1);
     let content_url = tracks[0]["contentUrl"].as_str().unwrap();
-    assert!(content_url.ends_with("/master.m3u8"), "got contentUrl: {content_url}");
-    assert_eq!(tracks[0]["mimeType"], json!("application/vnd.apple.mpegurl"));
+    assert!(
+        content_url.ends_with("/master.m3u8"),
+        "got contentUrl: {content_url}"
+    );
+    assert_eq!(
+        tracks[0]["mimeType"],
+        json!("application/vnd.apple.mpegurl")
+    );
 }
 
 #[tokio::test]
@@ -1687,11 +1786,7 @@ async fn play_uses_direct_when_client_supports_source_codec() {
     let user = create_user_for_audiobookshelf(&state);
 
     let podcast = insert_test_podcast("Direct podcast", &state, user.id);
-    let episode = insert_test_episode_with_path(
-        podcast.id,
-        "MP3 episode",
-        "/tmp/ep.mp3",
-    );
+    let episode = insert_test_episode_with_path(podcast.id, "MP3 episode", "/tmp/ep.mp3");
 
     login_audiobookshelf(&mut server, &user).await;
     let play_resp = server
@@ -1733,7 +1828,10 @@ async fn hls_master_playlist_returns_m3u8_for_owned_session() {
         ))
         .json(&json!({ "supportedMimeTypes": ["audio/mpeg"] }))
         .await;
-    let session_id = play_resp.json::<Value>()["id"].as_str().unwrap().to_string();
+    let session_id = play_resp.json::<Value>()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
 
     let master_resp = server
         .test_server
@@ -1770,7 +1868,10 @@ async fn hls_media_playlist_lists_segments_for_duration() {
         ))
         .json(&json!({ "supportedMimeTypes": ["audio/mpeg"] }))
         .await;
-    let session_id = play_resp.json::<Value>()["id"].as_str().unwrap().to_string();
+    let session_id = play_resp.json::<Value>()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
 
     let resp = server
         .test_server
@@ -1804,7 +1905,10 @@ async fn hls_playlist_cross_user_access_is_forbidden() {
         ))
         .json(&json!({ "supportedMimeTypes": ["audio/mpeg"] }))
         .await;
-    let session_id = play_resp.json::<Value>()["id"].as_str().unwrap().to_string();
+    let session_id = play_resp.json::<Value>()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
 
     login_audiobookshelf(&mut server, &user_b).await;
     let resp = server
@@ -1837,7 +1941,10 @@ async fn close_session_persists_listening_session_history() {
         ))
         .json(&json!({}))
         .await;
-    let session_id = play_resp.json::<Value>()["id"].as_str().unwrap().to_string();
+    let session_id = play_resp.json::<Value>()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
     server
         .test_server
         .post(&format!("/api/session/{session_id}/close"))
@@ -1856,10 +1963,17 @@ async fn close_session_persists_listening_session_history() {
     assert_eq!(resp.status_code().as_u16(), 200);
     let body: Value = resp.json();
     let sessions = body["sessions"].as_array().expect("sessions array");
-    assert_eq!(sessions.len(), 1, "expected 1 listening session, got {sessions:#?}");
+    assert_eq!(
+        sessions.len(),
+        1,
+        "expected 1 listening session, got {sessions:#?}"
+    );
     let entry = &sessions[0];
     assert_eq!(entry["mediaType"], json!("podcast"));
-    assert_eq!(entry["libraryItemId"], json!(format!("li_pod_{}", podcast.id)));
+    assert_eq!(
+        entry["libraryItemId"],
+        json!(format!("li_pod_{}", podcast.id))
+    );
     assert_eq!(entry["episodeId"], json!(format!("ep_{}", episode.id)));
     assert!((entry["timeListening"].as_f64().unwrap() - 60.0).abs() < 0.1);
 }
@@ -1885,7 +1999,10 @@ async fn listening_sessions_isolated_per_user() {
         ))
         .json(&json!({}))
         .await;
-    let session_id = play_resp.json::<Value>()["id"].as_str().unwrap().to_string();
+    let session_id = play_resp.json::<Value>()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
     server
         .test_server
         .post(&format!("/api/session/{session_id}/close"))
@@ -1898,7 +2015,11 @@ async fn listening_sessions_isolated_per_user() {
     assert_eq!(resp.status_code().as_u16(), 200);
     let body: Value = resp.json();
     let sessions = body["sessions"].as_array().unwrap();
-    assert_eq!(sessions.len(), 0, "user_b should see no sessions, got {sessions:#?}");
+    assert_eq!(
+        sessions.len(),
+        0,
+        "user_b should see no sessions, got {sessions:#?}"
+    );
 }
 
 // ── Book-side integration tests (Phase B) ───────────────────────────────────
@@ -1915,7 +2036,12 @@ async fn list_audiobooks_library_items_returns_books() {
         .list()
         .unwrap()
         .into_iter()
-        .find(|l| matches!(l.media_type, podfetch_domain::audiobookshelf::library::MediaType::Book))
+        .find(|l| {
+            matches!(
+                l.media_type,
+                podfetch_domain::audiobookshelf::library::MediaType::Book
+            )
+        })
         .expect("audiobooks library bootstrapped");
     let book = insert_test_book(&lib.id, "Project Hail Mary", "Andy Weir");
     insert_test_audio_file_row(&book.id, 0, "/tmp/nonexistent.m4b", 120.0);
@@ -1930,8 +2056,13 @@ async fn list_audiobooks_library_items_returns_books() {
     let results = body["results"].as_array().expect("results array");
     assert_eq!(results.len(), 1);
     assert_eq!(results[0]["mediaType"], json!("book"));
-    assert_eq!(results[0]["media"]["metadata"]["title"], json!("Project Hail Mary"));
-    let authors = results[0]["media"]["metadata"]["authors"].as_array().unwrap();
+    assert_eq!(
+        results[0]["media"]["metadata"]["title"],
+        json!("Project Hail Mary")
+    );
+    let authors = results[0]["media"]["metadata"]["authors"]
+        .as_array()
+        .unwrap();
     assert_eq!(authors.len(), 1);
     assert_eq!(authors[0]["name"], json!("Andy Weir"));
 }
@@ -1947,7 +2078,12 @@ async fn get_book_item_includes_chapters_and_audio_files() {
         .list()
         .unwrap()
         .into_iter()
-        .find(|l| matches!(l.media_type, podfetch_domain::audiobookshelf::library::MediaType::Book))
+        .find(|l| {
+            matches!(
+                l.media_type,
+                podfetch_domain::audiobookshelf::library::MediaType::Book
+            )
+        })
         .unwrap();
     let book = insert_test_book(&lib.id, "Mistborn", "Brandon Sanderson");
     insert_test_audio_file_row(&book.id, 0, "/tmp/mb-1.mp3", 100.0);
@@ -1981,7 +2117,12 @@ async fn play_book_session_returns_tracks_per_audio_file() {
         .list()
         .unwrap()
         .into_iter()
-        .find(|l| matches!(l.media_type, podfetch_domain::audiobookshelf::library::MediaType::Book))
+        .find(|l| {
+            matches!(
+                l.media_type,
+                podfetch_domain::audiobookshelf::library::MediaType::Book
+            )
+        })
         .unwrap();
     let book = insert_test_book(&lib.id, "Three Body", "Cixin Liu");
     insert_test_audio_file_row(&book.id, 0, "/tmp/tb-1.mp3", 50.0);
@@ -2014,7 +2155,12 @@ async fn stream_book_track_serves_correct_audio_file() {
         .list()
         .unwrap()
         .into_iter()
-        .find(|l| matches!(l.media_type, podfetch_domain::audiobookshelf::library::MediaType::Book))
+        .find(|l| {
+            matches!(
+                l.media_type,
+                podfetch_domain::audiobookshelf::library::MediaType::Book
+            )
+        })
         .unwrap();
 
     let bytes_0 = generate_pseudo_audio_bytes(2048);
@@ -2031,7 +2177,10 @@ async fn stream_book_track_serves_correct_audio_file() {
         .post(&format!("/api/items/{}/play", book.id))
         .json(&json!({}))
         .await;
-    let session_id = play_resp.json::<Value>()["id"].as_str().unwrap().to_string();
+    let session_id = play_resp.json::<Value>()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
 
     server.test_server.clear_headers();
     // Track 1 (second file) — verify routing to correct file
@@ -2062,9 +2211,8 @@ fn insert_test_book(
 
     let repo: Arc<dyn BookRepository<Error = common_infrastructure::error::CustomError>> =
         Arc::new(BookRepositoryImpl::new(database()));
-    let author_repo: Arc<
-        dyn AuthorRepository<Error = common_infrastructure::error::CustomError>,
-    > = Arc::new(AuthorRepositoryImpl::new(database()));
+    let author_repo: Arc<dyn AuthorRepository<Error = common_infrastructure::error::CustomError>> =
+        Arc::new(AuthorRepositoryImpl::new(database()));
 
     let now = Utc::now().naive_utc();
     let book = Book {
@@ -2102,9 +2250,8 @@ fn insert_test_audio_file_row(book_id: &str, idx: i32, path: &str, duration: f64
     use podfetch_persistence::db::database;
     use std::sync::Arc;
 
-    let repo: Arc<
-        dyn BookAudioFileRepository<Error = common_infrastructure::error::CustomError>,
-    > = Arc::new(BookAudioFileRepositoryImpl::new(database()));
+    let repo: Arc<dyn BookAudioFileRepository<Error = common_infrastructure::error::CustomError>> =
+        Arc::new(BookAudioFileRepositoryImpl::new(database()));
     let mut existing = repo.list_for_book(book_id).unwrap_or_default();
     existing.push(BookAudioFile {
         id: format!("af_{}", uuid::Uuid::new_v4().simple()),
@@ -2133,9 +2280,8 @@ fn insert_test_chapter_row(book_id: &str, idx: i32, start: f64, end: f64, title:
     use podfetch_persistence::db::database;
     use std::sync::Arc;
 
-    let repo: Arc<
-        dyn BookChapterRepository<Error = common_infrastructure::error::CustomError>,
-    > = Arc::new(BookChapterRepositoryImpl::new(database()));
+    let repo: Arc<dyn BookChapterRepository<Error = common_infrastructure::error::CustomError>> =
+        Arc::new(BookChapterRepositoryImpl::new(database()));
     let mut existing = repo.list_for_book(book_id).unwrap_or_default();
     existing.push(BookChapter {
         id: format!("chp_{}", uuid::Uuid::new_v4().simple()),
@@ -2154,7 +2300,10 @@ fn insert_test_chapter_row(book_id: &str, idx: i32, start: f64, end: f64, title:
 #[serial]
 async fn search_podcast_without_token_is_unauthorized() {
     let server = handle_test_startup().await;
-    let response = server.test_server.get("/api/search/podcast?term=test").await;
+    let response = server
+        .test_server
+        .get("/api/search/podcast?term=test")
+        .await;
     assert!(
         response.status_code().is_client_error(),
         "expected 4xx without bearer, got {}",
@@ -2328,7 +2477,10 @@ async fn listening_stats_aggregates_play_close_cycle() {
         ))
         .json(&json!({ "mediaPlayer": "test", "supportedMimeTypes": ["audio/mpeg"] }))
         .await;
-    let session_id = play_resp.json::<Value>()["id"].as_str().unwrap().to_string();
+    let session_id = play_resp.json::<Value>()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
     let close = server
         .test_server
         .post(&format!("/api/session/{session_id}/close"))
@@ -2352,12 +2504,7 @@ async fn listening_stats_aggregates_play_close_cycle() {
         "per-libraryItem bucket missing for {item_key}, items={}",
         body["items"]
     );
-    assert!(
-        body["items"][&item_key]["timeListening"]
-            .as_f64()
-            .unwrap()
-            >= 89.0
-    );
+    assert!(body["items"][&item_key]["timeListening"].as_f64().unwrap() >= 89.0);
     let today = Utc::now().format("%Y-%m-%d").to_string();
     assert!(
         body["days"][&today].is_number(),

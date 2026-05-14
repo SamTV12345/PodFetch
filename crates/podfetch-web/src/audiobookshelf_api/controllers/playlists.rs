@@ -409,8 +409,7 @@ pub fn expand_playlist(playlist: &Playlist, library_id: &str) -> Result<Value, C
     let now_ms = Utc::now().naive_utc().and_utc().timestamp_millis();
     let mut item_values: Vec<Value> = Vec::with_capacity(items.len());
     for (idx, pmi) in items.iter().enumerate() {
-        let Some(episode) =
-            PodcastEpisodeService::get_podcast_episode_by_internal_id(pmi.episode)?
+        let Some(episode) = PodcastEpisodeService::get_podcast_episode_by_internal_id(pmi.episode)?
         else {
             continue;
         };
@@ -435,8 +434,12 @@ pub fn expand_playlist(playlist: &Playlist, library_id: &str) -> Result<Value, C
             "isMissing": false,
             "isInvalid": false,
         });
-        let episode_json =
-            map_episode(&episode_domain, &library_item_id, podcast_domain.id, idx as i32 + 1);
+        let episode_json = map_episode(
+            &episode_domain,
+            &library_item_id,
+            podcast_domain.id,
+            idx as i32 + 1,
+        );
         item_values.push(json!({
             "episodeId": episode_id_str,
             "episode": episode_json,

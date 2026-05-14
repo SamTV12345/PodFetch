@@ -118,15 +118,15 @@ fn apply_patch(meta: &mut ResolvedBookMetadata, patch: &MetadataPatch) {
     if let Some(v) = patch.explicit {
         meta.explicit = v;
     }
-    if let Some(v) = patch.authors.clone() {
-        if !v.is_empty() {
-            meta.authors = v;
-        }
+    if let Some(v) = patch.authors.clone()
+        && !v.is_empty()
+    {
+        meta.authors = v;
     }
-    if let Some(v) = patch.narrators.clone() {
-        if !v.is_empty() {
-            meta.narrators = v;
-        }
+    if let Some(v) = patch.narrators.clone()
+        && !v.is_empty()
+    {
+        meta.narrators = v;
     }
     if let Some(v) = patch.series.clone() {
         meta.series = Some(v);
@@ -266,9 +266,11 @@ mod tests {
         )
         .unwrap();
 
-        let mut tags = ProbedTags::default();
-        tags.title = Some("From ID3".to_string());
-        tags.artist = Some("From ID3 Artist".to_string());
+        let tags = ProbedTags {
+            title: Some("From ID3".to_string()),
+            artist: Some("From ID3 Artist".to_string()),
+            ..Default::default()
+        };
 
         let folder = dir.join("Book Author").join("Book Title");
         std::fs::create_dir_all(&folder).unwrap();
@@ -301,9 +303,11 @@ mod tests {
             r#"{"title": "From ABS", "language": "fr"}"#,
         )
         .unwrap();
-        let mut tags = ProbedTags::default();
-        tags.title = Some("ID3 Title".to_string());
-        tags.language = Some("en".to_string());
+        let tags = ProbedTags {
+            title: Some("ID3 Title".to_string()),
+            language: Some("en".to_string()),
+            ..Default::default()
+        };
 
         let meta = resolve(&folder, &tags);
         assert_eq!(meta.title, "From ABS");
@@ -339,8 +343,10 @@ mod tests {
 
     #[test]
     fn folder_structure_with_author_and_title() {
-        let mut tags = ProbedTags::default();
-        tags.title = Some("Embedded Title".to_string());
+        let tags = ProbedTags {
+            title: Some("Embedded Title".to_string()),
+            ..Default::default()
+        };
         let meta = resolve(
             Path::new("/audiobooks/Andy Weir/Project Hail Mary"),
             &ProbedTags::default(),
@@ -348,10 +354,7 @@ mod tests {
         assert_eq!(meta.title, "Project Hail Mary");
         assert_eq!(meta.authors, vec!["Andy Weir".to_string()]);
         // Audio tags override title
-        let meta2 = resolve(
-            Path::new("/audiobooks/Andy Weir/Project Hail Mary"),
-            &tags,
-        );
+        let meta2 = resolve(Path::new("/audiobooks/Andy Weir/Project Hail Mary"), &tags);
         assert_eq!(meta2.title, "Embedded Title");
     }
 
@@ -371,17 +374,22 @@ mod tests {
 
     #[test]
     fn audio_tags_override_when_present() {
-        let mut tags = ProbedTags::default();
-        tags.album = Some("Tag Album".to_string());
-        tags.album_artist = Some("Tag Artist".to_string());
-        tags.composer = Some("Reader A, Reader B".to_string());
-        tags.year = Some("2024".to_string());
-        tags.series = Some("Tag Series".to_string());
-        tags.series_part = Some("3".to_string());
+        let tags = ProbedTags {
+            album: Some("Tag Album".to_string()),
+            album_artist: Some("Tag Artist".to_string()),
+            composer: Some("Reader A, Reader B".to_string()),
+            year: Some("2024".to_string()),
+            series: Some("Tag Series".to_string()),
+            series_part: Some("3".to_string()),
+            ..Default::default()
+        };
         let meta = resolve(Path::new("/audiobooks/Folder Author/Folder Title"), &tags);
         assert_eq!(meta.title, "Tag Album");
         assert_eq!(meta.authors, vec!["Tag Artist".to_string()]);
-        assert_eq!(meta.narrators, vec!["Reader A".to_string(), "Reader B".to_string()]);
+        assert_eq!(
+            meta.narrators,
+            vec!["Reader A".to_string(), "Reader B".to_string()]
+        );
         assert_eq!(meta.published_year.as_deref(), Some("2024"));
         assert_eq!(
             meta.series.as_ref().map(|(s, n)| (s.clone(), n.clone())),

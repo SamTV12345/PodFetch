@@ -52,8 +52,7 @@ pub fn build_progress_updated_payload(
 /// `user_updated` payload — superset of `/api/me`. Field set mirrors
 /// `User.js:604 toOldJSONForBrowser()`.
 pub fn build_user_updated_payload(user: &User, media_progress: &[MediaProgress]) -> Value {
-    let progress_array: Vec<Value> =
-        media_progress.iter().map(media_progress_to_json).collect();
+    let progress_array: Vec<Value> = media_progress.iter().map(media_progress_to_json).collect();
     json!({
         "id": user.id.to_string(),
         "username": user.username,
@@ -239,11 +238,8 @@ mod tests {
     #[test]
     fn progress_updated_wraps_session_id_and_device() {
         let progress = fixture_progress();
-        let payload = build_progress_updated_payload(
-            &progress,
-            "play_session_abc",
-            "iPhone 15 / Safari",
-        );
+        let payload =
+            build_progress_updated_payload(&progress, "play_session_abc", "iPhone 15 / Safari");
         assert_eq!(payload["id"], json!("li_pod_42-ep_7"));
         assert_eq!(payload["sessionId"], json!("play_session_abc"));
         assert_eq!(payload["deviceDescription"], json!("iPhone 15 / Safari"));
@@ -284,7 +280,11 @@ mod tests {
         assert_eq!(payload["token"], json!("abs_token_xyz"));
         assert_eq!(payload["isActive"], json!(true));
         assert_eq!(payload["mediaProgress"].as_array().unwrap().len(), 1);
-        assert!(payload["permissions"]["accessAllLibraries"].as_bool().unwrap());
+        assert!(
+            payload["permissions"]["accessAllLibraries"]
+                .as_bool()
+                .unwrap()
+        );
         assert!(payload["permissions"]["update"].as_bool().unwrap()); // admin
     }
 
@@ -326,7 +326,10 @@ mod tests {
         // Pin the wire names so a typo is caught at compile time AND fails this test.
         assert_eq!(EVENT_INIT, "init");
         assert_eq!(EVENT_USER_UPDATED, "user_updated");
-        assert_eq!(EVENT_USER_ITEM_PROGRESS_UPDATED, "user_item_progress_updated");
+        assert_eq!(
+            EVENT_USER_ITEM_PROGRESS_UPDATED,
+            "user_item_progress_updated"
+        );
         assert_eq!(EVENT_LIBRARY_ADDED, "library_added");
         assert_eq!(EVENT_LIBRARY_UPDATED, "library_updated");
         assert_eq!(EVENT_LIBRARY_REMOVED, "library_removed");

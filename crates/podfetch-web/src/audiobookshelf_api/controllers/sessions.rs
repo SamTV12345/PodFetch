@@ -87,7 +87,8 @@ async fn start_session(
         .and_then(EpisodeId::parse)
         .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
 
-    let podcast: podfetch_domain::podcast::Podcast = PodcastService::get_podcast(podcast_id)?.into();
+    let podcast: podfetch_domain::podcast::Podcast =
+        PodcastService::get_podcast(podcast_id)?.into();
     let episodes: Vec<podfetch_domain::podcast_episode::PodcastEpisode> =
         PodcastEpisodeService::get_episodes_by_podcast_id(podcast_id)?
             .into_iter()
@@ -131,9 +132,20 @@ async fn start_session(
         .as_ref()
         .and_then(|b| b.supported_mime_types.clone())
         .unwrap_or_default();
-    let force_transcode = _body.as_ref().and_then(|b| b.force_transcode).unwrap_or(false);
-    let force_direct = _body.as_ref().and_then(|b| b.force_direct_play).unwrap_or(false);
-    let use_hls = should_use_hls(&mime_type, &supported_mime_types, force_transcode, force_direct);
+    let force_transcode = _body
+        .as_ref()
+        .and_then(|b| b.force_transcode)
+        .unwrap_or(false);
+    let force_direct = _body
+        .as_ref()
+        .and_then(|b| b.force_direct_play)
+        .unwrap_or(false);
+    let use_hls = should_use_hls(
+        &mime_type,
+        &supported_mime_types,
+        force_transcode,
+        force_direct,
+    );
     let play_method = if use_hls {
         PlayMethod::HlsTranscode
     } else {
@@ -203,9 +215,11 @@ async fn start_session(
         .audiobookshelf_playback_session_service
         .create(session)?;
 
-    let progress = state
-        .audiobookshelf_media_progress_service
-        .find(user.id, item_id, Some(&EpisodeId(episode.id).as_string()))?;
+    let progress = state.audiobookshelf_media_progress_service.find(
+        user.id,
+        item_id,
+        Some(&EpisodeId(episode.id).as_string()),
+    )?;
     let mut session_with_progress = session.clone();
     if let Some(p) = progress.as_ref() {
         session_with_progress.current_time = p.current_time;
@@ -427,9 +441,20 @@ async fn start_book_session(
         .as_ref()
         .and_then(|b| b.supported_mime_types.clone())
         .unwrap_or_default();
-    let force_transcode = body.as_ref().and_then(|b| b.force_transcode).unwrap_or(false);
-    let force_direct = body.as_ref().and_then(|b| b.force_direct_play).unwrap_or(false);
-    let use_hls = should_use_hls(&source_mime, &supported_mime_types, force_transcode, force_direct);
+    let force_transcode = body
+        .as_ref()
+        .and_then(|b| b.force_transcode)
+        .unwrap_or(false);
+    let force_direct = body
+        .as_ref()
+        .and_then(|b| b.force_direct_play)
+        .unwrap_or(false);
+    let use_hls = should_use_hls(
+        &source_mime,
+        &supported_mime_types,
+        force_transcode,
+        force_direct,
+    );
     let play_method = if use_hls {
         PlayMethod::HlsTranscode
     } else {
@@ -500,8 +525,14 @@ async fn start_book_session(
                             .and_then(|s| s.to_str().map(String::from))
                     })
                     .unwrap_or_default(),
-                ext: first_file.as_ref().map(|af| af.ext.clone()).unwrap_or_default(),
-                path: first_file.as_ref().map(|af| af.path.clone()).unwrap_or_default(),
+                ext: first_file
+                    .as_ref()
+                    .map(|af| af.ext.clone())
+                    .unwrap_or_default(),
+                path: first_file
+                    .as_ref()
+                    .map(|af| af.path.clone())
+                    .unwrap_or_default(),
                 rel_path: first_file
                     .as_ref()
                     .map(|af| af.relative_path.clone())
@@ -590,10 +621,8 @@ fn upsert_progress(
     force_finished: bool,
 ) -> Result<MediaProgress, CustomError> {
     let now = Utc::now().naive_utc();
-    let progress_id = MediaProgress::compose_id(
-        &session.library_item_id,
-        session.episode_id.as_deref(),
-    );
+    let progress_id =
+        MediaProgress::compose_id(&session.library_item_id, session.episode_id.as_deref());
     let existing = state.audiobookshelf_media_progress_service.find(
         session.user_id,
         &session.library_item_id,
@@ -613,21 +642,23 @@ fn upsert_progress(
     } else {
         0.0
     };
-    state.audiobookshelf_media_progress_service.upsert(MediaProgress {
-        id: progress_id,
-        user_id: session.user_id,
-        library_item_id: session.library_item_id.clone(),
-        episode_id: session.episode_id.clone(),
-        media_type: session.media_type.clone(),
-        duration: session.duration,
-        current_time: session.current_time,
-        progress: progress_value,
-        is_finished,
-        hide_from_continue_listening: false,
-        last_update: now,
-        started_at,
-        finished_at,
-    })
+    state
+        .audiobookshelf_media_progress_service
+        .upsert(MediaProgress {
+            id: progress_id,
+            user_id: session.user_id,
+            library_item_id: session.library_item_id.clone(),
+            episode_id: session.episode_id.clone(),
+            media_type: session.media_type.clone(),
+            duration: session.duration,
+            current_time: session.current_time,
+            progress: progress_value,
+            is_finished,
+            hide_from_continue_listening: false,
+            last_update: now,
+            started_at,
+            finished_at,
+        })
 }
 
 fn mime_for_ext(ext: &str) -> String {

@@ -49,7 +49,8 @@ pub async fn get_podcast_feed(
     Json(body): Json<GetPodcastFeedRequest>,
 ) -> Result<Json<Value>, CustomError> {
     let feed_url = body.rss_feed.trim().to_string();
-    if feed_url.is_empty() || (!feed_url.starts_with("http://") && !feed_url.starts_with("https://"))
+    if feed_url.is_empty()
+        || (!feed_url.starts_with("http://") && !feed_url.starts_with("https://"))
     {
         return Err(CustomErrorInner::BadRequest(
             "rssFeed must be a valid http(s) URL".to_string(),

@@ -274,6 +274,15 @@ pub async fn post_sync_devices(
     get_sync_devices(State(state), Path(username), Extension(flag)).await
 }
 
+pub fn get_device_router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
+        .routes(routes!(get_devices_of_user))
+        .routes(routes!(post_device))
+        .routes(routes!(get_device_updates))
+        .routes(routes!(get_sync_devices))
+        .routes(routes!(post_sync_devices))
+}
+
 #[cfg(test)]
 mod tests {
     use crate::app_state::AppState;
@@ -440,13 +449,4 @@ mod tests {
         let body = response.json::<serde_json::Value>();
         assert!(body["synchronized"].as_array().unwrap().is_empty());
     }
-}
-
-pub fn get_device_router() -> OpenApiRouter<AppState> {
-    OpenApiRouter::new()
-        .routes(routes!(get_devices_of_user))
-        .routes(routes!(post_device))
-        .routes(routes!(get_device_updates))
-        .routes(routes!(get_sync_devices))
-        .routes(routes!(post_sync_devices))
 }

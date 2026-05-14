@@ -11,8 +11,8 @@ use crate::audiobookshelf_api::controllers::me::get_me_router as get_audiobooksh
 use crate::audiobookshelf_api::controllers::playlists::get_playlists_router as get_audiobookshelf_playlists_router;
 use crate::audiobookshelf_api::controllers::podcasts::get_podcasts_router as get_audiobookshelf_podcasts_router;
 use crate::audiobookshelf_api::controllers::public_session::get_public_session_router as get_audiobookshelf_public_session_router;
-use crate::audiobookshelf_api::controllers::search::get_search_router as get_audiobookshelf_search_router;
 use crate::audiobookshelf_api::controllers::scan::get_scan_router as get_audiobookshelf_scan_router;
+use crate::audiobookshelf_api::controllers::search::get_search_router as get_audiobookshelf_search_router;
 use crate::audiobookshelf_api::controllers::server_status::get_status_router as get_audiobookshelf_status_router;
 use crate::audiobookshelf_api::controllers::sessions::get_sessions_router as get_audiobookshelf_sessions_router;
 use crate::audiobookshelf_api::controllers::uploads::get_upload_router as get_audiobookshelf_upload_router;

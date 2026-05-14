@@ -1032,8 +1032,15 @@ impl SeriesRepository for SeriesRepositoryImpl {
     fn list_for_book(&self, book_id: &str) -> Result<Vec<(Series, Option<String>)>, Self::Error> {
         self.inner.list_for_book(book_id).map_err(Into::into)
     }
-    fn link(&self, book_id: &str, series_id: &str, sequence: Option<&str>) -> Result<(), Self::Error> {
-        self.inner.link(book_id, series_id, sequence).map_err(Into::into)
+    fn link(
+        &self,
+        book_id: &str,
+        series_id: &str,
+        sequence: Option<&str>,
+    ) -> Result<(), Self::Error> {
+        self.inner
+            .link(book_id, series_id, sequence)
+            .map_err(Into::into)
     }
     fn unlink_all_for_book(&self, book_id: &str) -> Result<usize, Self::Error> {
         self.inner.unlink_all_for_book(book_id).map_err(Into::into)
@@ -1057,7 +1064,9 @@ impl BookAudioFileRepository for BookAudioFileRepositoryImpl {
         book_id: &str,
         files: Vec<BookAudioFile>,
     ) -> Result<Vec<BookAudioFile>, Self::Error> {
-        self.inner.replace_for_book(book_id, files).map_err(Into::into)
+        self.inner
+            .replace_for_book(book_id, files)
+            .map_err(Into::into)
     }
     fn list_for_book(&self, book_id: &str) -> Result<Vec<BookAudioFile>, Self::Error> {
         self.inner.list_for_book(book_id).map_err(Into::into)
@@ -1081,7 +1090,9 @@ impl BookChapterRepository for BookChapterRepositoryImpl {
         book_id: &str,
         chapters: Vec<BookChapter>,
     ) -> Result<Vec<BookChapter>, Self::Error> {
-        self.inner.replace_for_book(book_id, chapters).map_err(Into::into)
+        self.inner
+            .replace_for_book(book_id, chapters)
+            .map_err(Into::into)
     }
     fn list_for_book(&self, book_id: &str) -> Result<Vec<BookChapter>, Self::Error> {
         self.inner.list_for_book(book_id).map_err(Into::into)
@@ -1114,7 +1125,11 @@ impl ListeningSessionRepository for ListeningSessionRepositoryImpl {
         self.inner.create(session).map_err(Into::into)
     }
 
-    fn list_for_user(&self, user_id: i32, limit: i64) -> Result<Vec<ListeningSession>, Self::Error> {
+    fn list_for_user(
+        &self,
+        user_id: i32,
+        limit: i64,
+    ) -> Result<Vec<ListeningSession>, Self::Error> {
         self.inner.list_for_user(user_id, limit).map_err(Into::into)
     }
 }

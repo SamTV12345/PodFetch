@@ -187,7 +187,9 @@ fn apply_tag(tags: &mut ProbedTags, key: &str, value: &serde_json::Value) {
         "comment" => tags.comment.get_or_insert(value),
         "description" => tags.description.get_or_insert(value),
         "series" | "show" | "tvshow" => tags.series.get_or_insert(value),
-        "series-part" | "series_part" | "episode_id" | "tves" => tags.series_part.get_or_insert(value),
+        "series-part" | "series_part" | "episode_id" | "tves" => {
+            tags.series_part.get_or_insert(value)
+        }
         "grouping" => tags.grouping.get_or_insert(value),
         "language" => tags.language.get_or_insert(value),
         "isbn" => tags.isbn.get_or_insert(value),

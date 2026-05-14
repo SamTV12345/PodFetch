@@ -27,8 +27,7 @@ pub fn emit_progress_updated(
     session_id: &str,
     device_description: &str,
 ) {
-    let payload =
-        events::build_progress_updated_payload(progress, session_id, device_description);
+    let payload = events::build_progress_updated_payload(progress, session_id, device_description);
     emit_to_user_room(user_id, EVENT_USER_ITEM_PROGRESS_UPDATED, payload);
 }
 
@@ -67,19 +66,19 @@ fn emit_to_user_room(user_id: i32, event: &str, payload: serde_json::Value) {
     let event = event.to_string();
     let io_handle = io.clone();
     tokio::spawn(async move {
-        if let Err(e) = io_handle.to(room.clone()).emit(event.clone(), &payload).await {
-            tracing::warn!(
-                "audiobookshelf socket.io emit({event}) to {room} failed: {e:?}"
-            );
+        if let Err(e) = io_handle
+            .to(room.clone())
+            .emit(event.clone(), &payload)
+            .await
+        {
+            tracing::warn!("audiobookshelf socket.io emit({event}) to {room} failed: {e:?}");
         }
     });
 }
 
 fn emit_broadcast(event: &str, payload: serde_json::Value) {
     let Some(io) = SOCKET_IO_LAYER.get() else {
-        tracing::trace!(
-            "audiobookshelf socket.io not initialised; dropping broadcast {event}"
-        );
+        tracing::trace!("audiobookshelf socket.io not initialised; dropping broadcast {event}");
         return;
     };
     let event = event.to_string();

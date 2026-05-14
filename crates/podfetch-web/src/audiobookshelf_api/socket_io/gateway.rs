@@ -42,27 +42,21 @@ async fn handle_auth(
     token: Option<String>,
 ) {
     let Some(token) = token.filter(|t| !t.is_empty()) else {
-        tracing::warn!(
-            "audiobookshelf socket {}: empty auth token",
-            socket.id
-        );
+        tracing::warn!("audiobookshelf socket {}: empty auth token", socket.id);
         emit_auth_failed(socket, "Missing token");
         return;
     };
     let user = match login_service.user_from_token(&token) {
         Ok(Some(user)) => user,
         Ok(None) | Err(_) => {
-            tracing::warn!(
-                "audiobookshelf socket {}: invalid auth token",
-                socket.id
-            );
+            tracing::warn!("audiobookshelf socket {}: invalid auth token", socket.id);
             emit_auth_failed(socket, "Invalid token");
             return;
         }
     };
     socket.join(user.id.to_string());
     let init_payload = events::build_init_payload(&user);
-    if let Err(e) = socket.emit(EVENT_INIT.to_string(), &init_payload) {
+    if let Err(e) = socket.emit(EVENT_INIT, &init_payload) {
         tracing::warn!(
             "audiobookshelf socket {}: init emit failed: {e:?}",
             socket.id
@@ -79,7 +73,7 @@ async fn handle_auth(
 
 fn emit_auth_failed(socket: &SocketRef, message: &str) {
     let payload = serde_json::json!({ "message": message });
-    let _ = socket.emit(EVENT_AUTH_FAILED.to_string(), &payload);
+    let _ = socket.emit(EVENT_AUTH_FAILED, &payload);
 }
 
 /// Accepts the `auth` payload in any of the forms the audiobookshelf
@@ -89,7 +83,10 @@ fn emit_auth_failed(socket: &SocketRef, message: &str) {
 fn extract_token_value(value: &Value) -> Option<String> {
     match value {
         Value::String(s) => Some(s.clone()),
-        Value::Object(map) => map.get("token").and_then(|v| v.as_str()).map(str::to_string),
+        Value::Object(map) => map
+            .get("token")
+            .and_then(|v| v.as_str())
+            .map(str::to_string),
         _ => None,
     }
 }

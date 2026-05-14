@@ -38,7 +38,8 @@ pub async fn login(
         .audiobookshelf_media_progress_service
         .list_for_user(user.id)
         .unwrap_or_default();
-    let progress_dtos: Vec<MediaProgressDto> = progress.iter().map(MediaProgressDto::from).collect();
+    let progress_dtos: Vec<MediaProgressDto> =
+        progress.iter().map(MediaProgressDto::from).collect();
 
     let default_lib_id = state
         .audiobookshelf_library_service
@@ -71,7 +72,8 @@ pub async fn authorize(
         .audiobookshelf_media_progress_service
         .list_for_user(user.id)
         .unwrap_or_default();
-    let progress_dtos: Vec<MediaProgressDto> = progress.iter().map(MediaProgressDto::from).collect();
+    let progress_dtos: Vec<MediaProgressDto> =
+        progress.iter().map(MediaProgressDto::from).collect();
 
     let default_lib_id = state
         .audiobookshelf_library_service

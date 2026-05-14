@@ -74,10 +74,7 @@ impl AudiobookFileWatcher {
         }
 
         let (tx, rx) = mpsc::unbounded_channel::<WatchEvent>();
-        let mut watchers = self
-            .watchers
-            .lock()
-            .expect("file_watcher mutex poisoned");
+        let mut watchers = self.watchers.lock().expect("file_watcher mutex poisoned");
 
         for library in &book_libraries {
             for folder in &library.folder_paths {
@@ -92,8 +89,8 @@ impl AudiobookFileWatcher {
                 }
                 let library_id = library.id.clone();
                 let tx = tx.clone();
-                let mut watcher = notify::recommended_watcher(
-                    move |result: notify::Result<notify::Event>| {
+                let mut watcher =
+                    notify::recommended_watcher(move |result: notify::Result<notify::Event>| {
                         if let Ok(event) = result
                             && is_meaningful(&event.kind)
                         {
@@ -101,8 +98,7 @@ impl AudiobookFileWatcher {
                                 library_id: library_id.clone(),
                             });
                         }
-                    },
-                )?;
+                    })?;
                 watcher.watch(&path, RecursiveMode::Recursive)?;
                 watchers.push(watcher);
                 tracing::info!(
@@ -185,7 +181,8 @@ fn flush_due(pending: &mut HashMap<String, Instant>, scanner: &Arc<AudiobookScan
     let now = Instant::now();
     let due_ids: Vec<String> = pending
         .iter()
-        .filter_map(|(id, deadline)| (*deadline <= now).then(|| id.clone()))
+        .filter(|&(_, deadline)| *deadline <= now)
+        .map(|(id, _)| id.clone())
         .collect();
     for id in due_ids {
         pending.remove(&id);
@@ -200,10 +197,7 @@ fn flush_due(pending: &mut HashMap<String, Instant>, scanner: &Arc<AudiobookScan
                     report.books_updated,
                     report.errors.len()
                 ),
-                Err(e) => tracing::warn!(
-                    "file_watcher: scan {} failed: {e:?}",
-                    id_clone
-                ),
+                Err(e) => tracing::warn!("file_watcher: scan {} failed: {e:?}", id_clone),
             };
         });
     }
@@ -233,13 +227,17 @@ mod tests {
     #[test]
     fn flush_due_does_not_remove_future_deadlines() {
         let mut pending: HashMap<String, Instant> = HashMap::new();
-        pending.insert("future".to_string(), Instant::now() + Duration::from_secs(60));
+        pending.insert(
+            "future".to_string(),
+            Instant::now() + Duration::from_secs(60),
+        );
         // We can't easily verify the scan trigger without a full scanner,
         // but we can at least confirm flush_due leaves future entries alone.
         let snapshot: Vec<String> = pending.keys().cloned().collect();
         let due_ids: Vec<String> = pending
             .iter()
-            .filter_map(|(id, deadline)| (*deadline <= Instant::now()).then(|| id.clone()))
+            .filter(|(_, deadline)| **deadline <= Instant::now())
+            .map(|(id, _)| id.clone())
             .collect();
         assert!(due_ids.is_empty(), "future deadline should not be due");
         assert_eq!(snapshot, vec!["future".to_string()]);
@@ -248,13 +246,11 @@ mod tests {
     #[test]
     fn flush_due_picks_up_past_deadlines() {
         let mut pending: HashMap<String, Instant> = HashMap::new();
-        pending.insert(
-            "past".to_string(),
-            Instant::now() - Duration::from_secs(1),
-        );
+        pending.insert("past".to_string(), Instant::now() - Duration::from_secs(1));
         let due_ids: Vec<String> = pending
             .iter()
-            .filter_map(|(id, deadline)| (*deadline <= Instant::now()).then(|| id.clone()))
+            .filter(|(_, deadline)| **deadline <= Instant::now())
+            .map(|(id, _)| id.clone())
             .collect();
         assert_eq!(due_ids, vec!["past".to_string()]);
     }

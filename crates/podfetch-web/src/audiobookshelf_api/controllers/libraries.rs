@@ -98,7 +98,11 @@ pub async fn get_recent_episodes(
     // episode's `date_of_recording` (RFC-2822 or RFC-3339); we parse both
     // for sorting and fall back to download_time.
     let podcasts = PodcastService::get_all_podcasts_raw()?;
-    let mut episodes_with_podcast: Vec<(podfetch_domain::podcast::Podcast, podfetch_domain::podcast_episode::PodcastEpisode, i64)> = Vec::new();
+    let mut episodes_with_podcast: Vec<(
+        podfetch_domain::podcast::Podcast,
+        podfetch_domain::podcast_episode::PodcastEpisode,
+        i64,
+    )> = Vec::new();
     for podcast_entity in podcasts {
         let domain_podcast: podfetch_domain::podcast::Podcast = podcast_entity.into();
         let eps: Vec<podfetch_domain::podcast_episode::PodcastEpisode> =
@@ -112,7 +116,7 @@ pub async fn get_recent_episodes(
             episodes_with_podcast.push((domain_podcast.clone(), ep, ts));
         }
     }
-    episodes_with_podcast.sort_by(|a, b| b.2.cmp(&a.2));
+    episodes_with_podcast.sort_by_key(|t| std::cmp::Reverse(t.2));
 
     let limit_raw = query.limit.unwrap_or(0);
     let limit = if limit_raw <= 0 {
@@ -213,7 +217,11 @@ pub async fn list_library_playlists(
     let limit = query.limit.unwrap_or(0);
     let page = query.page.unwrap_or(0);
     let slice: Vec<_> = if limit > 0 {
-        playlists.into_iter().skip(page * limit).take(limit).collect()
+        playlists
+            .into_iter()
+            .skip(page * limit)
+            .take(limit)
+            .collect()
     } else {
         playlists
     };

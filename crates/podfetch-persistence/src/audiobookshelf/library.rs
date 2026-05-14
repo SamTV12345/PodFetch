@@ -41,7 +41,8 @@ impl LibraryEntity {
             icon: self.icon,
             display_order: self.display_order,
             folder_paths: serde_json::from_str(&self.folder_paths).unwrap_or_default(),
-            metadata_precedence: serde_json::from_str(&self.metadata_precedence).unwrap_or_default(),
+            metadata_precedence: serde_json::from_str(&self.metadata_precedence)
+                .unwrap_or_default(),
             created_at: self.created_at,
             updated_at: self.updated_at,
         }

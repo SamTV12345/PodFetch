@@ -39,21 +39,21 @@ use podfetch_persistence::adapters::BookChapterRepositoryImpl;
 use podfetch_persistence::adapters::BookRepositoryImpl;
 use podfetch_persistence::adapters::DeviceRepositoryImpl;
 use podfetch_persistence::adapters::DeviceSyncGroupRepositoryImpl;
-use podfetch_persistence::adapters::LibraryRepositoryImpl;
-use podfetch_persistence::adapters::ListeningSessionRepositoryImpl;
-use podfetch_persistence::adapters::MediaProgressRepositoryImpl;
-use podfetch_persistence::adapters::NarratorRepositoryImpl;
-use podfetch_persistence::adapters::PlaybackSessionRepositoryImpl;
-use podfetch_persistence::adapters::SeriesRepositoryImpl;
 use podfetch_persistence::adapters::FavoritePodcastEpisodeRepositoryImpl;
 use podfetch_persistence::adapters::FilterRepositoryImpl;
 use podfetch_persistence::adapters::GpodderSettingRepositoryImpl;
 use podfetch_persistence::adapters::InviteRepositoryImpl;
+use podfetch_persistence::adapters::LibraryRepositoryImpl;
 use podfetch_persistence::adapters::ListeningEventRepositoryImpl;
+use podfetch_persistence::adapters::ListeningSessionRepositoryImpl;
+use podfetch_persistence::adapters::MediaProgressRepositoryImpl;
+use podfetch_persistence::adapters::NarratorRepositoryImpl;
 use podfetch_persistence::adapters::NotificationRepositoryImpl;
+use podfetch_persistence::adapters::PlaybackSessionRepositoryImpl;
 use podfetch_persistence::adapters::PlaylistRepositoryImpl;
 use podfetch_persistence::adapters::PodcastEpisodeChapterRepositoryImpl;
 use podfetch_persistence::adapters::PodcastSettingsRepositoryImpl;
+use podfetch_persistence::adapters::SeriesRepositoryImpl;
 use podfetch_persistence::adapters::SessionRepositoryImpl;
 use podfetch_persistence::adapters::SettingsRepositoryImpl;
 use podfetch_persistence::adapters::SubscriptionRepositoryImpl;
@@ -179,8 +179,7 @@ impl AppState {
             Arc::new(UserAdminRepositoryImpl::new(database.clone())),
         ));
 
-        let audiobookshelf_book_repository =
-            Arc::new(BookRepositoryImpl::new(database.clone()));
+        let audiobookshelf_book_repository = Arc::new(BookRepositoryImpl::new(database.clone()));
         let audiobookshelf_author_repository =
             Arc::new(AuthorRepositoryImpl::new(database.clone()));
         let audiobookshelf_narrator_repository =
@@ -212,21 +211,18 @@ impl AppState {
             series_repository: audiobookshelf_series_repository,
             environment: environment.clone(),
         });
-        let audiobookshelf_media_progress_service = Arc::new(
-            AudiobookshelfMediaProgressService::new(Arc::new(MediaProgressRepositoryImpl::new(
-                database.clone(),
-            ))),
-        );
-        let audiobookshelf_playback_session_service = Arc::new(
-            AudiobookshelfPlaybackSessionService::new(Arc::new(
+        let audiobookshelf_media_progress_service =
+            Arc::new(AudiobookshelfMediaProgressService::new(Arc::new(
+                MediaProgressRepositoryImpl::new(database.clone()),
+            )));
+        let audiobookshelf_playback_session_service =
+            Arc::new(AudiobookshelfPlaybackSessionService::new(Arc::new(
                 PlaybackSessionRepositoryImpl::new(database.clone()),
-            )),
-        );
-        let audiobookshelf_listening_session_service = Arc::new(
-            AudiobookshelfListeningSessionService::new(Arc::new(
+            )));
+        let audiobookshelf_listening_session_service =
+            Arc::new(AudiobookshelfListeningSessionService::new(Arc::new(
                 ListeningSessionRepositoryImpl::new(database),
-            )),
-        );
+            )));
         let audiobookshelf_login_service = Arc::new(AudiobookshelfLoginService::new(
             user_auth_service.clone(),
             user_admin_service.clone(),

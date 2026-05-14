@@ -63,11 +63,7 @@ pub fn map_episode_for_recent(
     ep_json
 }
 
-pub fn map_podcast(
-    podcast: &Podcast,
-    episodes: &[PodcastEpisode],
-    library_id: &str,
-) -> Value {
+pub fn map_podcast(podcast: &Podcast, episodes: &[PodcastEpisode], library_id: &str) -> Value {
     let item_id = LibraryItemId::Podcast(podcast.id).as_string();
     let added_ms = episodes
         .iter()
@@ -83,8 +79,7 @@ pub fn map_podcast(
         .unwrap_or_else(|| Utc::now().naive_utc())
         .and_utc()
         .timestamp_millis();
-    let active_episodes: Vec<&PodcastEpisode> =
-        episodes.iter().filter(|e| !e.deleted).collect();
+    let active_episodes: Vec<&PodcastEpisode> = episodes.iter().filter(|e| !e.deleted).collect();
     let episodes_json: Vec<Value> = active_episodes
         .iter()
         .enumerate()
@@ -326,7 +321,10 @@ mod tests {
 
     #[test]
     fn title_ignore_prefix_strips_articles() {
-        assert_eq!(title_ignore_prefix("The Witcher"), "Witcher, The".to_string());
+        assert_eq!(
+            title_ignore_prefix("The Witcher"),
+            "Witcher, The".to_string()
+        );
         assert_eq!(title_ignore_prefix("A Memory"), "Memory, A".to_string());
         assert_eq!(title_ignore_prefix("An Echo"), "Echo, An".to_string());
         assert_eq!(title_ignore_prefix("Witcher"), "Witcher".to_string());

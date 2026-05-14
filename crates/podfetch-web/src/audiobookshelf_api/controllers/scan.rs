@@ -29,7 +29,9 @@ pub async fn scan_library(
     // Emit item_added/item_updated per book (audiobookshelf parity:
     // LibraryScanner.libraryItemEmitter('item_added'|'item_updated', item)).
     for result in &report.book_results {
-        if let Ok(Some(book)) = state.audiobookshelf_book_service.find_by_id(&result.book_id)
+        if let Ok(Some(book)) = state
+            .audiobookshelf_book_service
+            .find_by_id(&result.book_id)
             && let Ok(aggregate) = state.audiobookshelf_book_service.hydrate(book)
         {
             let event = if result.is_new {

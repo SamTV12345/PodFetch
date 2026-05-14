@@ -112,7 +112,10 @@ where
         parts: &mut axum::http::request::Parts,
         _state: &S,
     ) -> impl std::future::Future<Output = Result<Self, Self::Rejection>> + Send {
-        let user = parts.extensions.get::<podfetch_domain::user::User>().cloned();
+        let user = parts
+            .extensions
+            .get::<podfetch_domain::user::User>()
+            .cloned();
         async move {
             user.map(AuthenticatedUser).ok_or_else(|| {
                 CustomError::from(CustomErrorInner::UnAuthorized(
@@ -123,4 +126,3 @@ where
         }
     }
 }
-

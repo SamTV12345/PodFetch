@@ -53,8 +53,7 @@ pub async fn list_library_items(
             podcasts
                 .into_iter()
                 .map(|podcast_entity| {
-                    let domain_podcast: podfetch_domain::podcast::Podcast =
-                        podcast_entity.into();
+                    let domain_podcast: podfetch_domain::podcast::Podcast = podcast_entity.into();
                     let episodes: Vec<podfetch_domain::podcast_episode::PodcastEpisode> =
                         PodcastEpisodeService::get_episodes_by_podcast_id(domain_podcast.id)
                             .unwrap_or_default()

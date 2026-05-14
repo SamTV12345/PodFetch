@@ -24,11 +24,10 @@ pub fn load(folder: &Path) -> Option<MetadataPatch> {
     let reader = folder.join("reader.txt");
     if reader.is_file()
         && let Ok(content) = std::fs::read_to_string(&reader)
+        && let Some(narrators) = first_line_split(&content)
     {
-        if let Some(narrators) = first_line_split(&content) {
-            patch.narrators = Some(narrators);
-            touched = true;
-        }
+        patch.narrators = Some(narrators);
+        touched = true;
     }
     touched.then_some(patch)
 }

@@ -58,9 +58,11 @@ impl AudiobookScanner {
         let library = self
             .library_service
             .find_by_id(library_id)?
-            .ok_or_else(|| common_infrastructure::error::CustomErrorInner::NotFound(
-                common_infrastructure::error::ErrorSeverity::Warning,
-            ))?;
+            .ok_or_else(|| {
+                common_infrastructure::error::CustomErrorInner::NotFound(
+                    common_infrastructure::error::ErrorSeverity::Warning,
+                )
+            })?;
 
         let mut report = ScanReport::default();
         for folder_path in &library.folder_paths {
@@ -189,11 +191,8 @@ impl AudiobookScanner {
         self.series_repository.unlink_all_for_book(&book.id)?;
         if let Some((series_name, sequence)) = &resolved.series {
             let series = self.series_repository.upsert_by_name(series_name)?;
-            self.series_repository.link(
-                &book.id,
-                &series.id,
-                sequence.as_deref(),
-            )?;
+            self.series_repository
+                .link(&book.id, &series.id, sequence.as_deref())?;
         }
 
         // Audio files
@@ -238,7 +237,8 @@ impl AudiobookScanner {
         // Chapters (concatenate per file with cumulative offsets; fall back to per-file titles)
         let chapters = build_chapter_list(&book.id, &probed);
         let chapter_count = chapters.len();
-        self.chapter_repository.replace_for_book(&book.id, chapters)?;
+        self.chapter_repository
+            .replace_for_book(&book.id, chapters)?;
 
         // Cover: prefer file in folder, fall back to ffmpeg-extracted artwork
         let cover_dir = cover_storage_dir(&self.environment);
@@ -371,10 +371,7 @@ fn parse_first_int(value: Option<&str>) -> Option<i32> {
     main.parse::<i32>().ok()
 }
 
-fn build_chapter_list(
-    book_id: &str,
-    probed: &[(PathBuf, ProbedAudioFile)],
-) -> Vec<BookChapter> {
+fn build_chapter_list(book_id: &str, probed: &[(PathBuf, ProbedAudioFile)]) -> Vec<BookChapter> {
     let mut chapters = Vec::new();
     let mut offset = 0.0_f64;
     let mut idx = 0_i32;
@@ -423,7 +420,11 @@ fn build_chapter_list(
         .map(|(path, p)| file_title(path, &p.tags))
         .collect();
     let all_unique = titles.iter().all(|t| !t.is_empty())
-        && titles.iter().collect::<std::collections::HashSet<_>>().len() == titles.len();
+        && titles
+            .iter()
+            .collect::<std::collections::HashSet<_>>()
+            .len()
+            == titles.len();
     if probed.len() > 1 && all_unique {
         for ((_, p), title) in probed.iter().zip(titles.iter()) {
             chapters.push(BookChapter {
@@ -461,9 +462,11 @@ mod tests {
 
     #[test]
     fn smart_track_key_uses_disc_track_then_name() {
-        let mut tags = ProbedTags::default();
-        tags.track = Some("3".to_string());
-        tags.disc = Some("2".to_string());
+        let tags = ProbedTags {
+            track: Some("3".to_string()),
+            disc: Some("2".to_string()),
+            ..Default::default()
+        };
         let key = smart_track_key(Path::new("/x/track-03.mp3"), &tags);
         assert_eq!(key.0, 2);
         assert_eq!(key.1, 3);
@@ -487,10 +490,14 @@ mod tests {
 
     #[test]
     fn build_chapter_list_synthesizes_per_file_chapters_when_unique_titles() {
-        let mut a_tags = ProbedTags::default();
-        a_tags.title = Some("Chapter A".to_string());
-        let mut b_tags = ProbedTags::default();
-        b_tags.title = Some("Chapter B".to_string());
+        let a_tags = ProbedTags {
+            title: Some("Chapter A".to_string()),
+            ..Default::default()
+        };
+        let b_tags = ProbedTags {
+            title: Some("Chapter B".to_string()),
+            ..Default::default()
+        };
         let probed = vec![
             (
                 PathBuf::from("/x/a.mp3"),
