@@ -50,6 +50,8 @@ pub async fn login(
         user: AbsUserDto::from_user(&user, progress_dtos),
         user_default_library_id: default_lib_id,
         server_settings: ServerSettingsDto::default_settings(),
+        ereader_devices: Vec::new(),
+        source: "podfetch".to_string(),
     }))
 }
 
@@ -91,6 +93,8 @@ pub async fn authorize(
         user: AbsUserDto::from_user(&user, progress_dtos),
         user_default_library_id: default_lib_id,
         server_settings: ServerSettingsDto::default_settings(),
+        ereader_devices: Vec::new(),
+        source: "podfetch".to_string(),
     }))
 }
 

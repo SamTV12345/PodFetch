@@ -61,8 +61,7 @@ pub async fn list_library_items(
                             .into_iter()
                             .map(Into::into)
                             .collect();
-                    let dto = map_podcast(&domain_podcast, &episodes, &library.id);
-                    serde_json::to_value(dto).unwrap_or(Value::Null)
+                    map_podcast(&domain_podcast, &episodes, &library.id)
                 })
                 .collect()
         }
@@ -124,8 +123,7 @@ pub async fn get_library_item(
                 .audiobookshelf_library_service
                 .find_default_podcasts_library()?
                 .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
-            let dto = map_podcast(&domain_podcast, &episodes, &library.id);
-            Ok(Json(serde_json::to_value(dto).unwrap_or(Value::Null)))
+            Ok(Json(map_podcast(&domain_podcast, &episodes, &library.id)))
         }
         LibraryItemId::Book(_) => {
             let book = state

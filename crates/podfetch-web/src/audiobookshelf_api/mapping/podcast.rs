@@ -1,21 +1,27 @@
 //! Maps PodFetch's `Podcast` + `PodcastEpisode` domain entities to the
-//! audiobookshelf-shaped `LibraryItem` DTO.
+//! audiobookshelf-shaped `LibraryItem` JSON for `mediaType: "podcast"`.
+//!
+//! Returns `serde_json::Value` directly because the exact byte-shape comes
+//! straight from upstream and not from any of our own structs.
+//! References:
+//!   - `server/models/LibraryItem.js::toOldJSONExpanded()`
+//!   - `server/models/Podcast.js::toOldJSONExpanded(libraryItemId)`
+//!   - `server/models/Podcast.js::oldMetadataToJSONExpanded()`
+//!   - `server/models/PodcastEpisode.js::toOldJSONExpanded(libraryItemId)`
+//!   - `server/models/PodcastEpisode.js::getAudioTrack(libraryItemId)`
 
-use crate::audiobookshelf_api::dto::library_item::{
-    AudioFileDto, AudioFileMetadataDto, AudioTrackInlineDto, EpisodeEnclosureDto, LibraryItemDto,
-    PodcastEpisodeDto, PodcastMediaDto, PodcastMetadataDto,
-};
 use chrono::{NaiveDateTime, Utc};
 use podfetch_domain::audiobookshelf::library_item_id::{EpisodeId, LibraryItemId};
 use podfetch_domain::podcast::Podcast;
 use podfetch_domain::podcast_episode::PodcastEpisode;
+use serde_json::{Value, json};
 use std::path::Path;
 
 pub fn map_podcast(
     podcast: &Podcast,
     episodes: &[PodcastEpisode],
     library_id: &str,
-) -> LibraryItemDto {
+) -> Value {
     let item_id = LibraryItemId::Podcast(podcast.id).as_string();
     let added_ms = episodes
         .iter()
@@ -31,80 +37,109 @@ pub fn map_podcast(
         .unwrap_or_else(|| Utc::now().naive_utc())
         .and_utc()
         .timestamp_millis();
-
-    let episode_dtos: Vec<PodcastEpisodeDto> = episodes
+    let active_episodes: Vec<&PodcastEpisode> =
+        episodes.iter().filter(|e| !e.deleted).collect();
+    let episodes_json: Vec<Value> = active_episodes
         .iter()
-        .filter(|e| !e.deleted)
         .enumerate()
-        .map(|(idx, episode)| map_episode(episode, &item_id, idx as i32 + 1))
+        .map(|(idx, ep)| map_episode(ep, &item_id, podcast.id, idx as i32 + 1))
         .collect();
-    let num_episodes = episode_dtos.len() as i32;
+    let num_episodes = episodes_json.len();
 
-    LibraryItemDto {
-        id: item_id.clone(),
-        ino: format!("ino_pod_{}", podcast.id),
-        library_id: library_id.to_string(),
-        folder_id: None,
-        path: podcast.directory_name.clone(),
-        rel_path: podcast.directory_name.clone(),
-        is_file: false,
-        mtime_ms: updated_ms,
-        ctime_ms: added_ms,
-        birthtime_ms: added_ms,
-        added_at: added_ms,
-        updated_at: updated_ms,
-        last_scan: Some(updated_ms),
-        scan_version: Some(env!("CARGO_PKG_VERSION").to_string()),
-        is_missing: false,
-        is_invalid: false,
-        media_type: "podcast".to_string(),
-        media: PodcastMediaDto {
-            metadata: PodcastMetadataDto {
-                title: podcast.name.clone(),
-                author: podcast.author.clone(),
-                description: podcast.summary.clone(),
-                release_date: podcast.last_build_date.clone(),
-                genres: podcast
-                    .keywords
-                    .as_deref()
-                    .map(|k| {
-                        k.split(',')
-                            .map(|s| s.trim().to_string())
-                            .filter(|s| !s.is_empty())
-                            .collect()
-                    })
-                    .unwrap_or_default(),
-                feed_url: podcast.rssfeed.clone(),
-                image_url: podcast.image_url.clone(),
-                itunes_page_url: None,
-                itunes_id: None,
-                itunes_artist_id: None,
-                explicit: matches!(
-                    podcast.explicit.as_deref(),
-                    Some("yes") | Some("true") | Some("1")
-                ),
-                language: podcast.language.clone(),
-            },
-            cover_path: Some(format!("/api/items/{item_id}/cover")),
-            tags: Vec::new(),
-            episodes: episode_dtos,
-            auto_download_episodes: podcast.active,
-            auto_download_schedule: None,
-            last_episode_check: updated_ms,
-            max_episodes_to_keep: 0,
-            max_new_episodes_to_download: 0,
-            num_episodes,
-        },
-        num_files: num_episodes,
-        size: 0,
+    let media = json!({
+        "id": format!("pod_{}", podcast.id),
+        "libraryItemId": item_id,
+        "metadata": metadata_json(podcast),
+        "coverPath": format!("/api/items/{item_id}/cover"),
+        "tags": Value::Array(vec![]),
+        "episodes": episodes_json,
+        "autoDownloadEpisodes": podcast.active,
+        "autoDownloadSchedule": Value::Null,
+        "lastEpisodeCheck": updated_ms,
+        "maxEpisodesToKeep": 0,
+        "maxNewEpisodesToDownload": 0,
+        "size": 0,
+        // PodFetch-specific helper field; mobile apps ignore unknown keys.
+        "numEpisodes": num_episodes,
+    });
+
+    json!({
+        "id": item_id,
+        "ino": format!("ino_pod_{}", podcast.id),
+        "oldLibraryItemId": Value::Null,
+        "libraryId": library_id,
+        "folderId": Value::Null,
+        "path": podcast.directory_name,
+        "relPath": podcast.directory_name,
+        "isFile": false,
+        "mtimeMs": updated_ms,
+        "ctimeMs": added_ms,
+        "birthtimeMs": added_ms,
+        "addedAt": added_ms,
+        "updatedAt": updated_ms,
+        "lastScan": updated_ms,
+        "scanVersion": env!("CARGO_PKG_VERSION"),
+        "isMissing": false,
+        "isInvalid": false,
+        "mediaType": "podcast",
+        "media": media,
+        "libraryFiles": Value::Array(vec![]),
+        "numFiles": num_episodes,
+        "size": 0,
+    })
+}
+
+fn metadata_json(podcast: &Podcast) -> Value {
+    let genres: Vec<Value> = podcast
+        .keywords
+        .as_deref()
+        .map(|k| {
+            k.split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .map(Value::from)
+                .collect()
+        })
+        .unwrap_or_default();
+    let title_ignore_prefix = title_ignore_prefix(&podcast.name);
+    json!({
+        "title": podcast.name,
+        "titleIgnorePrefix": title_ignore_prefix,
+        "author": podcast.author,
+        "description": podcast.summary,
+        "releaseDate": podcast.last_build_date,
+        "genres": genres,
+        "feedUrl": podcast.rssfeed,
+        "imageUrl": podcast.image_url,
+        "itunesPageUrl": Value::Null,
+        "itunesId": Value::Null,
+        "itunesArtistId": Value::Null,
+        "explicit": matches!(
+            podcast.explicit.as_deref(),
+            Some("yes") | Some("true") | Some("1")
+        ),
+        "language": podcast.language,
+        "type": "episodic",
+    })
+}
+
+/// Mirrors audiobookshelf `getTitlePrefixAtEnd` in `server/utils/index.js`:
+/// "The Witcher" -> "Witcher, The".
+fn title_ignore_prefix(title: &str) -> String {
+    for prefix in ["The ", "A ", "An "] {
+        if let Some(rest) = title.strip_prefix(prefix) {
+            return format!("{rest}, {}", prefix.trim());
+        }
     }
+    title.to_string()
 }
 
 fn map_episode(
     episode: &PodcastEpisode,
     library_item_id: &str,
+    podcast_id: i32,
     index: i32,
-) -> PodcastEpisodeDto {
+) -> Value {
     let published_at_naive: Option<NaiveDateTime> =
         chrono::DateTime::parse_from_rfc3339(&episode.date_of_recording)
             .ok()
@@ -115,13 +150,11 @@ fn map_episode(
                     .map(|dt| dt.naive_utc())
             });
     let published_at_ms = published_at_naive.map(|n| n.and_utc().timestamp_millis());
-
     let download_ms = episode
         .download_time
         .unwrap_or_else(|| Utc::now().naive_utc())
         .and_utc()
         .timestamp_millis();
-
     let local_path = episode
         .file_episode_path
         .clone()
@@ -140,71 +173,71 @@ fn map_episode(
     let mime_type = mime_for_ext(&ext);
     let codec = codec_for_ext(&ext);
     let duration = episode.total_time as f64;
-
-    let audio_metadata = AudioFileMetadataDto {
-        path: local_path.clone(),
-        filename: filename.clone(),
-        ext: ext.clone(),
-    };
+    let ino = format!("ino_ep_{}", episode.id);
+    let audio_file_metadata = json!({
+        "path": local_path,
+        "filename": filename,
+        "ext": ext,
+    });
+    let audio_file = json!({
+        "index": 1,
+        "ino": ino,
+        "metadata": audio_file_metadata,
+        "duration": duration,
+        "bitRate": 0,
+        "language": Value::Null,
+        "codec": codec,
+        "timeBase": "1/1000",
+        "channels": 2,
+        "channelLayout": "stereo",
+        "chapters": Value::Array(vec![]),
+        "embeddedCoverArt": Value::Null,
+        "mimeType": mime_type,
+    });
+    let audio_track = json!({
+        "index": 1,
+        "ino": ino,
+        "startOffset": 0.0,
+        "title": filename,
+        "duration": duration,
+        "contentUrl": format!("/api/items/{library_item_id}/file/{ino}"),
+        "mimeType": mime_type,
+        "codec": codec,
+        "metadata": audio_file_metadata.clone(),
+    });
     let enclosure = if episode.url.is_empty() {
-        None
+        Value::Null
     } else {
-        Some(EpisodeEnclosureDto {
-            url: episode.url.clone(),
-            r#type: mime_type.clone(),
-            length: None,
+        json!({
+            "url": episode.url,
+            "type": mime_type,
+            "length": Value::Null,
         })
     };
-    PodcastEpisodeDto {
-        library_item_id: library_item_id.to_string(),
-        podcast_id: episode.podcast_id,
-        id: EpisodeId(episode.id).as_string(),
-        old_episode_id: None,
-        index,
-        season: None,
-        episode: None,
-        episode_type: Some("full".to_string()),
-        title: episode.name.clone(),
-        subtitle: None,
-        description: Some(episode.description.clone()),
-        enclosure,
-        guid: Some(episode.guid.clone()).filter(|s| !s.is_empty()),
-        pub_date: Some(episode.date_of_recording.clone()),
-        chapters: Vec::new(),
-        audio_file: AudioFileDto {
-            index: 1,
-            ino: format!("ino_ep_{}", episode.id),
-            metadata: audio_metadata.clone(),
-            duration,
-            bit_rate: 0,
-            language: None,
-            codec: codec.clone(),
-            time_base: "1/1000".to_string(),
-            channels: 2,
-            channel_layout: "stereo".to_string(),
-            chapters: Vec::new(),
-            embedded_cover_art: None,
-            mime_type: mime_type.clone(),
-        },
-        audio_track: AudioTrackInlineDto {
-            index: 1,
-            start_offset: 0.0,
-            duration,
-            title: episode.name.clone(),
-            content_url: format!(
-                "/api/items/{library_item_id}/file/ino_ep_{}",
-                episode.id
-            ),
-            mime_type,
-            codec,
-            metadata: audio_metadata,
-        },
-        published_at: published_at_ms,
-        added_at: download_ms,
-        updated_at: download_ms,
-        duration,
-        size: 0,
-    }
+    json!({
+        "libraryItemId": library_item_id,
+        "podcastId": podcast_id,
+        "id": EpisodeId(episode.id).as_string(),
+        "oldEpisodeId": Value::Null,
+        "index": index,
+        "season": Value::Null,
+        "episode": Value::Null,
+        "episodeType": "full",
+        "title": episode.name,
+        "subtitle": Value::Null,
+        "description": episode.description,
+        "enclosure": enclosure,
+        "guid": Some(episode.guid.clone()).filter(|s| !s.is_empty()).map(Value::from).unwrap_or(Value::Null),
+        "pubDate": episode.date_of_recording,
+        "chapters": Value::Array(vec![]),
+        "audioFile": audio_file,
+        "audioTrack": audio_track,
+        "publishedAt": published_at_ms,
+        "addedAt": download_ms,
+        "updatedAt": download_ms,
+        "duration": duration,
+        "size": 0,
+    })
 }
 
 fn mime_for_ext(ext: &str) -> String {
@@ -231,4 +264,26 @@ fn codec_for_ext(ext: &str) -> String {
         _ => "unknown",
     }
     .to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn title_ignore_prefix_strips_articles() {
+        assert_eq!(title_ignore_prefix("The Witcher"), "Witcher, The".to_string());
+        assert_eq!(title_ignore_prefix("A Memory"), "Memory, A".to_string());
+        assert_eq!(title_ignore_prefix("An Echo"), "Echo, An".to_string());
+        assert_eq!(title_ignore_prefix("Witcher"), "Witcher".to_string());
+    }
+
+    #[test]
+    fn mime_for_ext_handles_common_audio_types() {
+        assert_eq!(mime_for_ext("mp3"), "audio/mpeg");
+        assert_eq!(mime_for_ext("m4a"), "audio/mp4");
+        assert_eq!(mime_for_ext("flac"), "audio/flac");
+        assert_eq!(mime_for_ext("opus"), "audio/ogg");
+        assert_eq!(mime_for_ext("xyz"), "application/octet-stream");
+    }
 }

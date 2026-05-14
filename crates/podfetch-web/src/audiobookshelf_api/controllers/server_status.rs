@@ -9,14 +9,19 @@ pub struct PingResponse {
     pub success: bool,
 }
 
+/// 100 % audiobookshelf-shape per upstream `Server.js:348` /status route.
+/// The `app: "audiobookshelf"` field is what the mobile apps probe to
+/// confirm they're talking to a compatible server - omitting it makes
+/// them refuse the connection.
 #[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct StatusResponse {
+    pub app: String,
+    pub server_version: String,
     pub is_init: bool,
     pub language: String,
     pub auth_methods: Vec<String>,
     pub auth_form_data: Option<serde_json::Value>,
-    pub server_version: String,
 }
 
 #[utoipa::path(
@@ -37,11 +42,12 @@ pub async fn ping() -> Json<PingResponse> {
 )]
 pub async fn status() -> Json<StatusResponse> {
     Json(StatusResponse {
+        app: "audiobookshelf".to_string(),
+        server_version: env!("CARGO_PKG_VERSION").to_string(),
         is_init: true,
         language: "en-us".to_string(),
         auth_methods: vec!["local".to_string()],
         auth_form_data: None,
-        server_version: env!("CARGO_PKG_VERSION").to_string(),
     })
 }
 

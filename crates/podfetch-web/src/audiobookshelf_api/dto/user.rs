@@ -86,30 +86,68 @@ impl AbsUserDto {
     }
 }
 
+/// audiobookshelf ServerSettings.toJSONForBrowser() shape. Only the fields
+/// the mobile apps actually read are populated; everything else can grow
+/// later if a client complains about a missing key.
 #[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ServerSettingsDto {
-    pub server_version: String,
+    pub id: String,
+    pub version: String,
+    pub build_number: i64,
     pub language: String,
     pub date_format: String,
     pub time_format: String,
+    pub auth_active_auth_methods: Vec<String>,
+    pub chromecast_enabled: bool,
+    pub bookshelf_view: i32,
+    pub home_bookshelf_view: i32,
+    pub sorting_ignore_prefix: bool,
+    pub sorting_prefixes: Vec<String>,
+    pub allow_iframe: bool,
+    pub log_level: i32,
+    pub allowed_origins: Vec<String>,
+    pub auth_login_custom_message: Option<String>,
+    pub server_version: String,
 }
 
 impl ServerSettingsDto {
     pub fn default_settings() -> Self {
         Self {
-            server_version: env!("CARGO_PKG_VERSION").to_string(),
+            id: "server-settings".to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            build_number: 0,
             language: "en-us".to_string(),
             date_format: "MM/dd/yyyy".to_string(),
             time_format: "h:mma".to_string(),
+            auth_active_auth_methods: vec!["local".to_string()],
+            chromecast_enabled: false,
+            bookshelf_view: 1,
+            home_bookshelf_view: 1,
+            sorting_ignore_prefix: false,
+            sorting_prefixes: vec!["the".to_string(), "a".to_string()],
+            allow_iframe: false,
+            log_level: 2,
+            allowed_origins: Vec::new(),
+            auth_login_custom_message: None,
+            server_version: env!("CARGO_PKG_VERSION").to_string(),
         }
     }
 }
 
+/// Login / authorize response. Field order + spelling mirrors upstream
+/// `Auth.getUserLoginResponsePayload`. The capitalised `Source` is
+/// upstream's `global.Source` and is preserved as-is - mobile apps read
+/// it with that exact key.
 #[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct LoginResponse {
     pub user: AbsUserDto,
+    #[serde(rename = "userDefaultLibraryId")]
     pub user_default_library_id: Option<String>,
+    #[serde(rename = "serverSettings")]
     pub server_settings: ServerSettingsDto,
+    #[serde(rename = "ereaderDevices")]
+    pub ereader_devices: Vec<serde_json::Value>,
+    #[serde(rename = "Source")]
+    pub source: String,
 }

@@ -647,6 +647,202 @@ fn generate_pseudo_audio_bytes(len: usize) -> Vec<u8> {
 
 #[tokio::test]
 #[serial]
+async fn login_response_shape_matches_upstream_payload() {
+    // Pins `Auth.getUserLoginResponsePayload`: user / userDefaultLibraryId /
+    // serverSettings / ereaderDevices / Source. The capitalised `Source` is
+    // significant - the mobile apps read it with that exact case.
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    server.test_server.clear_headers();
+    let resp = server
+        .test_server
+        .post("/login")
+        .json(&json!({ "username": user.username, "password": "password" }))
+        .await;
+    assert_eq!(resp.status_code().as_u16(), 200);
+    let body: Value = resp.json();
+    for top_field in ["user", "userDefaultLibraryId", "serverSettings", "ereaderDevices", "Source"] {
+        assert!(
+            body.get(top_field).is_some(),
+            "login response missing top-level field {top_field}"
+        );
+    }
+    assert!(body["ereaderDevices"].is_array());
+    assert!(body["Source"].is_string());
+    let ss = &body["serverSettings"];
+    for ss_field in [
+        "id",
+        "version",
+        "buildNumber",
+        "language",
+        "dateFormat",
+        "timeFormat",
+        "authActiveAuthMethods",
+        "chromecastEnabled",
+        "bookshelfView",
+        "homeBookshelfView",
+        "sortingPrefixes",
+    ] {
+        assert!(
+            ss.get(ss_field).is_some(),
+            "serverSettings missing field {ss_field}"
+        );
+    }
+}
+
+#[tokio::test]
+#[serial]
+async fn status_carries_app_audiobookshelf_marker() {
+    // Mobile apps probe /status and verify `app == "audiobookshelf"` before
+    // committing to the server. Omitting it makes them refuse the connection.
+    let server = handle_test_startup().await;
+    let resp = server.test_server.get("/status").await;
+    assert_eq!(resp.status_code().as_u16(), 200);
+    let body: Value = resp.json();
+    assert_eq!(body["app"], json!("audiobookshelf"));
+    assert!(body["serverVersion"].is_string());
+    assert_eq!(body["isInit"], json!(true));
+    assert!(body["authMethods"].is_array());
+    assert!(
+        body["authFormData"].is_null() || body["authFormData"].is_object(),
+        "authFormData must be null or object, got {:?}",
+        body["authFormData"]
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn podcast_library_item_shape_matches_upstream() {
+    // Pins the full LibraryItem.toOldJSONExpanded() shape for podcasts so we
+    // know we're byte-shape-compatible with upstream.
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    let podcast = insert_test_podcast("Shape Item Pod", &state, user.id);
+    let _ep = insert_test_episode(podcast.id, "Episode");
+    login_audiobookshelf(&mut server, &user).await;
+
+    let resp = server
+        .test_server
+        .get(&format!("/api/items/li_pod_{}", podcast.id))
+        .await;
+    assert_eq!(resp.status_code().as_u16(), 200);
+    let body: Value = resp.json();
+    // Top-level LibraryItem fields per LibraryItem.toOldJSONExpanded()
+    for field in [
+        "id",
+        "ino",
+        "oldLibraryItemId",
+        "libraryId",
+        "folderId",
+        "path",
+        "relPath",
+        "isFile",
+        "mtimeMs",
+        "ctimeMs",
+        "birthtimeMs",
+        "addedAt",
+        "updatedAt",
+        "lastScan",
+        "scanVersion",
+        "isMissing",
+        "isInvalid",
+        "mediaType",
+        "media",
+        "libraryFiles",
+        "size",
+    ] {
+        assert!(
+            body.get(field).is_some(),
+            "library-item missing field {field}"
+        );
+    }
+    assert_eq!(body["mediaType"], json!("podcast"));
+    assert_eq!(body["oldLibraryItemId"], Value::Null);
+    assert!(body["libraryFiles"].is_array());
+
+    // Media-level fields per Podcast.toOldJSONExpanded()
+    let media = &body["media"];
+    for field in [
+        "id",
+        "libraryItemId",
+        "metadata",
+        "coverPath",
+        "tags",
+        "episodes",
+        "autoDownloadEpisodes",
+        "autoDownloadSchedule",
+        "lastEpisodeCheck",
+        "maxEpisodesToKeep",
+        "maxNewEpisodesToDownload",
+        "size",
+    ] {
+        assert!(
+            media.get(field).is_some(),
+            "podcast media missing field {field}"
+        );
+    }
+    assert!(media["id"].as_str().unwrap().starts_with("pod_"));
+    assert_eq!(media["libraryItemId"], body["id"]);
+
+    // Metadata-level fields per Podcast.oldMetadataToJSONExpanded()
+    let metadata = &media["metadata"];
+    for field in [
+        "title",
+        "titleIgnorePrefix",
+        "author",
+        "description",
+        "releaseDate",
+        "genres",
+        "feedUrl",
+        "imageUrl",
+        "itunesPageUrl",
+        "itunesId",
+        "itunesArtistId",
+        "explicit",
+        "language",
+        "type",
+    ] {
+        assert!(
+            metadata.get(field).is_some(),
+            "podcast metadata missing field {field}"
+        );
+    }
+    assert_eq!(metadata["type"], json!("episodic"));
+}
+
+#[tokio::test]
+#[serial]
+async fn title_ignore_prefix_is_calculated_for_podcast() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    let podcast = insert_test_podcast_named("The Daily Sample", &state, user.id);
+    login_audiobookshelf(&mut server, &user).await;
+    let resp = server
+        .test_server
+        .get(&format!("/api/items/li_pod_{}", podcast.id))
+        .await;
+    let body: Value = resp.json();
+    assert_eq!(
+        body["media"]["metadata"]["titleIgnorePrefix"],
+        json!("Daily Sample, The")
+    );
+}
+
+fn insert_test_podcast_named(
+    name: &str,
+    state: &AppState,
+    user_id: i32,
+) -> podfetch_persistence::podcast::PodcastEntity {
+    insert_test_podcast(name, state, user_id)
+}
+
+
+
+#[tokio::test]
+#[serial]
 async fn me_dto_includes_all_upstream_user_fields() {
     // Pins the audiobookshelf User.toOldJSONForBrowser() shape so missing
     // fields stop the mobile apps. If you ever change a field name here you
