@@ -9,6 +9,7 @@ use std::borrow::Cow;
 use std::path::PathBuf;
 use std::str::FromStr;
 use utoipa::ToSchema;
+use crate::url_rewriting::resolve_image_url;
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct PodcastEpisodeDto {
@@ -36,84 +37,94 @@ pub enum FileType {
     Episode,
 }
 
-impl From<(PodcastEpisode, Option<User>, Option<FavoritePodcastEpisode>)> for PodcastEpisodeDto {
-    fn from(value: (PodcastEpisode, Option<User>, Option<FavoritePodcastEpisode>)) -> Self {
-        PodcastEpisodeDto {
-            id: value.0.id,
-            podcast_id: value.0.podcast_id,
-            episode_id: value.0.episode_id.to_string(),
-            name: value.0.name.to_string(),
-            url: value.0.url.clone(),
-            date_of_recording: value.0.date_of_recording.to_string(),
-            image_url: value.0.image_url.clone(),
-            total_time: value.0.total_time,
-            local_url: map_url(
-                &value.0,
-                &value.0.file_episode_path,
-                &value.0.url,
-                &value.1,
-                FileType::Episode,
-            ),
-            local_image_url: map_url(
-                &value.0,
-                &value.0.file_image_path,
-                &value.0.image_url,
-                &value.1,
+impl PodcastEpisodeDto {
+    pub fn from_episode_with_user(
+        episode: PodcastEpisode,
+        user: Option<User>,
+        favorite: Option<FavoritePodcastEpisode>,
+        server_url: &str,
+    ) -> Self {
+        let local_url = map_url(
+            &episode,
+            &episode.file_episode_path,
+            &episode.url,
+            &user,
+            FileType::Episode,
+            server_url,
+        );
+        let local_image_url = resolve_image_url(
+            &map_url(
+                &episode,
+                &episode.file_image_path,
+                &episode.image_url,
+                &user,
                 FileType::Image,
+                server_url,
             ),
-            description: value.0.description.to_string(),
-            download_time: value.0.download_time,
-            guid: value.0.guid.to_string(),
-            deleted: value.0.deleted,
-            episode_numbering_processed: value.0.episode_numbering_processed,
-            favored: value.2.map(|f| f.favorite),
-            status: value.0.is_downloaded(),
+            server_url,
+        );
+        PodcastEpisodeDto {
+            id: episode.id,
+            podcast_id: episode.podcast_id,
+            episode_id: episode.episode_id.to_string(),
+            name: episode.name.to_string(),
+            url: episode.url.clone(),
+            date_of_recording: episode.date_of_recording.to_string(),
+            image_url: episode.image_url.clone(),
+            total_time: episode.total_time,
+            local_url,
+            local_image_url,
+            description: episode.description.to_string(),
+            download_time: episode.download_time,
+            guid: episode.guid.to_string(),
+            deleted: episode.deleted,
+            episode_numbering_processed: episode.episode_numbering_processed,
+            favored: favorite.map(|f| f.favorite),
+            status: episode.is_downloaded(),
         }
     }
-}
 
-impl
-    From<(
-        PodcastEpisode,
-        Option<String>,
-        Option<FavoritePodcastEpisode>,
-    )> for PodcastEpisodeDto
-{
-    fn from(
-        value: (
-            PodcastEpisode,
-            Option<String>,
-            Option<FavoritePodcastEpisode>,
-        ),
+    pub fn from_episode_with_api_key(
+        episode: PodcastEpisode,
+        api_key: Option<String>,
+        favorite: Option<FavoritePodcastEpisode>,
+        server_url: &str,
     ) -> Self {
+        let local_url = map_file_url_with_api_key(
+            &episode,
+            &episode.file_episode_path,
+            &episode.url,
+            &api_key,
+            server_url,
+        );
+        let local_image_url = resolve_image_url(
+            &map_file_url_with_api_key(
+                &episode,
+                &episode.file_image_path,
+                &episode.image_url,
+                &api_key,
+                server_url,
+            ),
+            server_url,
+        );
         PodcastEpisodeDto {
-            id: value.0.id,
-            podcast_id: value.0.podcast_id,
-            episode_id: value.0.episode_id.to_string(),
-            name: value.0.name.to_string(),
-            url: value.0.url.clone(),
-            date_of_recording: value.0.date_of_recording.to_string(),
-            image_url: value.0.image_url.clone(),
-            total_time: value.0.total_time,
-            local_url: map_file_url_with_api_key(
-                &value.0,
-                &value.0.file_episode_path,
-                &value.0.url,
-                &value.1,
-            ),
-            local_image_url: map_file_url_with_api_key(
-                &value.0,
-                &value.0.file_image_path,
-                &value.0.image_url,
-                &value.1,
-            ),
-            description: value.0.description.to_string(),
-            status: value.0.is_downloaded(),
-            download_time: value.0.download_time,
-            guid: value.0.guid,
-            deleted: value.0.deleted,
-            episode_numbering_processed: value.0.episode_numbering_processed,
-            favored: value.2.map(|f| f.favorite),
+            id: episode.id,
+            podcast_id: episode.podcast_id,
+            episode_id: episode.episode_id.to_string(),
+            name: episode.name.to_string(),
+            url: episode.url.clone(),
+            date_of_recording: episode.date_of_recording.to_string(),
+            image_url: episode.image_url.clone(),
+            total_time: episode.total_time,
+            local_url,
+            local_image_url,
+            description: episode.description.to_string(),
+            status: episode.is_downloaded(),
+            download_time: episode.download_time,
+            guid: episode.guid,
+            deleted: episode.deleted,
+            episode_numbering_processed: episode.episode_numbering_processed,
+            favored: favorite.map(|f| f.favorite),
         }
     }
 }
@@ -123,13 +134,14 @@ fn map_file_url_with_api_key(
     local_url: &Option<String>,
     remote_url: &str,
     api_key: &Option<String>,
+    server_url: &str,
 ) -> String {
     match &podcast_episode.download_location {
         Some(location) => {
             let handle = FileHandlerType::from(location.as_str());
             match handle {
                 FileHandlerType::Local => {
-                    map_local_file_url_with_api_key(local_url, remote_url, api_key)
+                    map_local_file_url_with_api_key(local_url, remote_url, api_key, server_url)
                 }
                 FileHandlerType::S3 => map_s3_url(local_url, remote_url),
             }
@@ -142,6 +154,7 @@ pub fn map_local_file_url_with_api_key(
     url: &Option<String>,
     remote_url: &str,
     api_key: &Option<String>,
+    server_url: &str,
 ) -> String {
     match url {
         Some(url) => {
@@ -151,7 +164,7 @@ pub fn map_local_file_url_with_api_key(
                 .collect::<Vec<Cow<str>>>()
                 .join("/");
             let urlencoded = url_encoded.clone();
-            url_encoded = ENVIRONMENT_SERVICE.server_url.to_owned();
+            url_encoded = server_url.to_owned();
             url_encoded.push_str(&urlencoded);
 
             match ENVIRONMENT_SERVICE.any_auth_enabled {
@@ -172,23 +185,21 @@ fn map_url(
     remote_url: &str,
     user: &Option<User>,
     r#type: FileType,
+    server_url: &str,
 ) -> String {
     match &episode.download_location {
         Some(location) => {
             let handle = FileHandlerType::from(location.as_str());
             match handle {
-                FileHandlerType::Local => map_file_url(local_url, remote_url, user),
+                FileHandlerType::Local => map_file_url(local_url, remote_url, user, server_url),
                 FileHandlerType::S3 => map_s3_url(local_url, remote_url),
             }
         }
         None => match r#type {
             FileType::Image => remote_url.to_string(),
             FileType::Episode => {
-                let mut url = url::Url::from_str(&format!(
-                    "{}proxy/podcast",
-                    &ENVIRONMENT_SERVICE.server_url
-                ))
-                .unwrap();
+                let mut url = url::Url::from_str(&format!("{server_url}proxy/podcast"))
+                    .unwrap();
                 if ENVIRONMENT_SERVICE.any_auth_enabled
                     && let Some(user) = user
                     && let Some(key) = &user.api_key
@@ -203,7 +214,12 @@ fn map_url(
     }
 }
 
-pub fn map_file_url(url: &Option<String>, remote_url: &str, user: &Option<User>) -> String {
+pub fn map_file_url(
+    url: &Option<String>,
+    remote_url: &str,
+    user: &Option<User>,
+    server_url: &str,
+) -> String {
     match url {
         Some(url) => {
             let mut url_encoded = PathBuf::from(url)
@@ -211,7 +227,7 @@ pub fn map_file_url(url: &Option<String>, remote_url: &str, user: &Option<User>)
                 .map(|c| urlencoding::encode(c.as_os_str().to_str().unwrap()))
                 .collect::<Vec<Cow<str>>>()
                 .join("/");
-            url_encoded = format!("{}{}", ENVIRONMENT_SERVICE.server_url, url_encoded);
+            url_encoded = format!("{server_url}{url_encoded}");
 
             match ENVIRONMENT_SERVICE.any_auth_enabled {
                 true => match &user {
