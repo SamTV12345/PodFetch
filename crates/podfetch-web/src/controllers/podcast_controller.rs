@@ -35,7 +35,7 @@ use crate::podcast::{
     sanitize_proxy_request_headers, spawn_podindex_download,
 };
 use crate::services::file::service::{FileService, perform_podcast_variable_replacement};
-use crate::url_rewriting::{resolve_image_url, resolve_server_url_from_headers};
+use crate::url_rewriting::resolve_server_url_from_headers;
 use common_infrastructure::config::is_env_var_present_and_true;
 use common_infrastructure::http::get_http_client;
 use common_infrastructure::request::add_basic_auth_headers_conditionally;
@@ -596,12 +596,10 @@ async fn insert_outline(podcast: Outline, mut rng: ThreadRng, added_by: Option<i
             let image_url = match channel.image {
                 Some(ref image) => image.url.clone(),
                 None => {
-                    let server_url = &ENVIRONMENT_SERVICE.server_url;
                     tracing::info!(
-                        "No image found for podcast. Downloading from {}",
-                        resolve_image_url("", server_url)
+                        "No image found for podcast; storing empty image_url, default will be applied at response time"
                     );
-                    resolve_image_url("", server_url)
+                    String::new()
                 }
             };
 
