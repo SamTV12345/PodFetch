@@ -9,7 +9,7 @@ use podfetch_persistence::podcast::PodcastEntity as Podcast;
 
 use crate::podcast_episode_dto::PodcastEpisodeDto;
 pub use crate::rss::{RSSAPiKey, RSSQuery};
-use crate::url_rewriting::{create_url_rewriter, resolve_server_url_from_headers};
+use crate::url_rewriting::resolve_server_url_from_headers;
 use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
@@ -61,16 +61,16 @@ pub async fn get_rss_feed(
     };
 
     let api_key = api_key.and_then(|c| c.api_key);
-    let rewriter = create_url_rewriter(&headers);
 
     let downloaded_episodes: Vec<PodcastEpisodeDto> = downloaded_episodes
         .into_iter()
         .map(|c| {
-            let mut dto: PodcastEpisodeDto =
-                (c, api_key.clone(), None::<FavoritePodcastEpisode>).into();
-            rewriter.rewrite_in_place(&mut dto.local_url);
-            rewriter.rewrite_in_place(&mut dto.local_image_url);
-            dto
+            PodcastEpisodeDto::from_episode_with_api_key(
+                c,
+                api_key.clone(),
+                None::<FavoritePodcastEpisode>,
+                &server_url,
+            )
         })
         .collect();
 
@@ -173,17 +173,17 @@ pub async fn get_rss_feed_for_podcast(
     }
     let api_key = api_key.and_then(|c| c.api_key);
     let podcast = PodcastService::get_podcast(id)?;
-    let rewriter = create_url_rewriter(&headers);
 
     let downloaded_episodes: Vec<PodcastEpisodeDto> =
         PodcastEpisodeService::find_all_downloaded_podcast_episodes_by_podcast_id(id)?
             .into_iter()
             .map(|c| {
-                let mut dto: PodcastEpisodeDto =
-                    (c, api_key.clone(), None::<FavoritePodcastEpisode>).into();
-                rewriter.rewrite_in_place(&mut dto.local_url);
-                rewriter.rewrite_in_place(&mut dto.local_image_url);
-                dto
+                PodcastEpisodeDto::from_episode_with_api_key(
+                    c,
+                    api_key.clone(),
+                    None::<FavoritePodcastEpisode>,
+                    &server_url,
+                )
             })
             .collect();
 
