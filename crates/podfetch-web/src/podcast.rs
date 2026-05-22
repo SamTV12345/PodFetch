@@ -243,8 +243,9 @@ fn dedupe_keywords(keywords: Option<String>) -> Option<String> {
 fn build_podfetch_feed(podcast_id: i32, api_key: Option<&str>) -> String {
     let mut podfetch_rss_feed = ENVIRONMENT_SERVICE.build_url_to_rss_feed();
     podfetch_rss_feed
-        .join(&format!("/{}", podcast_id))
-        .expect("safe string join for podcast rss feed");
+        .path_segments_mut()
+        .expect("rss feed base URL must be a hierarchical scheme")
+        .push(&podcast_id.to_string());
 
     if let Some(api_key) = api_key {
         podfetch_rss_feed
@@ -526,5 +527,32 @@ pub fn ensure_podindex_configured<Err: Display>(
         Err(PodcastControllerError::BadRequest(
             "Podindex is not configured".to_string(),
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_podfetch_feed;
+
+    #[test]
+    fn build_podfetch_feed_appends_podcast_id_to_rss_path() {
+        let url = build_podfetch_feed(42, None);
+        assert!(
+            url.ends_with("/rss/42"),
+            "expected per-podcast feed URL to end with /rss/42, got: {url}"
+        );
+    }
+
+    #[test]
+    fn build_podfetch_feed_appends_api_key_query_param() {
+        let url = build_podfetch_feed(42, Some("secret-key"));
+        assert!(
+            url.contains("/rss/42"),
+            "expected per-podcast feed URL to contain /rss/42, got: {url}"
+        );
+        assert!(
+            url.contains("apiKey=secret-key"),
+            "expected url to contain apiKey query param, got: {url}"
+        );
     }
 }
