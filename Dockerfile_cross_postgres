@@ -1,7 +1,7 @@
 FROM alpine:3 AS cache
 RUN apk add -U --no-cache ca-certificates
 
-FROM mwader/static-ffmpeg:7.1 AS ffmpeg
+FROM mwader/static-ffmpeg:8.1.1 AS ffmpeg
 
 FROM scratch as base
 COPY ./static/ /app/static
