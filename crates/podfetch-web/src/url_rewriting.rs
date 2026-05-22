@@ -132,7 +132,10 @@ pub fn resolve_server_url_from_headers(headers: &HeaderMap) -> String {
         .or_else(|| get_header_value(headers, ":authority"));
 
     if host.is_none() {
-        return ENVIRONMENT_SERVICE.server_url.clone();
+        // HTTP/1.1 requires Host. If somehow none of x-forwarded-host / host /
+        // :authority are present, return empty — callers building URLs will
+        // emit relative paths, which is the safest degraded behaviour.
+        return String::new();
     }
 
     let proto = get_header_value(headers, "x-forwarded-proto")
