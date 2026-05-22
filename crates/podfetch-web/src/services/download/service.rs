@@ -290,23 +290,11 @@ impl DownloadService {
             &ENVIRONMENT_SERVICE.default_file_handler,
         )?;
 
-        let final_episode_path = if settings_in_db.auto_transcode_opus {
-            match Self::transcode_to_opus(&paths.filename) {
-                Ok(opus_path) => opus_path,
-                Err(e) => {
-                    tracing::warn!("Opus transcoding failed, keeping original file: {e}");
-                    paths.filename.clone()
-                }
-            }
-        } else {
-            paths.filename.clone()
-        };
-
-        PodcastEpisodeService::update_local_paths(
-            &podcast_episode.episode_id,
-            &paths.image_filename,
-            &final_episode_path,
-        )?;
+        // Read chapters and embed tags BEFORE transcoding. Opus has no
+        // id3/mp4-atom metadata, and transcoding would also delete the
+        // source file we need to read chapters from. Doing this first means
+        // chapters are preserved in the DB even when the source is removed
+        // by the transcode step below.
         let result = Self::handle_metadata_insertion(&paths, &podcast_episode, podcast);
         if let Ok(chapters) = &result {
             tracing::info!("Inserting chapters for episode {}", podcast_episode.id);
@@ -326,6 +314,24 @@ impl DownloadService {
         if let Err(err) = result {
             tracing::error!("Error handling metadata insertion: {err:?}");
         }
+
+        let final_episode_path = if settings_in_db.auto_transcode_opus {
+            match Self::transcode_to_opus(&paths.filename) {
+                Ok(opus_path) => opus_path,
+                Err(e) => {
+                    tracing::warn!("Opus transcoding failed, keeping original file: {e}");
+                    paths.filename.clone()
+                }
+            }
+        } else {
+            paths.filename.clone()
+        };
+
+        PodcastEpisodeService::update_local_paths(
+            &podcast_episode.episode_id,
+            &paths.image_filename,
+            &final_episode_path,
+        )?;
         Ok(())
     }
 
@@ -376,7 +382,15 @@ impl DownloadService {
 
         let chapters: Vec<Chapter>;
 
-        let detected_file = FileFormat::from_file(&paths.filename).unwrap();
+        let detected_file = FileFormat::from_file(&paths.filename).map_err(|e| {
+            CustomErrorInner::Conflict(
+                format!(
+                    "Failed to detect file format for {}: {e}",
+                    paths.filename
+                ),
+                ErrorSeverity::Warning,
+            )
+        })?;
         match detected_file {
             FileFormat::Mpeg12AudioLayer3
             | FileFormat::Mpeg12AudioLayer2
@@ -679,7 +693,7 @@ impl DownloadService {
 
 #[cfg(test)]
 mod tests {
-    use super::DownloadService;
+    use super::{DownloadService, FilenameBuilderReturn, Podcast, PodcastEpisode};
 
     #[test]
     fn empty_stored_value_is_treated_as_default_image() {
@@ -689,5 +703,58 @@ mod tests {
     #[test]
     fn whitespace_only_is_treated_as_default_image() {
         assert!(DownloadService::is_default_fallback_image_url("   "));
+    }
+
+    fn make_podcast() -> Podcast {
+        Podcast {
+            id: 1,
+            name: "p".into(),
+            directory_id: "1".into(),
+            rssfeed: "https://x".into(),
+            image_url: "https://x/img.jpg".into(),
+            summary: None,
+            language: None,
+            explicit: None,
+            keywords: None,
+            last_build_date: None,
+            author: None,
+            active: true,
+            original_image_url: "https://x/img".into(),
+            directory_name: "podcasts/p".into(),
+            download_location: Some("Local".into()),
+            guid: None,
+            added_by: None,
+        }
+    }
+
+    // Regression: when auto_transcode_opus deletes the source mp3 before
+    // handle_metadata_insertion runs, the function used to `.unwrap()` the
+    // missing-file error from `FileFormat::from_file`, panicking the download
+    // thread. That panic skipped `update_podcast_episode_status`, leaving
+    // `download_location` NULL — so the next polling cycle re-downloaded and
+    // re-transcoded the episode, looping forever (issue #2074).
+    #[test]
+    fn handle_metadata_insertion_returns_err_when_audio_file_is_missing() {
+        let tmp = std::env::temp_dir().join(format!(
+            "podfetch-handle-metadata-missing-{}",
+            std::process::id()
+        ));
+        let missing_audio = tmp.join("does-not-exist.mp3");
+        let missing_image = tmp.join("does-not-exist.jpg");
+        let paths = FilenameBuilderReturn::new(
+            missing_audio.to_string_lossy().into_owned(),
+            missing_image.to_string_lossy().into_owned(),
+        );
+        let episode = PodcastEpisode::default();
+        let podcast = make_podcast();
+
+        let result = DownloadService::handle_metadata_insertion(&paths, &episode, &podcast);
+
+        assert!(
+            result.is_err(),
+            "handle_metadata_insertion must return Err when the audio file is missing, \
+             not panic — otherwise the download thread dies and the episode is \
+             re-downloaded/re-transcoded on every poll",
+        );
     }
 }
