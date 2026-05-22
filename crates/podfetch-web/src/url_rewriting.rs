@@ -195,14 +195,18 @@ pub fn create_url_rewriter(headers: &HeaderMap) -> UrlRewriter {
 /// Resolve a stored image URL into a client-facing URL.
 ///
 /// - Empty string → default image at `<server_url>/ui/default.jpg`.
-/// - Absolute http/https → passthrough (external remote URL).
+/// - Absolute http/https (case-insensitive scheme) → passthrough (external remote URL).
 /// - Relative path → `<server_url>/<path>` (leading slash stripped before joining).
+///
+/// If `server_url` is empty (e.g., no Host header present), the returned URL
+/// will be root-relative (e.g., `"/ui/default.jpg"`).
 pub fn resolve_image_url(stored: &str, server_url: &str) -> String {
     let base = normalize_server_url(server_url);
     if stored.is_empty() {
         return format!("{base}{DEFAULT_IMAGE_URL}");
     }
-    if stored.starts_with("http://") || stored.starts_with("https://") {
+    let lower = stored.to_ascii_lowercase();
+    if lower.starts_with("http://") || lower.starts_with("https://") {
         return stored.to_string();
     }
     format!("{base}{}", stored.trim_start_matches('/'))
@@ -328,5 +332,23 @@ mod tests {
     fn resolve_image_url_leading_slash_stripped_before_prefix() {
         let result = resolve_image_url("/podcasts/foo/image.jpg", "https://example.com/");
         assert_eq!(result, "https://example.com/podcasts/foo/image.jpg");
+    }
+
+    #[test]
+    fn resolve_image_url_uppercase_scheme_passes_through() {
+        let result = resolve_image_url("HTTP://remote.example/cover.jpg", "https://example.com/");
+        assert_eq!(result, "HTTP://remote.example/cover.jpg");
+    }
+
+    #[test]
+    fn resolve_image_url_server_url_without_trailing_slash_is_normalized() {
+        let result = resolve_image_url("podcasts/foo/image.jpg", "https://example.com");
+        assert_eq!(result, "https://example.com/podcasts/foo/image.jpg");
+    }
+
+    #[test]
+    fn resolve_image_url_empty_server_url_returns_root_relative() {
+        let result = resolve_image_url("", "");
+        assert_eq!(result, "/ui/default.jpg");
     }
 }
