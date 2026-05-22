@@ -119,12 +119,12 @@ impl PodcastEpisodeDto {
             local_url,
             local_image_url,
             description: episode.description.to_string(),
-            status: episode.is_downloaded(),
             download_time: episode.download_time,
-            guid: episode.guid,
+            guid: episode.guid.to_string(),
             deleted: episode.deleted,
             episode_numbering_processed: episode.episode_numbering_processed,
             favored: favorite.map(|f| f.favorite),
+            status: episode.is_downloaded(),
         }
     }
 }
