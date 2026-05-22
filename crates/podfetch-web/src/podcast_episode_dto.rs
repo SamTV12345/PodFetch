@@ -198,6 +198,9 @@ fn map_url(
         None => match r#type {
             FileType::Image => remote_url.to_string(),
             FileType::Episode => {
+                if server_url.is_empty() {
+                    return remote_url.to_string();
+                }
                 let mut url = url::Url::from_str(&format!("{server_url}proxy/podcast"))
                     .unwrap();
                 if ENVIRONMENT_SERVICE.any_auth_enabled
