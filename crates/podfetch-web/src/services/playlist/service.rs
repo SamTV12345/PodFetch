@@ -6,7 +6,6 @@ use crate::podcast_episode_dto::PodcastEpisodeDto;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use crate::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
 use common_infrastructure::error::CustomError;
-use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::playlist::{Playlist, PlaylistItem, PlaylistRepository};
 use podfetch_domain::user::User;
 use podfetch_persistence::adapters::PlaylistRepositoryImpl;
@@ -39,16 +38,11 @@ impl PlaylistService {
             .map(
                 |(_, podcast_episode, history): (PlaylistItem, PodcastEpisode, Option<Episode>)| {
                     PodcastEpisodeWithHistory {
-                        podcast_episode: <(
-                            PodcastEpisode,
-                            Option<User>,
-                            Option<FavoritePodcastEpisode>,
-                        ) as Into<PodcastEpisodeDto>>::into(
-                            (
+                        podcast_episode: PodcastEpisodeDto::from_episode_with_user(
                             podcast_episode,
                             Some(user.clone()),
                             None,
-                        )
+                            "",
                         ),
                         podcast_history_item: history
                             .map(Into::into)
