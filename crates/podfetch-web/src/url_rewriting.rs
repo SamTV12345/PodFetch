@@ -3,7 +3,7 @@
 //! This module provides functions to rewrite URLs in DTOs from internal server URLs
 //! to the actual server URL as seen by the client (handling reverse proxies, etc.).
 
-use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
+use common_infrastructure::runtime::{DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE};
 use http::HeaderMap;
 use url::Url;
 
@@ -192,6 +192,22 @@ pub fn create_url_rewriter(headers: &HeaderMap) -> UrlRewriter {
     UrlRewriter::new(old_base, new_base)
 }
 
+/// Resolve a stored image URL into a client-facing URL.
+///
+/// - Empty string → default image at `<server_url>/ui/default.jpg`.
+/// - Absolute http/https → passthrough (external remote URL).
+/// - Relative path → `<server_url>/<path>` (leading slash stripped before joining).
+pub fn resolve_image_url(stored: &str, server_url: &str) -> String {
+    let base = normalize_server_url(server_url);
+    if stored.is_empty() {
+        return format!("{base}{DEFAULT_IMAGE_URL}");
+    }
+    if stored.starts_with("http://") || stored.starts_with("https://") {
+        return stored.to_string();
+    }
+    format!("{base}{}", stored.trim_start_matches('/'))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -282,5 +298,35 @@ mod tests {
             normalize_server_url("https://example.com/"),
             "https://example.com/"
         );
+    }
+
+    #[test]
+    fn resolve_image_url_empty_stored_returns_default() {
+        let result = resolve_image_url("", "https://example.com/");
+        assert_eq!(result, "https://example.com/ui/default.jpg");
+    }
+
+    #[test]
+    fn resolve_image_url_absolute_http_passes_through() {
+        let result = resolve_image_url("http://remote.example/cover.jpg", "https://example.com/");
+        assert_eq!(result, "http://remote.example/cover.jpg");
+    }
+
+    #[test]
+    fn resolve_image_url_absolute_https_passes_through() {
+        let result = resolve_image_url("https://remote.example/cover.jpg", "https://example.com/");
+        assert_eq!(result, "https://remote.example/cover.jpg");
+    }
+
+    #[test]
+    fn resolve_image_url_relative_path_gets_prefixed() {
+        let result = resolve_image_url("podcasts/foo/image.jpg", "https://example.com/");
+        assert_eq!(result, "https://example.com/podcasts/foo/image.jpg");
+    }
+
+    #[test]
+    fn resolve_image_url_leading_slash_stripped_before_prefix() {
+        let result = resolve_image_url("/podcasts/foo/image.jpg", "https://example.com/");
+        assert_eq!(result, "https://example.com/podcasts/foo/image.jpg");
     }
 }
