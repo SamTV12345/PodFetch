@@ -97,10 +97,12 @@ pub async fn search_podcasts(
     State(state): State<AppState>,
     Query(query): Query<PodcastSearchModelUtoipa>,
     Extension(requester): Extension<User>,
+    headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastDto>>, CustomError> {
     let existing_filter = state.filter_service.get_filter_by_user_id(requester.id)?;
     let search_plan = build_podcast_search_plan(query, requester.id, existing_filter);
     state.filter_service.save_filter(search_plan.filter)?;
+    let server_url = resolve_server_url_from_headers(&headers);
 
     match search_plan.favored_only {
         true => {
@@ -111,6 +113,7 @@ pub async fn search_podcasts(
                 search_plan.user_id,
                 search_plan.tag,
                 &requester,
+                &server_url,
             )?;
             Ok(Json(podcasts))
         }
@@ -121,6 +124,7 @@ pub async fn search_podcasts(
                 search_plan.order_option,
                 search_plan.tag,
                 &requester,
+                &server_url,
             )?;
             Ok(Json(podcasts))
         }
@@ -161,8 +165,10 @@ tag="podcasts"
 )]
 pub async fn find_all_podcasts(
     Extension(requester): Extension<User>,
+    headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastDto>>, CustomError> {
-    let podcasts = PodcastService::get_podcasts(&requester)?;
+    let server_url = resolve_server_url_from_headers(&headers);
+    let podcasts = PodcastService::get_podcasts(&requester, &server_url)?;
 
     Ok(Json(podcasts))
 }
@@ -308,7 +314,7 @@ pub async fn add_podcast_by_feed(
                 .image
                 .clone()
                 .map(|i| i.url)
-                .unwrap_or(get_default_image()),
+                .unwrap_or_else(|| get_default_image(&server_url)),
         },
         Some(channel),
         Some(requester.id),
@@ -542,8 +548,10 @@ tag="podcasts"
 )]
 pub async fn get_favored_podcasts(
     Extension(requester): Extension<User>,
+    headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastDto>>, CustomError> {
-    let podcasts = PodcastService::get_favored_podcasts(requester)?;
+    let server_url = resolve_server_url_from_headers(&headers);
+    let podcasts = PodcastService::get_favored_podcasts(requester, &server_url)?;
     Ok(Json(podcasts))
 }
 
@@ -886,6 +894,7 @@ pub mod tests {
     use crate::test_support::tests::handle_test_startup;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::extract::{Path, State};
+    use axum::http::HeaderMap;
     use axum::{Extension, Json};
     use common_infrastructure::error::CustomErrorInner;
     use podfetch_domain::user::User;
@@ -1265,6 +1274,7 @@ pub mod tests {
 
         let add_itunes_result = super::add_podcast(
             Extension(non_privileged.clone()),
+            HeaderMap::new(),
             Json(PodcastAddModel {
                 track_id: 12345,
                 user_id: 0,
@@ -1278,6 +1288,7 @@ pub mod tests {
 
         let add_feed_result = super::add_podcast_by_feed(
             Extension(non_privileged.clone()),
+            HeaderMap::new(),
             Json(PodcastRSSAddModel {
                 rss_feed_url: "https://example.com/feed.xml".to_string(),
             }),
