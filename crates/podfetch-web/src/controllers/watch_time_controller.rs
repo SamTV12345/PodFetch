@@ -264,7 +264,7 @@ mod tests {
             &format!("Watchtime Rewrite Podcast {unique}"),
             &podcast_slug,
             &format!("https://example.com/{podcast_slug}.xml"),
-            "http://localhost:8080/ui/default.jpg",
+            "",
             &podcast_slug,
         )
         .unwrap();

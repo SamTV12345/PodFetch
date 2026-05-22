@@ -133,12 +133,7 @@ pub struct PodcastDto {
 
 
 pub fn map_podcast_to_dto(value: Podcast, server_url: &str) -> PodcastDto {
-    let resolved = resolve_image_url(&value.image_url, server_url);
-    let image_url = crate::url_rewriting::rewrite_url(
-        &resolved,
-        &ENVIRONMENT_SERVICE.server_url,
-        server_url,
-    );
+    let image_url = resolve_image_url(&value.image_url, server_url);
     let keywords = dedupe_keywords(value.keywords.clone());
     let podfetch_rss_feed = build_podfetch_feed(value.id, None, server_url);
 
@@ -171,14 +166,7 @@ pub fn map_podcast_with_context_to_dto(
     server_url: &str,
 ) -> PodcastDto {
     let image_url = match resolve_file_handler_type(value.download_location.clone()) {
-        FileHandlerType::Local => {
-            let resolved = resolve_image_url(&value.image_url, server_url);
-            crate::url_rewriting::rewrite_url(
-                &resolved,
-                &ENVIRONMENT_SERVICE.server_url,
-                server_url,
-            )
-        }
+        FileHandlerType::Local => resolve_image_url(&value.image_url, server_url),
         FileHandlerType::S3 => {
             format!(
                 "{}/{}",
