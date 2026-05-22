@@ -281,19 +281,23 @@ impl WatchtimeApplicationService for WatchtimeUseCase {
         Self::log_watchtime(&request.podcast_episode_id, request.time, username)
     }
 
-    fn get_last_watched(&self, user: &User) -> Result<Vec<Self::LastWatchedItem>, Self::Error> {
+    fn get_last_watched(
+        &self,
+        user: &User,
+        server_url: &str,
+    ) -> Result<Vec<Self::LastWatchedItem>, Self::Error> {
         Self::get_last_watched_episodes(user).map(|items| {
             items
                 .into_iter()
                 .map(|(podcast_episode, episode, podcast)| {
                     PodcastWatchedEpisodeModelWithPodcastEpisode {
-                        podcast_episode: (
+                        podcast_episode: PodcastEpisodeDto::from_episode_with_user(
                             podcast_episode,
                             Some(user.clone()),
                             None::<FavoritePodcastEpisode>,
-                        )
-                            .into(),
-                        podcast: map_podcast_to_dto(podcast.into()),
+                            server_url,
+                        ),
+                        podcast: map_podcast_to_dto(podcast.into(), server_url),
                         episode: map_episode_to_dto(&episode.into()),
                     }
                 })

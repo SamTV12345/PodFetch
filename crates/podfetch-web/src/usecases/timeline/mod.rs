@@ -70,6 +70,7 @@ impl TimelineItem {
     pub fn get_timeline(
         user: User,
         favored_only: TimelineQueryParams,
+        server_url: &str,
     ) -> Result<TimelineItem, CustomError> {
         use podfetch_persistence::schema::podcast_episodes::dsl::*;
         use podfetch_persistence::schema::podcasts::dsl::*;
@@ -184,12 +185,13 @@ impl TimelineItem {
                         })
                     });
                     (
-                        PodcastEpisodeDto::from((
+                        PodcastEpisodeDto::from_episode_with_user(
                             podcast_episode,
                             Some(user.clone()),
                             fav_episode.map(Into::into),
-                        )),
-                        map_podcast_to_dto(podcast.into()),
+                            server_url,
+                        ),
+                        map_podcast_to_dto(podcast.into(), server_url),
                         history_dto,
                         favorite.map(|f| TimelineFavorite { favored: f.favored }),
                     )

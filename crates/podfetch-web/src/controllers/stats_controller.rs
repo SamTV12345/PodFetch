@@ -1,6 +1,6 @@
 use crate::app_state::AppState;
 use crate::stats::{self, StatsControllerError, StatsOverview, StatsOverviewQueryParams};
-use crate::url_rewriting::create_url_rewriter;
+use crate::url_rewriting::{resolve_image_url, resolve_server_url_from_headers};
 use axum::extract::{Query, State};
 use axum::http::HeaderMap;
 use axum::{Extension, Json};
@@ -24,12 +24,12 @@ pub async fn get_stats_overview(
     Query(params): Query<StatsOverviewQueryParams>,
     headers: HeaderMap,
 ) -> Result<Json<StatsOverview>, CustomError> {
-    let rewriter = create_url_rewriter(&headers);
+    let server_url = resolve_server_url_from_headers(&headers);
     let mut stats =
         stats::get_stats_overview(state.stats_service.as_ref(), &requester.username, params)
             .map_err(map_stats_error)?;
     stats.top_podcasts.iter_mut().for_each(|podcast| {
-        rewriter.rewrite_in_place(&mut podcast.image_url);
+        podcast.image_url = resolve_image_url(&podcast.image_url, &server_url);
     });
     Ok(Json(stats))
 }
@@ -491,7 +491,7 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_get_stats_overview_rewrites_image_urls_with_forwarded_headers() {
+    async fn test_get_stats_overview_prefixes_relative_image_urls_with_forwarded_headers() {
         let mut server = handle_test_startup().await;
         let _username = ENVIRONMENT_SERVICE
             .username
@@ -500,11 +500,12 @@ mod tests {
         let unique = Uuid::new_v4().to_string();
         let podcast_slug = format!("stats-rewrite-podcast-{unique}");
 
+        // Store a relative image path so resolve_image_url can prefix it with the server URL.
         let podcast = crate::services::podcast::service::PodcastService::add_podcast_to_database(
             &unique_name("Stats Rewrite Podcast"),
             &podcast_slug,
             &format!("https://example.com/{podcast_slug}.xml"),
-            "http://localhost:8080/ui/default.jpg",
+            &format!("podcasts/{podcast_slug}/cover.jpg"),
             &podcast_slug,
         )
         .unwrap();
@@ -541,11 +542,9 @@ mod tests {
         let payload = response.json::<Value>();
         let top_podcasts = payload["topPodcasts"].as_array().unwrap();
         assert!(!top_podcasts.is_empty());
-        assert!(
-            top_podcasts[0]["imageUrl"]
-                .as_str()
-                .unwrap()
-                .starts_with("https://podfetch.example.com/ui/")
+        assert_eq!(
+            top_podcasts[0]["imageUrl"].as_str().unwrap(),
+            format!("https://podfetch.example.com/ui/podcasts/{podcast_slug}/cover.jpg")
         );
     }
 

@@ -18,11 +18,12 @@ pub async fn check_permissions_for_files(
     next: Next,
 ) -> Result<Response, CustomError> {
     let request = query.and_then(|rss_api_key| rss_api_key.api_key);
+    let server_url = crate::url_rewriting::resolve_server_url_from_headers(req.headers());
     check_file_access(
         req.uri().path(),
         request,
         ENVIRONMENT_SERVICE.any_auth_enabled,
-        &ENVIRONMENT_SERVICE.server_url,
+        &server_url,
         |api_key| state.user_auth_service.is_api_key_valid(api_key),
         |path| {
             PodcastEpisodeService::get_podcast_episodes_by_url(path)

@@ -5,58 +5,6 @@
 
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use http::HeaderMap;
-use url::Url;
-
-/// Rewrites a URL from the old server base to a new server base.
-///
-/// This handles:
-/// - URLs that start with the old base (replaces prefix)
-/// - Relative local paths (prepends new base)
-/// - Absolute localhost URLs (rewrites if path is local)
-/// - External URLs (leaves unchanged)
-///
-/// # Arguments
-/// * `url` - The URL to rewrite
-/// * `old_base` - The original server URL (e.g., "http://localhost:8080/")
-/// * `new_base` - The new server URL (e.g., "https://podfetch.example.com/")
-///
-/// # Returns
-/// The rewritten URL as a String
-pub fn rewrite_url(url: &str, old_base: &str, new_base: &str) -> String {
-    let old_base = normalize_server_url(old_base);
-    let new_base = normalize_server_url(new_base);
-
-    // If URL starts with old base, simple replacement
-    if let Some(remainder) = url.strip_prefix(&old_base) {
-        return format!("{new_base}{remainder}");
-    }
-
-    // Handle URLs that start with / and are local paths
-    if url.starts_with('/') && is_local_path(url) {
-        return format!("{}{}", new_base, url.trim_start_matches('/'));
-    }
-
-    // Handle relative paths like "ui/image.jpg" or "./podcasts/file.mp3"
-    if let Some(local_relative_path) = normalize_relative_local_path(url) {
-        return format!("{}{}", new_base, local_relative_path);
-    }
-
-    // Handle absolute URLs (e.g., http://localhost:8080/podcasts/file.mp3)
-    if let Ok(parsed) = Url::parse(url)
-        && is_local_host(parsed.host_str(), &old_base)
-        && is_local_path(parsed.path())
-    {
-        let mut rewritten = format!("{}{}", new_base, parsed.path().trim_start_matches('/'));
-        if let Some(query) = parsed.query() {
-            rewritten.push('?');
-            rewritten.push_str(query);
-        }
-        return rewritten;
-    }
-
-    // Return unchanged for external URLs
-    url.to_string()
-}
 
 /// Normalizes a server URL to always end with a trailing slash.
 pub fn normalize_server_url(server_url: &str) -> String {
@@ -65,55 +13,6 @@ pub fn normalize_server_url(server_url: &str) -> String {
     } else {
         format!("{server_url}/")
     }
-}
-
-/// Checks if a path is a local application path (podcasts, ui, rss, proxy).
-fn is_local_path(path: &str) -> bool {
-    path == "/rss"
-        || path.starts_with("/rss/")
-        || path == "/proxy"
-        || path.starts_with("/proxy/")
-        || path == "/podcasts"
-        || path.starts_with("/podcasts/")
-        || path == "/ui"
-        || path.starts_with("/ui/")
-}
-
-/// Normalizes a relative path to a local path, if valid.
-fn normalize_relative_local_path(path: &str) -> Option<String> {
-    let normalized = path.trim().trim_start_matches("./").trim_start_matches('/');
-    if normalized.is_empty() {
-        return None;
-    }
-
-    let normalized_with_slash = format!("/{normalized}");
-    if is_local_path(&normalized_with_slash) {
-        Some(normalized.to_string())
-    } else {
-        None
-    }
-}
-
-/// Checks if a host is considered "local" (localhost or matching the old base).
-fn is_local_host(host: Option<&str>, old_base: &str) -> bool {
-    let host = match host {
-        Some(host) => host,
-        None => return false,
-    };
-
-    // Check common localhost variants
-    if host.eq_ignore_ascii_case("localhost") || host == "127.0.0.1" || host == "::1" {
-        return true;
-    }
-
-    // Check if host matches the old base URL's host
-    if let Ok(parsed_old) = Url::parse(old_base)
-        && let Some(old_host) = parsed_old.host_str()
-    {
-        return host.eq_ignore_ascii_case(old_host);
-    }
-
-    false
 }
 
 fn get_header_value(headers: &HeaderMap, key: &str) -> Option<String> {
@@ -132,7 +31,10 @@ pub fn resolve_server_url_from_headers(headers: &HeaderMap) -> String {
         .or_else(|| get_header_value(headers, ":authority"));
 
     if host.is_none() {
-        return ENVIRONMENT_SERVICE.server_url.clone();
+        // HTTP/1.1 requires Host. If somehow none of x-forwarded-host / host /
+        // :authority are present, return empty — callers building URLs will
+        // emit relative paths, which is the safest degraded behaviour.
+        return String::new();
     }
 
     let proto = get_header_value(headers, "x-forwarded-proto")
@@ -153,43 +55,25 @@ pub fn resolve_server_url_from_headers(headers: &HeaderMap) -> String {
     normalize_server_url(&base)
 }
 
-/// URL rewriter for batch rewriting URLs on DTOs.
+/// Resolve a stored image URL into a client-facing URL.
 ///
-/// Create once with the old and new base URLs, then use to rewrite multiple URLs.
-#[derive(Debug, Clone)]
-pub struct UrlRewriter {
-    old_base: String,
-    new_base: String,
-}
-
-impl UrlRewriter {
-    /// Creates a new URL rewriter.
-    ///
-    /// # Arguments
-    /// * `old_base` - The original server URL (e.g., "http://localhost:8080/")
-    /// * `new_base` - The new server URL (e.g., "https://podfetch.example.com/")
-    pub fn new(old_base: impl Into<String>, new_base: impl Into<String>) -> Self {
-        Self {
-            old_base: normalize_server_url(&old_base.into()),
-            new_base: normalize_server_url(&new_base.into()),
-        }
+/// - Empty string → default image at `<server_url>/ui/default.jpg`.
+/// - Absolute http/https (case-insensitive scheme) → passthrough (external remote URL).
+/// - Relative path → `<server_url>/<path>` (leading slash stripped before joining).
+///
+/// If `server_url` is empty (e.g., no Host header present), the returned URL
+/// will be root-relative (e.g., `"/ui/default.jpg"`).
+pub fn resolve_image_url(stored: &str, server_url: &str) -> String {
+    use common_infrastructure::runtime::DEFAULT_IMAGE_URL;
+    let base = normalize_server_url(server_url);
+    if stored.is_empty() {
+        return format!("{base}{DEFAULT_IMAGE_URL}");
     }
-
-    /// Rewrites a URL from the old base to the new base.
-    pub fn rewrite(&self, url: &str) -> String {
-        rewrite_url(url, &self.old_base, &self.new_base)
+    let lower = stored.to_ascii_lowercase();
+    if lower.starts_with("http://") || lower.starts_with("https://") {
+        return stored.to_string();
     }
-
-    /// Rewrites a URL in place, taking a mutable reference to a String.
-    pub fn rewrite_in_place(&self, url: &mut String) {
-        *url = self.rewrite(url);
-    }
-}
-
-pub fn create_url_rewriter(headers: &HeaderMap) -> UrlRewriter {
-    let old_base = &ENVIRONMENT_SERVICE.server_url;
-    let new_base = resolve_server_url_from_headers(headers);
-    UrlRewriter::new(old_base, new_base)
+    format!("{base}{}", stored.trim_start_matches('/'))
 }
 
 #[cfg(test)]
@@ -197,80 +81,6 @@ mod tests {
     use super::*;
     use http::HeaderMap;
     use http::HeaderValue;
-
-    #[test]
-    fn test_rewrite_url_with_old_base_prefix() {
-        let result = rewrite_url(
-            "http://localhost:8080/podcasts/file.mp3",
-            "http://localhost:8080/",
-            "https://podfetch.example.com/",
-        );
-        assert_eq!(result, "https://podfetch.example.com/podcasts/file.mp3");
-    }
-
-    #[test]
-    fn test_rewrite_url_relative_path() {
-        let result = rewrite_url(
-            "ui/default.jpg",
-            "http://localhost:8080/",
-            "http://new.host/",
-        );
-        assert_eq!(result, "http://new.host/ui/default.jpg");
-    }
-
-    #[test]
-    fn test_rewrite_url_absolute_path() {
-        let result = rewrite_url(
-            "/podcasts/episode.mp3",
-            "http://localhost:8080/",
-            "https://example.com/",
-        );
-        assert_eq!(result, "https://example.com/podcasts/episode.mp3");
-    }
-
-    #[test]
-    fn test_rewrite_url_external_unchanged() {
-        let result = rewrite_url(
-            "https://external.com/image.jpg",
-            "http://localhost:8080/",
-            "https://example.com/",
-        );
-        assert_eq!(result, "https://external.com/image.jpg");
-    }
-
-    #[test]
-    fn test_rewrite_url_with_query_params() {
-        let result = rewrite_url(
-            "http://localhost:8080/rss?apiKey=123",
-            "http://localhost:8080/",
-            "https://example.com/",
-        );
-        assert_eq!(result, "https://example.com/rss?apiKey=123");
-    }
-
-    #[test]
-    fn test_url_rewriter_struct() {
-        let rewriter = UrlRewriter::new("http://localhost:8080", "https://example.com");
-        assert_eq!(
-            rewriter.rewrite("/ui/image.jpg"),
-            "https://example.com/ui/image.jpg"
-        );
-    }
-
-    #[test]
-    fn test_create_url_rewriter_from_headers() {
-        let mut headers = HeaderMap::new();
-        headers.insert(
-            "x-forwarded-host",
-            HeaderValue::from_static("podfetch.example.com"),
-        );
-        headers.insert("x-forwarded-proto", HeaderValue::from_static("https"));
-        let rewriter = create_url_rewriter(&headers);
-        assert_eq!(
-            rewriter.rewrite("/ui/default.jpg"),
-            "https://podfetch.example.com/ui/default.jpg"
-        );
-    }
 
     #[test]
     fn test_normalize_server_url() {
@@ -282,5 +92,72 @@ mod tests {
             normalize_server_url("https://example.com/"),
             "https://example.com/"
         );
+    }
+
+    #[test]
+    fn resolve_image_url_empty_stored_returns_default() {
+        let result = resolve_image_url("", "https://example.com/");
+        assert_eq!(result, "https://example.com/ui/default.jpg");
+    }
+
+    #[test]
+    fn resolve_image_url_absolute_http_passes_through() {
+        let result = resolve_image_url("http://remote.example/cover.jpg", "https://example.com/");
+        assert_eq!(result, "http://remote.example/cover.jpg");
+    }
+
+    #[test]
+    fn resolve_image_url_absolute_https_passes_through() {
+        let result = resolve_image_url("https://remote.example/cover.jpg", "https://example.com/");
+        assert_eq!(result, "https://remote.example/cover.jpg");
+    }
+
+    #[test]
+    fn resolve_image_url_relative_path_gets_prefixed() {
+        let result = resolve_image_url("podcasts/foo/image.jpg", "https://example.com/");
+        assert_eq!(result, "https://example.com/podcasts/foo/image.jpg");
+    }
+
+    #[test]
+    fn resolve_image_url_leading_slash_stripped_before_prefix() {
+        let result = resolve_image_url("/podcasts/foo/image.jpg", "https://example.com/");
+        assert_eq!(result, "https://example.com/podcasts/foo/image.jpg");
+    }
+
+    #[test]
+    fn resolve_image_url_uppercase_scheme_passes_through() {
+        let result = resolve_image_url("HTTP://remote.example/cover.jpg", "https://example.com/");
+        assert_eq!(result, "HTTP://remote.example/cover.jpg");
+    }
+
+    #[test]
+    fn resolve_image_url_server_url_without_trailing_slash_is_normalized() {
+        let result = resolve_image_url("podcasts/foo/image.jpg", "https://example.com");
+        assert_eq!(result, "https://example.com/podcasts/foo/image.jpg");
+    }
+
+    #[test]
+    fn resolve_image_url_empty_server_url_returns_root_relative() {
+        let result = resolve_image_url("", "");
+        assert_eq!(result, "/ui/default.jpg");
+    }
+
+    #[test]
+    fn resolve_server_url_from_headers_returns_empty_when_no_host_headers() {
+        let headers = HeaderMap::new();
+        let result = resolve_server_url_from_headers(&headers);
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn resolve_server_url_from_headers_uses_x_forwarded_host() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "x-forwarded-host",
+            HeaderValue::from_static("podfetch.example.com"),
+        );
+        headers.insert("x-forwarded-proto", HeaderValue::from_static("https"));
+        let result = resolve_server_url_from_headers(&headers);
+        assert_eq!(result, "https://podfetch.example.com/");
     }
 }

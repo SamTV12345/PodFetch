@@ -12,7 +12,7 @@ use axum::{Extension, Json, debug_handler};
 use axum_extra::extract::OptionalQuery;
 use common_infrastructure::config::{BASIC_AUTH, OIDC_AUTH};
 use common_infrastructure::http::COMMON_USER_AGENT;
-use common_infrastructure::runtime::{DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE};
+use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use opml::{OPML, Outline};
 use rand::RngExt;
 use rand::rngs::ThreadRng;
@@ -35,7 +35,7 @@ use crate::podcast::{
     sanitize_proxy_request_headers, spawn_podindex_download,
 };
 use crate::services::file::service::{FileService, perform_podcast_variable_replacement};
-use crate::url_rewriting::create_url_rewriter;
+use crate::url_rewriting::resolve_server_url_from_headers;
 use common_infrastructure::config::is_env_var_present_and_true;
 use common_infrastructure::http::get_http_client;
 use common_infrastructure::request::add_basic_auth_headers_conditionally;
@@ -78,10 +78,9 @@ pub async fn search_podcast_of_episode(
     Path(id): Path<i32>,
     headers: HeaderMap,
 ) -> Result<Json<PodcastDto>, CustomError> {
-    let rewriter = create_url_rewriter(&headers);
+    let server_url = resolve_server_url_from_headers(&headers);
     let podcast = PodcastService::get_podcast_by_episode_id(id)?;
-    let mut dto = map_podcast_to_dto(podcast.into());
-    dto.rewrite_urls(&rewriter);
+    let dto = map_podcast_to_dto(podcast.into(), &server_url);
     Ok(Json(dto))
 }
 
@@ -100,10 +99,10 @@ pub async fn search_podcasts(
     Extension(requester): Extension<User>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastDto>>, CustomError> {
-    let rewriter = create_url_rewriter(&headers);
     let existing_filter = state.filter_service.get_filter_by_user_id(requester.id)?;
     let search_plan = build_podcast_search_plan(query, requester.id, existing_filter);
     state.filter_service.save_filter(search_plan.filter)?;
+    let server_url = resolve_server_url_from_headers(&headers);
 
     match search_plan.favored_only {
         true => {
@@ -114,11 +113,8 @@ pub async fn search_podcasts(
                 search_plan.user_id,
                 search_plan.tag,
                 &requester,
+                &server_url,
             )?;
-            let podcasts = podcasts
-                .into_iter()
-                .map(|p| p.with_rewritten_urls(&rewriter))
-                .collect();
             Ok(Json(podcasts))
         }
         false => {
@@ -128,11 +124,8 @@ pub async fn search_podcasts(
                 search_plan.order_option,
                 search_plan.tag,
                 &requester,
+                &server_url,
             )?;
-            let podcasts = podcasts
-                .into_iter()
-                .map(|p| p.with_rewritten_urls(&rewriter))
-                .collect();
             Ok(Json(podcasts))
         }
     }
@@ -153,13 +146,12 @@ pub async fn find_podcast_by_id(
     headers: HeaderMap,
 ) -> Result<Json<PodcastDto>, CustomError> {
     let id_num = parse_podcast_id::<CustomError>(&id).map_err(map_podcast_error)?;
-    let rewriter = create_url_rewriter(&headers);
+    let server_url = resolve_server_url_from_headers(&headers);
 
     let podcast = PodcastService::get_podcast(id_num)?;
     let tags = state.tag_service.get_tags_of_podcast(id_num, user.id)?;
     let favorite = PodcastService::get_favorite_state(user.id, id_num)?;
-    let podcast_dto = map_podcast_with_context_to_dto(podcast.into(), favorite, tags, &user)
-        .with_rewritten_urls(&rewriter);
+    let podcast_dto = map_podcast_with_context_to_dto(podcast.into(), favorite, tags, &user, &server_url);
     Ok(Json(podcast_dto))
 }
 
@@ -175,11 +167,8 @@ pub async fn find_all_podcasts(
     Extension(requester): Extension<User>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastDto>>, CustomError> {
-    let rewriter = create_url_rewriter(&headers);
-    let podcasts = PodcastService::get_podcasts(&requester)?
-        .into_iter()
-        .map(|p| p.with_rewritten_urls(&rewriter))
-        .collect();
+    let server_url = resolve_server_url_from_headers(&headers);
+    let podcasts = PodcastService::get_podcasts(&requester, &server_url)?;
 
     Ok(Json(podcasts))
 }
@@ -210,7 +199,8 @@ pub async fn find_podcast(
         }
         Podindex => {
             ensure_podindex_configured::<CustomError>(
-                ENVIRONMENT_SERVICE.get_config().podindex_configured,
+                !ENVIRONMENT_SERVICE.podindex_api_key.is_empty()
+                    && !ENVIRONMENT_SERVICE.podindex_api_secret.is_empty(),
             )
             .map_err(map_podcast_error)?;
 
@@ -232,6 +222,7 @@ tag="podcasts"
 #[debug_handler]
 pub async fn add_podcast(
     Extension(requester): Extension<User>,
+    headers: HeaderMap,
     Json(track_id): Json<PodcastAddModel>,
 ) -> Result<Json<PodcastDto>, CustomError> {
     let current_count = DieselPodcastRepository::new(database())
@@ -259,6 +250,7 @@ pub async fn add_podcast(
 
     let res = res.json::<Value>().await.unwrap();
 
+    let server_url = resolve_server_url_from_headers(&headers);
     let inserted = PodcastService::handle_insert_of_podcast(
         PodcastInsertModel {
             feed_url: unwrap_string(&res["results"][0]["feedUrl"]),
@@ -272,7 +264,7 @@ pub async fn add_podcast(
         Some(requester.id),
     )
     .await?;
-    Ok(Json(map_podcast_to_dto(inserted.into())))
+    Ok(Json(map_podcast_to_dto(inserted.into(), &server_url)))
 }
 
 #[utoipa::path(
@@ -285,6 +277,7 @@ tag="podcasts"
 )]
 pub async fn add_podcast_by_feed(
     Extension(requester): Extension<User>,
+    headers: HeaderMap,
     Json(rss_feed): Json<PodcastRSSAddModel>,
 ) -> Result<Json<PodcastDto>, CustomError> {
     let current_count = DieselPodcastRepository::new(database())
@@ -312,6 +305,7 @@ pub async fn add_podcast_by_feed(
     let channel = Channel::read_from(bytes.as_bytes()).unwrap();
     let num = rand::rng().random_range(100..10000000);
 
+    let server_url = resolve_server_url_from_headers(&headers);
     let inserted = PodcastService::handle_insert_of_podcast(
         PodcastInsertModel {
             feed_url: rss_feed.clone().rss_feed_url.clone(),
@@ -321,13 +315,13 @@ pub async fn add_podcast_by_feed(
                 .image
                 .clone()
                 .map(|i| i.url)
-                .unwrap_or(get_default_image()),
+                .unwrap_or_else(|| get_default_image(&server_url)),
         },
         Some(channel),
         Some(requester.id),
     )
     .await?;
-    let res: PodcastDto = map_podcast_to_dto(inserted.into());
+    let res: PodcastDto = map_podcast_to_dto(inserted.into(), &server_url);
 
     Ok(Json(res))
 }
@@ -407,8 +401,11 @@ pub async fn add_podcast_from_podindex(
         1,
     )
     .map_err(map_podcast_error)?;
-    ensure_podindex_configured::<CustomError>(ENVIRONMENT_SERVICE.get_config().podindex_configured)
-        .map_err(map_podcast_error)?;
+    ensure_podindex_configured::<CustomError>(
+        !ENVIRONMENT_SERVICE.podindex_api_key.is_empty()
+            && !ENVIRONMENT_SERVICE.podindex_api_secret.is_empty(),
+    )
+    .map_err(map_podcast_error)?;
 
     let added_by = Some(requester.id);
     spawn_blocking(move || {
@@ -435,15 +432,11 @@ pub async fn query_for_podcast(
     podcast: Path<String>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastEpisodeDto>>, CustomError> {
-    let rewriter = create_url_rewriter(&headers);
+    let server_url = resolve_server_url_from_headers(&headers);
     let res = PodcastEpisodeService::query_for_podcast(&podcast)?
         .into_iter()
         .map(|p| {
-            let mut episode: PodcastEpisodeDto =
-                (p, None::<User>, None::<FavoritePodcastEpisode>).into();
-            rewriter.rewrite_in_place(&mut episode.local_url);
-            rewriter.rewrite_in_place(&mut episode.local_image_url);
-            episode
+            PodcastEpisodeDto::from_episode_with_user(p, None::<User>, None::<FavoritePodcastEpisode>, &server_url)
         })
         .collect::<Vec<PodcastEpisodeDto>>();
 
@@ -561,11 +554,8 @@ pub async fn get_favored_podcasts(
     Extension(requester): Extension<User>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastDto>>, CustomError> {
-    let rewriter = create_url_rewriter(&headers);
-    let podcasts = PodcastService::get_favored_podcasts(requester)?
-        .into_iter()
-        .map(|p| p.with_rewritten_urls(&rewriter))
-        .collect();
+    let server_url = resolve_server_url_from_headers(&headers);
+    let podcasts = PodcastService::get_favored_podcasts(requester, &server_url)?;
     Ok(Json(podcasts))
 }
 
@@ -619,10 +609,9 @@ async fn insert_outline(podcast: Outline, mut rng: ThreadRng, added_by: Option<i
                 Some(ref image) => image.url.clone(),
                 None => {
                     tracing::info!(
-                        "No image found for podcast. Downloading from {}",
-                        ENVIRONMENT_SERVICE.server_url.clone().to_owned() + DEFAULT_IMAGE_URL
+                        "No image found for podcast; storing empty image_url, default will be applied at response time"
                     );
-                    ENVIRONMENT_SERVICE.server_url.clone().to_owned() + "ui/default.jpg"
+                    String::new()
                 }
             };
 
@@ -909,6 +898,7 @@ pub mod tests {
     use crate::test_support::tests::handle_test_startup;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::extract::{Path, State};
+    use axum::http::HeaderMap;
     use axum::{Extension, Json};
     use common_infrastructure::error::CustomErrorInner;
     use podfetch_domain::user::User;
@@ -1288,6 +1278,7 @@ pub mod tests {
 
         let add_itunes_result = super::add_podcast(
             Extension(non_privileged.clone()),
+            HeaderMap::new(),
             Json(PodcastAddModel {
                 track_id: 12345,
                 user_id: 0,
@@ -1301,6 +1292,7 @@ pub mod tests {
 
         let add_feed_result = super::add_podcast_by_feed(
             Extension(non_privileged.clone()),
+            HeaderMap::new(),
             Json(PodcastRSSAddModel {
                 rss_feed_url: "https://example.com/feed.xml".to_string(),
             }),

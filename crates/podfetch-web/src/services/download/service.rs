@@ -676,3 +676,18 @@ impl DownloadService {
         chapters
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::DownloadService;
+
+    #[test]
+    fn empty_stored_value_is_treated_as_default_image() {
+        assert!(DownloadService::is_default_fallback_image_url(""));
+    }
+
+    #[test]
+    fn whitespace_only_is_treated_as_default_image() {
+        assert!(DownloadService::is_default_fallback_image_url("   "));
+    }
+}

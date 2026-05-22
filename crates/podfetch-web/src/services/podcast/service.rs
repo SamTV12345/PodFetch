@@ -513,7 +513,7 @@ impl PodcastService {
             .unwrap()
     }
 
-    pub fn get_favored_podcasts(requester: User) -> Result<Vec<PodcastDto>, CustomError> {
+    pub fn get_favored_podcasts(requester: User, server_url: &str) -> Result<Vec<PodcastDto>, CustomError> {
         let result = favorite_repo()
             .get_favored_podcasts(requester.id)
             .map_err(CustomError::from)?;
@@ -528,6 +528,7 @@ impl PodcastService {
                     Some(podcast.favorite.favored),
                     tags,
                     &requester,
+                    server_url,
                 )
             })
             .collect::<Vec<PodcastDto>>();
@@ -594,7 +595,7 @@ impl PodcastService {
             .ok_or_else(|| CustomErrorInner::NotFound(ErrorSeverity::Warning).into())
     }
 
-    pub fn get_podcasts(u: &User) -> Result<Vec<PodcastDto>, CustomError> {
+    pub fn get_podcasts(u: &User, server_url: &str) -> Result<Vec<PodcastDto>, CustomError> {
         let result = podcast_repo()
             .find_all_with_favorites(u.id)
             .map_err(CustomError::from)?;
@@ -609,6 +610,7 @@ impl PodcastService {
                     podcast.favorite.clone().map(|f| f.favored),
                     tags,
                     u,
+                    server_url,
                 )
             })
             .collect::<Vec<PodcastDto>>();
@@ -622,6 +624,7 @@ impl PodcastService {
         designated_user_id: i32,
         tag: Option<String>,
         requester: &User,
+        server_url: &str,
     ) -> Result<Vec<PodcastDto>, CustomError> {
         let podcasts = favorite_repo()
             .search_podcasts_favored(order, title, latest_pub, designated_user_id)
@@ -639,6 +642,7 @@ impl PodcastService {
                     Some(p.favorite.favored),
                     p.tags.iter().cloned().map(Into::into).collect(),
                     requester,
+                    server_url,
                 )
             })
             .collect::<Vec<PodcastDto>>();
@@ -652,6 +656,7 @@ impl PodcastService {
         latest_pub: OrderOption,
         tag: Option<String>,
         requester: &User,
+        server_url: &str,
     ) -> Result<Vec<PodcastDto>, CustomError> {
         let podcasts = favorite_repo()
             .search_podcasts(order, title, latest_pub, requester.id)
@@ -669,6 +674,7 @@ impl PodcastService {
                     p.favorite.as_ref().map(|f| f.favored),
                     p.tags.iter().cloned().map(Into::into).collect(),
                     requester,
+                    server_url,
                 )
             })
             .collect::<Vec<PodcastDto>>();

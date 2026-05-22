@@ -26,7 +26,7 @@ fn get_size(path: &str) -> Result<u64, std::io::Error> {
     Ok(total)
 }
 use crate::sys::{self, LoginControllerError, LoginRequest, SysExtraInfo, VersionInfo};
-use crate::url_rewriting::{create_url_rewriter, resolve_server_url_from_headers};
+use crate::url_rewriting::resolve_server_url_from_headers;
 use podfetch_domain::user::User;
 use reqwest::StatusCode;
 use sysinfo::{Disks, System};
@@ -111,17 +111,12 @@ pub async fn get_public_config(
     headers: HeaderMap,
 ) -> Json<ConfigModel> {
     let resolved_server_url = resolve_server_url_from_headers(&headers);
-    let rewriter = create_url_rewriter(&headers);
-    let config = state.environment.get_config();
-    let rewritten_oidc_redirect_uri = config
-        .oidc_config
-        .as_ref()
-        .map(|oidc| rewriter.rewrite(&oidc.redirect_uri));
+    let config = state.environment.get_config(&resolved_server_url);
 
     Json(sys::get_public_config(
         config,
         &resolved_server_url,
-        rewritten_oidc_redirect_uri,
+        None,
     ))
 }
 

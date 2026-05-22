@@ -13,7 +13,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::filter::Filter;
 use crate::tags::Tag;
-use crate::url_rewriting::UrlRewriter;
+use crate::url_rewriting::resolve_image_url;
 
 #[derive(Debug, Serialize, Deserialize, Clone, IntoParams)]
 #[serde(rename_all = "camelCase")]
@@ -131,31 +131,11 @@ pub struct PodcastDto {
     pub tags: Vec<Tag>,
 }
 
-impl PodcastDto {
-    /// Rewrites internal URLs (image_url, podfetch_feed) to use the resolved server URL.
-    ///
-    /// This is useful when the server is behind a reverse proxy and clients need URLs
-    /// that point to the external-facing URL rather than the internal one.
-    pub fn rewrite_urls(&mut self, rewriter: &UrlRewriter) {
-        rewriter.rewrite_in_place(&mut self.image_url);
-        rewriter.rewrite_in_place(&mut self.podfetch_feed);
-    }
 
-    /// Returns a new PodcastDto with URLs rewritten using the given rewriter.
-    pub fn with_rewritten_urls(mut self, rewriter: &UrlRewriter) -> Self {
-        self.rewrite_urls(rewriter);
-        self
-    }
-}
-
-pub fn map_podcast_to_dto(value: Podcast) -> PodcastDto {
-    let image_url = format!(
-        "{}{}",
-        ENVIRONMENT_SERVICE.get_server_url(),
-        value.image_url
-    );
+pub fn map_podcast_to_dto(value: Podcast, server_url: &str) -> PodcastDto {
+    let image_url = resolve_image_url(&value.image_url, server_url);
     let keywords = dedupe_keywords(value.keywords.clone());
-    let podfetch_rss_feed = build_podfetch_feed(value.id, None);
+    let podfetch_rss_feed = build_podfetch_feed(value.id, None, server_url);
 
     PodcastDto {
         id: value.id,
@@ -183,15 +163,10 @@ pub fn map_podcast_with_context_to_dto(
     favorite: Option<bool>,
     tags: Vec<Tag>,
     user: &User,
+    server_url: &str,
 ) -> PodcastDto {
     let image_url = match resolve_file_handler_type(value.download_location.clone()) {
-        FileHandlerType::Local => {
-            format!(
-                "{}{}",
-                ENVIRONMENT_SERVICE.get_server_url(),
-                value.image_url
-            )
-        }
+        FileHandlerType::Local => resolve_image_url(&value.image_url, server_url),
         FileHandlerType::S3 => {
             format!(
                 "{}/{}",
@@ -207,7 +182,7 @@ pub fn map_podcast_with_context_to_dto(
         directory_id: value.directory_id.clone(),
         rssfeed: value.rssfeed.clone(),
         image_url,
-        podfetch_feed: build_podfetch_feed(value.id, user.api_key.as_deref()),
+        podfetch_feed: build_podfetch_feed(value.id, user.api_key.as_deref(), server_url),
         language: value.language.clone(),
         keywords: dedupe_keywords(value.keywords.clone()),
         summary: value.summary.clone(),
@@ -240,20 +215,27 @@ fn dedupe_keywords(keywords: Option<String>) -> Option<String> {
     })
 }
 
-fn build_podfetch_feed(podcast_id: i32, api_key: Option<&str>) -> String {
-    let mut podfetch_rss_feed = ENVIRONMENT_SERVICE.build_url_to_rss_feed();
-    podfetch_rss_feed
-        .path_segments_mut()
+fn build_podfetch_feed(podcast_id: i32, api_key: Option<&str>, server_url: &str) -> String {
+    if server_url.is_empty() {
+        // No Host headers present — emit a root-relative URL. The browser
+        // (or the eventual proxy) will resolve it against the page origin.
+        let mut path = format!("/rss/{podcast_id}");
+        if let Some(api_key) = api_key {
+            path.push_str("?apiKey=");
+            path.push_str(api_key);
+        }
+        return path;
+    }
+    let base = crate::url_rewriting::normalize_server_url(server_url);
+    let mut url = url::Url::parse(&format!("{base}rss"))
+        .expect("server_url must be a valid base URL");
+    url.path_segments_mut()
         .expect("rss feed base URL must be a hierarchical scheme")
         .push(&podcast_id.to_string());
-
     if let Some(api_key) = api_key {
-        podfetch_rss_feed
-            .query_pairs_mut()
-            .append_pair("apiKey", api_key);
+        url.query_pairs_mut().append_pair("apiKey", api_key);
     }
-
-    podfetch_rss_feed.to_string()
+    url.to_string()
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -536,7 +518,7 @@ mod tests {
 
     #[test]
     fn build_podfetch_feed_appends_podcast_id_to_rss_path() {
-        let url = build_podfetch_feed(42, None);
+        let url = build_podfetch_feed(42, None, "http://localhost:8000/");
         assert!(
             url.ends_with("/rss/42"),
             "expected per-podcast feed URL to end with /rss/42, got: {url}"
@@ -545,7 +527,7 @@ mod tests {
 
     #[test]
     fn build_podfetch_feed_appends_api_key_query_param() {
-        let url = build_podfetch_feed(42, Some("secret-key"));
+        let url = build_podfetch_feed(42, Some("secret-key"), "http://localhost:8000/");
         assert!(
             url.contains("/rss/42"),
             "expected per-podcast feed URL to contain /rss/42, got: {url}"
@@ -554,5 +536,23 @@ mod tests {
             url.contains("apiKey=secret-key"),
             "expected url to contain apiKey query param, got: {url}"
         );
+    }
+
+    #[test]
+    fn build_podfetch_feed_uses_provided_server_url() {
+        let url = build_podfetch_feed(7, None, "https://podfetch.example.com/");
+        assert_eq!(url, "https://podfetch.example.com/rss/7");
+    }
+
+    #[test]
+    fn build_podfetch_feed_empty_server_url_returns_root_relative() {
+        let url = build_podfetch_feed(42, None, "");
+        assert_eq!(url, "/rss/42");
+    }
+
+    #[test]
+    fn build_podfetch_feed_empty_server_url_with_api_key_appends_query() {
+        let url = build_podfetch_feed(42, Some("secret"), "");
+        assert_eq!(url, "/rss/42?apiKey=secret");
     }
 }

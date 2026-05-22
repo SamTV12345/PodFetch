@@ -64,7 +64,14 @@ pub async fn get_rss_feed(
 
     let downloaded_episodes: Vec<PodcastEpisodeDto> = downloaded_episodes
         .into_iter()
-        .map(|c| (c, api_key.clone(), None::<FavoritePodcastEpisode>).into())
+        .map(|c| {
+            PodcastEpisodeDto::from_episode_with_api_key(
+                c,
+                api_key.clone(),
+                None::<FavoritePodcastEpisode>,
+                &server_url,
+            )
+        })
         .collect();
 
     let feed_url = add_api_key_to_url(format!("{}rss", &server_url), &api_key);
@@ -170,7 +177,14 @@ pub async fn get_rss_feed_for_podcast(
     let downloaded_episodes: Vec<PodcastEpisodeDto> =
         PodcastEpisodeService::find_all_downloaded_podcast_episodes_by_podcast_id(id)?
             .into_iter()
-            .map(|c| (c, api_key.clone(), None::<FavoritePodcastEpisode>).into())
+            .map(|c| {
+                PodcastEpisodeDto::from_episode_with_api_key(
+                    c,
+                    api_key.clone(),
+                    None::<FavoritePodcastEpisode>,
+                    &server_url,
+                )
+            })
             .collect();
 
     let mut itunes_owner = get_itunes_owner("", "");
@@ -352,7 +366,10 @@ mod tests {
     use crate::app_state::AppState;
     use crate::test_support::tests::handle_test_startup;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use podfetch_persistence::db::get_connection;
     use podfetch_persistence::podcast::PodcastEntity as Podcast;
+    use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
+    use podfetch_persistence::schema::podcast_episodes::dsl as pe_dsl;
     use serial_test::serial;
     use uuid::Uuid;
 
@@ -392,6 +409,37 @@ mod tests {
             &slug,
         )
         .unwrap()
+    }
+
+    fn insert_downloaded_episode(
+        podcast_id: i32,
+        episode_id: &str,
+        guid: &str,
+        file_episode_path: &str,
+        file_image_path: &str,
+    ) -> PodcastEpisode {
+        use diesel::ExpressionMethods;
+        use diesel::RunQueryDsl;
+
+        diesel::insert_into(pe_dsl::podcast_episodes)
+            .values((
+                pe_dsl::podcast_id.eq(podcast_id),
+                pe_dsl::episode_id.eq(episode_id.to_string()),
+                pe_dsl::name.eq("RSS Rewrite Episode".to_string()),
+                pe_dsl::url.eq(format!("https://example.com/{episode_id}.mp3")),
+                pe_dsl::date_of_recording.eq("2026-03-01T00:00:00Z".to_string()),
+                pe_dsl::image_url.eq("https://example.com/image.jpg".to_string()),
+                pe_dsl::total_time.eq(1800),
+                pe_dsl::description.eq("rss rewrite test".to_string()),
+                pe_dsl::guid.eq(guid.to_string()),
+                pe_dsl::deleted.eq(false),
+                pe_dsl::episode_numbering_processed.eq(false),
+                pe_dsl::file_episode_path.eq(Some(file_episode_path.to_string())),
+                pe_dsl::file_image_path.eq(Some(file_image_path.to_string())),
+                pe_dsl::download_location.eq(Some("Local".to_string())),
+            ))
+            .get_result::<PodcastEpisode>(&mut get_connection())
+            .unwrap()
     }
 
     #[tokio::test]
@@ -497,6 +545,55 @@ mod tests {
             assert!(body.contains("<rss"));
             assert!(body.contains("<channel>"));
         }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_rss_feed_for_podcast_rewrites_episode_urls_using_forwarded_headers() {
+        let mut server = handle_test_startup().await;
+        server
+            .test_server
+            .add_header("x-forwarded-host", "podfetch.example.com");
+        server.test_server.add_header("x-forwarded-proto", "https");
+
+        let podcast = create_podcast_for_rss();
+        let api_key = create_api_key_user();
+        let unique = Uuid::new_v4();
+        let file_episode_path = format!("podcasts/rss-rewrite-{unique}/episode.mp3");
+        let file_image_path = format!("podcasts/rss-rewrite-{unique}/image.jpg");
+        let _episode = insert_downloaded_episode(
+            podcast.id,
+            &format!("rss-rewrite-ep-{unique}"),
+            &format!("rss-rewrite-guid-{unique}"),
+            &file_episode_path,
+            &file_image_path,
+        );
+
+        let request_path = with_api_key(&format!("/rss/{}", podcast.id), &api_key);
+        let response = server.test_server.get(&request_path).await;
+        let status = response.status_code();
+        if status != 200 {
+            // Skip when auth is enforced in this environment
+            assert_eq!(status, 403);
+            return;
+        }
+
+        let body = response.text();
+        let expected_episode_url =
+            format!("https://podfetch.example.com/{file_episode_path}");
+        let expected_image_url = format!("https://podfetch.example.com/{file_image_path}");
+        assert!(
+            body.contains(&expected_episode_url),
+            "expected rewritten enclosure URL {expected_episode_url:?} in body, got: {body}"
+        );
+        assert!(
+            body.contains(&expected_image_url),
+            "expected rewritten image URL {expected_image_url:?} in body, got: {body}"
+        );
+        assert!(
+            !body.contains(&format!("http://localhost:8000/{file_episode_path}")),
+            "body should not contain internal localhost URL for the episode, got: {body}"
+        );
     }
 
     #[test]

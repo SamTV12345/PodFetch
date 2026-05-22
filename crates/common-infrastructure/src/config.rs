@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 use std::env;
 use std::env::var;
 use std::fmt::{Display, Formatter};
-use url::Url;
 use utoipa::ToSchema;
 
 pub const TELEGRAM_BOT_TOKEN: &str = "TELEGRAM_BOT_TOKEN";
@@ -26,8 +25,6 @@ pub const API_KEY: &str = "API_KEY";
 pub const SUB_DIRECTORY: &str = "SUB_DIRECTORY";
 pub const PORT: &str = "PORT";
 pub const DEFAULT_PORT: u16 = 8000;
-/// Internal base URL used for URL construction. Actual external URLs are derived from request headers.
-pub const INTERNAL_SERVER_URL: &str = "http://localhost:8000/";
 pub const POLLING_INTERVAL: &str = "POLLING_INTERVAL";
 pub const PODINDEX_API_KEY: &str = "PODINDEX_API_KEY";
 pub const PODINDEX_API_SECRET: &str = "PODINDEX_API_SECRET";
@@ -121,7 +118,6 @@ pub struct ConfigModel {
 
 #[derive(Clone)]
 pub struct EnvironmentService {
-    pub server_url: String,
     pub port: u16,
     pub polling_interval: u32,
     pub podindex_api_key: String,
@@ -267,16 +263,8 @@ impl EnvironmentService {
         }
     }
 
-    pub fn build_url_to_rss_feed(&self) -> Url {
-        let mut rss_feed_url = self.server_url.to_string();
-        rss_feed_url.push_str("rss");
-        Url::parse(&rss_feed_url).unwrap()
-    }
-
     pub fn new() -> EnvironmentService {
         let oidc_configured = Self::handle_oidc();
-
-        let server_url = INTERNAL_SERVER_URL.to_string();
 
         let port = var(PORT)
             .ok()
@@ -298,7 +286,6 @@ impl EnvironmentService {
         let handler = Self::handle_default_file_handler();
 
         EnvironmentService {
-            server_url: server_url.clone(),
             port,
             polling_interval: var(POLLING_INTERVAL)
                 .ok()
@@ -400,10 +387,6 @@ impl EnvironmentService {
         }
     }
 
-    pub fn get_server_url(&self) -> String {
-        self.server_url.clone()
-    }
-
     pub fn get_polling_interval(&self) -> u32 {
         self.polling_interval
     }
@@ -439,12 +422,12 @@ impl EnvironmentService {
         println!("\n");
     }
 
-    pub fn get_config(&self) -> ConfigModel {
+    pub fn get_config(&self, server_url: &str) -> ConfigModel {
         ConfigModel {
             podindex_configured: !self.podindex_api_key.is_empty()
                 && !self.podindex_api_secret.is_empty(),
-            rss_feed: self.server_url.clone() + "rss",
-            server_url: self.server_url.clone(),
+            rss_feed: format!("{server_url}rss"),
+            server_url: server_url.to_string(),
             reverse_proxy: self.reverse_proxy,
             basic_auth: self.http_basic,
             oidc_configured: self.oidc_configured,

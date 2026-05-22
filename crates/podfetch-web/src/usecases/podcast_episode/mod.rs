@@ -20,7 +20,7 @@ use common_infrastructure::http::COMMON_USER_AGENT;
 use common_infrastructure::http::get_sync_client;
 use common_infrastructure::mutex::LockResultExt;
 use common_infrastructure::retry::do_retry;
-use common_infrastructure::runtime::{DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE};
+use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use common_infrastructure::telegram::send_new_episode_notification;
 use common_infrastructure::time::opt_or_empty_string;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -532,7 +532,7 @@ impl PodcastEpisodeUseCase {
                     let mut image_url = if !podcast.original_image_url.is_empty() {
                         podcast.original_image_url.clone()
                     } else {
-                        format!("{}{}", ENVIRONMENT_SERVICE.server_url, DEFAULT_IMAGE_URL)
+                        String::new()
                     };
 
                     // itunes extension checking
@@ -585,9 +585,9 @@ impl PodcastEpisodeUseCase {
                 )?;
             }
             None => {
-                let url = ENVIRONMENT_SERVICE.server_url.clone().to_owned() + DEFAULT_IMAGE_URL;
                 crate::services::podcast::service::PodcastService::update_original_image_url(
-                    &url, podcast.id,
+                    "",
+                    podcast.id,
                 )?;
             }
         }

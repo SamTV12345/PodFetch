@@ -28,7 +28,11 @@ pub trait WatchtimeApplicationService {
         username: String,
         request: PodcastWatchedPostModel,
     ) -> Result<(), Self::Error>;
-    fn get_last_watched(&self, user: &User) -> Result<Vec<Self::LastWatchedItem>, Self::Error>;
+    fn get_last_watched(
+        &self,
+        user: &User,
+        server_url: &str,
+    ) -> Result<Vec<Self::LastWatchedItem>, Self::Error>;
     fn get_watchtime(
         &self,
         episode_id: &str,
@@ -61,13 +65,14 @@ where
 pub fn get_last_watched<S>(
     service: &S,
     user: &User,
+    server_url: &str,
 ) -> Result<Vec<S::LastWatchedItem>, WatchtimeControllerError<S::Error>>
 where
     S: WatchtimeApplicationService,
     S::Error: Display,
 {
     service
-        .get_last_watched(user)
+        .get_last_watched(user, server_url)
         .map_err(WatchtimeControllerError::Service)
 }
 
