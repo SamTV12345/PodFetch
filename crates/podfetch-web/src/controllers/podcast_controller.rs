@@ -199,7 +199,8 @@ pub async fn find_podcast(
         }
         Podindex => {
             ensure_podindex_configured::<CustomError>(
-                ENVIRONMENT_SERVICE.get_config().podindex_configured,
+                !ENVIRONMENT_SERVICE.podindex_api_key.is_empty()
+                    && !ENVIRONMENT_SERVICE.podindex_api_secret.is_empty(),
             )
             .map_err(map_podcast_error)?;
 
@@ -400,8 +401,11 @@ pub async fn add_podcast_from_podindex(
         1,
     )
     .map_err(map_podcast_error)?;
-    ensure_podindex_configured::<CustomError>(ENVIRONMENT_SERVICE.get_config().podindex_configured)
-        .map_err(map_podcast_error)?;
+    ensure_podindex_configured::<CustomError>(
+        !ENVIRONMENT_SERVICE.podindex_api_key.is_empty()
+            && !ENVIRONMENT_SERVICE.podindex_api_secret.is_empty(),
+    )
+    .map_err(map_podcast_error)?;
 
     let added_by = Some(requester.id);
     spawn_blocking(move || {

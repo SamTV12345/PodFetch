@@ -161,17 +161,12 @@ pub fn transform_index_files(headers: &http::HeaderMap) -> String {
         ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/manifest.json";
     let (js_file, css_file) = resolve_index_assets();
 
-    let base_config = ENVIRONMENT_SERVICE.get_config();
     let resolved_server_url = crate::url_rewriting::resolve_server_url_from_headers(headers);
-    let rewriter = crate::url_rewriting::create_url_rewriter(headers);
-    let rewritten_oidc_redirect_uri = base_config
-        .oidc_config
-        .as_ref()
-        .map(|oidc| rewriter.rewrite(&oidc.redirect_uri));
+    let base_config = ENVIRONMENT_SERVICE.get_config(&resolved_server_url);
     let public_config = crate::sys::get_public_config(
         base_config,
         &resolved_server_url,
-        rewritten_oidc_redirect_uri,
+        None,
     );
     let config_string = serde_json::to_string(&public_config).unwrap();
 

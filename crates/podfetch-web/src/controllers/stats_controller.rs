@@ -1,6 +1,6 @@
 use crate::app_state::AppState;
 use crate::stats::{self, StatsControllerError, StatsOverview, StatsOverviewQueryParams};
-use crate::url_rewriting::create_url_rewriter;
+use crate::url_rewriting::{resolve_image_url, resolve_server_url_from_headers};
 use axum::extract::{Query, State};
 use axum::http::HeaderMap;
 use axum::{Extension, Json};
@@ -24,12 +24,12 @@ pub async fn get_stats_overview(
     Query(params): Query<StatsOverviewQueryParams>,
     headers: HeaderMap,
 ) -> Result<Json<StatsOverview>, CustomError> {
-    let rewriter = create_url_rewriter(&headers);
+    let server_url = resolve_server_url_from_headers(&headers);
     let mut stats =
         stats::get_stats_overview(state.stats_service.as_ref(), &requester.username, params)
             .map_err(map_stats_error)?;
     stats.top_podcasts.iter_mut().for_each(|podcast| {
-        rewriter.rewrite_in_place(&mut podcast.image_url);
+        podcast.image_url = resolve_image_url(&podcast.image_url, &server_url);
     });
     Ok(Json(stats))
 }
