@@ -15,7 +15,7 @@ use reqwest::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-use crate::url_rewriting::create_url_rewriter;
+use crate::url_rewriting::resolve_server_url_from_headers;
 use common_infrastructure::error::ErrorSeverity::Debug;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 
@@ -57,17 +57,15 @@ pub async fn get_last_watched(
     Extension(requester): Extension<User>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<LastWatchedItem>>, CustomError> {
-    let rewriter = create_url_rewriter(&headers);
-    let episodes = watchtime::get_last_watched(state.watchtime_service.as_ref(), &requester)
-        .map_err(map_watchtime_error)?
-        .into_iter()
-        .map(|mut item| {
-            rewriter.rewrite_in_place(&mut item.podcast_episode.local_url);
-            rewriter.rewrite_in_place(&mut item.podcast_episode.local_image_url);
-            item.podcast.rewrite_urls(&rewriter);
-            item
-        })
-        .collect();
+    let server_url = resolve_server_url_from_headers(&headers);
+    let episodes = watchtime::get_last_watched(
+        state.watchtime_service.as_ref(),
+        &requester,
+        &server_url,
+    )
+    .map_err(map_watchtime_error)?
+    .into_iter()
+    .collect();
     Ok(Json(episodes))
 }
 
