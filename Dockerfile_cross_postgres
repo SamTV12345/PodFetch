@@ -1,22 +1,25 @@
 FROM alpine:3 AS cache
 RUN apk add -U --no-cache ca-certificates
 
+FROM mwader/static-ffmpeg:7.1 AS ffmpeg
+
 FROM scratch as base
 COPY ./static/ /app/static
 COPY ./migrations /app/migrations
 COPY ./db /app/db
 WORKDIR /app/
+ENV PATH=/usr/local/bin
 
 FROM base as amd64
 COPY --from=cache /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=ffmpeg /ffmpeg /usr/local/bin/ffmpeg
+COPY --from=ffmpeg /ffprobe /usr/local/bin/ffprobe
 COPY ./target/x86_64-unknown-linux-musl/release/podfetch /app/podfetch
-
-FROM base as armv7
-COPY --from=cache /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY ./target/armv7-unknown-linux-musleabihf/release/podfetch /app/podfetch
 
 FROM base as arm64
 COPY --from=cache /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=ffmpeg /ffmpeg /usr/local/bin/ffmpeg
+COPY --from=ffmpeg /ffprobe /usr/local/bin/ffprobe
 COPY ./target/aarch64-unknown-linux-musl/release/podfetch /app/podfetch
 
 FROM ${TARGETARCH}${TARGETVARIANT} as final
