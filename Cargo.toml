@@ -119,7 +119,7 @@ r2d2 = "0.8.10"
 r2d2_postgres = { version = "0.18.2" }
 rand = "0.10.1"
 regex = "1.12.3"
-reqwest = { version = "0.13.3", features = ["stream", "json", "blocking", "rustls", "hickory-dns", "query"] }
+reqwest = { version = "0.13.3", features = ["stream", "json", "blocking", "rustls", "query"] }
 rpassword = "7.5.2"
 rss = "2.0.13"
 rust-s3 = { version = "0.37.2", features = ["blocking", "fail-on-err", "futures-util", "tokio", "tokio-rustls-tls"], default-features = false }
