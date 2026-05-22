@@ -19,7 +19,6 @@ pub fn get_manifest_router() -> OpenApiRouter {
 mod tests {
     use crate::test_support::tests::handle_test_startup;
     use axum::http::HeaderMap;
-    use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
     use serde_json::Value;
     use serial_test::serial;
 
@@ -117,12 +116,11 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_get_manifest_direct_handler_without_headers_uses_env_fallback() {
+    async fn test_get_manifest_direct_handler_without_headers_uses_empty_fallback() {
         let response = super::get_manifest(HeaderMap::new()).await.unwrap();
-        assert_eq!(
-            response.0.start_url,
-            format!("{}ui/", ENVIRONMENT_SERVICE.server_url)
-        );
+        // With no headers, resolve_server_url_from_headers returns empty;
+        // start_url is "ui/" (no scheme/host).
+        assert_eq!(response.0.start_url, "ui/");
     }
 
     #[tokio::test]
