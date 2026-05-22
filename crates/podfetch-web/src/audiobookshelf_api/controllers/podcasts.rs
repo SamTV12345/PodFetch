@@ -103,6 +103,7 @@ pub struct CreatePodcastMetadata {
 pub async fn create_podcast(
     State(state): State<AppState>,
     AuthenticatedUser(user): AuthenticatedUser,
+    headers: axum::http::HeaderMap,
     Json(body): Json<CreatePodcastRequest>,
 ) -> Result<Json<Value>, CustomError> {
     let feed_url = body.media.metadata.feed_url.trim().to_string();
@@ -114,6 +115,7 @@ pub async fn create_podcast(
         .into());
     }
 
+    let server_url = crate::url_rewriting::resolve_server_url_from_headers(&headers);
     let channel = fetch_and_parse_feed(&feed_url).await?;
     let title = body
         .media
@@ -127,10 +129,7 @@ pub async fn create_podcast(
         .image_url
         .clone()
         .or_else(|| channel.image().map(|i| i.url.clone()))
-        .unwrap_or_else(|| {
-            ENVIRONMENT_SERVICE.server_url.clone()
-                + common_infrastructure::runtime::DEFAULT_IMAGE_URL
-        });
+        .unwrap_or_else(|| crate::url_rewriting::resolve_image_url("", &server_url));
     let id = body
         .media
         .metadata
