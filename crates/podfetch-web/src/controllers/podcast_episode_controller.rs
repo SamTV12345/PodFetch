@@ -19,7 +19,7 @@ use crate::services::file::service::perform_episode_variable_replacement;
 use crate::services::podcast::service::PodcastService;
 use crate::settings::Setting;
 use crate::subscription::GPodderAvailablePodcast;
-use crate::url_rewriting::create_url_rewriter;
+use crate::url_rewriting::resolve_server_url_from_headers;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use crate::usecases::timeline::TimelineItem;
 use crate::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
@@ -92,7 +92,7 @@ pub async fn get_podcast_episode_by_id(
     Extension(requester): Extension<User>,
     headers: HeaderMap,
 ) -> Result<Json<PodcastEpisodeWithHistory>, CustomError> {
-    let rewriter = create_url_rewriter(&headers);
+    let server_url = resolve_server_url_from_headers(&headers);
     let requester_username = requester.username.clone();
     let episode_with_history = web_get_episode_with_history(
         &id,
@@ -100,11 +100,12 @@ pub async fn get_podcast_episode_by_id(
         |episode_id| {
             PodcastEpisodeService::get_podcast_episode_by_id(episode_id).map(|opt| {
                 opt.map(|podcast_inner| {
-                    let mut mapped_podcast_episode: PodcastEpisodeDto =
-                        (podcast_inner, Some(requester), None).into();
-                    rewriter.rewrite_in_place(&mut mapped_podcast_episode.local_url);
-                    rewriter.rewrite_in_place(&mut mapped_podcast_episode.local_image_url);
-                    mapped_podcast_episode
+                    PodcastEpisodeDto::from_episode_with_user(
+                        podcast_inner,
+                        Some(requester),
+                        None,
+                        &server_url,
+                    )
                 })
             })
         },
@@ -133,7 +134,7 @@ pub async fn find_all_podcast_episodes_of_podcast(
     last_podcast_episode: Query<OptionalId>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastEpisodeWithHistory>>, CustomError> {
-    let rewriter = create_url_rewriter(&headers);
+    let server_url = resolve_server_url_from_headers(&headers);
     let mapped_podcasts = web_get_podcast_episodes_with_history(
         &id,
         &user.username,
@@ -150,10 +151,12 @@ pub async fn find_all_podcast_episodes_of_podcast(
                 episodes
                     .into_iter()
                     .map(|podcast_inner| {
-                        let mut mapped_podcast_episode: PodcastEpisodeDto =
-                            (podcast_inner.0, Some(user.clone()), podcast_inner.2).into();
-                        rewriter.rewrite_in_place(&mut mapped_podcast_episode.local_url);
-                        rewriter.rewrite_in_place(&mut mapped_podcast_episode.local_image_url);
+                        let mapped_podcast_episode = PodcastEpisodeDto::from_episode_with_user(
+                            podcast_inner.0,
+                            Some(user.clone()),
+                            podcast_inner.2,
+                            &server_url,
+                        );
                         (
                             mapped_podcast_episode,
                             podcast_inner
@@ -205,20 +208,15 @@ pub async fn get_timeline(
     Query(favored_only): Query<TimelineQueryParams>,
     headers: HeaderMap,
 ) -> Result<Json<TimeLinePodcastItem>, CustomError> {
-    let res = TimelineItem::get_timeline(requester, favored_only)?;
-    let rewriter = create_url_rewriter(&headers);
+    let server_url = resolve_server_url_from_headers(&headers);
+    let res = TimelineItem::get_timeline(requester, favored_only, &server_url)?;
 
     let mapped_timeline = res
         .data
         .iter()
         .map(|podcast_episode| {
-            let (podcast_episode, podcast_extracted, history, favorite) = podcast_episode.clone();
-
-            let mut mapped_podcast_episode = podcast_episode;
-            rewriter.rewrite_in_place(&mut mapped_podcast_episode.local_url);
-            rewriter.rewrite_in_place(&mut mapped_podcast_episode.local_image_url);
-            let mapped_podcast = podcast_extracted.with_rewritten_urls(&rewriter);
-
+            let (mapped_podcast_episode, mapped_podcast, history, favorite) =
+                podcast_episode.clone();
             TimeLinePodcastEpisode {
                 podcast_episode: mapped_podcast_episode,
                 podcast: mapped_podcast,
