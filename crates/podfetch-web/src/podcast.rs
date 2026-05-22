@@ -216,6 +216,16 @@ fn dedupe_keywords(keywords: Option<String>) -> Option<String> {
 }
 
 fn build_podfetch_feed(podcast_id: i32, api_key: Option<&str>, server_url: &str) -> String {
+    if server_url.is_empty() {
+        // No Host headers present — emit a root-relative URL. The browser
+        // (or the eventual proxy) will resolve it against the page origin.
+        let mut path = format!("/rss/{podcast_id}");
+        if let Some(api_key) = api_key {
+            path.push_str("?apiKey=");
+            path.push_str(api_key);
+        }
+        return path;
+    }
     let base = crate::url_rewriting::normalize_server_url(server_url);
     let mut url = url::Url::parse(&format!("{base}rss"))
         .expect("server_url must be a valid base URL");
@@ -532,5 +542,17 @@ mod tests {
     fn build_podfetch_feed_uses_provided_server_url() {
         let url = build_podfetch_feed(7, None, "https://podfetch.example.com/");
         assert_eq!(url, "https://podfetch.example.com/rss/7");
+    }
+
+    #[test]
+    fn build_podfetch_feed_empty_server_url_returns_root_relative() {
+        let url = build_podfetch_feed(42, None, "");
+        assert_eq!(url, "/rss/42");
+    }
+
+    #[test]
+    fn build_podfetch_feed_empty_server_url_with_api_key_appends_query() {
+        let url = build_podfetch_feed(42, Some("secret"), "");
+        assert_eq!(url, "/rss/42?apiKey=secret");
     }
 }
