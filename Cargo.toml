@@ -93,7 +93,7 @@ axum-extra = { version = "0.12.6", features = ["cookie", "query"] }
 axum-test = "20.0.0"
 base64 = "0.22.1"
 bollard = { version = "*", features = ["rustls", "rustls-native-certs"], default-features = false }
-built = { version = "0.8.0", features = ["chrono", "semver", "cargo-lock"] }
+built = { version = "0.8.1", features = ["chrono", "semver", "cargo-lock"] }
 chrono = { version = "0.4.44", default-features = false, features = ["clock"] }
 clokwerk = "0.4.0"
 derive_builder = "0.20.2"
@@ -120,17 +120,17 @@ r2d2_postgres = { version = "0.18.2" }
 rand = "0.10.1"
 regex = "1.12.3"
 reqwest = { version = "0.13.3", features = ["stream", "json", "blocking", "rustls", "query"] }
-rpassword = "7.5.2"
+rpassword = "7.5.3"
 rss = "2.0.13"
 rust-s3 = { version = "0.37.2", features = ["blocking", "fail-on-err", "futures-util", "tokio", "tokio-rustls-tls"], default-features = false }
 serial_test = "3.4.0"
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.149"
+serde_json = "1.0.150"
 sha1 = "0.11.0"
 sha256 = "1.6.0"
 socketioxide = "0.18.3"
 strfmt = "0.2.5"
-sysinfo = { version = "0.39.1", default-features = false, features = ["disk", "system"] }
+sysinfo = { version = "0.39.2", default-features = false, features = ["disk", "system"] }
 testcontainers = { version = "0.27.3" }
 testcontainers-modules = { version = "0.15.0", features = ["postgres", "blocking"] }
 thiserror = { version = "2.0.18", features = ["std"] }
@@ -139,7 +139,7 @@ rust_cast = { version = "0.21", features = ["thread_safe"] }
 tokio = { version = "1.52.3", features = ["full"] }
 tokio-tungstenite = { version = "0.29.0" }
 tower = { version = "0.5.3", features = ["util"] }
-tower-http = { version = "0.6.10", features = ["fs", "trace"] }
+tower-http = { version = "0.6.11", features = ["fs", "trace"] }
 tracing = "0.1"
 tracing-error = "0.2"
 tracing-log = "0.2"
