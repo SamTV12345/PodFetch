@@ -75,8 +75,8 @@ importers:
         specifier: ~55.0.14
         version: 55.0.14(expo@55.0.24)(react@19.2.6)
       expo-network:
-        specifier: ^55.0.14
-        version: 55.0.14(expo@55.0.24)(react@19.2.6)
+        specifier: ^56.0.4
+        version: 56.0.4(expo@55.0.24)(react@19.2.6)
       expo-router:
         specifier: ~6.0.23
         version: 6.0.23(01767aed7cbe5ba6072189dad858e77d)
@@ -2437,8 +2437,8 @@ packages:
       react-native-worklets:
         optional: true
 
-  expo-network@55.0.14:
-    resolution: {integrity: sha512-Sy544zTPjVh+tbOLUOU8fBX87oRSrNQqUZY6TLO0w0WF/QTNb7yxlwRh6v6wfKKRg9xpZypTIIEtdG/s6q8ZQA==}
+  expo-network@56.0.4:
+    resolution: {integrity: sha512-UFX/x0JXJ9TNFTczJQdNqUumW5QleLCv0/UVjEoO30DHqmVGzatitTnPnUBrkdmEMHF1zmqdjwkNXL5b9jCjMA==}
     peerDependencies:
       expo: '*'
       react: '*'
@@ -7329,7 +7329,7 @@ snapshots:
     optionalDependencies:
       react-native-worklets: 0.8.3(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(react-native@0.85.3(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)
 
-  expo-network@55.0.14(expo@55.0.24)(react@19.2.6):
+  expo-network@56.0.4(expo@55.0.24)(react@19.2.6):
     dependencies:
       expo: 55.0.24(@babel/core@7.29.0)(@expo/dom-webview@55.0.5)(@expo/metro-runtime@6.1.2)(expo-router@6.0.23)(react-dom@19.2.6(react@19.2.6))(react-native-webview@13.16.1(react-native@0.85.3(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(react-native-worklets@0.8.3(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(react-native@0.85.3(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(react-native@0.85.3(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)(typescript@5.9.3)
       react: 19.2.6
