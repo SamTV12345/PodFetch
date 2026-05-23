@@ -72,8 +72,8 @@ importers:
         specifier: ~8.0.12
         version: 8.0.12(expo@55.0.24)(react-native@0.85.3(@babel/core@7.29.0)(@react-native/jest-preset@0.85.3(@babel/core@7.29.0)(react@19.2.6))(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)
       expo-localization:
-        specifier: ~55.0.14
-        version: 55.0.14(expo@55.0.24)(react@19.2.6)
+        specifier: ~56.0.6
+        version: 56.0.6(expo@55.0.24)(react@19.2.6)
       expo-network:
         specifier: ^56.0.4
         version: 56.0.4(expo@55.0.24)(react@19.2.6)
@@ -2498,8 +2498,8 @@ packages:
       react: '*'
       react-native: '*'
 
-  expo-localization@55.0.14:
-    resolution: {integrity: sha512-Q7VeW5gs0qMunYxIDB8+SpY/4T/h3CUE2kl6r6jnbYc6MPpmrK9bx/D9MeCfh0LmXW8oefy3MJYZQdPciEXU7Q==}
+  expo-localization@56.0.6:
+    resolution: {integrity: sha512-zzBVoUFHCVNBywcxGsspoZeIXebihOo/AnmQYE4jMv8gHCSKlLNFT+ft+0+mWcZCMs9necvUs8S8TDonAu/xBA==}
     peerDependencies:
       expo: '*'
       react: '*'
@@ -7579,7 +7579,7 @@ snapshots:
       - expo
       - supports-color
 
-  expo-localization@55.0.14(expo@55.0.24)(react@19.2.6):
+  expo-localization@56.0.6(expo@55.0.24)(react@19.2.6):
     dependencies:
       expo: 55.0.24(@babel/core@7.29.0)(@expo/dom-webview@55.0.5)(@expo/metro-runtime@6.1.2)(expo-router@6.0.23)(react-dom@19.2.6(react@19.2.6))(react-native-webview@13.16.1(react-native@0.85.3(@babel/core@7.29.0)(@react-native/jest-preset@0.85.3(@babel/core@7.29.0)(react@19.2.6))(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(react-native-worklets@0.8.3(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(react-native@0.85.3(@babel/core@7.29.0)(@react-native/jest-preset@0.85.3(@babel/core@7.29.0)(react@19.2.6))(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(react-native@0.85.3(@babel/core@7.29.0)(@react-native/jest-preset@0.85.3(@babel/core@7.29.0)(react@19.2.6))(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)(typescript@5.9.3)
       react: 19.2.6
