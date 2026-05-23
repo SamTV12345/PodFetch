@@ -41,7 +41,7 @@
     "expo-network": "^56.0.4",
     "expo-router": "~6.0.23",
     "expo-splash-screen": "~55.0.21",
-    "expo-sqlite": "~55.0.16",
+    "expo-sqlite": "~56.0.4",
     "expo-status-bar": "~55.0.6",
     "expo-symbols": "~55.0.8",
     "expo-system-ui": "~55.0.18",
