@@ -7,6 +7,7 @@ import en_translation from './json/en.json'
 import fr_translation from './json/fr.json'
 import pl_translation from './json/pl.json'
 import es_translation from './json/es.json'
+import zh_translation from './json/zh.json'
 
 const resources = {
     da:{
@@ -26,6 +27,9 @@ const resources = {
     },
     es:{
         translation: es_translation
+    },
+    zh:{
+        translation: zh_translation
     }
 }
 

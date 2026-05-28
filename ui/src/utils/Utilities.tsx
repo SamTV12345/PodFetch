@@ -5,6 +5,7 @@ import de from 'javascript-time-ago/locale/de'
 import fr from 'javascript-time-ago/locale/fr'
 import pl from 'javascript-time-ago/locale/pl'
 import es from 'javascript-time-ago/locale/es'
+import zh from 'javascript-time-ago/locale/zh'
 import i18n from "i18next";
 import useCommon from "../store/CommonSlice";
 import {Filter} from "../models/Filter";
@@ -29,6 +30,7 @@ TimeAgo.addLocale(de)
 TimeAgo.addLocale(pl)
 TimeAgo.addLocale(es)
 TimeAgo.addLocale(fr)
+TimeAgo.addLocale(zh)
 
 export const SKIPPED_TIME = 30
 export const VOLUME_STEP = 5
@@ -111,5 +113,4 @@ export const TITLE_DESCENDING:OrderCriteriaSortingType = {
     sorting: OrderCriteria.TITLE,
     ascending: false
 }
-
 
