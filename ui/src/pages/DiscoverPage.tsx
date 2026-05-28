@@ -16,7 +16,7 @@ type Feed = components['schemas']['Feed']
 type ChartEntry = components['schemas']['ItunesChartEntry']
 type Category = components['schemas']['CategoryDto']
 
-// Derived from the six UI translations shipped in ui/src/language/json/.
+// Derived from the UI translations shipped in ui/src/language/json/.
 // Language = ISO-639-1 code (Podcastindex `lang` filter).
 // Country = ISO-3166-1 alpha-2 (iTunes RSS `country` segment).
 const LANGUAGE_OPTIONS: Option[] = [
@@ -26,10 +26,12 @@ const LANGUAGE_OPTIONS: Option[] = [
     { value: 'es', label: 'Español' },
     { value: 'fr', label: 'Français' },
     { value: 'pl', label: 'Polski' },
+    { value: 'zh', label: '中文' },
 ]
 const COUNTRY_OPTIONS: Option[] = [
     { value: 'dk', label: 'Danmark' },
     { value: 'de', label: 'Deutschland' },
+    { value: 'cn', label: '中国' },
     { value: 'us', label: 'USA' },
     { value: 'gb', label: 'United Kingdom' },
     { value: 'es', label: 'España' },

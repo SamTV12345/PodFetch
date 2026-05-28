@@ -9,7 +9,8 @@ const languageOptions = [
     { value: 'en', label: 'English' },
     { value: 'fr', label: 'Français' },
     { value: 'pl', label: 'Polski' },
-    { value: 'es', label: 'Español' }
+    { value: 'es', label: 'Español' },
+    { value: 'zh', label: '中文' }
 ]
 
 export const LanguageDropdown = () => {
