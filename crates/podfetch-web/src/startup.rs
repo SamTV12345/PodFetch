@@ -383,6 +383,11 @@ pub fn build_server_router() -> Router {
     insert_default_settings_if_not_present(state.settings_service.as_ref())
         .expect("Could not insert default settings");
 
+    state
+        .user_auth_service
+        .ensure_standard_user_present()
+        .expect("Could not seed standard user");
+
     if ENVIRONMENT_SERVICE.audiobookshelf_integration_enabled
         && let Err(e) = state.audiobookshelf_library_service.bootstrap_defaults()
     {
