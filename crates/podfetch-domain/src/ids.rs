@@ -15,7 +15,8 @@ mod tests {
         let b = new_id();
         assert_eq!(a.get_version_num(), 7, "must be a v7 UUID");
         assert_ne!(a, b, "two ids must differ");
-        // v7 is time-ordered: a was created before b.
-        assert!(a <= b, "v7 ids should be monotonically non-decreasing");
+        // v7 is time-ordered and the uuid crate guarantees strict
+        // monotonicity within a process, so b must sort after a.
+        assert!(a < b, "v7 ids must be strictly increasing within a process");
     }
 }
