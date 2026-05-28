@@ -6,6 +6,7 @@ pub mod favorite;
 pub mod favorite_podcast_episode;
 pub mod filter;
 pub mod gpodder_setting;
+pub mod ids;
 pub mod invite;
 pub mod listening_event;
 pub mod notification;
