@@ -770,6 +770,10 @@ impl UserAdminRepository for UserAdminRepositoryImpl {
         self.inner.create(user).map_err(Into::into)
     }
 
+    fn ensure_with_id(&self, user: ManagedUser) -> Result<ManagedUser, Self::Error> {
+        self.inner.ensure_with_id(user).map_err(Into::into)
+    }
+
     fn find_by_api_key(&self, api_key: &str) -> Result<Option<ManagedUser>, Self::Error> {
         self.inner.find_by_api_key(api_key).map_err(Into::into)
     }

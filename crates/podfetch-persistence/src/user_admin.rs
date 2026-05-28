@@ -108,6 +108,31 @@ impl UserAdminRepository for DieselUserAdminRepository {
             .map_err(Into::into)
     }
 
+    fn ensure_with_id(&self, user: ManagedUser) -> Result<ManagedUser, Self::Error> {
+        use self::users::dsl::*;
+
+        let mut conn = self.database.connection()?;
+        let entity = UserEntity::from(user);
+
+        // Check-then-insert keeps this idempotent without relying on
+        // backend-specific upsert (`on_conflict`), which is not supported
+        // uniformly across the `MultiConnection` backends. The seed runs once at
+        // startup on a single thread, so the gap between the two queries is safe.
+        if let Some(existing) = users
+            .filter(id.eq(entity.id))
+            .first::<UserEntity>(&mut conn)
+            .optional()?
+        {
+            return Ok(existing.into());
+        }
+
+        diesel::insert_into(users)
+            .values(&entity)
+            .get_result::<UserEntity>(&mut conn)
+            .map(Into::into)
+            .map_err(Into::into)
+    }
+
     fn find_by_api_key(&self, api_key_to_find: &str) -> Result<Option<ManagedUser>, Self::Error> {
         use self::users::dsl::*;
 

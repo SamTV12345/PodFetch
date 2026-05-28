@@ -94,6 +94,11 @@ pub trait UserAdminRepository: Send + Sync {
     type Error;
 
     fn create(&self, user: ManagedUser) -> Result<ManagedUser, Self::Error>;
+    /// Insert a user with an explicit primary key, doing nothing if a row with
+    /// that id already exists. Unlike [`create`], which lets the database assign
+    /// the id, this preserves the supplied id so fixed identities (e.g. the
+    /// no-auth standard user) can be seeded deterministically.
+    fn ensure_with_id(&self, user: ManagedUser) -> Result<ManagedUser, Self::Error>;
     fn find_by_api_key(&self, api_key: &str) -> Result<Option<ManagedUser>, Self::Error>;
     fn find_by_username(&self, username: &str) -> Result<Option<ManagedUser>, Self::Error>;
     fn find_all(&self) -> Result<Vec<ManagedUser>, Self::Error>;
