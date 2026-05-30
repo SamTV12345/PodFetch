@@ -101,7 +101,7 @@ diesel = { version = "2.3.9", features = ["chrono", "r2d2"] }
 diesel_migrations = "2.3.2"
 fake = { version = "5.0.0", features = ["chrono", "url"] }
 file-format = "0.29.0"
-frankenstein = { version = "0.49.0", features = ["client-ureq"] }
+frankenstein = { version = "0.50.0", features = ["client-ureq"] }
 fs_extra = "1.3.0"
 futures = "0.3.32"
 http = "1.3.1"
