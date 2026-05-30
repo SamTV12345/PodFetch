@@ -134,7 +134,7 @@ sysinfo = { version = "0.39.2", default-features = false, features = ["disk", "s
 testcontainers = { version = "0.27.3" }
 testcontainers-modules = { version = "0.15.0", features = ["postgres", "blocking"] }
 thiserror = { version = "2.0.18", features = ["std"] }
-mdns-sd = { version = "0.19" }
+mdns-sd = { version = "0.20" }
 rust_cast = { version = "0.21", features = ["thread_safe"] }
 tokio = { version = "1.52.3", features = ["full"] }
 tokio-tungstenite = { version = "0.29.0" }
