@@ -90,7 +90,7 @@ podfetch-web = { path = "crates/podfetch-web", default-features = false }
 async-recursion = "1.1.1"
 axum = { version = "0.8.9", features = ["macros", "http2", "ws", "multipart"] }
 axum-extra = { version = "0.12.6", features = ["cookie", "query"] }
-axum-test = "20.0.0"
+axum-test = "20.1.0"
 base64 = "0.22.1"
 bollard = { version = "*", features = ["rustls", "rustls-native-certs"], default-features = false }
 built = { version = "0.8.1", features = ["chrono", "semver", "cargo-lock"] }
@@ -106,7 +106,7 @@ fs_extra = "1.3.0"
 futures = "0.3.32"
 http = "1.3.1"
 hyper-tls = { version = "0.6.0" }
-id3 = "1.16.4"
+id3 = "1.17.0"
 indexmap = "2"
 jsonwebtoken = { version = "10.4.0", features = ["rust_crypto"] }
 libsqlite3-sys = { version = "0.37.0", features = ["bundled"] }
@@ -119,7 +119,7 @@ r2d2 = "0.8.10"
 r2d2_postgres = { version = "0.18.2" }
 rand = "0.10.1"
 regex = "1.12.3"
-reqwest = { version = "0.13.3", features = ["stream", "json", "blocking", "rustls", "query"] }
+reqwest = { version = "0.13.4", features = ["stream", "json", "blocking", "rustls", "query"] }
 rpassword = "7.5.3"
 rss = "2.0.13"
 rust-s3 = { version = "0.37.2", features = ["blocking", "fail-on-err", "futures-util", "tokio", "tokio-rustls-tls"], default-features = false }
@@ -130,7 +130,7 @@ sha1 = "0.11.0"
 sha256 = "1.6.0"
 socketioxide = "0.18.3"
 strfmt = "0.2.5"
-sysinfo = { version = "0.39.2", default-features = false, features = ["disk", "system"] }
+sysinfo = { version = "0.39.3", default-features = false, features = ["disk", "system"] }
 testcontainers = { version = "0.27.3" }
 testcontainers-modules = { version = "0.15.0", features = ["postgres", "blocking"] }
 thiserror = { version = "2.0.18", features = ["std"] }
@@ -152,7 +152,7 @@ utoipa-rapidoc = { version = "6.0.0", features = ["axum"] }
 utoipa-redoc = { version = "6.0.0", features = ["axum"] }
 utoipa-scalar = { version = "0.3.0", features = ["axum"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
-uuid = { version = "1.23.1", features = ["v4", "serde"] }
+uuid = { version = "1.23.2", features = ["v4", "serde"] }
 xml-builder = "0.6.0"
 quick-xml = "0.40"
 notify = "8.2"
