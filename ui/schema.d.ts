@@ -197,6 +197,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/episodes/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_archive"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/episodes/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_inbox"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/episodes/inbox/clear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["clear_inbox"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/episodes/waiting-list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_waiting_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/episodes/{id}/triage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["set_episode_triage"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/info": {
         parameters: {
             query?: never;
@@ -3150,6 +3230,125 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PodcastEpisodeWithHistory"][];
+                };
+            };
+        };
+    };
+    get_inbox: {
+        parameters: {
+            query?: {
+                /** @description Exclusive `date_of_recording` cursor for keyset pagination. */
+                lastEpisodeDate?: string | null;
+                /** @description Page size. Defaults to 30, capped at 100. */
+                limit?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description New, not-yet-triaged episodes (the inbox). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PodcastEpisodeWithHistory"][];
+                };
+            };
+        };
+    };
+    get_waiting_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Episodes the user picked to listen to. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PodcastEpisodeWithHistory"][];
+                };
+            };
+        };
+    };
+    get_archive: {
+        parameters: {
+            query?: {
+                /** @description Exclusive `date_of_recording` cursor for keyset pagination. */
+                lastEpisodeDate?: string | null;
+                /** @description Page size. Defaults to 30, capped at 100. */
+                limit?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every downloaded episode (the archive). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PodcastEpisodeWithHistory"][];
+                };
+            };
+        };
+    };
+    set_episode_triage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description One of `queued`, `archived` or `dismissed`. */
+                    status: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Records the triage decision for an episode. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    clear_inbox: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dismisses every episode currently in the inbox. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        dismissed: number;
+                    };
                 };
             };
         };

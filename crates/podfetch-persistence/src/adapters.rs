@@ -276,6 +276,61 @@ impl FavoritePodcastEpisodeRepository for FavoritePodcastEpisodeRepositoryImpl {
     }
 }
 
+// ── EpisodeTriage ───────────────────────────────────────────────────────────
+
+use crate::episode_triage::DieselEpisodeTriageRepository;
+use podfetch_domain::episode_triage::{EpisodeTriage, EpisodeTriageRepository, TriageStatus};
+
+pub struct EpisodeTriageRepositoryImpl {
+    inner: DieselEpisodeTriageRepository,
+}
+
+impl EpisodeTriageRepositoryImpl {
+    pub fn new(database: Database) -> Self {
+        Self {
+            inner: DieselEpisodeTriageRepository::new(database),
+        }
+    }
+}
+
+impl EpisodeTriageRepository for EpisodeTriageRepositoryImpl {
+    type Error = CustomError;
+
+    fn get(&self, user_id: Uuid, episode_id: Uuid) -> Result<Option<EpisodeTriage>, Self::Error> {
+        self.inner.get(user_id, episode_id).map_err(Into::into)
+    }
+
+    fn upsert(&self, triage: EpisodeTriage) -> Result<(), Self::Error> {
+        self.inner.upsert(triage).map_err(Into::into)
+    }
+
+    fn delete(&self, user_id: Uuid, episode_id: Uuid) -> Result<usize, Self::Error> {
+        self.inner.delete(user_id, episode_id).map_err(Into::into)
+    }
+
+    fn delete_by_episode_id(&self, episode_id: Uuid) -> Result<usize, Self::Error> {
+        self.inner
+            .delete_by_episode_id(episode_id)
+            .map_err(Into::into)
+    }
+
+    fn list_episode_ids_by_status(
+        &self,
+        user_id: Uuid,
+        status: TriageStatus,
+    ) -> Result<Vec<Uuid>, Self::Error> {
+        self.inner
+            .list_episode_ids_by_status(user_id, status)
+            .map_err(Into::into)
+    }
+
+    fn list_triaged_episode_ids(&self, user_id: Uuid) -> Result<Vec<Uuid>, Self::Error> {
+        self.inner
+            .list_triaged_episode_ids(user_id)
+            .map_err(Into::into)
+    }
+}
+
 // ── ListeningEvent ──────────────────────────────────────────────────────────
 
 use crate::listening_event::DieselListeningEventRepository;

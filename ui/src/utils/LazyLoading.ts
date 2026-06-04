@@ -43,3 +43,15 @@ export const StatisticsViewLazyLoad = lazy(()=>import('../pages/StatisticsPage')
 export const DiscoverViewLazyLoad = lazy(()=>import('../pages/DiscoverPage').then(module=> {
     return{default:module["DiscoverPage"]}
 }))
+
+export const InboxViewLazyLoad = lazy(()=>import('../pages/InboxPage').then(module=> {
+    return{default:module["InboxPage"]}
+}))
+
+export const WaitingListViewLazyLoad = lazy(()=>import('../pages/WaitingListPage').then(module=> {
+    return{default:module["WaitingListPage"]}
+}))
+
+export const EpisodesArchiveViewLazyLoad = lazy(()=>import('../pages/EpisodesArchivePage').then(module=> {
+    return{default:module["EpisodesArchivePage"]}
+}))

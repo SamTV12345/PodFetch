@@ -9,6 +9,7 @@ use crate::controllers::discover_controller::get_discover_router;
 use crate::controllers::file_hosting::podcast_serving;
 use crate::controllers::manifest_controller::get_manifest_router;
 use crate::controllers::notification_controller::get_notification_router;
+use crate::controllers::episode_triage_controller::get_episode_triage_router;
 use crate::controllers::playlist_controller::get_playlist_router;
 use crate::controllers::podcast_controller::{get_podcast_router, proxy_podcast};
 use crate::controllers::podcast_episode_controller::get_podcast_episode_router;
@@ -350,6 +351,7 @@ fn get_private_api(state: AppState) -> OpenApiRouter {
         .merge(get_stats_router().with_state(state.clone()))
         .merge(get_notification_router().with_state(state.clone()))
         .merge(get_podcast_episode_router().with_state(state.clone()))
+        .merge(get_episode_triage_router().with_state(state.clone()))
         .merge(get_settings_router().with_state(state.clone()))
         .merge(get_tags_router().with_state(state.clone()))
         .merge(get_user_router().with_state(state.clone()));

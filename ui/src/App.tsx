@@ -3,7 +3,9 @@ import {createBrowserRouter, createRoutesFromElements, Navigate, Route} from 're
 import {
     DiscoverViewLazyLoad,
     EpisodeSearchViewLazyLoad,
+    EpisodesArchiveViewLazyLoad,
     HomepageViewLazyLoad,
+    InboxViewLazyLoad,
     PlaylistViewLazyLoad,
     PodcastDetailViewLazyLoad,
     PodcastInfoViewLazyLoad,
@@ -11,7 +13,8 @@ import {
     SettingsViewLazyLoad,
     StatisticsViewLazyLoad,
     TimeLineViewLazyLoad,
-    UserAdminViewLazyLoad
+    UserAdminViewLazyLoad,
+    WaitingListViewLazyLoad
 } from "./utils/LazyLoading"
 import {Root} from "./routing/Root"
 import {AcceptInvite} from "./pages/AcceptInvite"
@@ -55,6 +58,9 @@ export const router = createBrowserRouter(createRoutesFromElements(
                 <Route index element={<Suspense><DiscoverViewLazyLoad /></Suspense>} />
                 <Route path=":tab" element={<Suspense><DiscoverViewLazyLoad /></Suspense>} />
             </Route>
+            <Route path="inbox" element={<Suspense><InboxViewLazyLoad /></Suspense>} />
+            <Route path="waiting-list" element={<Suspense><WaitingListViewLazyLoad /></Suspense>} />
+            <Route path="episodes" element={<Suspense><EpisodesArchiveViewLazyLoad /></Suspense>} />
             <Route path="timeline" element={<Suspense><TimeLineViewLazyLoad /></Suspense>} />
             <Route path="stats" element={<Suspense><StatisticsViewLazyLoad /></Suspense>} />
             <Route path={"favorites"}>

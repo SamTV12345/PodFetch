@@ -1,7 +1,7 @@
 import useCommon from '../store/CommonSlice'
 import { useTranslation } from 'react-i18next'
 import { SidebarItem } from './SidebarItem'
-import { BarChart2, Compass, Heart, Home, Menu as MenuIcon, Mic, Podcast, Search, Sparkles, Tag, X } from 'lucide-react'
+import { Archive, BarChart2, Compass, Heart, Home, Inbox, ListChecks, Menu as MenuIcon, Mic, Podcast, Search, Sparkles, Tag, X } from 'lucide-react'
 
 const ICON_SIZE = 18
 
@@ -30,6 +30,9 @@ export const Sidebar = () => {
                 <SidebarItem icon={<Compass size={ICON_SIZE} />} path="discover" translationKey="discover"/>
                 <SidebarItem icon={<Heart size={ICON_SIZE} />} path="favorites" translationKey="favorites"/>
                 <SidebarItem icon={<Sparkles size={ICON_SIZE} />} path="timeline" translationKey="timeline"/>
+                <SidebarItem icon={<Inbox size={ICON_SIZE} />} path="inbox" translationKey="inbox" spaceBefore={true}/>
+                <SidebarItem icon={<ListChecks size={ICON_SIZE} />} path="waiting-list" translationKey="waiting-list"/>
+                <SidebarItem icon={<Archive size={ICON_SIZE} />} path="episodes" translationKey="episodes-archive"/>
                 <SidebarItem icon={<BarChart2 size={ICON_SIZE} />} path="stats" translationKey="stats-title"/>
                 <SidebarItem icon={<Tag size={ICON_SIZE} />} path="tags" translationKey="tag_other"/>
 

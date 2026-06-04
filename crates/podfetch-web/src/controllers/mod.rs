@@ -2,6 +2,7 @@ pub mod agent_ws_controller;
 pub mod cast_controller;
 pub mod controller_utils;
 pub mod discover_controller;
+pub mod episode_triage_controller;
 pub mod file_hosting;
 pub mod id_resolver;
 pub mod manifest_controller;
