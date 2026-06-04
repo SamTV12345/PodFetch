@@ -17,6 +17,7 @@ diesel::table! {
         agent_id -> Nullable<Text>,
         last_seen_at -> Nullable<Timestamp>,
         ip -> Nullable<Text>,
+        base_url -> Nullable<Text>,
     }
 }
 
@@ -32,6 +33,7 @@ struct DeviceEntity {
     agent_id: Option<String>,
     last_seen_at: Option<NaiveDateTime>,
     ip: Option<String>,
+    base_url: Option<String>,
 }
 
 impl From<Device> for DeviceEntity {
@@ -53,6 +55,7 @@ impl From<Device> for DeviceEntity {
             agent_id: value.agent_id,
             last_seen_at: value.last_seen_at,
             ip: value.ip,
+            base_url: value.base_url,
         }
     }
 }
@@ -72,6 +75,7 @@ impl From<DeviceEntity> for Device {
             agent_id: value.agent_id,
             last_seen_at: value.last_seen_at,
             ip: value.ip,
+            base_url: value.base_url,
         }
     }
 }
@@ -197,6 +201,7 @@ impl DeviceRepository for DieselDeviceRepository {
                     agent_id: Some(agent_id_value.to_string()),
                     last_seen_at: Some(last_seen_at_value),
                     ip: ip_value.map(ToString::to_string),
+                    base_url: None,
                 };
                 diesel::insert_into(devices)
                     .values(&entity)
@@ -209,18 +214,101 @@ impl DeviceRepository for DieselDeviceRepository {
 
     fn list_castable_for_user(&self, viewer_user_id: Uuid) -> Result<Vec<Device>, Self::Error> {
         use self::devices::dsl::*;
-
         let mut conn = self.database.connection()?;
-
-        // Owned personal Chromecasts OR any shared Chromecast on the instance.
+        let viewer = viewer_user_id.to_string();
         devices
             .filter(
-                kind.eq(device_kind::CHROMECAST_SHARED).or(kind
-                    .eq(device_kind::CHROMECAST_PERSONAL)
-                    .and(user_id.eq(viewer_user_id.to_string()))),
+                kind.eq(device_kind::CHROMECAST_SHARED)
+                    .or(kind.eq(device_kind::MOPIDY_SHARED))
+                    .or(kind.eq(device_kind::CHROMECAST_PERSONAL).and(user_id.eq(&viewer)))
+                    .or(kind.eq(device_kind::MOPIDY_PERSONAL).and(user_id.eq(&viewer))),
             )
             .load::<DeviceEntity>(&mut conn)
             .map(|items| items.into_iter().map(Into::into).collect())
             .map_err(Into::into)
+    }
+
+    fn find_by_id(&self, id_to_find: Uuid) -> Result<Option<Device>, Self::Error> {
+        use self::devices::dsl::*;
+        let mut conn = self.database.connection()?;
+        match devices.filter(id.eq(id_to_find.to_string())).first::<DeviceEntity>(&mut conn) {
+            Ok(entity) => Ok(Some(entity.into())),
+            Err(diesel::result::Error::NotFound) => Ok(None),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    fn delete_by_id(&self, id_to_delete: Uuid) -> Result<usize, Self::Error> {
+        use self::devices::dsl::*;
+        let mut conn = self.database.connection()?;
+        diesel::delete(devices.filter(id.eq(id_to_delete.to_string()))).execute(&mut conn).map_err(Into::into)
+    }
+}
+
+#[cfg(test)]
+mod mopidy_persistence_tests {
+    use super::*;
+    use crate::db::{database, run_migrations};
+    use podfetch_domain::device::kind as device_kind;
+
+    mod seed_schema {
+        diesel::table! {
+            users (id) { id -> Text, username -> Text, role -> Text, }
+        }
+    }
+
+    #[derive(diesel::Insertable)]
+    #[diesel(table_name = seed_schema::users)]
+    struct SeedUser { id: String, username: String, role: String }
+
+    fn seed_user() -> Uuid {
+        use seed_schema::users;
+        let owner = podfetch_domain::ids::new_id();
+        let mut conn = database().connection().expect("db connection");
+        diesel::insert_into(users::table)
+            .values(SeedUser {
+                id: owner.to_string(),
+                username: format!("mopidy-test-{owner}"),
+                role: "user".to_string(),
+            })
+            .execute(&mut conn)
+            .expect("seed user");
+        owner
+    }
+
+    fn mopidy_device(owner: Uuid, kind_str: &str, url: &str) -> Device {
+        Device {
+            id: None,
+            deviceid: url.to_string(),
+            kind: kind_str.to_string(),
+            name: "Living Room".to_string(),
+            user_id: owner,
+            chromecast_uuid: Some(podfetch_domain::ids::new_id().to_string()),
+            agent_id: None,
+            last_seen_at: None,
+            ip: None,
+            base_url: Some(url.to_string()),
+        }
+    }
+
+    #[test]
+    fn create_persists_base_url_and_list_castable_includes_shared_mopidy() {
+        run_migrations();
+        let repo = DieselDeviceRepository::new(database());
+        let owner = seed_user();
+        let viewer = seed_user();
+
+        let created = repo
+            .create(mopidy_device(owner, device_kind::MOPIDY_SHARED, "http://m.local:6680"))
+            .expect("create mopidy device");
+        assert_eq!(created.base_url.as_deref(), Some("http://m.local:6680"));
+
+        let castable = repo.list_castable_for_user(viewer).expect("list castable");
+        assert!(castable.iter().any(|d| d.id == created.id));
+
+        let found = repo.find_by_id(created.id.unwrap()).expect("find").expect("present");
+        assert_eq!(found.base_url, created.base_url);
+        assert_eq!(repo.delete_by_id(created.id.unwrap()).expect("delete"), 1);
+        assert!(repo.find_by_id(created.id.unwrap()).expect("find again").is_none());
     }
 }
