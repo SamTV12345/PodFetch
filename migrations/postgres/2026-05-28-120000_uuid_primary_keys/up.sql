@@ -6,7 +6,9 @@
 -- recreation is needed. All foreign-key constraints that involve a converting
 -- column are dropped up front and re-added at the end, so the column swaps run
 -- without enforcement and the re-added constraints validate the final state.
--- gen_random_uuid() is built in on PostgreSQL 13+.
+-- gen_random_uuid() is built in on PostgreSQL 13+; on older servers (e.g. 11/12)
+-- it is provided by the pgcrypto extension, so enable it for portability.
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- ============================================================
 -- A1. Add uuid to every integer-PK parent + legacy_id where required.
