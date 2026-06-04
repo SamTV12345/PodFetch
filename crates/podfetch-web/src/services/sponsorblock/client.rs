@@ -3,7 +3,7 @@
 //! ID never leaves this server.
 
 use common_infrastructure::error::{map_reqwest_error, CustomError};
-use common_infrastructure::http::{get_async_sync_client, COMMON_USER_AGENT};
+use common_infrastructure::http::{get_http_client, COMMON_USER_AGENT};
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use reqwest::header::USER_AGENT;
 use serde::Deserialize;
@@ -77,6 +77,9 @@ pub fn parse_hash_response(body: &str, video_id: &str) -> Result<Vec<FetchedSegm
             if !SUPPORTED_CATEGORIES.contains(&seg.category.as_str()) {
                 continue;
             }
+            if seg.action_type != "skip" {
+                continue;
+            }
             let start_ms = (seg.segment[0] * 1000.0).round() as i64;
             let end_ms = (seg.segment[1] * 1000.0).round() as i64;
             if end_ms <= start_ms {
@@ -110,9 +113,7 @@ pub async fn fetch_segments(video_id: &str) -> Result<Vec<FetchedSegment>, Custo
     let categories = serde_json::to_string(&SUPPORTED_CATEGORIES).unwrap();
     let url = format!("{}/api/skipSegments/{}", base_url(), prefix);
 
-    let client = get_async_sync_client(&ENVIRONMENT_SERVICE)
-        .build()
-        .map_err(map_reqwest_error)?;
+    let client = get_http_client(&ENVIRONMENT_SERVICE);
 
     let resp = client
         .get(&url)
@@ -176,5 +177,19 @@ mod tests {
     #[test]
     fn invalid_json_is_an_error() {
         assert!(parse_hash_response("not json", "x").is_err());
+    }
+
+    #[test]
+    fn non_skip_action_type_is_dropped() {
+        let body = r#"[
+          {"videoID":"vid00000001","hash":"h","segments":[
+            {"UUID":"poi","category":"sponsor","actionType":"poi","segment":[5.0,5.0],"votes":1,"locked":0,"videoDuration":100.0},
+            {"UUID":"mute","category":"sponsor","actionType":"mute","segment":[10.0,20.0],"votes":1,"locked":0,"videoDuration":100.0},
+            {"UUID":"keep","category":"sponsor","actionType":"skip","segment":[30.0,40.0],"votes":1,"locked":0,"videoDuration":100.0}
+          ]}
+        ]"#;
+        let segs = parse_hash_response(body, "vid00000001").unwrap();
+        assert_eq!(segs.len(), 1);
+        assert_eq!(segs[0].uuid, "keep");
     }
 }
