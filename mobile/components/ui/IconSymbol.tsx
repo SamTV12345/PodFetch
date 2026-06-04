@@ -31,7 +31,7 @@ const MAPPING = {
   'power': 'power-settings-new',
 } as Partial<
   Record<
-    import('expo-symbols').SymbolViewProps['name'],
+    Extract<import('expo-symbols').SymbolViewProps['name'], string>,
     React.ComponentProps<typeof MaterialIcons>['name']
   >
 >;

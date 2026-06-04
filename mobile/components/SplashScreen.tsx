@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     starsContainer: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
     },
     star: {
         position: 'absolute',

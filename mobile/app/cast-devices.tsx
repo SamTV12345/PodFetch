@@ -18,6 +18,9 @@ import { useRouter } from 'expo-router';
 
 type CastKind = 'chromecast_personal' | 'chromecast_shared';
 
+const toCastKind = (kind: string): CastKind =>
+    kind === 'chromecast_shared' ? 'chromecast_shared' : 'chromecast_personal';
+
 const isOnline = (agentId?: string | null, lastSeenAt?: string | null): boolean => {
     if (!agentId) return false;
     if (!lastSeenAt) return false;
@@ -216,7 +219,7 @@ const CastDevicesScreen = () => {
                                             {device.name}
                                         </ThemedText>
                                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                                            <KindBadge kind={device.kind} />
+                                            <KindBadge kind={toCastKind(device.kind)} />
                                             <View style={{
                                                 flexDirection: 'row',
                                                 alignItems: 'center',

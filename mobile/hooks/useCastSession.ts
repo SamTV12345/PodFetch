@@ -20,10 +20,10 @@ export const useCastSessionPolling = () => {
 
     const { data, error } = $api.useQuery(
         'get',
-        '/api/v1/cast/sessions/{id}',
+        '/api/v1/cast/sessions/{session_id}',
         sessionId
-            ? { params: { path: { id: sessionId } } }
-            : { params: { path: { id: '' } } },
+            ? { params: { path: { session_id: sessionId } } }
+            : { params: { path: { session_id: '' } } },
         {
             enabled: !!sessionId,
             refetchInterval: 2000,
@@ -52,13 +52,13 @@ export const useCastControls = () => {
     const { t } = useTranslation();
     const castSession = useStore((s) => s.castSession);
     const clearCastSession = useStore((s) => s.clearCastSession);
-    const controlMutation = $api.useMutation('post', '/api/v1/cast/sessions/{id}/control');
+    const controlMutation = $api.useMutation('post', '/api/v1/cast/sessions/{session_id}/control');
 
     const sendCommand = async (cmd: ControlBody): Promise<boolean> => {
         if (!castSession) return false;
         try {
             await controlMutation.mutateAsync({
-                params: { path: { id: castSession.session_id } },
+                params: { path: { session_id: castSession.session_id } },
                 body: cmd,
             });
             return true;

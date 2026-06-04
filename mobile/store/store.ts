@@ -227,8 +227,6 @@ export const useStore = create<ZustandStore>()(
                 castDeviceName: deviceName ?? null,
                 castStatus: session ? {
                     session_id: session.session_id,
-                    chromecast_uuid: session.chromecast_uuid,
-                    episode_id: session.episode_id,
                     state: session.state,
                     position_secs: session.position_secs,
                     volume: session.volume,
