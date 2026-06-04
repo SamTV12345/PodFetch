@@ -1,4 +1,5 @@
 use chrono::NaiveDateTime;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PlayMethod {
@@ -25,7 +26,7 @@ impl PlayMethod {
 #[derive(Debug, Clone)]
 pub struct PlaybackSession {
     pub id: String,
-    pub user_id: i32,
+    pub user_id: Uuid,
     pub library_id: Option<String>,
     pub library_item_id: String,
     pub episode_id: Option<String>,

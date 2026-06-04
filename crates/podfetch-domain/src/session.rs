@@ -4,13 +4,13 @@ use uuid::Uuid;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Session {
     pub username: String,
-    pub user_id: i32,
+    pub user_id: Uuid,
     pub session_id: String,
     pub expires: NaiveDateTime,
 }
 
 impl Session {
-    pub fn new(username: String, user_id: i32) -> Self {
+    pub fn new(username: String, user_id: Uuid) -> Self {
         Self {
             username,
             user_id,
@@ -27,6 +27,6 @@ pub trait SessionRepository: Send + Sync {
 
     fn create(&self, session: Session) -> Result<Session, Self::Error>;
     fn find_by_session_id(&self, session_id: &str) -> Result<Option<Session>, Self::Error>;
-    fn delete_by_user_id(&self, user_id: i32) -> Result<usize, Self::Error>;
+    fn delete_by_user_id(&self, user_id: Uuid) -> Result<usize, Self::Error>;
     fn cleanup_expired(&self, now: NaiveDateTime) -> Result<usize, Self::Error>;
 }

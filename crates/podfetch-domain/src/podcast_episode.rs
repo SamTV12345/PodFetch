@@ -1,4 +1,5 @@
 use chrono::NaiveDateTime;
+use uuid::Uuid;
 
 use crate::episode::Episode;
 use crate::favorite_podcast_episode::FavoritePodcastEpisode;
@@ -6,8 +7,9 @@ use crate::favorite_podcast_episode::FavoritePodcastEpisode;
 /// A podcast episode - technology-agnostic domain entity.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct PodcastEpisode {
-    pub id: i32,
-    pub podcast_id: i32,
+    pub id: Uuid,
+    pub legacy_id: Option<i64>,
+    pub podcast_id: Uuid,
     pub episode_id: String,
     pub name: String,
     pub url: String,
@@ -33,7 +35,7 @@ impl PodcastEpisode {
 /// Data for creating a new podcast episode.
 #[derive(Debug, Clone)]
 pub struct NewPodcastEpisode {
-    pub podcast_id: i32,
+    pub podcast_id: Uuid,
     pub episode_id: String,
     pub name: String,
     pub url: String,
@@ -57,31 +59,35 @@ pub trait PodcastEpisodeRepository: Send + Sync {
 
     // Basic CRUD operations
     fn create(&self, episode: NewPodcastEpisode) -> Result<PodcastEpisode, Self::Error>;
-    fn find_by_id(&self, id: i32) -> Result<Option<PodcastEpisode>, Self::Error>;
+    fn find_by_id(&self, id: Uuid) -> Result<Option<PodcastEpisode>, Self::Error>;
+    /// Resolve an episode by its pre-migration integer id (backwards-compat for
+    /// durable deep links). Returns `None` for rows created after the UUID
+    /// migration (which have no `legacy_id`).
+    fn find_by_legacy_id(&self, legacy_id: i64) -> Result<Option<PodcastEpisode>, Self::Error>;
     fn find_by_episode_id(&self, episode_id: &str) -> Result<Option<PodcastEpisode>, Self::Error>;
     fn find_by_url(
         &self,
         url: &str,
-        podcast_id: Option<i32>,
+        podcast_id: Option<Uuid>,
     ) -> Result<Option<PodcastEpisode>, Self::Error>;
     fn find_by_guid(&self, guid: &str) -> Result<Option<PodcastEpisode>, Self::Error>;
-    fn find_by_podcast_id(&self, podcast_id: i32) -> Result<Vec<PodcastEpisode>, Self::Error>;
+    fn find_by_podcast_id(&self, podcast_id: Uuid) -> Result<Vec<PodcastEpisode>, Self::Error>;
     fn find_by_file_path(&self, path: &str) -> Result<Option<PodcastEpisode>, Self::Error>;
     fn update(&self, episode: &PodcastEpisode) -> Result<(), Self::Error>;
-    fn delete(&self, id: i32) -> Result<(), Self::Error>;
-    fn delete_by_podcast_id(&self, podcast_id: i32) -> Result<(), Self::Error>;
+    fn delete(&self, id: Uuid) -> Result<(), Self::Error>;
+    fn delete_by_podcast_id(&self, podcast_id: Uuid) -> Result<(), Self::Error>;
 
     // Query by URL with LIKE pattern matching
     fn query_by_url_like(&self, url_pattern: &str) -> Result<Option<PodcastEpisode>, Self::Error>;
 
     // Pagination methods
-    fn get_nth_page(&self, last_id: i32, limit: i64) -> Result<Vec<PodcastEpisode>, Self::Error>;
+    fn get_nth_page(&self, last_id: Uuid, limit: i64) -> Result<Vec<PodcastEpisode>, Self::Error>;
 
     /// Get episodes of a podcast with watch history and favorites for a user.
     /// Returns episodes with optional history and favorites, paginated by date_of_recording.
     fn get_episodes_with_history(
         &self,
-        podcast_id: i32,
+        podcast_id: Uuid,
         username: &str,
         last_date: Option<&str>,
         only_unlistened: bool,
@@ -92,13 +98,13 @@ pub trait PodcastEpisodeRepository: Send + Sync {
     fn get_position_of_episode(
         &self,
         timestamp: &str,
-        podcast_id: i32,
+        podcast_id: Uuid,
     ) -> Result<usize, Self::Error>;
 
     // Get last N episodes by date
     fn get_last_n_episodes(
         &self,
-        podcast_id: i32,
+        podcast_id: Uuid,
         n: i64,
     ) -> Result<Vec<PodcastEpisode>, Self::Error>;
 
@@ -112,7 +118,7 @@ pub trait PodcastEpisodeRepository: Send + Sync {
     fn get_episodes_older_than_days(
         &self,
         days: i64,
-        podcast_id: i32,
+        podcast_id: Uuid,
     ) -> Result<Vec<PodcastEpisode>, Self::Error>;
 
     // Get top K episodes per podcast (latest K per podcast)
@@ -133,7 +139,7 @@ pub trait PodcastEpisodeRepository: Send + Sync {
         download_time: NaiveDateTime,
     ) -> Result<PodcastEpisode, Self::Error>;
 
-    fn remove_download_status(&self, id: i32) -> Result<(), Self::Error>;
+    fn remove_download_status(&self, id: Uuid) -> Result<(), Self::Error>;
 
     fn update_guid(&self, episode_id: &str, guid: &str) -> Result<(), Self::Error>;
 

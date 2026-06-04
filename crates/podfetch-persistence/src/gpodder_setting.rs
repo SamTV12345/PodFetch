@@ -1,13 +1,14 @@
 use crate::db::{Database, PersistenceError};
 use diesel::prelude::{Insertable, Queryable, QueryableByName};
-use diesel::sql_types::{Integer, Nullable, Text};
+use diesel::sql_types::{Nullable, Text};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use podfetch_domain::gpodder_setting::{GpodderSetting, GpodderSettingRepository};
+use uuid::Uuid;
 
 diesel::table! {
     gpodder_settings (id) {
-        id -> Integer,
-        user_id -> Integer,
+        id -> Text,
+        user_id -> Text,
         scope -> Text,
         scope_id -> Nullable<Text>,
         data -> Text,
@@ -17,10 +18,10 @@ diesel::table! {
 #[derive(Debug, Clone, Queryable, QueryableByName, Insertable)]
 #[diesel(table_name = gpodder_settings)]
 struct GpodderSettingEntity {
-    #[diesel(sql_type = Integer)]
-    id: i32,
-    #[diesel(sql_type = Integer)]
-    user_id: i32,
+    #[diesel(sql_type = Text)]
+    id: String,
+    #[diesel(sql_type = Text)]
+    user_id: String,
     #[diesel(sql_type = Text)]
     scope: String,
     #[diesel(sql_type = Nullable<Text>)]
@@ -32,7 +33,8 @@ struct GpodderSettingEntity {
 #[derive(Debug, Clone, Insertable)]
 #[diesel(table_name = gpodder_settings)]
 struct NewGpodderSettingEntity {
-    user_id: i32,
+    id: String,
+    user_id: String,
     scope: String,
     scope_id: Option<String>,
     data: String,
@@ -41,8 +43,8 @@ struct NewGpodderSettingEntity {
 impl From<GpodderSettingEntity> for GpodderSetting {
     fn from(value: GpodderSettingEntity) -> Self {
         Self {
-            id: value.id,
-            user_id: value.user_id,
+            id: Uuid::parse_str(&value.id).expect("valid uuid in db"),
+            user_id: Uuid::parse_str(&value.user_id).expect("valid uuid in db"),
             scope: value.scope,
             scope_id: value.scope_id,
             data: value.data,
@@ -65,14 +67,14 @@ impl GpodderSettingRepository for DieselGpodderSettingRepository {
 
     fn get_setting(
         &self,
-        user_id_to_find: i32,
+        user_id_to_find: Uuid,
         scope: &str,
         scope_id: Option<&str>,
     ) -> Result<Option<GpodderSetting>, Self::Error> {
         use self::gpodder_settings::dsl as gs_dsl;
 
         let mut query = gs_dsl::gpodder_settings
-            .filter(gs_dsl::user_id.eq(user_id_to_find))
+            .filter(gs_dsl::user_id.eq(user_id_to_find.to_string()))
             .filter(gs_dsl::scope.eq(scope))
             .into_boxed();
 
@@ -98,7 +100,7 @@ impl GpodderSettingRepository for DieselGpodderSettingRepository {
         let mut connection = self.database.connection()?;
 
         let mut query = gs_dsl::gpodder_settings
-            .filter(gs_dsl::user_id.eq(setting.user_id))
+            .filter(gs_dsl::user_id.eq(setting.user_id.to_string()))
             .filter(gs_dsl::scope.eq(&setting.scope))
             .into_boxed();
 
@@ -118,13 +120,13 @@ impl GpodderSettingRepository for DieselGpodderSettingRepository {
 
         match existing {
             Some(existing) => {
-                diesel::update(gs_dsl::gpodder_settings.filter(gs_dsl::id.eq(existing.id)))
+                diesel::update(gs_dsl::gpodder_settings.filter(gs_dsl::id.eq(existing.id.clone())))
                     .set(gs_dsl::data.eq(&setting.data))
                     .execute(&mut connection)
                     .map_err(PersistenceError::from)?;
 
                 Ok(GpodderSetting {
-                    id: existing.id,
+                    id: Uuid::parse_str(&existing.id).expect("valid uuid in db"),
                     user_id: setting.user_id,
                     scope: setting.scope,
                     scope_id: setting.scope_id,
@@ -134,7 +136,8 @@ impl GpodderSettingRepository for DieselGpodderSettingRepository {
             None => {
                 diesel::insert_into(gs_dsl::gpodder_settings)
                     .values(NewGpodderSettingEntity {
-                        user_id: setting.user_id,
+                        id: podfetch_domain::ids::new_id().to_string(),
+                        user_id: setting.user_id.to_string(),
                         scope: setting.scope.clone(),
                         scope_id: setting.scope_id.clone(),
                         data: setting.data.clone(),

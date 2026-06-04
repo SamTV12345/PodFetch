@@ -7,10 +7,12 @@ use podfetch_domain::favorite::Favorite;
 use podfetch_domain::podcast::{
     NewPodcast, Podcast, PodcastMetadataUpdate, PodcastRepository, PodcastWithFavorite,
 };
+use uuid::Uuid;
 
 diesel::table! {
     podcasts (id) {
-        id -> Integer,
+        id -> Text,
+        legacy_id -> Nullable<BigInt>,
         name -> Text,
         directory_id -> Text,
         rssfeed -> Text,
@@ -26,14 +28,15 @@ diesel::table! {
         directory_name -> Text,
         download_location -> Nullable<Text>,
         guid -> Nullable<Text>,
-        added_by -> Nullable<Integer>,
+        added_by -> Nullable<Text>,
     }
 }
 
 diesel::table! {
     podcast_episodes (id) {
-        id -> Integer,
-        podcast_id -> Integer,
+        id -> Text,
+        legacy_id -> Nullable<BigInt>,
+        podcast_id -> Text,
         episode_id -> Text,
         name -> Text,
         url -> Text,
@@ -53,8 +56,8 @@ diesel::table! {
 
 diesel::table! {
     favorites (user_id, podcast_id) {
-        user_id -> Integer,
-        podcast_id -> Integer,
+        user_id -> Text,
+        podcast_id -> Text,
         favored -> Bool,
     }
 }
@@ -64,7 +67,8 @@ diesel::allow_tables_to_appear_in_same_query!(podcasts, podcast_episodes, favori
 #[derive(Queryable, Identifiable, Selectable, Debug, Clone, Default)]
 #[diesel(table_name = podcasts)]
 pub struct PodcastEntity {
-    pub id: i32,
+    pub id: String,
+    pub legacy_id: Option<i64>,
     pub name: String,
     pub directory_id: String,
     pub rssfeed: String,
@@ -80,25 +84,28 @@ pub struct PodcastEntity {
     pub directory_name: String,
     pub download_location: Option<String>,
     pub guid: Option<String>,
-    pub added_by: Option<i32>,
+    pub added_by: Option<String>,
 }
 
 #[derive(Insertable, Debug, Clone)]
 #[diesel(table_name = podcasts)]
 struct NewPodcastEntity {
+    id: String,
+    legacy_id: Option<i64>,
     name: String,
     directory_id: String,
     rssfeed: String,
     image_url: String,
     original_image_url: String,
     directory_name: String,
-    added_by: Option<i32>,
+    added_by: Option<String>,
 }
 
 impl From<PodcastEntity> for Podcast {
     fn from(entity: PodcastEntity) -> Self {
         Self {
-            id: entity.id,
+            id: uuid::Uuid::parse_str(&entity.id).expect("valid uuid in db"),
+            legacy_id: entity.legacy_id,
             name: entity.name,
             directory_id: entity.directory_id,
             rssfeed: entity.rssfeed,
@@ -114,7 +121,10 @@ impl From<PodcastEntity> for Podcast {
             directory_name: entity.directory_name,
             download_location: entity.download_location,
             guid: entity.guid,
-            added_by: entity.added_by,
+            added_by: entity
+                .added_by
+                .as_deref()
+                .map(|s| uuid::Uuid::parse_str(s).expect("valid uuid in db")),
         }
     }
 }
@@ -122,7 +132,8 @@ impl From<PodcastEntity> for Podcast {
 impl From<Podcast> for PodcastEntity {
     fn from(value: Podcast) -> Self {
         Self {
-            id: value.id,
+            id: value.id.to_string(),
+            legacy_id: value.legacy_id,
             name: value.name,
             directory_id: value.directory_id,
             rssfeed: value.rssfeed,
@@ -138,7 +149,7 @@ impl From<Podcast> for PodcastEntity {
             directory_name: value.directory_name,
             download_location: value.download_location,
             guid: value.guid,
-            added_by: value.added_by,
+            added_by: value.added_by.map(|u| u.to_string()),
         }
     }
 }
@@ -146,29 +157,31 @@ impl From<Podcast> for PodcastEntity {
 impl From<NewPodcast> for NewPodcastEntity {
     fn from(podcast: NewPodcast) -> Self {
         Self {
+            id: podfetch_domain::ids::new_id().to_string(),
+            legacy_id: None,
             name: podcast.name,
             directory_id: podcast.directory_id,
             rssfeed: podcast.rssfeed,
             image_url: podcast.image_url.clone(),
             original_image_url: podcast.image_url,
             directory_name: podcast.directory_name,
-            added_by: podcast.added_by,
+            added_by: podcast.added_by.map(|u| u.to_string()),
         }
     }
 }
 
 #[derive(Queryable, Debug, Clone)]
 struct FavoriteEntity {
-    user_id: i32,
-    podcast_id: i32,
+    user_id: String,
+    podcast_id: String,
     favored: bool,
 }
 
 impl From<FavoriteEntity> for Favorite {
     fn from(entity: FavoriteEntity) -> Self {
         Self {
-            user_id: entity.user_id,
-            podcast_id: entity.podcast_id,
+            user_id: uuid::Uuid::parse_str(&entity.user_id).expect("valid uuid in db"),
+            podcast_id: uuid::Uuid::parse_str(&entity.podcast_id).expect("valid uuid in db"),
             favored: entity.favored,
         }
     }
@@ -195,9 +208,18 @@ impl PodcastRepository for DieselPodcastRepository {
             .map_err(Into::into)
     }
 
-    fn find_by_id(&self, id: i32) -> Result<Option<Podcast>, Self::Error> {
+    fn find_by_id(&self, id: Uuid) -> Result<Option<Podcast>, Self::Error> {
         podcasts::table
-            .filter(podcasts::id.eq(id))
+            .filter(podcasts::id.eq(id.to_string()))
+            .first::<PodcastEntity>(&mut self.database.connection()?)
+            .optional()
+            .map(|opt| opt.map(Into::into))
+            .map_err(Into::into)
+    }
+
+    fn find_by_legacy_id(&self, legacy_id: i64) -> Result<Option<Podcast>, Self::Error> {
+        podcasts::table
+            .filter(podcasts::legacy_id.eq(legacy_id))
             .first::<PodcastEntity>(&mut self.database.connection()?)
             .optional()
             .map(|opt| opt.map(Into::into))
@@ -241,10 +263,10 @@ impl PodcastRepository for DieselPodcastRepository {
             .map_err(Into::into)
     }
 
-    fn find_by_episode_id(&self, episode_id: i32) -> Result<Option<Podcast>, Self::Error> {
+    fn find_by_episode_id(&self, episode_id: Uuid) -> Result<Option<Podcast>, Self::Error> {
         podcasts::table
             .inner_join(podcast_episodes::table.on(podcast_episodes::podcast_id.eq(podcasts::id)))
-            .filter(podcast_episodes::id.eq(episode_id))
+            .filter(podcast_episodes::id.eq(episode_id.to_string()))
             .select(podcasts::all_columns)
             .first::<PodcastEntity>(&mut self.database.connection()?)
             .optional()
@@ -261,12 +283,12 @@ impl PodcastRepository for DieselPodcastRepository {
 
     fn find_all_with_favorites(
         &self,
-        user_id: i32,
+        user_id: Uuid,
     ) -> Result<Vec<PodcastWithFavorite>, Self::Error> {
         podcasts::table
             .left_join(
                 favorites::table.on(favorites::user_id
-                    .eq(user_id)
+                    .eq(user_id.to_string())
                     .and(favorites::podcast_id.eq(podcasts::id))),
             )
             .load::<(PodcastEntity, Option<FavoriteEntity>)>(&mut self.database.connection()?)
@@ -283,7 +305,7 @@ impl PodcastRepository for DieselPodcastRepository {
     }
 
     fn update_metadata(&self, update: PodcastMetadataUpdate) -> Result<(), Self::Error> {
-        diesel::update(podcasts::table.filter(podcasts::id.eq(update.id)))
+        diesel::update(podcasts::table.filter(podcasts::id.eq(update.id.to_string())))
             .set((
                 podcasts::author.eq(update.author),
                 podcasts::keywords.eq(update.keywords),
@@ -298,32 +320,32 @@ impl PodcastRepository for DieselPodcastRepository {
             .map_err(Into::into)
     }
 
-    fn update_active(&self, id: i32, active: bool) -> Result<(), Self::Error> {
-        diesel::update(podcasts::table.filter(podcasts::id.eq(id)))
+    fn update_active(&self, id: Uuid, active: bool) -> Result<(), Self::Error> {
+        diesel::update(podcasts::table.filter(podcasts::id.eq(id.to_string())))
             .set(podcasts::active.eq(active))
             .execute(&mut self.database.connection()?)
             .map(|_| ())
             .map_err(Into::into)
     }
 
-    fn update_name(&self, id: i32, name: &str) -> Result<(), Self::Error> {
-        diesel::update(podcasts::table.filter(podcasts::id.eq(id)))
+    fn update_name(&self, id: Uuid, name: &str) -> Result<(), Self::Error> {
+        diesel::update(podcasts::table.filter(podcasts::id.eq(id.to_string())))
             .set(podcasts::name.eq(name))
             .execute(&mut self.database.connection()?)
             .map(|_| ())
             .map_err(Into::into)
     }
 
-    fn update_rss_feed(&self, id: i32, rss_feed: &str) -> Result<(), Self::Error> {
-        diesel::update(podcasts::table.filter(podcasts::id.eq(id)))
+    fn update_rss_feed(&self, id: Uuid, rss_feed: &str) -> Result<(), Self::Error> {
+        diesel::update(podcasts::table.filter(podcasts::id.eq(id.to_string())))
             .set(podcasts::rssfeed.eq(rss_feed))
             .execute(&mut self.database.connection()?)
             .map(|_| ())
             .map_err(Into::into)
     }
 
-    fn update_original_image_url(&self, id: i32, image_url: &str) -> Result<(), Self::Error> {
-        diesel::update(podcasts::table.filter(podcasts::id.eq(id)))
+    fn update_original_image_url(&self, id: Uuid, image_url: &str) -> Result<(), Self::Error> {
+        diesel::update(podcasts::table.filter(podcasts::id.eq(id.to_string())))
             .set(podcasts::original_image_url.eq(image_url))
             .execute(&mut self.database.connection()?)
             .map(|_| ())
@@ -346,17 +368,17 @@ impl PodcastRepository for DieselPodcastRepository {
             .map_err(Into::into)
     }
 
-    fn delete(&self, id: i32) -> Result<(), Self::Error> {
-        diesel::delete(podcasts::table.filter(podcasts::id.eq(id)))
+    fn delete(&self, id: Uuid) -> Result<(), Self::Error> {
+        diesel::delete(podcasts::table.filter(podcasts::id.eq(id.to_string())))
             .execute(&mut self.database.connection()?)
             .map(|_| ())
             .map_err(Into::into)
     }
 
-    fn count_by_added_by(&self, user_id: i32) -> Result<i64, Self::Error> {
+    fn count_by_added_by(&self, user_id: Uuid) -> Result<i64, Self::Error> {
         use diesel::dsl::count_star;
         podcasts::table
-            .filter(podcasts::added_by.eq(user_id))
+            .filter(podcasts::added_by.eq(user_id.to_string()))
             .select(count_star())
             .first::<i64>(&mut self.database.connection()?)
             .map_err(Into::into)

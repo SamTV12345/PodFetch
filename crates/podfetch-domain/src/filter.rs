@@ -1,6 +1,8 @@
+use uuid::Uuid;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Filter {
-    pub user_id: i32,
+    pub user_id: Uuid,
     pub title: Option<String>,
     pub ascending: bool,
     pub filter: Option<String>,
@@ -9,7 +11,7 @@ pub struct Filter {
 
 impl Filter {
     pub fn new(
-        user_id: i32,
+        user_id: Uuid,
         title: Option<String>,
         ascending: bool,
         filter: Option<String>,
@@ -28,7 +30,7 @@ impl Filter {
 pub trait FilterRepository: Send + Sync {
     type Error;
 
-    fn get_by_user_id(&self, user_id: i32) -> Result<Option<Filter>, Self::Error>;
+    fn get_by_user_id(&self, user_id: Uuid) -> Result<Option<Filter>, Self::Error>;
     fn save(&self, filter: Filter) -> Result<(), Self::Error>;
-    fn save_timeline_decision(&self, user_id: i32, only_favored: bool) -> Result<(), Self::Error>;
+    fn save_timeline_decision(&self, user_id: Uuid, only_favored: bool) -> Result<(), Self::Error>;
 }

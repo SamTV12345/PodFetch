@@ -1,9 +1,10 @@
 use chrono::{NaiveDateTime, Utc};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Subscription {
-    pub id: i32,
-    pub user_id: i32,
+    pub id: Uuid,
+    pub user_id: Uuid,
     pub device: String,
     pub podcast: String,
     pub created: NaiveDateTime,
@@ -11,9 +12,9 @@ pub struct Subscription {
 }
 
 impl Subscription {
-    pub fn new(user_id: i32, device: String, podcast: String) -> Self {
+    pub fn new(user_id: Uuid, device: String, podcast: String) -> Self {
         Self {
-            id: 0,
+            id: Uuid::nil(),
             user_id,
             device,
             podcast,
@@ -64,24 +65,24 @@ pub struct GPodderAvailablePodcast {
 pub trait SubscriptionRepository: Send + Sync {
     type Error;
 
-    fn delete_by_user_id(&self, user_id: i32) -> Result<(), Self::Error>;
+    fn delete_by_user_id(&self, user_id: Uuid) -> Result<(), Self::Error>;
     fn get_device_subscriptions(
         &self,
         device_id: &str,
-        user_id: i32,
+        user_id: Uuid,
         since: NaiveDateTime,
         timestamp: i64,
     ) -> Result<SubscriptionModelChanges, Self::Error>;
     fn get_user_subscriptions(
         &self,
-        user_id: i32,
+        user_id: Uuid,
         since: NaiveDateTime,
         timestamp: i64,
     ) -> Result<SubscriptionModelChanges, Self::Error>;
     fn update_subscriptions(
         &self,
         device_id: &str,
-        user_id: i32,
+        user_id: Uuid,
         add: &[String],
         remove: &[String],
     ) -> Result<Vec<Vec<String>>, Self::Error>;
@@ -89,6 +90,6 @@ pub trait SubscriptionRepository: Send + Sync {
     fn get_active_device_podcast_urls(
         &self,
         device_id: &str,
-        user_id: i32,
+        user_id: Uuid,
     ) -> Result<Vec<String>, Self::Error>;
 }

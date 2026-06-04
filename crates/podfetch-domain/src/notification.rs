@@ -1,6 +1,8 @@
+use uuid::Uuid;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Notification {
-    pub id: i32,
+    pub id: Uuid,
     pub type_of_message: String,
     pub message: String,
     pub created_at: String,
@@ -12,5 +14,5 @@ pub trait NotificationRepository: Send + Sync {
 
     fn create(&self, notification: Notification) -> Result<Notification, Self::Error>;
     fn get_unread_notifications(&self) -> Result<Vec<Notification>, Self::Error>;
-    fn update_status_of_notification(&self, id: i32, status: &str) -> Result<(), Self::Error>;
+    fn update_status_of_notification(&self, id: Uuid, status: &str) -> Result<(), Self::Error>;
 }

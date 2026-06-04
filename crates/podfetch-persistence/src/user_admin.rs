@@ -2,10 +2,11 @@ use crate::db::{Database, PersistenceError};
 use diesel::prelude::{AsChangeset, Insertable, Queryable};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use podfetch_domain::user_admin::{ManagedUser, UserAdminRepository};
+use uuid::Uuid;
 
 diesel::table! {
     users (id) {
-        id -> Integer,
+        id -> Text,
         username -> Text,
         role -> Text,
         password -> Nullable<Text>,
@@ -20,7 +21,7 @@ diesel::table! {
 #[derive(Queryable, Insertable, AsChangeset, Clone)]
 #[diesel(table_name = users)]
 struct UserEntity {
-    id: i32,
+    id: String,
     username: String,
     role: String,
     password: Option<String>,
@@ -34,7 +35,7 @@ struct UserEntity {
 impl From<UserEntity> for ManagedUser {
     fn from(value: UserEntity) -> Self {
         Self {
-            id: value.id,
+            id: Uuid::parse_str(&value.id).expect("valid uuid in db"),
             username: value.username,
             role: value.role,
             password: value.password,
@@ -50,7 +51,7 @@ impl From<UserEntity> for ManagedUser {
 impl From<ManagedUser> for UserEntity {
     fn from(value: ManagedUser) -> Self {
         Self {
-            id: value.id,
+            id: value.id.to_string(),
             username: value.username,
             role: value.role,
             password: value.password,
@@ -82,6 +83,7 @@ impl UserAdminRepository for DieselUserAdminRepository {
         let mut conn = self.database.connection()?;
         diesel::insert_into(users)
             .values((
+                id.eq(podfetch_domain::ids::new_id().to_string()),
                 username.eq(user.username),
                 role.eq(user.role),
                 password.eq(user.password),
@@ -119,7 +121,7 @@ impl UserAdminRepository for DieselUserAdminRepository {
         // uniformly across the `MultiConnection` backends. The seed runs once at
         // startup on a single thread, so the gap between the two queries is safe.
         if let Some(existing) = users
-            .filter(id.eq(entity.id))
+            .filter(id.eq(entity.id.clone()))
             .first::<UserEntity>(&mut conn)
             .optional()?
         {
@@ -160,7 +162,7 @@ impl UserAdminRepository for DieselUserAdminRepository {
 
         let mut conn = self.database.connection()?;
         let entity = UserEntity::from(user.clone());
-        diesel::update(users.filter(id.eq(user.id)))
+        diesel::update(users.filter(id.eq(user.id.to_string())))
             .set(entity)
             .get_result::<UserEntity>(&mut conn)
             .map(Into::into)

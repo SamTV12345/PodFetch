@@ -1,6 +1,8 @@
+use uuid::Uuid;
+
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct PodcastSetting {
-    pub podcast_id: i32,
+    pub podcast_id: Uuid,
     pub episode_numbering: bool,
     pub auto_download: bool,
     pub auto_update: bool,
@@ -20,6 +22,6 @@ pub struct PodcastSetting {
 pub trait PodcastSettingsRepository: Send + Sync {
     type Error;
 
-    fn get_settings(&self, podcast_id: i32) -> Result<Option<PodcastSetting>, Self::Error>;
+    fn get_settings(&self, podcast_id: Uuid) -> Result<Option<PodcastSetting>, Self::Error>;
     fn upsert_settings(&self, setting: PodcastSetting) -> Result<PodcastSetting, Self::Error>;
 }

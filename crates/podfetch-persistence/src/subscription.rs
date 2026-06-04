@@ -4,16 +4,17 @@ use diesel::BoolExpressionMethods;
 use diesel::JoinOnDsl;
 use diesel::OptionalExtension;
 use diesel::prelude::{AsChangeset, Insertable, Queryable, QueryableByName};
-use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
+use diesel::sql_types::{Nullable, Text, Timestamp};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use podfetch_domain::subscription::{
     GPodderAvailablePodcast, Subscription, SubscriptionModelChanges, SubscriptionRepository,
 };
+use uuid::Uuid;
 
 diesel::table! {
     subscriptions (id) {
-        id -> Integer,
-        user_id -> Integer,
+        id -> Text,
+        user_id -> Text,
         device -> Text,
         podcast -> Text,
         created -> Timestamp,
@@ -23,7 +24,7 @@ diesel::table! {
 
 diesel::table! {
     podcasts (id) {
-        id -> Integer,
+        id -> Text,
         rssfeed -> Text,
     }
 }
@@ -34,10 +35,10 @@ diesel::allow_tables_to_appear_in_same_query!(subscriptions, podcasts);
 #[diesel(table_name = subscriptions)]
 #[diesel(treat_none_as_null = true)]
 struct SubscriptionEntity {
-    #[diesel(sql_type = Integer)]
-    id: i32,
-    #[diesel(sql_type = Integer)]
-    user_id: i32,
+    #[diesel(sql_type = Text)]
+    id: String,
+    #[diesel(sql_type = Text)]
+    user_id: String,
     #[diesel(sql_type = Text)]
     device: String,
     #[diesel(sql_type = Text)]
@@ -51,7 +52,8 @@ struct SubscriptionEntity {
 #[derive(Debug, Clone, Insertable)]
 #[diesel(table_name = subscriptions)]
 struct NewSubscriptionEntity {
-    user_id: i32,
+    id: String,
+    user_id: String,
     device: String,
     podcast: String,
     created: NaiveDateTime,
@@ -69,8 +71,8 @@ struct GPodderAvailablePodcastEntity {
 impl From<SubscriptionEntity> for Subscription {
     fn from(value: SubscriptionEntity) -> Self {
         Self {
-            id: value.id,
-            user_id: value.user_id,
+            id: Uuid::parse_str(&value.id).expect("valid uuid in db"),
+            user_id: Uuid::parse_str(&value.user_id).expect("valid uuid in db"),
             device: value.device,
             podcast: value.podcast,
             created: value.created,
@@ -101,12 +103,12 @@ impl DieselSubscriptionRepository {
 impl SubscriptionRepository for DieselSubscriptionRepository {
     type Error = PersistenceError;
 
-    fn delete_by_user_id(&self, user_id_to_delete: i32) -> Result<(), Self::Error> {
+    fn delete_by_user_id(&self, user_id_to_delete: Uuid) -> Result<(), Self::Error> {
         use self::subscriptions::dsl as subscriptions_dsl;
 
         diesel::delete(
             subscriptions_dsl::subscriptions
-                .filter(subscriptions_dsl::user_id.eq(user_id_to_delete)),
+                .filter(subscriptions_dsl::user_id.eq(user_id_to_delete.to_string())),
         )
         .execute(&mut self.database.connection()?)
         .map(|_| ())
@@ -116,14 +118,14 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
     fn get_device_subscriptions(
         &self,
         device_id: &str,
-        user_id_to_find: i32,
+        user_id_to_find: Uuid,
         since: NaiveDateTime,
         timestamp: i64,
     ) -> Result<SubscriptionModelChanges, Self::Error> {
         use self::subscriptions::dsl as subscriptions_dsl;
 
         let subscriptions = subscriptions_dsl::subscriptions
-            .filter(subscriptions_dsl::user_id.eq(user_id_to_find))
+            .filter(subscriptions_dsl::user_id.eq(user_id_to_find.to_string()))
             .filter(
                 subscriptions_dsl::device
                     .eq(device_id)
@@ -148,14 +150,14 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
 
     fn get_user_subscriptions(
         &self,
-        user_id_to_find: i32,
+        user_id_to_find: Uuid,
         since: NaiveDateTime,
         timestamp: i64,
     ) -> Result<SubscriptionModelChanges, Self::Error> {
         use self::subscriptions::dsl as subscriptions_dsl;
 
         let subscriptions = subscriptions_dsl::subscriptions
-            .filter(subscriptions_dsl::user_id.eq(user_id_to_find))
+            .filter(subscriptions_dsl::user_id.eq(user_id_to_find.to_string()))
             .filter(subscriptions_dsl::created.gt(since))
             .load::<SubscriptionEntity>(&mut self.database.connection()?)
             .map_err(PersistenceError::from)?
@@ -177,12 +179,13 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
     fn update_subscriptions(
         &self,
         device_id: &str,
-        user_id_to_update: i32,
+        user_id_to_update: Uuid,
         add: &[String],
         remove: &[String],
     ) -> Result<Vec<Vec<String>>, Self::Error> {
         use self::subscriptions::dsl as subscriptions_dsl;
 
+        let user_id_to_update = user_id_to_update.to_string();
         let mut rewritten_urls = vec![vec![]];
         let mut connection = self.database.connection()?;
 
@@ -195,7 +198,7 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
             let existing = subscriptions_dsl::subscriptions
                 .filter(
                     subscriptions_dsl::user_id
-                        .eq(user_id_to_update)
+                        .eq(user_id_to_update.clone())
                         .and(subscriptions_dsl::device.eq(device_id))
                         .and(subscriptions_dsl::podcast.eq(podcast)),
                 )
@@ -213,13 +216,14 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
                 }
                 None => {
                     let subscription = Subscription::new(
-                        user_id_to_update,
+                        Uuid::parse_str(&user_id_to_update).expect("valid uuid"),
                         device_id.to_string(),
                         podcast.to_string(),
                     );
                     diesel::insert_into(subscriptions_dsl::subscriptions)
                         .values(NewSubscriptionEntity {
-                            user_id: subscription.user_id,
+                            id: podfetch_domain::ids::new_id().to_string(),
+                            user_id: subscription.user_id.to_string(),
                             device: subscription.device,
                             podcast: subscription.podcast,
                             created: subscription.created,
@@ -239,7 +243,7 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
             if let Some(existing) = subscriptions_dsl::subscriptions
                 .filter(
                     subscriptions_dsl::user_id
-                        .eq(user_id_to_update)
+                        .eq(user_id_to_update.clone())
                         .and(subscriptions_dsl::device.eq(device_id))
                         .and(subscriptions_dsl::podcast.eq(podcast)),
                 )
@@ -260,14 +264,14 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
     fn get_active_device_podcast_urls(
         &self,
         device_id: &str,
-        user_id_to_find: i32,
+        user_id_to_find: Uuid,
     ) -> Result<Vec<String>, Self::Error> {
         use self::subscriptions::dsl as subscriptions_dsl;
 
         subscriptions_dsl::subscriptions
             .filter(
                 subscriptions_dsl::user_id
-                    .eq(user_id_to_find)
+                    .eq(user_id_to_find.to_string())
                     .and(subscriptions_dsl::device.eq(device_id))
                     .and(subscriptions_dsl::deleted.is_null()),
             )

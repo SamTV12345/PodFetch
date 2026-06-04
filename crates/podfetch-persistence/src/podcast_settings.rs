@@ -3,10 +3,11 @@ use diesel::OptionalExtension;
 use diesel::prelude::{AsChangeset, Insertable, Queryable};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use podfetch_domain::podcast_settings::{PodcastSetting, PodcastSettingsRepository};
+use uuid::Uuid;
 
 diesel::table! {
     podcast_settings (podcast_id) {
-        podcast_id -> Integer,
+        podcast_id -> Text,
         episode_numbering -> Bool,
         auto_download -> Bool,
         auto_update -> Bool,
@@ -27,7 +28,7 @@ diesel::table! {
 #[derive(Debug, Clone, Queryable, Insertable, AsChangeset)]
 #[diesel(table_name = podcast_settings)]
 struct PodcastSettingEntity {
-    podcast_id: i32,
+    podcast_id: String,
     episode_numbering: bool,
     auto_download: bool,
     auto_update: bool,
@@ -47,7 +48,7 @@ struct PodcastSettingEntity {
 impl From<PodcastSettingEntity> for PodcastSetting {
     fn from(value: PodcastSettingEntity) -> Self {
         Self {
-            podcast_id: value.podcast_id,
+            podcast_id: Uuid::parse_str(&value.podcast_id).expect("valid uuid in db"),
             episode_numbering: value.episode_numbering,
             auto_download: value.auto_download,
             auto_update: value.auto_update,
@@ -69,7 +70,7 @@ impl From<PodcastSettingEntity> for PodcastSetting {
 impl From<PodcastSetting> for PodcastSettingEntity {
     fn from(value: PodcastSetting) -> Self {
         Self {
-            podcast_id: value.podcast_id,
+            podcast_id: value.podcast_id.to_string(),
             episode_numbering: value.episode_numbering,
             auto_download: value.auto_download,
             auto_update: value.auto_update,
@@ -101,11 +102,11 @@ impl DieselPodcastSettingsRepository {
 impl PodcastSettingsRepository for DieselPodcastSettingsRepository {
     type Error = PersistenceError;
 
-    fn get_settings(&self, podcast_id: i32) -> Result<Option<PodcastSetting>, Self::Error> {
+    fn get_settings(&self, podcast_id: Uuid) -> Result<Option<PodcastSetting>, Self::Error> {
         use self::podcast_settings::dsl as podcast_settings_dsl;
 
         podcast_settings_dsl::podcast_settings
-            .filter(podcast_settings_dsl::podcast_id.eq(podcast_id))
+            .filter(podcast_settings_dsl::podcast_id.eq(podcast_id.to_string()))
             .first::<PodcastSettingEntity>(&mut self.database.connection()?)
             .optional()
             .map(|setting| setting.map(Into::into))
@@ -115,9 +116,10 @@ impl PodcastSettingsRepository for DieselPodcastSettingsRepository {
     fn upsert_settings(&self, setting: PodcastSetting) -> Result<PodcastSetting, Self::Error> {
         use self::podcast_settings::dsl as podcast_settings_dsl;
 
+        let podcast_id = setting.podcast_id;
         let entity = PodcastSettingEntity::from(setting);
-        if self.get_settings(entity.podcast_id)?.is_some() {
-            diesel::update(podcast_settings_dsl::podcast_settings.find(entity.podcast_id))
+        if self.get_settings(podcast_id)?.is_some() {
+            diesel::update(podcast_settings_dsl::podcast_settings.find(entity.podcast_id.clone()))
                 .set(entity.clone())
                 .execute(&mut self.database.connection()?)?;
         } else {
@@ -126,7 +128,7 @@ impl PodcastSettingsRepository for DieselPodcastSettingsRepository {
                 .execute(&mut self.database.connection()?)?;
         }
 
-        self.get_settings(entity.podcast_id)?
+        self.get_settings(podcast_id)?
             .ok_or_else(|| PersistenceError::Database(diesel::result::Error::NotFound))
     }
 }

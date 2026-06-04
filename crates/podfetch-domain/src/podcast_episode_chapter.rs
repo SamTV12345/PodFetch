@@ -1,9 +1,10 @@
 use chrono::NaiveDateTime;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PodcastEpisodeChapter {
     pub id: String,
-    pub episode_id: i32,
+    pub episode_id: Uuid,
     pub title: String,
     pub start_time: i32,
     pub end_time: i32,
@@ -15,7 +16,7 @@ pub struct PodcastEpisodeChapter {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UpsertPodcastEpisodeChapter {
-    pub episode_id: i32,
+    pub episode_id: Uuid,
     pub title: String,
     pub start_time: i32,
     pub end_time: i32,
@@ -28,6 +29,6 @@ pub trait PodcastEpisodeChapterRepository: Send + Sync {
 
     fn upsert(&self, chapter: UpsertPodcastEpisodeChapter) -> Result<(), Self::Error>;
 
-    fn get_by_episode_id(&self, episode_id: i32)
+    fn get_by_episode_id(&self, episode_id: Uuid)
     -> Result<Vec<PodcastEpisodeChapter>, Self::Error>;
 }
