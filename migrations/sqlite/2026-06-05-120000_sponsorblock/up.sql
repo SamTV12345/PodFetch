@@ -12,7 +12,7 @@ CREATE TABLE episode_sponsor_segments (
     votes INTEGER NOT NULL DEFAULT 0,
     locked BOOLEAN NOT NULL DEFAULT 0,
     duration_mismatch BOOLEAN NOT NULL DEFAULT 0,
-    fetched_at TIMESTAMP NOT NULL
+    fetched_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE UNIQUE INDEX uq_episode_sponsor_segments_episode_uuid
