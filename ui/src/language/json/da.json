@@ -278,5 +278,7 @@
   "mopidy-server-added": "Mopidy-server tilføjet",
   "mopidy-server-deleted": "Mopidy-server fjernet",
   "mopidy-no-servers": "Ingen Mopidy-servere konfigureret endnu.",
+  "mopidy-kind-shared": "Shared",
+  "mopidy-kind-personal": "Personal",
   "cast-kind-mopidy": "Mopidy"
 }

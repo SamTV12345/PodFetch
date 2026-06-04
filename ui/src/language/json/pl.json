@@ -278,5 +278,7 @@
   "mopidy-server-added": "Serwer Mopidy dodany",
   "mopidy-server-deleted": "Serwer Mopidy usunięty",
   "mopidy-no-servers": "Brak skonfigurowanych serwerów Mopidy.",
+  "mopidy-kind-shared": "Shared",
+  "mopidy-kind-personal": "Personal",
   "cast-kind-mopidy": "Mopidy"
 }
