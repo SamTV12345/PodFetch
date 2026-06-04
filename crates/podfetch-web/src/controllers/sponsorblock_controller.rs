@@ -1,12 +1,10 @@
 use crate::app_state::AppState;
-use crate::controllers::id_resolver::{ResolvedId, parse_resolved_id};
+use crate::controllers::podcast_episode_controller::resolve_episode_uuid;
 use axum::extract::Path;
 use axum::{Extension, Json};
-use common_infrastructure::error::ErrorSeverity::Warning;
-use common_infrastructure::error::{CustomError, CustomErrorInner};
+use common_infrastructure::error::CustomError;
 use podfetch_domain::user::User;
 use podfetch_persistence::sponsorblock::{SponsorblockRepository, SponsorblockUserSettingsEntity};
-use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use serde::{Deserialize, Serialize};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -39,6 +37,9 @@ pub struct SponsorblockUserSettingsDto {
 }
 
 impl SponsorblockUserSettingsDto {
+    /// Factory defaults for a user with no stored row. These MUST match the DB
+    /// column defaults in the `2026-06-05-120000_sponsorblock` migration
+    /// (enabled + sponsor + selfpromo on, everything else off).
     fn defaults() -> Self {
         Self {
             enabled: true,
@@ -90,21 +91,6 @@ impl From<SponsorblockUserSettingsEntity> for SponsorblockUserSettingsDto {
 pub struct SponsorblockEpisodeResponse {
     pub segments: Vec<SponsorSegmentDto>,
     pub preferences: SponsorblockUserSettingsDto,
-}
-
-/// Resolve an episode `{id}` path segment (UUID or legacy integer) to the
-/// canonical episode `Uuid`. Replicates the logic from
-/// `podcast_episode_controller::resolve_episode_uuid`.
-fn resolve_episode_uuid(id: &str) -> Result<uuid::Uuid, CustomError> {
-    match parse_resolved_id(id)? {
-        ResolvedId::Uuid(uuid) => Ok(uuid),
-        ResolvedId::Legacy(legacy) => {
-            let episode = PodcastEpisodeService::get_podcast_episode_by_legacy_id(legacy)?
-                .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Warning)))?;
-            uuid::Uuid::parse_str(&episode.id)
-                .map_err(|_| CustomErrorInner::NotFound(Warning).into())
-        }
-    }
 }
 
 #[utoipa::path(
