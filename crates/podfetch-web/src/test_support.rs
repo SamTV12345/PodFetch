@@ -118,8 +118,10 @@ END $$;
             "favorite_podcast_episodes",
             "subscriptions",
             "episodes",
+            "episode_sponsor_segments",
             "podcast_episodes",
             "podcast_episode_chapters",
+            "sponsorblock_user_settings",
             "tags_podcasts",
             "tags",
             "invites",
@@ -248,8 +250,20 @@ END $$;
                     .unwrap();
             }
             {
+                use podfetch_persistence::schema::episode_sponsor_segments::dsl::episode_sponsor_segments;
+                diesel::delete(episode_sponsor_segments)
+                    .execute(&mut get_connection())
+                    .unwrap();
+            }
+            {
                 use podfetch_persistence::schema::podcast_episodes::dsl::podcast_episodes;
                 diesel::delete(podcast_episodes)
+                    .execute(&mut get_connection())
+                    .unwrap();
+            }
+            {
+                use podfetch_persistence::schema::sponsorblock_user_settings::dsl::sponsorblock_user_settings;
+                diesel::delete(sponsorblock_user_settings)
                     .execute(&mut get_connection())
                     .unwrap();
             }
