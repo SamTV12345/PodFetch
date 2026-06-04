@@ -108,6 +108,7 @@ fn build_name_only_setting(update: &UpdateNameSettings) -> podfetch_domain::sett
         auto_transcode_opus: false,
         use_one_cover_for_all_episodes: false,
         max_parallel_downloads: 3,
+        sponsorblock_enabled: true,
     }
 }
 

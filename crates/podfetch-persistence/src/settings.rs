@@ -22,6 +22,7 @@ diesel::table! {
         auto_transcode_opus -> Bool,
         use_one_cover_for_all_episodes -> Bool,
         max_parallel_downloads -> Integer,
+        sponsorblock_enabled -> Bool,
     }
 }
 
@@ -43,6 +44,7 @@ struct SettingEntity {
     auto_transcode_opus: bool,
     use_one_cover_for_all_episodes: bool,
     max_parallel_downloads: i32,
+    sponsorblock_enabled: bool,
 }
 
 impl From<SettingEntity> for Setting {
@@ -63,6 +65,7 @@ impl From<SettingEntity> for Setting {
             auto_transcode_opus: value.auto_transcode_opus,
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
             max_parallel_downloads: value.max_parallel_downloads,
+            sponsorblock_enabled: value.sponsorblock_enabled,
         }
     }
 }
@@ -85,6 +88,7 @@ impl From<Setting> for SettingEntity {
             auto_transcode_opus: value.auto_transcode_opus,
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
             max_parallel_downloads: value.max_parallel_downloads,
+            sponsorblock_enabled: value.sponsorblock_enabled,
         }
     }
 }
@@ -146,6 +150,7 @@ impl SettingRepository for DieselSettingsRepository {
                 auto_transcode_opus.eq(false),
                 use_one_cover_for_all_episodes.eq(false),
                 max_parallel_downloads.eq(3),
+                sponsorblock_enabled.eq(true),
             ))
             .execute(&mut conn)
             .map(|_| ())
