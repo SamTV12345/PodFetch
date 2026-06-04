@@ -51,7 +51,8 @@ impl EpisodeTriageService {
         }
     }
 
-    /// Inbox: not-yet-downloaded, non-deleted episodes the user has not triaged.
+    /// Inbox: non-deleted episodes the user has not triaged yet, regardless of
+    /// download state.
     pub fn get_inbox(
         &self,
         user: &User,

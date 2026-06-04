@@ -261,10 +261,15 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_inbox_contains_undownloaded_and_excludes_downloaded() {
+    async fn test_inbox_contains_untriaged_episodes_regardless_of_download_state() {
+        // The inbox captures every new (untriaged, non-deleted) episode, whether
+        // or not it has been downloaded. Uses a fresh user + a large limit so
+        // the assertions are robust against episodes left by other tests in the
+        // shared database.
         let server = handle_test_startup().await;
+        let _guard = &server.mutex;
         let unique = Uuid::new_v4();
-        let podcast = add_podcast(&format!("inbox-podcast-{unique}"));
+        let podcast = add_podcast(&format!("inbox-state-podcast-{unique}"));
         let pending = insert_episode(
             &podcast.id,
             &format!("inbox-pending-{unique}"),
@@ -276,17 +281,37 @@ mod tests {
             &format!("inbox-downloaded-guid-{unique}"),
         );
         mark_downloaded(&downloaded);
+        let dismissed = insert_episode(
+            &podcast.id,
+            &format!("inbox-dismissed-{unique}"),
+            &format!("inbox-dismissed-guid-{unique}"),
+        );
 
-        let response = server.test_server.get("/api/v1/episodes/inbox").await;
-        assert_eq!(response.status_code(), 200);
-        let payload = response.json::<Value>();
+        let user = non_admin_user();
+        let state = app_state();
+        state
+            .episode_triage_service
+            .set_status(
+                user.id,
+                Uuid::parse_str(&dismissed.id).unwrap(),
+                podfetch_domain::episode_triage::TriageStatus::Dismissed,
+            )
+            .unwrap();
+
+        let inbox = state
+            .episode_triage_service
+            .get_inbox(&user, None, 100_000, "")
+            .unwrap();
+        let in_inbox = |ep: &PodcastEpisode| inbox.iter().any(|i| i.podcast_episode.id == ep.id);
+
+        assert!(in_inbox(&pending), "undownloaded untriaged episode should be in the inbox");
         assert!(
-            contains_episode(&payload, &pending),
-            "undownloaded episode should be in the inbox"
+            in_inbox(&downloaded),
+            "downloaded but untriaged episode should also be in the inbox"
         );
         assert!(
-            !contains_episode(&payload, &downloaded),
-            "downloaded episode must not be in the inbox"
+            !in_inbox(&dismissed),
+            "an episode the user dismissed must not be in the inbox"
         );
     }
 

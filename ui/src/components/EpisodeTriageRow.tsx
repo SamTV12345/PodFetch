@@ -70,18 +70,20 @@ export const EpisodeTriageRow: FC<EpisodeTriageRowProps> = ({item, onQueue, onDi
                     }}
                 />
                 {onQueue && (
-                    episode.status
-                        ? <CloudDownload size={22} aria-label={t('downloaded') as string}
-                                         className="ui-icon" fill="currentColor"/>
-                        : <CloudDownload
-                            size={22}
-                            aria-label={t('triage-queue') as string}
-                            className="cursor-pointer ui-icon hover:ui-icon-hover active:scale-90"
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                onQueue()
-                            }}
-                        />
+                    // The inbox holds episodes regardless of download state.
+                    // Queueing always adds the episode to the waiting list; if
+                    // it isn't downloaded yet the server also starts the
+                    // download. A filled icon just signals it's already local.
+                    <CloudDownload
+                        size={22}
+                        aria-label={t('triage-queue') as string}
+                        fill={episode.status ? 'currentColor' : 'transparent'}
+                        className="cursor-pointer ui-icon hover:ui-icon-hover active:scale-90"
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            onQueue()
+                        }}
+                    />
                 )}
                 {onArchive && (
                     <Archive

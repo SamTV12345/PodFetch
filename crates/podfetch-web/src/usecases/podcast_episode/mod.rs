@@ -135,8 +135,8 @@ impl PodcastEpisodeUseCase {
             .map_err(Into::into)
     }
 
-    /// Inbox listing: not-yet-downloaded, non-deleted episodes the user has not
-    /// triaged yet, newest first.
+    /// Inbox listing: non-deleted episodes the user has not triaged yet,
+    /// newest first, regardless of download state.
     pub fn get_inbox_episodes(
         exclude_episode_ids: &[Uuid],
         last_date: Option<&str>,

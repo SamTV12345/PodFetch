@@ -559,8 +559,9 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
 
         // `ne_all` on an empty list renders as an always-true predicate in
         // Diesel, so an untouched inbox correctly returns every candidate.
+        // The inbox captures every new episode regardless of download state;
+        // downloaded-but-not-yet-triaged episodes show up here too.
         let mut query = podcast_episodes::table
-            .filter(podcast_episodes::download_location.is_null())
             .filter(podcast_episodes::deleted.eq(false))
             .filter(podcast_episodes::id.ne_all(exclude))
             .order(podcast_episodes::date_of_recording.desc())

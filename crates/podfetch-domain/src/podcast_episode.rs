@@ -111,10 +111,10 @@ pub trait PodcastEpisodeRepository: Send + Sync {
     // Get all episodes
     fn get_all(&self) -> Result<Vec<PodcastEpisode>, Self::Error>;
 
-    /// Inbox query: not-yet-downloaded, non-deleted episodes whose id is **not**
-    /// in `exclude_episode_ids` (the episodes the user has already triaged),
-    /// newest first. `last_date` is an exclusive `date_of_recording` cursor for
-    /// keyset pagination.
+    /// Inbox query: non-deleted episodes whose id is **not** in
+    /// `exclude_episode_ids` (the episodes the user has already triaged),
+    /// newest first — regardless of download state. `last_date` is an exclusive
+    /// `date_of_recording` cursor for keyset pagination.
     fn get_inbox_episodes(
         &self,
         exclude_episode_ids: &[Uuid],
