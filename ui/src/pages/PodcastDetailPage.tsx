@@ -37,8 +37,8 @@ export const PodcastDetailPage = () => {
     })
 
     const currentDetailedPodcastId = useMemo(()=>{
-        if (params && !isNaN(parseFloat(params.id as string))) {
-            return params.id ?? ""
+        if (params && params.id) {
+            return params.id
         }
         return ""
     }, [params])
@@ -134,7 +134,7 @@ export const PodcastDetailPage = () => {
                         self-start xs:self-end
                     ">
 
-                        {currentPodcast.data && <EditableHeading podcastId={Number(currentDetailedPodcastId)} initialText={currentPodcast.data.name} allowedToEdit={data?.role == "admin"}></EditableHeading>}
+                        {currentPodcast.data && <EditableHeading podcastId={currentDetailedPodcastId} initialText={currentPodcast.data.name} allowedToEdit={data?.role == "admin"}></EditableHeading>}
 
                         {currentPodcast.data && data?.role === ADMIN_ROLE && refreshPodcastEpisodes.isPending ? <Loading className="inline-block h-auto w-auto"/>:  <RotateCw
                             size={20}

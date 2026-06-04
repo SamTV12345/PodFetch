@@ -145,7 +145,7 @@ export default function RootLayout() {
         <AudioPlayer />
       )}
       </AudioProvider>
-      <StatusBar style="light" backgroundColor="#000" />
+      <StatusBar style="light" />
     </ThemeProvider>
       </QueryClientProvider>
   );

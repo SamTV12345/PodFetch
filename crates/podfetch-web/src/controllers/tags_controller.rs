@@ -1,4 +1,6 @@
 use crate::app_state::AppState;
+use crate::controllers::id_resolver::{ResolvedId, parse_resolved_id};
+use crate::services::podcast::service::PodcastService;
 use crate::tags;
 pub use crate::tags::{Tag, TagCreate, TagsPodcast};
 use axum::extract::{Path, State};
@@ -8,6 +10,23 @@ use common_infrastructure::error::CustomError;
 use podfetch_domain::user::User;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
+
+/// Resolve a podcast `{podcast_id}` path segment (UUID or legacy integer) to
+/// the canonical podcast `Uuid`.
+fn resolve_podcast_uuid(id: &str) -> Result<uuid::Uuid, CustomError> {
+    match parse_resolved_id(id)? {
+        ResolvedId::Uuid(uuid) => Ok(uuid),
+        ResolvedId::Legacy(legacy) => {
+            let podcast = PodcastService::get_podcast_by_legacy_id(legacy)?;
+            uuid::Uuid::parse_str(&podcast.id).map_err(|_| {
+                common_infrastructure::error::CustomErrorInner::NotFound(
+                    common_infrastructure::error::ErrorSeverity::Warning,
+                )
+                .into()
+            })
+        }
+    }
+}
 
 #[utoipa::path(
 post,
@@ -85,15 +104,16 @@ tag="tags"
 )]
 pub async fn add_podcast_to_tag(
     State(state): State<AppState>,
-    Path(tag_id_to_convert): Path<(String, i32)>,
+    Path(tag_id_to_convert): Path<(String, String)>,
     requester: Extension<User>,
 ) -> Result<Json<TagsPodcast>, CustomError> {
     let (tag_id, podcast_id) = tag_id_to_convert;
+    let podcast_uuid = resolve_podcast_uuid(&podcast_id)?;
     tags::add_podcast_to_tag(
         state.tag_service.as_ref(),
         requester.id,
         &tag_id,
-        podcast_id,
+        podcast_uuid,
     )
     .map(Json)
 }
@@ -107,16 +127,17 @@ tag="tags"
 )]
 pub async fn delete_podcast_from_tag(
     State(state): State<AppState>,
-    Path(tag_id): Path<(String, i32)>,
+    Path(tag_id): Path<(String, String)>,
     Extension(requester): Extension<User>,
 ) -> Result<StatusCode, CustomError> {
     let (tag_id, podcast_id) = tag_id;
+    let podcast_uuid = resolve_podcast_uuid(&podcast_id)?;
 
     tags::delete_podcast_from_tag(
         state.tag_service.as_ref(),
         requester.id,
         &tag_id,
-        podcast_id,
+        podcast_uuid,
     )
     .map(|_| StatusCode::OK)
 }
@@ -165,7 +186,7 @@ mod tests {
 
     fn other_user() -> podfetch_domain::user::User {
         let mut user = UserTestDataBuilder::new().build();
-        user.id = 999_999;
+        user.id = Uuid::new_v4();
         user
     }
 
@@ -173,7 +194,7 @@ mod tests {
         AppState::new()
     }
 
-    fn admin_user_id() -> i32 {
+    fn admin_user_id() -> Uuid {
         app_state()
             .user_auth_service
             .find_by_username(&admin_username())
@@ -272,7 +293,7 @@ mod tests {
 
         let tags_for_podcast = app_state()
             .tag_service
-            .get_tags_of_podcast(podcast.id, admin_user_id())
+            .get_tags_of_podcast(Uuid::parse_str(&podcast.id).unwrap(), admin_user_id())
             .unwrap();
         assert_eq!(tags_for_podcast.len(), 1);
         assert_eq!(tags_for_podcast[0].id, tag.id);
@@ -285,7 +306,7 @@ mod tests {
 
         let tags_after_remove = app_state()
             .tag_service
-            .get_tags_of_podcast(podcast.id, admin_user_id())
+            .get_tags_of_podcast(Uuid::parse_str(&podcast.id).unwrap(), admin_user_id())
             .unwrap();
         assert!(tags_after_remove.is_empty());
     }

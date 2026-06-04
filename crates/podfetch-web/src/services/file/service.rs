@@ -171,8 +171,10 @@ impl FileService {
     }
 
     pub fn delete_podcast_files(podcast: &Podcast) {
+        let podcast_uuid =
+            uuid::Uuid::parse_str(&podcast.id).unwrap_or_else(|_| uuid::Uuid::nil());
         let episodes =
-            PodcastEpisodeService::get_episodes_by_podcast_id(podcast.id).unwrap_or_default();
+            PodcastEpisodeService::get_episodes_by_podcast_id(podcast_uuid).unwrap_or_default();
         let episode_infos: Vec<podfetch_storage::EpisodeFileInfo> = episodes
             .iter()
             .map(|e| podfetch_storage::EpisodeFileInfo {
@@ -182,7 +184,10 @@ impl FileService {
             })
             .collect();
         let podcast_info = podfetch_storage::PodcastFileInfo {
-            id: podcast.id,
+            // `id` is unused by the storage layer's directory removal; the
+            // podcast is identified by `directory_name`. The storage DTO still
+            // types it as i32, so pass a placeholder now that ids are UUIDs.
+            id: 0,
             image_url: podcast.image_url.clone(),
             directory_name: podcast.directory_name.clone(),
             download_location: podcast.download_location.clone(),
@@ -210,7 +215,10 @@ pub async fn prepare_podcast_title_to_directory(
     channel: Option<Channel>,
 ) -> Result<String, CustomError> {
     let retrieved_settings = SettingsService::shared().get_settings()?.unwrap();
-    let opt_podcast_settings = PodcastSettingsService::get_settings_for_podcast(podcast.id)?;
+    // The podcast row does not exist yet at this point (this runs during
+    // initial insert), so there can be no per-podcast settings override.
+    let opt_podcast_settings =
+        PodcastSettingsService::get_settings_for_podcast(uuid::Uuid::nil())?;
 
     let podcast = match channel {
         Some(channel) => RSSFeedParser::parse_rss_feed(channel),
@@ -318,8 +326,10 @@ pub fn prepare_podcast_episode_title_to_directory(
             return Ok(res_unwrapped);
         }
     }
-    let podcast_settings =
-        PodcastSettingsService::get_settings_for_podcast(podcast_episode.podcast_id)?;
+    let podcast_settings = PodcastSettingsService::get_settings_for_podcast(
+        uuid::Uuid::parse_str(&podcast_episode.podcast_id)
+            .map_err(|_| CustomError::from(CustomErrorInner::NotFound(ErrorSeverity::Warning)))?,
+    )?;
     perform_episode_variable_replacement(
         retrieved_settings.into(),
         podcast_episode,
@@ -496,7 +506,7 @@ mod tests {
     fn test_perform_replacement_dash_and_underscore() {
         let title = "test: test";
         let settings = Setting {
-            id: 1,
+            id: uuid::Uuid::nil(),
             auto_download: false,
             auto_update: false,
             auto_cleanup: false,
@@ -523,7 +533,7 @@ mod tests {
     fn test_perform_replacement_remove() {
         let title = "test: test";
         let settings = Setting {
-            id: 1,
+            id: uuid::Uuid::nil(),
             auto_download: false,
             auto_update: false,
             auto_cleanup: false,
@@ -550,7 +560,7 @@ mod tests {
     fn test_perform_replacement_replace_with_dash() {
         let title = "test: test";
         let settings = Setting {
-            id: 1,
+            id: uuid::Uuid::nil(),
             auto_download: false,
             auto_update: false,
             auto_cleanup: false,
@@ -576,7 +586,7 @@ mod tests {
     #[serial]
     fn test_podcast_episode_replacement_guid() {
         let settings = Setting {
-            id: 2,
+            id: uuid::Uuid::nil(),
             auto_download: false,
             auto_update: false,
             auto_cleanup: false,
@@ -593,14 +603,15 @@ mod tests {
         };
 
         let podcast_episode = PodcastEpisode {
-            id: 2,
+            id: uuid::Uuid::nil().to_string(),
+            legacy_id: None,
             name: "test".to_string(),
             description: "test".to_string(),
             url: "test".to_string(),
             guid: "test".to_string(),
             total_time: 0,
             date_of_recording: "2022".to_string(),
-            podcast_id: 0,
+            podcast_id: uuid::Uuid::nil().to_string(),
             file_episode_path: None,
             file_image_path: None,
             episode_id: "".to_string(),
@@ -619,7 +630,7 @@ mod tests {
     #[serial]
     fn test_podcast_episode_replacement_title() {
         let settings = Setting {
-            id: 2,
+            id: uuid::Uuid::nil(),
             auto_download: false,
             auto_update: false,
             auto_cleanup: false,
@@ -636,14 +647,15 @@ mod tests {
         };
 
         let podcast_episode = PodcastEpisode {
-            id: 2,
+            id: uuid::Uuid::nil().to_string(),
+            legacy_id: None,
             name: "MyPodcast".to_string(),
             description: "test".to_string(),
             url: "test".to_string(),
             guid: "test".to_string(),
             total_time: 0,
             date_of_recording: "2022".to_string(),
-            podcast_id: 0,
+            podcast_id: uuid::Uuid::nil().to_string(),
             file_episode_path: None,
             file_image_path: None,
             episode_id: "".to_string(),
@@ -662,7 +674,7 @@ mod tests {
     #[serial]
     fn test_podcast_episode_replacement_old_format() {
         let settings = Setting {
-            id: 2,
+            id: uuid::Uuid::nil(),
             auto_download: false,
             auto_update: false,
             auto_cleanup: false,
@@ -679,14 +691,15 @@ mod tests {
         };
 
         let podcast_episode = PodcastEpisode {
-            id: 2,
+            id: uuid::Uuid::nil().to_string(),
+            legacy_id: None,
             name: "MyPodcast".to_string(),
             description: "test".to_string(),
             url: "test2".to_string(),
             guid: "test".to_string(),
             total_time: 0,
             date_of_recording: "2022".to_string(),
-            podcast_id: 0,
+            podcast_id: uuid::Uuid::nil().to_string(),
             file_episode_path: None,
             file_image_path: None,
             episode_id: "".to_string(),
@@ -705,7 +718,7 @@ mod tests {
     #[serial]
     pub fn perform_podcast_variable_replacement_date_title() {
         let settings = Setting {
-            id: 2,
+            id: uuid::Uuid::nil(),
             auto_download: false,
             auto_update: false,
             auto_cleanup: false,
@@ -737,7 +750,7 @@ mod tests {
     #[serial]
     pub fn perform_podcast_variable_replacement_old_format() {
         let settings = Setting {
-            id: 2,
+            id: uuid::Uuid::nil(),
             auto_download: false,
             auto_update: false,
             auto_cleanup: false,

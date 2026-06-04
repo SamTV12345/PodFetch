@@ -5,11 +5,12 @@ use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use podfetch_domain::podcast_episode_chapter::{
     PodcastEpisodeChapter, PodcastEpisodeChapterRepository, UpsertPodcastEpisodeChapter,
 };
+use uuid::Uuid;
 
 diesel::table! {
     podcast_episode_chapters (id) {
         id -> Text,
-        episode_id -> Integer,
+        episode_id -> Text,
         title -> Text,
         start_time -> Integer,
         end_time -> Integer,
@@ -24,7 +25,7 @@ diesel::table! {
 #[diesel(table_name = podcast_episode_chapters)]
 struct PodcastEpisodeChapterEntity {
     id: String,
-    episode_id: i32,
+    episode_id: String,
     title: String,
     start_time: i32,
     end_time: i32,
@@ -38,7 +39,7 @@ struct PodcastEpisodeChapterEntity {
 #[diesel(table_name = podcast_episode_chapters)]
 struct PodcastEpisodeChapterInsertEntity {
     id: String,
-    episode_id: i32,
+    episode_id: String,
     title: String,
     start_time: i32,
     end_time: i32,
@@ -52,7 +53,7 @@ impl From<PodcastEpisodeChapterEntity> for PodcastEpisodeChapter {
     fn from(value: PodcastEpisodeChapterEntity) -> Self {
         Self {
             id: value.id,
-            episode_id: value.episode_id,
+            episode_id: Uuid::parse_str(&value.episode_id).expect("valid uuid in db"),
             title: value.title,
             start_time: value.start_time,
             end_time: value.end_time,
@@ -82,8 +83,9 @@ impl PodcastEpisodeChapterRepository for DieselPodcastEpisodeChapterRepository {
         use self::podcast_episode_chapters::table as pec_table;
 
         let now = chrono::Utc::now().naive_utc();
+        let episode_id = chapter.episode_id.to_string();
         let existing = pec_table
-            .filter(pec_dsl::episode_id.eq(chapter.episode_id))
+            .filter(pec_dsl::episode_id.eq(episode_id.clone()))
             .filter(pec_dsl::start_time.eq(chapter.start_time))
             .first::<PodcastEpisodeChapterEntity>(&mut self.database.connection()?)
             .optional()?;
@@ -91,7 +93,7 @@ impl PodcastEpisodeChapterRepository for DieselPodcastEpisodeChapterRepository {
         let chapter_to_store = match &existing {
             Some(existing) => PodcastEpisodeChapterInsertEntity {
                 id: existing.id.clone(),
-                episode_id: chapter.episode_id,
+                episode_id: episode_id.clone(),
                 title: chapter.title,
                 start_time: chapter.start_time,
                 end_time: chapter.end_time,
@@ -102,7 +104,7 @@ impl PodcastEpisodeChapterRepository for DieselPodcastEpisodeChapterRepository {
             },
             None => PodcastEpisodeChapterInsertEntity {
                 id: uuid::Uuid::new_v4().to_string(),
-                episode_id: chapter.episode_id,
+                episode_id: episode_id.clone(),
                 title: chapter.title,
                 start_time: chapter.start_time,
                 end_time: chapter.end_time,
@@ -137,13 +139,13 @@ impl PodcastEpisodeChapterRepository for DieselPodcastEpisodeChapterRepository {
 
     fn get_by_episode_id(
         &self,
-        episode_id_to_search: i32,
+        episode_id_to_search: Uuid,
     ) -> Result<Vec<PodcastEpisodeChapter>, Self::Error> {
         use self::podcast_episode_chapters::dsl as pec_dsl;
         use self::podcast_episode_chapters::table as pec_table;
 
         pec_table
-            .filter(pec_dsl::episode_id.eq(episode_id_to_search))
+            .filter(pec_dsl::episode_id.eq(episode_id_to_search.to_string()))
             .load::<PodcastEpisodeChapterEntity>(&mut self.database.connection()?)
             .map(|chapters| chapters.into_iter().map(Into::into).collect())
             .map_err(Into::into)

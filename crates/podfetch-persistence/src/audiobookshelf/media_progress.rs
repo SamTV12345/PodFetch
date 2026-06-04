@@ -3,11 +3,12 @@ use chrono::NaiveDateTime;
 use diesel::prelude::{AsChangeset, Insertable, Queryable};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use podfetch_domain::audiobookshelf::media_progress::{MediaProgress, MediaProgressRepository};
+use uuid::Uuid;
 
 diesel::table! {
     audiobookshelf_media_progress (id) {
         id -> Text,
-        user_id -> Integer,
+        user_id -> Text,
         library_item_id -> Text,
         episode_id -> Nullable<Text>,
         media_type -> Text,
@@ -26,7 +27,7 @@ diesel::table! {
 #[diesel(table_name = audiobookshelf_media_progress)]
 struct MediaProgressEntity {
     id: String,
-    user_id: i32,
+    user_id: String,
     library_item_id: String,
     episode_id: Option<String>,
     media_type: String,
@@ -44,7 +45,7 @@ impl From<MediaProgressEntity> for MediaProgress {
     fn from(value: MediaProgressEntity) -> Self {
         Self {
             id: value.id,
-            user_id: value.user_id,
+            user_id: Uuid::parse_str(&value.user_id).expect("valid uuid in db"),
             library_item_id: value.library_item_id,
             episode_id: value.episode_id,
             media_type: value.media_type,
@@ -64,7 +65,7 @@ impl From<MediaProgress> for MediaProgressEntity {
     fn from(value: MediaProgress) -> Self {
         Self {
             id: value.id,
-            user_id: value.user_id,
+            user_id: value.user_id.to_string(),
             library_item_id: value.library_item_id,
             episode_id: value.episode_id,
             media_type: value.media_type,
@@ -93,12 +94,12 @@ impl DieselMediaProgressRepository {
 impl MediaProgressRepository for DieselMediaProgressRepository {
     type Error = PersistenceError;
 
-    fn list_for_user(&self, lookup_user_id: i32) -> Result<Vec<MediaProgress>, Self::Error> {
+    fn list_for_user(&self, lookup_user_id: Uuid) -> Result<Vec<MediaProgress>, Self::Error> {
         use self::audiobookshelf_media_progress::dsl::*;
 
         let mut conn = self.database.connection()?;
         audiobookshelf_media_progress
-            .filter(user_id.eq(lookup_user_id))
+            .filter(user_id.eq(lookup_user_id.to_string()))
             .load::<MediaProgressEntity>(&mut conn)
             .map(|rows| rows.into_iter().map(Into::into).collect())
             .map_err(Into::into)
@@ -106,7 +107,7 @@ impl MediaProgressRepository for DieselMediaProgressRepository {
 
     fn find(
         &self,
-        lookup_user_id: i32,
+        lookup_user_id: Uuid,
         lookup_item_id: &str,
         lookup_episode_id: Option<&str>,
     ) -> Result<Option<MediaProgress>, Self::Error> {
@@ -114,7 +115,7 @@ impl MediaProgressRepository for DieselMediaProgressRepository {
 
         let mut conn = self.database.connection()?;
         let mut query = audiobookshelf_media_progress
-            .filter(user_id.eq(lookup_user_id))
+            .filter(user_id.eq(lookup_user_id.to_string()))
             .filter(library_item_id.eq(lookup_item_id))
             .into_boxed();
         query = match lookup_episode_id {

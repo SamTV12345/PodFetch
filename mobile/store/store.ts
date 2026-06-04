@@ -46,8 +46,8 @@ type ZustandStore = {
     // User profile
     userApiKey: string | null,
     setUserApiKey: (apiKey: string | null) => void,
-    userProfile: components["schemas"]["UserWithAPiKey"] | null,
-    setUserProfile: (profile: components["schemas"]["UserWithAPiKey"] | null) => void,
+    userProfile: components["schemas"]["UserWithApiKey"] | null,
+    setUserProfile: (profile: components["schemas"]["UserWithApiKey"] | null) => void,
     // Offline mode
     offlineMode: boolean,
     setOfflineMode: (enabled: boolean) => void,
@@ -227,8 +227,6 @@ export const useStore = create<ZustandStore>()(
                 castDeviceName: deviceName ?? null,
                 castStatus: session ? {
                     session_id: session.session_id,
-                    chromecast_uuid: session.chromecast_uuid,
-                    episode_id: session.episode_id,
                     state: session.state,
                     position_secs: session.position_secs,
                     volume: session.volume,

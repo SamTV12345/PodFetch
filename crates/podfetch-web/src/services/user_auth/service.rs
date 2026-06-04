@@ -49,7 +49,7 @@ impl UserAuthService {
         }
 
         self.repository.create(ManagedUser {
-            id: 0,
+            id: podfetch_domain::ids::new_id(),
             username,
             role,
             password,
@@ -110,7 +110,7 @@ impl UserAuthService {
         }
 
         self.repository.create(ManagedUser {
-            id: 0,
+            id: podfetch_domain::ids::new_id(),
             username: admin_username.clone(),
             role: Role::Admin.to_string(),
             password: self.environment.password.clone(),

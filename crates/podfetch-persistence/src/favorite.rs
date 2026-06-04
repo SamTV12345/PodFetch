@@ -12,18 +12,20 @@ use podfetch_domain::ordering::{OrderCriteria, OrderOption};
 use podfetch_domain::podcast::Podcast;
 use podfetch_domain::tag::Tag;
 use std::collections::BTreeMap;
+use uuid::Uuid;
 
 diesel::table! {
     favorites (user_id, podcast_id) {
-        user_id -> Integer,
-        podcast_id -> Integer,
+        user_id -> Text,
+        podcast_id -> Text,
         favored -> Bool,
     }
 }
 
 diesel::table! {
     podcasts (id) {
-        id -> Integer,
+        id -> Text,
+        legacy_id -> Nullable<BigInt>,
         name -> Text,
         directory_id -> Text,
         rssfeed -> Text,
@@ -39,7 +41,7 @@ diesel::table! {
         directory_name -> Text,
         download_location -> Nullable<Text>,
         guid -> Nullable<Text>,
-        added_by -> Nullable<Integer>,
+        added_by -> Nullable<Text>,
     }
 }
 
@@ -47,7 +49,7 @@ diesel::table! {
     tags (id) {
         id -> Text,
         name -> Text,
-        user_id -> Integer,
+        user_id -> Text,
         description -> Nullable<Text>,
         created_at -> Timestamp,
         color -> Text,
@@ -57,7 +59,7 @@ diesel::table! {
 diesel::table! {
     tags_podcasts (tag_id, podcast_id) {
         tag_id -> Text,
-        podcast_id -> Integer,
+        podcast_id -> Text,
     }
 }
 
@@ -66,14 +68,15 @@ diesel::allow_tables_to_appear_in_same_query!(favorites, podcasts, tags, tags_po
 #[derive(Queryable, Insertable, AsChangeset, Debug, Clone, PartialEq, Eq)]
 #[diesel(table_name = favorites)]
 pub struct FavoriteEntity {
-    pub user_id: i32,
-    pub podcast_id: i32,
+    pub user_id: String,
+    pub podcast_id: String,
     pub favored: bool,
 }
 
 #[derive(Queryable, Debug, Clone)]
 struct PodcastEntity {
-    id: i32,
+    id: String,
+    legacy_id: Option<i64>,
     name: String,
     directory_id: String,
     rssfeed: String,
@@ -89,21 +92,21 @@ struct PodcastEntity {
     directory_name: String,
     download_location: Option<String>,
     guid: Option<String>,
-    added_by: Option<i32>,
+    added_by: Option<String>,
 }
 
 #[derive(Queryable, Clone)]
 #[allow(dead_code)]
 struct JoinedTagsPodcast {
     tag_id: String,
-    podcast_id: i32,
+    podcast_id: String,
 }
 
 #[derive(Queryable, Clone)]
 struct JoinedTag {
     id: String,
     name: String,
-    user_id: i32,
+    user_id: String,
     description: Option<String>,
     created_at: chrono::NaiveDateTime,
     color: String,
@@ -112,8 +115,8 @@ struct JoinedTag {
 impl From<FavoriteEntity> for Favorite {
     fn from(entity: FavoriteEntity) -> Self {
         Self {
-            user_id: entity.user_id,
-            podcast_id: entity.podcast_id,
+            user_id: Uuid::parse_str(&entity.user_id).expect("valid uuid in db"),
+            podcast_id: Uuid::parse_str(&entity.podcast_id).expect("valid uuid in db"),
             favored: entity.favored,
         }
     }
@@ -122,8 +125,8 @@ impl From<FavoriteEntity> for Favorite {
 impl From<Favorite> for FavoriteEntity {
     fn from(favorite: Favorite) -> Self {
         Self {
-            user_id: favorite.user_id,
-            podcast_id: favorite.podcast_id,
+            user_id: favorite.user_id.to_string(),
+            podcast_id: favorite.podcast_id.to_string(),
             favored: favorite.favored,
         }
     }
@@ -132,7 +135,8 @@ impl From<Favorite> for FavoriteEntity {
 impl From<PodcastEntity> for Podcast {
     fn from(entity: PodcastEntity) -> Self {
         Self {
-            id: entity.id,
+            id: Uuid::parse_str(&entity.id).expect("valid uuid in db"),
+            legacy_id: entity.legacy_id,
             name: entity.name,
             directory_id: entity.directory_id,
             rssfeed: entity.rssfeed,
@@ -148,7 +152,10 @@ impl From<PodcastEntity> for Podcast {
             directory_name: entity.directory_name,
             download_location: entity.download_location,
             guid: entity.guid,
-            added_by: entity.added_by,
+            added_by: entity
+                .added_by
+                .as_deref()
+                .map(|s| Uuid::parse_str(s).expect("valid uuid in db")),
         }
     }
 }
@@ -158,7 +165,7 @@ impl From<JoinedTag> for Tag {
         Self {
             id: value.id,
             name: value.name,
-            user_id: value.user_id,
+            user_id: Uuid::parse_str(&value.user_id).expect("valid uuid in db"),
             description: value.description,
             created_at: value.created_at,
             color: value.color,
@@ -185,8 +192,8 @@ impl FavoriteRepository for DieselFavoriteRepository {
         let existing = favorites::table
             .filter(
                 favorites::user_id
-                    .eq(entity.user_id)
-                    .and(favorites::podcast_id.eq(entity.podcast_id)),
+                    .eq(entity.user_id.clone())
+                    .and(favorites::podcast_id.eq(entity.podcast_id.clone())),
             )
             .first::<FavoriteEntity>(&mut self.database.connection()?)
             .optional()?;
@@ -195,8 +202,8 @@ impl FavoriteRepository for DieselFavoriteRepository {
             Some(_) => diesel::update(
                 favorites::table.filter(
                     favorites::user_id
-                        .eq(entity.user_id)
-                        .and(favorites::podcast_id.eq(entity.podcast_id)),
+                        .eq(entity.user_id.clone())
+                        .and(favorites::podcast_id.eq(entity.podcast_id.clone())),
                 ),
             )
             .set(favorites::favored.eq(entity.favored))
@@ -213,14 +220,14 @@ impl FavoriteRepository for DieselFavoriteRepository {
 
     fn find_by_user_id_and_podcast_id(
         &self,
-        user_id: i32,
-        podcast_id: i32,
+        user_id: Uuid,
+        podcast_id: Uuid,
     ) -> Result<Option<Favorite>, Self::Error> {
         favorites::table
             .filter(
                 favorites::user_id
-                    .eq(user_id)
-                    .and(favorites::podcast_id.eq(podcast_id)),
+                    .eq(user_id.to_string())
+                    .and(favorites::podcast_id.eq(podcast_id.to_string())),
             )
             .first::<FavoriteEntity>(&mut self.database.connection()?)
             .optional()
@@ -228,11 +235,11 @@ impl FavoriteRepository for DieselFavoriteRepository {
             .map_err(Into::into)
     }
 
-    fn find_favored_by_user_id(&self, user_id: i32) -> Result<Vec<Favorite>, Self::Error> {
+    fn find_favored_by_user_id(&self, user_id: Uuid) -> Result<Vec<Favorite>, Self::Error> {
         favorites::table
             .filter(
                 favorites::user_id
-                    .eq(user_id)
+                    .eq(user_id.to_string())
                     .and(favorites::favored.eq(true)),
             )
             .load::<FavoriteEntity>(&mut self.database.connection()?)
@@ -240,8 +247,8 @@ impl FavoriteRepository for DieselFavoriteRepository {
             .map_err(Into::into)
     }
 
-    fn delete_by_user_id(&self, user_id: i32) -> Result<(), Self::Error> {
-        diesel::delete(favorites::table.filter(favorites::user_id.eq(user_id)))
+    fn delete_by_user_id(&self, user_id: Uuid) -> Result<(), Self::Error> {
+        diesel::delete(favorites::table.filter(favorites::user_id.eq(user_id.to_string())))
             .execute(&mut self.database.connection()?)
             .map(|_| ())
             .map_err(Into::into)
@@ -249,15 +256,17 @@ impl FavoriteRepository for DieselFavoriteRepository {
 
     fn update_podcast_favor(
         &self,
-        podcast_id: i32,
+        podcast_id: Uuid,
         favor: bool,
-        user_id: i32,
+        user_id: Uuid,
     ) -> Result<(), Self::Error> {
+        let podcast_id = podcast_id.to_string();
+        let user_id = user_id.to_string();
         let existing = favorites::table
             .filter(
                 favorites::podcast_id
-                    .eq(podcast_id)
-                    .and(favorites::user_id.eq(user_id)),
+                    .eq(podcast_id.clone())
+                    .and(favorites::user_id.eq(user_id.clone())),
             )
             .first::<FavoriteEntity>(&mut self.database.connection()?)
             .optional()?;
@@ -266,8 +275,8 @@ impl FavoriteRepository for DieselFavoriteRepository {
             Some(_) => diesel::update(
                 favorites::table.filter(
                     favorites::podcast_id
-                        .eq(podcast_id)
-                        .and(favorites::user_id.eq(user_id)),
+                        .eq(podcast_id.clone())
+                        .and(favorites::user_id.eq(user_id.clone())),
                 ),
             )
             .set(favorites::favored.eq(favor))
@@ -286,13 +295,13 @@ impl FavoriteRepository for DieselFavoriteRepository {
         }
     }
 
-    fn get_favored_podcasts(&self, user_id: i32) -> Result<Vec<PodcastWithFavorite>, Self::Error> {
+    fn get_favored_podcasts(&self, user_id: Uuid) -> Result<Vec<PodcastWithFavorite>, Self::Error> {
         podcasts::table
             .inner_join(favorites::table.on(podcasts::id.eq(favorites::podcast_id)))
             .filter(
                 favorites::favored
                     .eq(true)
-                    .and(favorites::user_id.eq(user_id)),
+                    .and(favorites::user_id.eq(user_id.to_string())),
             )
             .load::<(PodcastEntity, FavoriteEntity)>(&mut self.database.connection()?)
             .map(|results| {
@@ -312,21 +321,22 @@ impl FavoriteRepository for DieselFavoriteRepository {
         order: OrderCriteria,
         title: Option<String>,
         order_option: OrderOption,
-        user_id: i32,
+        user_id: Uuid,
     ) -> Result<Vec<FavoredPodcastSearchResult>, Self::Error> {
+        let user_id = user_id.to_string();
         let mut conn = self.database.connection()?;
 
         let mut query = podcasts::table
             .inner_join(
                 favorites::table.on(podcasts::id
                     .eq(favorites::podcast_id)
-                    .and(favorites::user_id.eq(user_id))),
+                    .and(favorites::user_id.eq(user_id.clone()))),
             )
             .left_join(tags_podcasts::table.on(podcasts::id.eq(tags_podcasts::podcast_id)))
             .left_join(
                 tags::table.on(tags_podcasts::tag_id
                     .eq(tags::id)
-                    .and(tags::user_id.eq(user_id))),
+                    .and(tags::user_id.eq(user_id.clone()))),
             )
             .into_boxed();
 
@@ -360,7 +370,8 @@ impl FavoriteRepository for DieselFavoriteRepository {
             Option<JoinedTag>,
         )>(&mut conn)?;
 
-        let mut matching_podcast_ids: BTreeMap<i32, FavoredPodcastSearchResult> = BTreeMap::new();
+        let mut matching_podcast_ids: BTreeMap<String, FavoredPodcastSearchResult> =
+            BTreeMap::new();
         for (podcast, favorite, _tags_podcast, tag) in results {
             if let Some(existing) = matching_podcast_ids.get_mut(&podcast.id) {
                 if let Some(tag) = tag
@@ -374,7 +385,7 @@ impl FavoriteRepository for DieselFavoriteRepository {
                     tags.push(tag.into());
                 }
                 matching_podcast_ids.insert(
-                    podcast.id,
+                    podcast.id.clone(),
                     FavoredPodcastSearchResult {
                         podcast: podcast.into(),
                         favorite: favorite.into(),
@@ -392,23 +403,24 @@ impl FavoriteRepository for DieselFavoriteRepository {
         order: OrderCriteria,
         title: Option<String>,
         order_option: OrderOption,
-        user_id: i32,
+        user_id: Uuid,
     ) -> Result<Vec<PodcastSearchResult>, Self::Error> {
         diesel::define_sql_function!(fn lower(x: diesel::sql_types::Text) -> diesel::sql_types::Text);
 
+        let user_id = user_id.to_string();
         let mut conn = self.database.connection()?;
 
         let mut query = podcasts::table
             .left_join(
                 favorites::table.on(favorites::user_id
-                    .eq(user_id)
+                    .eq(user_id.clone())
                     .and(favorites::podcast_id.eq(podcasts::id))),
             )
             .left_join(tags_podcasts::table.on(podcasts::id.eq(tags_podcasts::podcast_id)))
             .left_join(
                 tags::table.on(tags_podcasts::tag_id
                     .eq(tags::id)
-                    .and(tags::user_id.eq(user_id))),
+                    .and(tags::user_id.eq(user_id.clone()))),
             )
             .into_boxed();
 
@@ -442,7 +454,7 @@ impl FavoriteRepository for DieselFavoriteRepository {
             Option<JoinedTag>,
         )>(&mut conn)?;
 
-        let mut matching_podcast_ids: IndexMap<i32, PodcastSearchResult> = IndexMap::new();
+        let mut matching_podcast_ids: IndexMap<String, PodcastSearchResult> = IndexMap::new();
         for (podcast, favorite, _tags_podcast, tag) in results {
             if let Some(existing) = matching_podcast_ids.get_mut(&podcast.id) {
                 if let Some(tag) = tag
@@ -456,7 +468,7 @@ impl FavoriteRepository for DieselFavoriteRepository {
                     tags.push(tag.into());
                 }
                 matching_podcast_ids.insert(
-                    podcast.id,
+                    podcast.id.clone(),
                     PodcastSearchResult {
                         podcast: podcast.into(),
                         favorite: favorite.map(Into::into),

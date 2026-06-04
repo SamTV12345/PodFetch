@@ -8,4 +8,4 @@ path = "src/lib.rs"
 
 [dependencies]
 chrono = { workspace = true }
-uuid = { workspace = true }
+uuid = { workspace = true, features = ["v7", "v4"] }

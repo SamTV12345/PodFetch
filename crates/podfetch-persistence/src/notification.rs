@@ -2,10 +2,11 @@ use crate::db::{Database, PersistenceError};
 use diesel::prelude::{AsChangeset, Insertable, Queryable};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use podfetch_domain::notification::{Notification, NotificationRepository};
+use uuid::Uuid;
 
 diesel::table! {
     notifications (id) {
-        id -> Integer,
+        id -> Text,
         type_of_message -> Text,
         message -> Text,
         created_at -> Text,
@@ -16,7 +17,7 @@ diesel::table! {
 #[derive(Queryable, Insertable, AsChangeset, Debug, Clone)]
 #[diesel(table_name = notifications)]
 struct NotificationEntity {
-    id: i32,
+    id: String,
     type_of_message: String,
     message: String,
     created_at: String,
@@ -26,7 +27,7 @@ struct NotificationEntity {
 impl From<NotificationEntity> for Notification {
     fn from(value: NotificationEntity) -> Self {
         Self {
-            id: value.id,
+            id: Uuid::parse_str(&value.id).expect("valid uuid in db"),
             type_of_message: value.type_of_message,
             message: value.message,
             created_at: value.created_at,
@@ -53,6 +54,7 @@ impl NotificationRepository for DieselNotificationRepository {
 
         diesel::insert_into(notifications)
             .values((
+                id.eq(podfetch_domain::ids::new_id().to_string()),
                 type_of_message.eq(notification.type_of_message),
                 message.eq(notification.message),
                 created_at.eq(notification.created_at),
@@ -76,12 +78,12 @@ impl NotificationRepository for DieselNotificationRepository {
 
     fn update_status_of_notification(
         &self,
-        id_to_update: i32,
+        id_to_update: Uuid,
         status_update: &str,
     ) -> Result<(), Self::Error> {
         use self::notifications::dsl::*;
 
-        diesel::update(notifications.filter(id.eq(id_to_update)))
+        diesel::update(notifications.filter(id.eq(id_to_update.to_string())))
             .set(status.eq(status_update))
             .execute(&mut self.database.connection()?)
             .map(|_| ())

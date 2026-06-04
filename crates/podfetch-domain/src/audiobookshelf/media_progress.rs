@@ -1,9 +1,10 @@
 use chrono::NaiveDateTime;
+use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct MediaProgress {
     pub id: String,
-    pub user_id: i32,
+    pub user_id: Uuid,
     pub library_item_id: String,
     pub episode_id: Option<String>,
     pub media_type: String,
@@ -29,10 +30,10 @@ impl MediaProgress {
 pub trait MediaProgressRepository: Send + Sync {
     type Error;
 
-    fn list_for_user(&self, user_id: i32) -> Result<Vec<MediaProgress>, Self::Error>;
+    fn list_for_user(&self, user_id: Uuid) -> Result<Vec<MediaProgress>, Self::Error>;
     fn find(
         &self,
-        user_id: i32,
+        user_id: Uuid,
         library_item_id: &str,
         episode_id: Option<&str>,
     ) -> Result<Option<MediaProgress>, Self::Error>;

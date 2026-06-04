@@ -193,7 +193,7 @@ mod tests {
 
     fn insert_user_with_password(username: String, plain_password: &str) {
         let user = User::new(
-            0,
+            Uuid::new_v4(),
             username,
             Role::User,
             Some(digest(plain_password)),
@@ -345,7 +345,7 @@ mod tests {
     #[serial]
     async fn test_get_sys_info_handler_returns_forbidden_for_non_admin() {
         let non_admin = User::new(
-            0,
+            Uuid::new_v4(),
             unique_username("non-admin"),
             Role::User,
             Some(digest("non-admin-password")),

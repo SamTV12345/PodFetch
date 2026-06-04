@@ -5,15 +5,16 @@ use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use podfetch_domain::listening_event::{
     ListeningEvent, ListeningEventRepository, NewListeningEvent,
 };
+use uuid::Uuid;
 
 diesel::table! {
     listening_events (id) {
-        id -> Integer,
-        user_id -> Integer,
+        id -> Text,
+        user_id -> Text,
         device -> Text,
         podcast_episode_id -> Text,
-        podcast_id -> Integer,
-        podcast_episode_db_id -> Integer,
+        podcast_id -> Text,
+        podcast_episode_db_id -> Text,
         delta_seconds -> Integer,
         start_position -> Integer,
         end_position -> Integer,
@@ -24,12 +25,12 @@ diesel::table! {
 #[derive(Queryable, Selectable, Clone)]
 #[diesel(table_name = listening_events)]
 struct ListeningEventEntity {
-    id: i32,
-    user_id: i32,
+    id: String,
+    user_id: String,
     device: String,
     podcast_episode_id: String,
-    podcast_id: i32,
-    podcast_episode_db_id: i32,
+    podcast_id: String,
+    podcast_episode_db_id: String,
     delta_seconds: i32,
     start_position: i32,
     end_position: i32,
@@ -39,11 +40,12 @@ struct ListeningEventEntity {
 #[derive(Insertable, Clone)]
 #[diesel(table_name = listening_events)]
 struct NewListeningEventEntity {
-    user_id: i32,
+    id: String,
+    user_id: String,
     device: String,
     podcast_episode_id: String,
-    podcast_id: i32,
-    podcast_episode_db_id: i32,
+    podcast_id: String,
+    podcast_episode_db_id: String,
     delta_seconds: i32,
     start_position: i32,
     end_position: i32,
@@ -53,12 +55,13 @@ struct NewListeningEventEntity {
 impl From<ListeningEventEntity> for ListeningEvent {
     fn from(value: ListeningEventEntity) -> Self {
         Self {
-            id: value.id,
-            user_id: value.user_id,
+            id: Uuid::parse_str(&value.id).expect("valid uuid in db"),
+            user_id: Uuid::parse_str(&value.user_id).expect("valid uuid in db"),
             device: value.device,
             podcast_episode_id: value.podcast_episode_id,
-            podcast_id: value.podcast_id,
-            podcast_episode_db_id: value.podcast_episode_db_id,
+            podcast_id: Uuid::parse_str(&value.podcast_id).expect("valid uuid in db"),
+            podcast_episode_db_id: Uuid::parse_str(&value.podcast_episode_db_id)
+                .expect("valid uuid in db"),
             delta_seconds: value.delta_seconds,
             start_position: value.start_position,
             end_position: value.end_position,
@@ -70,11 +73,12 @@ impl From<ListeningEventEntity> for ListeningEvent {
 impl From<NewListeningEvent> for NewListeningEventEntity {
     fn from(value: NewListeningEvent) -> Self {
         Self {
-            user_id: value.user_id,
+            id: podfetch_domain::ids::new_id().to_string(),
+            user_id: value.user_id.to_string(),
             device: value.device,
             podcast_episode_id: value.podcast_episode_id,
-            podcast_id: value.podcast_id,
-            podcast_episode_db_id: value.podcast_episode_db_id,
+            podcast_id: value.podcast_id.to_string(),
+            podcast_episode_db_id: value.podcast_episode_db_id.to_string(),
             delta_seconds: value.delta_seconds,
             start_position: value.start_position,
             end_position: value.end_position,
@@ -108,7 +112,7 @@ impl ListeningEventRepository for DieselListeningEventRepository {
 
     fn get_by_user_and_range(
         &self,
-        user_id_to_search: i32,
+        user_id_to_search: Uuid,
         from: Option<NaiveDateTime>,
         to: Option<NaiveDateTime>,
     ) -> Result<Vec<ListeningEvent>, Self::Error> {
@@ -116,7 +120,7 @@ impl ListeningEventRepository for DieselListeningEventRepository {
         use self::listening_events::table as le_table;
 
         let mut query = le_table
-            .filter(le_dsl::user_id.eq(user_id_to_search))
+            .filter(le_dsl::user_id.eq(user_id_to_search.to_string()))
             .into_boxed();
 
         if let Some(from) = from {
@@ -134,20 +138,20 @@ impl ListeningEventRepository for DieselListeningEventRepository {
             .map_err(Into::into)
     }
 
-    fn delete_by_user_id(&self, user_id_to_search: i32) -> Result<usize, Self::Error> {
+    fn delete_by_user_id(&self, user_id_to_search: Uuid) -> Result<usize, Self::Error> {
         use self::listening_events::dsl as le_dsl;
         use self::listening_events::table as le_table;
 
-        diesel::delete(le_table.filter(le_dsl::user_id.eq(user_id_to_search)))
+        diesel::delete(le_table.filter(le_dsl::user_id.eq(user_id_to_search.to_string())))
             .execute(&mut self.database.connection()?)
             .map_err(Into::into)
     }
 
-    fn delete_by_podcast_id(&self, podcast_id_to_delete: i32) -> Result<usize, Self::Error> {
+    fn delete_by_podcast_id(&self, podcast_id_to_delete: Uuid) -> Result<usize, Self::Error> {
         use self::listening_events::dsl as le_dsl;
         use self::listening_events::table as le_table;
 
-        diesel::delete(le_table.filter(le_dsl::podcast_id.eq(podcast_id_to_delete)))
+        diesel::delete(le_table.filter(le_dsl::podcast_id.eq(podcast_id_to_delete.to_string())))
             .execute(&mut self.database.connection()?)
             .map_err(Into::into)
     }

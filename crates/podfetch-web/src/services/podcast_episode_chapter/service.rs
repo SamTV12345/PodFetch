@@ -30,7 +30,12 @@ impl PodcastEpisodeChapterService {
     ) -> Result<(), CustomError> {
         self.repository.upsert(
             UpsertPodcastEpisodeChapter {
-                episode_id: podcast_episode.id,
+                episode_id: uuid::Uuid::parse_str(&podcast_episode.id).map_err(|_| {
+                    CustomError::from(common_infrastructure::error::CustomErrorInner::BadRequest(
+                        "invalid episode id".to_string(),
+                        common_infrastructure::error::ErrorSeverity::Warning,
+                    ))
+                })?,
                 title: chapter_to_save.title.clone().unwrap_or_default(),
                 start_time: chapter_to_save.start.num_seconds() as i32,
                 end_time: chapter_to_save.end.unwrap_or_default().num_seconds() as i32,
@@ -46,7 +51,7 @@ impl PodcastEpisodeChapterService {
 
     pub fn get_chapters_by_episode_id(
         &self,
-        episode_id: i32,
+        episode_id: uuid::Uuid,
     ) -> Result<Vec<podfetch_domain::podcast_episode_chapter::PodcastEpisodeChapter>, CustomError>
     {
         self.repository.get_by_episode_id(episode_id)

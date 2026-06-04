@@ -4,6 +4,86 @@
  */
 
 export interface paths {
+    "/api/v1/cast/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_cast_devices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cast/devices/discover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["discover_cast_devices"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cast/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["start_cast_session"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cast/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_cast_session_status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cast/sessions/{session_id}/control": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["control_cast_session"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/discover/categories": {
         parameters: {
             query?: never;
@@ -1127,86 +1207,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/cast/devices": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["list_cast_devices"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/cast/devices/discover": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["discover_cast_devices"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/cast/sessions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["start_cast_session"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/cast/sessions/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["get_cast_session"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/cast/sessions/{id}/control": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["control_cast_session"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/ui/index.html": {
         parameters: {
             query?: never;
@@ -1230,61 +1230,82 @@ export interface components {
         BatchActionResponse: {
             affected: number;
         };
-        /** @enum {string} */
-        CastDeviceKind: "chromecast_personal" | "chromecast_shared";
+        /** @description Request body for `POST /cast/sessions/:id/control`. */
+        CastControlRequest: {
+            /** @enum {string} */
+            cmd: "pause";
+        } | {
+            /** @enum {string} */
+            cmd: "resume";
+        } | {
+            /** @enum {string} */
+            cmd: "stop";
+        } | {
+            /** @enum {string} */
+            cmd: "seek";
+            /** Format: double */
+            position_secs: number;
+        } | {
+            /** @enum {string} */
+            cmd: "set_volume";
+            /** Format: float */
+            volume: number;
+        };
+        /** @description One Chromecast device as exposed to the UI. */
         CastDeviceResponse: {
-            chromecast_uuid: string;
-            name: string;
-            kind: components["schemas"]["CastDeviceKind"];
+            /**
+             * @description `None` for devices on the same LAN as the server, otherwise the
+             *     agent that contributed this device.
+             */
             agent_id?: string | null;
+            chromecast_uuid: string;
+            ip?: string | null;
+            /** @description `chromecast_personal` or `chromecast_shared`. */
+            kind: string;
+            /** Format: date-time */
             last_seen_at?: string | null;
-            ip?: string | null;
+            name: string;
         };
-        DiscoveredCastDeviceResponse: {
-            uuid: string;
-            friendly_name: string;
-            model?: string | null;
-            ip?: string | null;
-            /** Format: int32 */
-            port: number;
-        };
-        /** @enum {string} */
-        CastSessionState: "idle" | "buffering" | "playing" | "paused" | "stopped";
         CastSessionResponse: {
-            session_id: string;
             chromecast_uuid: string;
-            episode_id?: number | null;
-            state: components["schemas"]["CastSessionState"];
-            /** Format: float */
+            episode_id?: string | null;
+            /** Format: double */
             position_secs: number;
+            session_id: string;
+            state: components["schemas"]["CastStateDto"];
             /** Format: float */
             volume: number;
         };
-        CastStatusResponse: {
-            session_id: string;
-            state: components["schemas"]["CastSessionState"];
-            /** Format: float */
-            position_secs: number;
-            /** Format: float */
-            volume: number;
-        };
-        CastStartSessionRequest: {
+        /** @description Request body for `POST /cast/sessions`. */
+        CastStartRequest: {
+            artwork_url?: string | null;
             chromecast_uuid: string;
-            /** Format: int32 */
-            episode_id: number;
-            url: string;
+            /** Format: double */
+            duration_secs?: number | null;
+            episode_id: string;
             mime: string;
             title: string;
-            artwork_url?: string | null;
-            /** Format: float */
-            duration_secs?: number | null;
+            /**
+             * @description Direct URL the Chromecast should fetch. For local server scenarios
+             *     the caller resolves this from the episode (proxied or direct file
+             *     URL); the controller passes it through unchanged.
+             */
+            url: string;
         };
-        CastControlCommand:
-            | { cmd: "pause" }
-            | { cmd: "resume" }
-            | { cmd: "stop" }
-            | { cmd: "seek"; position_secs: number }
-            | { cmd: "set_volume"; volume: number };
+        /**
+         * @description Wire-friendly mirror of [`podfetch_cast::CastState`] — gives utoipa a
+         *     schema without leaking the cast crate's enum into the OpenAPI surface.
+         * @enum {string}
+         */
+        CastStateDto: "idle" | "buffering" | "playing" | "paused" | "stopped";
+        CastStatusResponse: {
+            /** Format: double */
+            position_secs: number;
+            session_id: string;
+            state: components["schemas"]["CastStateDto"];
+            /** Format: float */
+            volume: number;
+        };
         CategoryDto: {
             /** Format: int32 */
             itunesGenreId: number;
@@ -1323,6 +1344,19 @@ export interface components {
         };
         DeletePodcast: {
             delete_files: boolean;
+        };
+        /**
+         * @description One device returned by an explicit discovery scan. Distinct from
+         *     `CastDeviceResponse` because discovery results are *not yet persisted*
+         *     and have no `kind` until an admin promotes them.
+         */
+        DiscoveredCastDeviceResponse: {
+            friendly_name: string;
+            ip?: string | null;
+            model?: string | null;
+            /** Format: int32 */
+            port: number;
+            uuid: string;
         };
         /** @enum {string} */
         EpisodeAction: "new" | "download" | "play" | "delete";
@@ -1379,8 +1413,7 @@ export interface components {
             filter?: string | null;
             only_favored: boolean;
             title?: string | null;
-            /** Format: int32 */
-            user_id: number;
+            user_id: string;
         };
         GPodderAvailablePodcast: {
             device: string;
@@ -1465,15 +1498,13 @@ export interface components {
         };
         Notification: {
             createdAt: string;
-            /** Format: int32 */
-            id: number;
+            id: string;
             message: string;
             status: string;
             typeOfMessage: string;
         };
         NotificationId: {
-            /** Format: int32 */
-            id: number;
+            id: string;
         };
         OidcConfig: {
             authority: string;
@@ -1497,8 +1528,7 @@ export interface components {
             name: string;
         };
         PlaylistItem: {
-            /** Format: int32 */
-            episode: number;
+            episode: string;
         };
         PodcastAddModel: {
             /** Format: int32 */
@@ -1521,12 +1551,13 @@ export interface components {
             directory_name: string;
             explicit?: string | null;
             favorites: boolean;
-            /** Format: int32 */
-            id: number;
+            id: string;
             image_url: string;
             keywords?: string | null;
             language?: string | null;
             last_build_date?: string | null;
+            /** Format: int64 */
+            legacyId?: number | null;
             name: string;
             original_image_url: string;
             podfetch_feed: string;
@@ -1544,14 +1575,14 @@ export interface components {
             episode_numbering_processed: boolean;
             favored?: boolean | null;
             guid: string;
-            /** Format: int32 */
-            id: number;
+            id: string;
             image_url: string;
+            /** Format: int64 */
+            legacyId?: number | null;
             local_image_url: string;
             local_url: string;
             name: string;
-            /** Format: int32 */
-            podcast_id: number;
+            podcast_id: string;
             status: boolean;
             /** Format: int32 */
             total_time: number;
@@ -1563,8 +1594,7 @@ export interface components {
         };
         PodcastFavorUpdateModel: {
             favored: boolean;
-            /** Format: int32 */
-            id: number;
+            id: string;
         };
         PodcastRSSAddModel: {
             rssFeedUrl: string;
@@ -1581,8 +1611,7 @@ export interface components {
             episodeFormat: string;
             episodeNumbering: boolean;
             podcastFormat: string;
-            /** Format: int32 */
-            podcastId: number;
+            podcastId: string;
             /** Format: int32 */
             podcastPrefill: number;
             replaceInvalidCharacters: boolean;
@@ -1609,11 +1638,36 @@ export interface components {
         };
         /** @enum {string} */
         ReplacementStrategy: "replace-with-dash-and-underscore" | "remove" | "replace-with-dash";
+        /**
+         * @description Toggles for re-applying the current settings to already-downloaded
+         *     episodes. Each field is opt-in so an empty body keeps the historical
+         *     "chapter rescan only" behaviour of `/settings/rescan-episodes`.
+         */
         RescanOptions: {
-            applyCovers?: boolean;
-            applyFilenames?: boolean;
-            applyMetadata?: boolean;
-            applyTranscode?: boolean;
+            /**
+             * @description If `use_one_cover_for_all_episodes` is on, remove the per-episode
+             *     cover image from disk.
+             * @default false
+             */
+            applyCovers: boolean;
+            /**
+             * @description Rename / move the audio + image file to the path the current naming
+             *     settings would produce.
+             * @default false
+             */
+            applyFilenames: boolean;
+            /**
+             * @description Rewrite embedded ID3 / MP4 tags (title, artist, album, track, cover,
+             *     episode-number prefix).
+             * @default false
+             */
+            applyMetadata: boolean;
+            /**
+             * @description If `auto_transcode_opus` is on and the file is still mp3, convert it
+             *     to opus (same ffmpeg call the downloader uses).
+             * @default false
+             */
+            applyTranscode: boolean;
         };
         Setting: {
             autoCleanup: boolean;
@@ -1624,8 +1678,7 @@ export interface components {
             autoUpdate: boolean;
             directPaths: boolean;
             episodeFormat: string;
-            /** Format: int32 */
-            id: number;
+            id: string;
             podcastFormat: string;
             /** Format: int32 */
             podcastPrefill: number;
@@ -1679,8 +1732,7 @@ export interface components {
             description?: string | null;
             id: string;
             name: string;
-            /** Format: int32 */
-            user_id: number;
+            user_id: string;
         };
         TagCreate: {
             color: components["schemas"]["Color"];
@@ -1688,8 +1740,7 @@ export interface components {
             name: string;
         };
         TagsPodcast: {
-            /** Format: int32 */
-            podcast_id: number;
+            podcast_id: string;
             tag_id: string;
         };
         TimeLinePodcastEpisode: {
@@ -1712,8 +1763,7 @@ export interface components {
             listenedEpisodes: number;
             /** Format: int64 */
             listenedSeconds: number;
-            /** Format: int32 */
-            podcastId: number;
+            podcastId: string;
             podcastName: string;
         };
         UpdateNameSettings: {
@@ -1746,8 +1796,7 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             explicitConsent: boolean;
-            /** Format: int32 */
-            id: number;
+            id: string;
             role: string;
             username: string;
         };
@@ -1757,8 +1806,7 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             explicitConsent: boolean;
-            /** Format: int32 */
-            id: number;
+            id: string;
             language?: string | null;
             readOnly: boolean;
             role: string;
@@ -1788,6 +1836,158 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_cast_devices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Chromecast devices visible to the caller */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CastDeviceResponse"][];
+                };
+            };
+        };
+    };
+    discover_cast_devices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Newly discovered Chromecasts on the server's LAN */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscoveredCastDeviceResponse"][];
+                };
+            };
+            /** @description Only admins can trigger discovery */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    start_cast_session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CastStartRequest"];
+            };
+        };
+        responses: {
+            /** @description Started a new cast session */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CastSessionResponse"];
+                };
+            };
+            /** @description Device not found or not visible to caller */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_cast_session_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Snapshot of session status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CastStatusResponse"];
+                };
+            };
+            /** @description Caller does not own this session */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    control_cast_session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CastControlRequest"];
+            };
+        };
+        responses: {
+            /** @description Command accepted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Caller does not own this session */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     get_categories: {
         parameters: {
             query?: never;
@@ -2265,7 +2465,7 @@ export interface operations {
             header?: never;
             path: {
                 playlist_id: string;
-                episode_id: number;
+                episode_id: string;
             };
             cookie?: never;
         };
@@ -2407,7 +2607,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -2605,7 +2805,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -2700,7 +2900,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -2831,7 +3031,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -2899,7 +3099,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -2945,7 +3145,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -2967,7 +3167,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -3131,7 +3331,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
                 "application/json": components["schemas"]["RescanOptions"];
             };
@@ -3322,7 +3522,7 @@ export interface operations {
             header?: never;
             path: {
                 tag_id: string;
-                podcast_id: number;
+                podcast_id: string;
             };
             cookie?: never;
         };
@@ -3345,7 +3545,7 @@ export interface operations {
             header?: never;
             path: {
                 tag_id: string;
-                podcast_id: number;
+                podcast_id: string;
             };
             cookie?: never;
         };
@@ -3604,7 +3804,7 @@ export interface operations {
             header?: never;
             path: {
                 apiKey: string;
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -3624,7 +3824,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -3636,113 +3836,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-        };
-    };
-    list_cast_devices: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CastDeviceResponse"][];
-                };
-            };
-        };
-    };
-    discover_cast_devices: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DiscoveredCastDeviceResponse"][];
-                };
-            };
-        };
-    };
-    start_cast_session: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CastStartSessionRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CastSessionResponse"];
-                };
-            };
-        };
-    };
-    get_cast_session: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CastStatusResponse"];
-                };
-            };
-        };
-    };
-    control_cast_session: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CastControlCommand"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CastStatusResponse"];
-                };
             };
         };
     };

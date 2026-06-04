@@ -296,7 +296,7 @@ async fn get_item_by_id_returns_podcast_with_episodes() {
     let user = create_user_for_audiobookshelf(&state);
 
     let podcast = insert_test_podcast("Detail test podcast", &state, user.id);
-    insert_test_episode(podcast.id, "Test Episode 1");
+    insert_test_episode(&podcast.id, "Test Episode 1");
 
     login_audiobookshelf(&mut server, &user).await;
     let response = server
@@ -343,7 +343,7 @@ async fn play_sync_close_updates_media_progress() {
     let user = create_user_for_audiobookshelf(&state);
 
     let podcast = insert_test_podcast("Session test podcast", &state, user.id);
-    let episode = insert_test_episode(podcast.id, "Session Episode");
+    let episode = insert_test_episode(&podcast.id, "Session Episode");
 
     login_audiobookshelf(&mut server, &user).await;
 
@@ -429,7 +429,7 @@ async fn session_cross_user_access_is_forbidden() {
     let user_b = create_user_for_audiobookshelf(&state);
 
     let podcast = insert_test_podcast("XUser podcast", &state, user_a.id);
-    let episode = insert_test_episode(podcast.id, "XUser episode");
+    let episode = insert_test_episode(&podcast.id, "XUser episode");
 
     // User A opens a session
     login_audiobookshelf(&mut server, &user_a).await;
@@ -473,7 +473,7 @@ async fn stream_track_serves_full_file_when_no_range() {
     let temp_path = write_temp_audio_file(&bytes, "stream-full.mp3");
 
     let podcast = insert_test_podcast("Stream podcast", &state, user.id);
-    let episode = insert_test_episode_with_path(podcast.id, "Stream episode", &temp_path);
+    let episode = insert_test_episode_with_path(&podcast.id, "Stream episode", &temp_path);
 
     let token = login_audiobookshelf(&mut server, &user).await;
 
@@ -515,7 +515,7 @@ async fn stream_track_honors_byte_range() {
     let temp_path = write_temp_audio_file(&bytes, "stream-range.mp3");
 
     let podcast = insert_test_podcast("Range podcast", &state, user.id);
-    let episode = insert_test_episode_with_path(podcast.id, "Range episode", &temp_path);
+    let episode = insert_test_episode_with_path(&podcast.id, "Range episode", &temp_path);
 
     let token = login_audiobookshelf(&mut server, &user).await;
     let play_resp = server
@@ -564,7 +564,7 @@ async fn stream_track_without_token_is_unauthorized() {
     let bytes = generate_pseudo_audio_bytes(1024);
     let temp_path = write_temp_audio_file(&bytes, "stream-noauth.mp3");
     let podcast = insert_test_podcast("Noauth podcast", &state, user.id);
-    let episode = insert_test_episode_with_path(podcast.id, "Noauth episode", &temp_path);
+    let episode = insert_test_episode_with_path(&podcast.id, "Noauth episode", &temp_path);
 
     login_audiobookshelf(&mut server, &user).await;
     let play_resp = server
@@ -599,7 +599,7 @@ async fn stream_track_without_token_is_unauthorized() {
 fn insert_test_podcast(
     name: &str,
     _state: &AppState,
-    user_id: i32,
+    user_id: uuid::Uuid,
 ) -> podfetch_persistence::podcast::PodcastEntity {
     use podfetch_domain::podcast::{NewPodcast, PodcastRepository};
     use podfetch_persistence::podcast::DieselPodcastRepository;
@@ -615,7 +615,8 @@ fn insert_test_podcast(
     };
     let created = repo.create(new).expect("create podcast");
     podfetch_persistence::podcast::PodcastEntity {
-        id: created.id,
+        id: created.id.to_string(),
+        legacy_id: created.legacy_id,
         name: created.name,
         directory_id: created.directory_id,
         rssfeed: created.rssfeed,
@@ -631,19 +632,19 @@ fn insert_test_podcast(
         directory_name: created.directory_name,
         download_location: created.download_location,
         guid: created.guid,
-        added_by: created.added_by,
+        added_by: created.added_by.map(|u| u.to_string()),
     }
 }
 
 fn insert_test_episode(
-    podcast_id: i32,
+    podcast_id: &str,
     title: &str,
 ) -> podfetch_domain::podcast_episode::PodcastEpisode {
     insert_test_episode_with_path(podcast_id, title, "/tmp/nonexistent.mp3")
 }
 
 fn insert_test_episode_with_path(
-    podcast_id: i32,
+    podcast_id: &str,
     title: &str,
     file_path: &str,
 ) -> podfetch_domain::podcast_episode::PodcastEpisode {
@@ -653,7 +654,7 @@ fn insert_test_episode_with_path(
 
     let repo = DieselPodcastEpisodeRepository::new(podfetch_persistence::db::database());
     let new = NewPodcastEpisode {
-        podcast_id,
+        podcast_id: uuid::Uuid::parse_str(podcast_id).expect("valid podcast uuid"),
         episode_id: format!("epid-{}", uuid::Uuid::new_v4().simple()),
         name: title.to_string(),
         url: format!("https://example.com/{title}.mp3"),
@@ -673,6 +674,169 @@ fn insert_test_episode_with_path(
 
 fn generate_pseudo_audio_bytes(len: usize) -> Vec<u8> {
     (0..len).map(|i| (i % 251) as u8).collect()
+}
+
+/// Stamps a pre-migration integer `legacy_id` directly onto the podcast row,
+/// simulating a podcast that existed before the UUID migration (the migration
+/// backfills `legacy_id` from the old integer pk). `DBType` derives
+/// `diesel::MultiConnection`, so this runs against sqlite + postgres alike.
+fn set_podcast_legacy_id(podcast_uuid: &str, legacy: i64) {
+    use diesel::prelude::*;
+    use podfetch_persistence::db::database;
+    use podfetch_persistence::podcast::podcasts;
+    let db = database();
+    let mut conn = db.connection().expect("db connection");
+    diesel::update(podcasts::table.filter(podcasts::id.eq(podcast_uuid.to_string())))
+        .set(podcasts::legacy_id.eq(Some(legacy)))
+        .execute(&mut conn)
+        .expect("set podcast legacy_id");
+}
+
+/// Stamps a pre-migration integer `legacy_id` directly onto the episode row.
+fn set_episode_legacy_id(episode_uuid: &str, legacy: i64) {
+    use diesel::prelude::*;
+    use podfetch_persistence::db::database;
+    use podfetch_persistence::podcast_episode::podcast_episodes;
+    let db = database();
+    let mut conn = db.connection().expect("db connection");
+    diesel::update(podcast_episodes::table.filter(podcast_episodes::id.eq(episode_uuid.to_string())))
+        .set(podcast_episodes::legacy_id.eq(Some(legacy)))
+        .execute(&mut conn)
+        .expect("set episode legacy_id");
+}
+
+// ── Legacy ABS id backwards-compat (UUID migration) ────────────────────────
+
+/// An ABS client that cached the pre-migration integer ids (`li_pod_{int}`,
+/// `ino_ep_{int}`) must resolve to the *same* podcast/episode/file as the new
+/// UUID-based ids. Proves incoming legacy id parsing while outgoing ids stay
+/// UUID-shaped.
+#[tokio::test]
+#[serial]
+async fn legacy_integer_ids_resolve_to_same_podcast_and_episode() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+
+    let bytes = generate_pseudo_audio_bytes(2048);
+    let path = write_temp_audio_file(&bytes, "legacy-file.mp3");
+    let podcast = insert_test_podcast("Legacy id podcast", &state, user.id);
+    let episode = insert_test_episode_with_path(&podcast.id, "Legacy ep", &path);
+
+    // Simulate the migration backfilling old integer pks.
+    let podcast_legacy: i64 = 4242;
+    let episode_legacy: i64 = 7777;
+    set_podcast_legacy_id(&podcast.id, podcast_legacy);
+    set_episode_legacy_id(&episode.id.to_string(), episode_legacy);
+
+    login_audiobookshelf(&mut server, &user).await;
+
+    // (1) GET /api/items via the UUID form establishes the canonical payload.
+    let uuid_resp = server
+        .test_server
+        .get(&format!("/api/items/li_pod_{}", podcast.id))
+        .await;
+    assert_eq!(uuid_resp.status_code().as_u16(), 200);
+    let uuid_body: Value = uuid_resp.json();
+
+    // (2) GET /api/items via the LEGACY integer form must resolve to the same
+    //     podcast and emit the same UUID-shaped outgoing ids.
+    let legacy_resp = server
+        .test_server
+        .get(&format!("/api/items/li_pod_{podcast_legacy}"))
+        .await;
+    assert_eq!(
+        legacy_resp.status_code().as_u16(),
+        200,
+        "legacy li_pod_{{int}} must resolve, got {}",
+        legacy_resp.status_code()
+    );
+    let legacy_body: Value = legacy_resp.json();
+
+    // Outgoing ids stay UUID-based and identical between both fetches.
+    assert_eq!(legacy_body["id"], uuid_body["id"]);
+    assert_eq!(legacy_body["id"], json!(format!("li_pod_{}", podcast.id)));
+    assert_eq!(legacy_body["media"]["id"], json!(format!("pod_{}", podcast.id)));
+    assert_eq!(
+        legacy_body["media"]["metadata"]["title"],
+        json!(podcast.name)
+    );
+    let legacy_episodes = legacy_body["media"]["episodes"].as_array().unwrap();
+    assert_eq!(legacy_episodes.len(), 1);
+    assert_eq!(
+        legacy_episodes[0]["id"],
+        json!(format!("ep_{}", episode.id))
+    );
+
+    // (3) The audio-file endpoint must accept BOTH a legacy library-item id and
+    //     a legacy `ino_ep_{int}` and stream the same bytes as the UUID form.
+    let uuid_file = server
+        .test_server
+        .get(&format!(
+            "/api/items/li_pod_{}/file/ino_ep_{}",
+            podcast.id, episode.id
+        ))
+        .await;
+    assert_eq!(uuid_file.status_code().as_u16(), 200);
+    assert_eq!(uuid_file.as_bytes().as_ref(), bytes.as_slice());
+
+    let legacy_file = server
+        .test_server
+        .get(&format!(
+            "/api/items/li_pod_{podcast_legacy}/file/ino_ep_{episode_legacy}"
+        ))
+        .await;
+    assert_eq!(
+        legacy_file.status_code().as_u16(),
+        200,
+        "legacy ino_ep_{{int}} must stream, got {}",
+        legacy_file.status_code()
+    );
+    assert_eq!(legacy_file.as_bytes().as_ref(), bytes.as_slice());
+
+    let _ = std::fs::remove_file(&path);
+}
+
+/// Starting a playback session with legacy `li_pod_{int}` / `ep_{int}` must
+/// behave like the UUID form, and the resulting session must carry the
+/// canonical UUID-shaped ids so the streaming endpoints (which re-parse the
+/// stored id with the UUID-only parser) keep working.
+#[tokio::test]
+#[serial]
+async fn legacy_integer_ids_start_session_with_canonical_uuid() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+
+    let podcast = insert_test_podcast("Legacy session pod", &state, user.id);
+    let episode = insert_test_episode(&podcast.id, "Legacy session ep");
+    let podcast_legacy: i64 = 909;
+    let episode_legacy: i64 = 808;
+    set_podcast_legacy_id(&podcast.id, podcast_legacy);
+    set_episode_legacy_id(&episode.id.to_string(), episode_legacy);
+
+    login_audiobookshelf(&mut server, &user).await;
+    let resp = server
+        .test_server
+        .post(&format!(
+            "/api/items/li_pod_{podcast_legacy}/play/ep_{episode_legacy}"
+        ))
+        .json(&json!({}))
+        .await;
+    assert_eq!(
+        resp.status_code().as_u16(),
+        200,
+        "legacy play must succeed, got {}",
+        resp.status_code()
+    );
+    let body: Value = resp.json();
+    assert_eq!(body["mediaType"], json!("podcast"));
+    // Stored/emitted ids are canonical UUID form, never the legacy integer.
+    assert_eq!(
+        body["libraryItemId"],
+        json!(format!("li_pod_{}", podcast.id))
+    );
+    assert_eq!(body["episodeId"], json!(format!("ep_{}", episode.id)));
 }
 
 // ── Cover-redirect: real podcasts have remote artwork in the RSS feed ──────
@@ -783,10 +947,10 @@ async fn recent_episodes_endpoint_returns_episodes_envelope() {
         .unwrap()
         .unwrap();
     let podcast_a = insert_test_podcast("A pod", &state, user.id);
-    let _ep_a1 = insert_test_episode(podcast_a.id, "A1");
-    let _ep_a2 = insert_test_episode(podcast_a.id, "A2");
+    let _ep_a1 = insert_test_episode(&podcast_a.id, "A1");
+    let _ep_a2 = insert_test_episode(&podcast_a.id, "A2");
     let podcast_b = insert_test_podcast("B pod", &state, user.id);
-    let _ep_b1 = insert_test_episode(podcast_b.id, "B1");
+    let _ep_b1 = insert_test_episode(&podcast_b.id, "B1");
     login_audiobookshelf(&mut server, &user).await;
 
     let resp = server
@@ -882,7 +1046,7 @@ async fn items_in_progress_returns_library_items_envelope() {
     let state = AppState::new();
     let user = create_user_for_audiobookshelf(&state);
     let podcast = insert_test_podcast("Progress pod", &state, user.id);
-    let episode = insert_test_episode(podcast.id, "Ep");
+    let episode = insert_test_episode(&podcast.id, "Ep");
     login_audiobookshelf(&mut server, &user).await;
 
     let empty = server.test_server.get("/api/me/items-in-progress").await;
@@ -914,7 +1078,7 @@ async fn playback_session_shape_matches_upstream() {
     let state = AppState::new();
     let user = create_user_for_audiobookshelf(&state);
     let podcast = insert_test_podcast("Shape session pod", &state, user.id);
-    let episode = insert_test_episode(podcast.id, "Shape ep");
+    let episode = insert_test_episode(&podcast.id, "Shape ep");
     login_audiobookshelf(&mut server, &user).await;
     let resp = server
         .test_server
@@ -980,7 +1144,7 @@ async fn play_response_passes_android_kotlin_required_fields() {
     let state = AppState::new();
     let user = create_user_for_audiobookshelf(&state);
     let podcast = insert_test_podcast("Android compat pod", &state, user.id);
-    let episode = insert_test_episode(podcast.id, "Compat ep");
+    let episode = insert_test_episode(&podcast.id, "Compat ep");
     login_audiobookshelf(&mut server, &user).await;
     let resp = server
         .test_server
@@ -1114,7 +1278,7 @@ async fn podcast_library_item_shape_matches_upstream() {
     let state = AppState::new();
     let user = create_user_for_audiobookshelf(&state);
     let podcast = insert_test_podcast("Shape Item Pod", &state, user.id);
-    let _ep = insert_test_episode(podcast.id, "Episode");
+    let _ep = insert_test_episode(&podcast.id, "Episode");
     login_audiobookshelf(&mut server, &user).await;
 
     let resp = server
@@ -1228,7 +1392,7 @@ async fn title_ignore_prefix_is_calculated_for_podcast() {
 fn insert_test_podcast_named(
     name: &str,
     state: &AppState,
-    user_id: i32,
+    user_id: uuid::Uuid,
 ) -> podfetch_persistence::podcast::PodcastEntity {
     insert_test_podcast(name, state, user_id)
 }
@@ -1285,7 +1449,7 @@ async fn podcast_episode_shape_matches_audiobookshelf() {
     let state = AppState::new();
     let user = create_user_for_audiobookshelf(&state);
     let podcast = insert_test_podcast("Shape pod", &state, user.id);
-    let episode = insert_test_episode(podcast.id, "Shape ep");
+    let episode = insert_test_episode(&podcast.id, "Shape ep");
     login_audiobookshelf(&mut server, &user).await;
 
     let resp = server
@@ -1324,9 +1488,9 @@ async fn podcast_episode_shape_matches_audiobookshelf() {
             "episode payload missing field {field}: {ep:#?}"
         );
     }
-    // podcastId is an i32, not a string
-    assert!(ep["podcastId"].is_i64());
-    assert_eq!(ep["podcastId"], json!(podcast.id));
+    // podcastId is a uuid string
+    assert!(ep["podcastId"].is_string());
+    assert_eq!(ep["podcastId"], json!(podcast.id.to_string()));
     // audioTrack.contentUrl matches upstream's /api/items/<id>/file/<ino>
     let url = ep["audioTrack"]["contentUrl"].as_str().unwrap();
     let expected = format!(
@@ -1348,7 +1512,7 @@ async fn patch_me_progress_creates_progress_row_and_reflects_in_me() {
     let state = AppState::new();
     let user = create_user_for_audiobookshelf(&state);
     let podcast = insert_test_podcast("Patch pod", &state, user.id);
-    let episode = insert_test_episode(podcast.id, "Patch ep");
+    let episode = insert_test_episode(&podcast.id, "Patch ep");
     login_audiobookshelf(&mut server, &user).await;
 
     let li_id = format!("li_pod_{}", podcast.id);
@@ -1405,8 +1569,8 @@ async fn patch_me_progress_batch_upserts_multiple() {
     let state = AppState::new();
     let user = create_user_for_audiobookshelf(&state);
     let podcast = insert_test_podcast("Batch pod", &state, user.id);
-    let ep_a = insert_test_episode(podcast.id, "ep a");
-    let ep_b = insert_test_episode(podcast.id, "ep b");
+    let ep_a = insert_test_episode(&podcast.id, "ep a");
+    let ep_b = insert_test_episode(&podcast.id, "ep b");
     login_audiobookshelf(&mut server, &user).await;
 
     let body = json!([
@@ -1467,7 +1631,7 @@ async fn item_file_endpoint_streams_episode_audio() {
     let bytes = generate_pseudo_audio_bytes(2048);
     let path = write_temp_audio_file(&bytes, "item-file.mp3");
     let podcast = insert_test_podcast("Item file pod", &state, user.id);
-    let episode = insert_test_episode_with_path(podcast.id, "ep", &path);
+    let episode = insert_test_episode_with_path(&podcast.id, "ep", &path);
     login_audiobookshelf(&mut server, &user).await;
 
     let resp = server
@@ -1491,7 +1655,7 @@ async fn item_file_endpoint_honors_range() {
     let bytes = generate_pseudo_audio_bytes(4096);
     let path = write_temp_audio_file(&bytes, "range-file.mp3");
     let podcast = insert_test_podcast("Range item pod", &state, user.id);
-    let episode = insert_test_episode_with_path(podcast.id, "ep", &path);
+    let episode = insert_test_episode_with_path(&podcast.id, "ep", &path);
     login_audiobookshelf(&mut server, &user).await;
     let resp = server
         .test_server
@@ -1744,7 +1908,7 @@ async fn play_chooses_hls_when_client_lacks_source_codec() {
     let user = create_user_for_audiobookshelf(&state);
 
     let podcast = insert_test_podcast("HLS podcast", &state, user.id);
-    let episode = insert_test_episode_with_path(podcast.id, "FLAC episode", "/tmp/episode.flac");
+    let episode = insert_test_episode_with_path(&podcast.id, "FLAC episode", "/tmp/episode.flac");
 
     login_audiobookshelf(&mut server, &user).await;
     let play_resp = server
@@ -1786,7 +1950,7 @@ async fn play_uses_direct_when_client_supports_source_codec() {
     let user = create_user_for_audiobookshelf(&state);
 
     let podcast = insert_test_podcast("Direct podcast", &state, user.id);
-    let episode = insert_test_episode_with_path(podcast.id, "MP3 episode", "/tmp/ep.mp3");
+    let episode = insert_test_episode_with_path(&podcast.id, "MP3 episode", "/tmp/ep.mp3");
 
     login_audiobookshelf(&mut server, &user).await;
     let play_resp = server
@@ -1818,7 +1982,7 @@ async fn hls_master_playlist_returns_m3u8_for_owned_session() {
     let user = create_user_for_audiobookshelf(&state);
 
     let podcast = insert_test_podcast("HLS pod", &state, user.id);
-    let episode = insert_test_episode_with_path(podcast.id, "HLS ep", "/tmp/x.flac");
+    let episode = insert_test_episode_with_path(&podcast.id, "HLS ep", "/tmp/x.flac");
     login_audiobookshelf(&mut server, &user).await;
     let play_resp = server
         .test_server
@@ -1857,7 +2021,7 @@ async fn hls_media_playlist_lists_segments_for_duration() {
     let user = create_user_for_audiobookshelf(&state);
 
     let podcast = insert_test_podcast("HLS-Index pod", &state, user.id);
-    let episode = insert_test_episode_with_path(podcast.id, "Ep", "/tmp/x.flac");
+    let episode = insert_test_episode_with_path(&podcast.id, "Ep", "/tmp/x.flac");
     // total_time = 300 → expect 50 segments at 6 sec each
     login_audiobookshelf(&mut server, &user).await;
     let play_resp = server
@@ -1895,7 +2059,7 @@ async fn hls_playlist_cross_user_access_is_forbidden() {
     let user_b = create_user_for_audiobookshelf(&state);
 
     let podcast = insert_test_podcast("HLS XUser pod", &state, user_a.id);
-    let episode = insert_test_episode_with_path(podcast.id, "Ep", "/tmp/x.flac");
+    let episode = insert_test_episode_with_path(&podcast.id, "Ep", "/tmp/x.flac");
     login_audiobookshelf(&mut server, &user_a).await;
     let play_resp = server
         .test_server
@@ -1930,7 +2094,7 @@ async fn close_session_persists_listening_session_history() {
     let user = create_user_for_audiobookshelf(&state);
 
     let podcast = insert_test_podcast("History pod", &state, user.id);
-    let episode = insert_test_episode(podcast.id, "History ep");
+    let episode = insert_test_episode(&podcast.id, "History ep");
     login_audiobookshelf(&mut server, &user).await;
 
     let play_resp = server
@@ -1987,7 +2151,7 @@ async fn listening_sessions_isolated_per_user() {
     let user_b = create_user_for_audiobookshelf(&state);
 
     let podcast = insert_test_podcast("Isolation pod", &state, user_a.id);
-    let episode = insert_test_episode(podcast.id, "Iso ep");
+    let episode = insert_test_episode(&podcast.id, "Iso ep");
 
     // user_a opens and closes a session
     login_audiobookshelf(&mut server, &user_a).await;
@@ -2466,7 +2630,7 @@ async fn listening_stats_aggregates_play_close_cycle() {
     let state = AppState::new();
     let user = create_user_for_audiobookshelf(&state);
     let podcast = insert_test_podcast("Stats Podcast", &state, user.id);
-    let episode = insert_test_episode(podcast.id, "Stats Episode");
+    let episode = insert_test_episode(&podcast.id, "Stats Episode");
     login_audiobookshelf(&mut server, &user).await;
 
     let play_resp = server
@@ -2557,7 +2721,7 @@ async fn create_playlist_returns_audiobookshelf_shape() {
     let state = AppState::new();
     let user = create_user_for_audiobookshelf(&state);
     let podcast = insert_test_podcast("Playlist Podcast", &state, user.id);
-    let episode = insert_test_episode(podcast.id, "Playlist Episode");
+    let episode = insert_test_episode(&podcast.id, "Playlist Episode");
     login_audiobookshelf(&mut server, &user).await;
 
     let create = server
@@ -2619,8 +2783,8 @@ async fn batch_add_and_remove_round_trip() {
     let state = AppState::new();
     let user = create_user_for_audiobookshelf(&state);
     let podcast = insert_test_podcast("Batch Podcast", &state, user.id);
-    let ep1 = insert_test_episode(podcast.id, "Episode 1");
-    let ep2 = insert_test_episode(podcast.id, "Episode 2");
+    let ep1 = insert_test_episode(&podcast.id, "Episode 1");
+    let ep2 = insert_test_episode(&podcast.id, "Episode 2");
     login_audiobookshelf(&mut server, &user).await;
 
     let created = server

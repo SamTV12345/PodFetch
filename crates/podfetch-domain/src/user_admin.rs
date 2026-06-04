@@ -1,8 +1,9 @@
 use chrono::NaiveDateTime;
+use uuid::Uuid;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ManagedUser {
-    pub id: i32,
+    pub id: Uuid,
     pub username: String,
     pub role: String,
     pub password: Option<String>,
@@ -15,7 +16,7 @@ pub struct ManagedUser {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UserSummary {
-    pub id: i32,
+    pub id: Uuid,
     pub username: String,
     pub role: String,
     pub created_at: NaiveDateTime,
@@ -24,7 +25,7 @@ pub struct UserSummary {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UserWithApiKey {
-    pub id: i32,
+    pub id: Uuid,
     pub username: String,
     pub role: String,
     pub created_at: NaiveDateTime,
@@ -37,7 +38,7 @@ pub struct UserWithApiKey {
 
 impl ManagedUser {
     pub fn new(
-        id: i32,
+        id: Uuid,
         username: impl Into<String>,
         role: impl ToString,
         password: Option<impl Into<String>>,

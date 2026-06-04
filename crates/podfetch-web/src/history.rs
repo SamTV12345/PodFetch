@@ -69,7 +69,7 @@ pub fn map_episode_dto_to_episode(episode_dto: &EpisodeDto, username: String) ->
     episode.set_query(None);
 
     Episode {
-        id: 0,
+        id: uuid::Uuid::nil(),
         username,
         device: episode_dto.device.clone(),
         podcast: episode_dto.podcast.clone(),

@@ -1,6 +1,7 @@
 use common_infrastructure::error::CustomError;
 use podfetch_domain::gpodder_setting::{GpodderSetting, GpodderSettingRepository};
 use std::sync::Arc;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct GpodderSettingService {
@@ -14,7 +15,7 @@ impl GpodderSettingService {
 
     pub fn get_setting(
         &self,
-        user_id: i32,
+        user_id: Uuid,
         scope: &str,
         scope_id: Option<&str>,
     ) -> Result<Option<GpodderSetting>, CustomError> {

@@ -13,17 +13,18 @@ use std::net::IpAddr;
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 use tracing::warn;
+use uuid::Uuid;
 
 /// Bookkeeping for an active cast session as seen by the orchestrator.
 #[derive(Debug, Clone)]
 pub struct ActiveSession {
     pub session_id: CastSessionId,
     pub device_uuid: CastDeviceUuid,
-    pub user_id: i32,
+    pub user_id: Uuid,
     /// Username of the session owner — cached so watchtime persistence
     /// from the WS handler doesn't need to round-trip the user repo.
     pub username: String,
-    pub episode_id: Option<i32>,
+    pub episode_id: Option<Uuid>,
     /// String episode identifier used by `WatchtimeUseCase::log_watchtime`
     /// (i.e. `PodcastEpisode::episode_id`, the GUID-like string), looked
     /// up at session-start time.
@@ -146,6 +147,7 @@ impl<L: CastDriver> CastOrchestrator<L> {
         user: &User,
         chromecast_uuid: &str,
         media: CastMedia,
+        episode_id: Option<Uuid>,
         episode_string_id: Option<String>,
     ) -> Result<ActiveSession, OrchestratorError> {
         let device = self.resolve_castable(user, chromecast_uuid)?;
@@ -168,7 +170,7 @@ impl<L: CastDriver> CastOrchestrator<L> {
             device_uuid: target.uuid,
             user_id: user.id,
             username: user.username.clone(),
-            episode_id: media.episode_id,
+            episode_id,
             episode_string_id,
             agent_id,
             last_status: status,
@@ -317,7 +319,7 @@ mod tests {
             Ok(device)
         }
 
-        fn get_devices_of_user(&self, user_id: i32) -> Result<Vec<Device>, Self::Error> {
+        fn get_devices_of_user(&self, user_id: Uuid) -> Result<Vec<Device>, Self::Error> {
             Ok(self
                 .devices
                 .lock()
@@ -328,11 +330,11 @@ mod tests {
                 .collect())
         }
 
-        fn delete_by_user_id(&self, _user_id: i32) -> Result<(), Self::Error> {
+        fn delete_by_user_id(&self, _user_id: Uuid) -> Result<(), Self::Error> {
             Ok(())
         }
 
-        fn list_castable_for_user(&self, viewer_user_id: i32) -> Result<Vec<Device>, Self::Error> {
+        fn list_castable_for_user(&self, viewer_user_id: Uuid) -> Result<Vec<Device>, Self::Error> {
             Ok(self
                 .devices
                 .lock()
@@ -364,7 +366,7 @@ mod tests {
             &self,
             _chromecast_uuid: &str,
             _agent_id: &str,
-            _owner_user_id: i32,
+            _owner_user_id: Uuid,
             _name: &str,
             _ip: Option<&str>,
             _last_seen_at: chrono::NaiveDateTime,
@@ -373,9 +375,9 @@ mod tests {
         }
     }
 
-    fn user(id: i32, role: &str) -> User {
+    fn user(id: u128, role: &str) -> User {
         User::new(
-            id,
+            Uuid::from_u128(id),
             format!("user{id}"),
             role,
             None::<String>,
@@ -387,9 +389,9 @@ mod tests {
         )
     }
 
-    fn make_device(id: i32, owner: i32, kind: &str, uuid: &str) -> Device {
+    fn make_device(id: u128, owner: Uuid, kind: &str, uuid: &str) -> Device {
         Device {
-            id: Some(id),
+            id: Some(Uuid::from_u128(id)),
             deviceid: format!("dev-{id}"),
             kind: kind.to_string(),
             name: format!("Device {id}"),
@@ -429,7 +431,7 @@ mod tests {
         let devices = vec![
             make_device(10, alice.id, device_kind::CHROMECAST_PERSONAL, "uuid-alice"),
             make_device(11, bob.id, device_kind::CHROMECAST_PERSONAL, "uuid-bob"),
-            make_device(12, 99, device_kind::CHROMECAST_SHARED, "uuid-shared"),
+            make_device(12, Uuid::from_u128(99), device_kind::CHROMECAST_SHARED, "uuid-shared"),
         ];
         let orch = orchestrator(devices);
 
@@ -448,7 +450,7 @@ mod tests {
         let alice = user(1, "user");
         let devices = vec![make_device(
             11,
-            2,
+            Uuid::from_u128(2),
             device_kind::CHROMECAST_PERSONAL,
             "uuid-bob",
         )];
@@ -496,7 +498,7 @@ mod tests {
         let (tx, mut wire) = mpsc::channel(16);
         registry.register(AgentSessionHandle::new(
             "agent-1".into(),
-            5,
+            Uuid::from_u128(5),
             "0.1.0".into(),
             tx,
         ));
@@ -529,8 +531,9 @@ mod tests {
                     title: "Ep".into(),
                     artwork_url: None,
                     duration_secs: Some(60.0),
-                    episode_id: Some(1),
+                    episode_id: None,
                 },
+                Some(Uuid::from_u128(1)),
                 Some("ep-uuid".into()),
             )
             .await
@@ -575,6 +578,7 @@ mod tests {
                     episode_id: None,
                 },
                 None,
+                None,
             )
             .await;
         match res {
@@ -593,7 +597,7 @@ mod tests {
             ActiveSession {
                 session_id: session_id.clone(),
                 device_uuid: CastDeviceUuid("u".into()),
-                user_id: 42,
+                user_id: Uuid::from_u128(42),
                 username: "u42".into(),
                 episode_id: None,
                 episode_string_id: None,
@@ -616,7 +620,7 @@ mod tests {
             at: Utc::now(),
         };
         let recorded = orch.record_status(status).expect("known session");
-        assert_eq!(recorded.user_id, 42);
+        assert_eq!(recorded.user_id, Uuid::from_u128(42));
         assert_eq!(recorded.last_status.position_secs, 5.0);
 
         let unknown = CastStatus {

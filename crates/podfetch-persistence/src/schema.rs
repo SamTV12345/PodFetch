@@ -2,8 +2,8 @@
 
 diesel::table! {
     device_sync_groups (id) {
-        id -> Integer,
-        user_id -> Integer,
+        id -> Text,
+        user_id -> Text,
         group_id -> Integer,
         device_id -> Text,
     }
@@ -11,11 +11,11 @@ diesel::table! {
 
 diesel::table! {
     devices (id) {
-        id -> Integer,
+        id -> Text,
         deviceid -> Text,
         kind -> Text,
         name -> Text,
-        user_id -> Integer,
+        user_id -> Text,
         chromecast_uuid -> Nullable<Text>,
         agent_id -> Nullable<Text>,
         last_seen_at -> Nullable<Timestamp>,
@@ -25,8 +25,8 @@ diesel::table! {
 
 diesel::table! {
     episodes (id) {
-        id -> Integer,
-        user_id -> Integer,
+        id -> Text,
+        user_id -> Text,
         device -> Text,
         podcast -> Text,
         episode -> Text,
@@ -41,23 +41,23 @@ diesel::table! {
 
 diesel::table! {
     favorite_podcast_episodes (user_id, episode_id) {
-        user_id -> Integer,
-        episode_id -> Integer,
+        user_id -> Text,
+        episode_id -> Text,
         favorite -> Bool,
     }
 }
 
 diesel::table! {
     favorites (user_id, podcast_id) {
-        user_id -> Integer,
-        podcast_id -> Integer,
+        user_id -> Text,
+        podcast_id -> Text,
         favored -> Bool,
     }
 }
 
 diesel::table! {
     filters (user_id) {
-        user_id -> Integer,
+        user_id -> Text,
         title -> Nullable<Text>,
         ascending -> Bool,
         filter -> Nullable<Text>,
@@ -67,8 +67,8 @@ diesel::table! {
 
 diesel::table! {
     gpodder_settings (id) {
-        id -> Integer,
-        user_id -> Integer,
+        id -> Text,
+        user_id -> Text,
         scope -> Text,
         scope_id -> Nullable<Text>,
         data -> Text,
@@ -88,7 +88,7 @@ diesel::table! {
 
 diesel::table! {
     notifications (id) {
-        id -> Integer,
+        id -> Text,
         type_of_message -> Text,
         message -> Text,
         created_at -> Text,
@@ -98,12 +98,12 @@ diesel::table! {
 
 diesel::table! {
     listening_events (id) {
-        id -> Integer,
-        user_id -> Integer,
+        id -> Text,
+        user_id -> Text,
         device -> Text,
         podcast_episode_id -> Text,
-        podcast_id -> Integer,
-        podcast_episode_db_id -> Integer,
+        podcast_id -> Text,
+        podcast_episode_db_id -> Text,
         delta_seconds -> Integer,
         start_position -> Integer,
         end_position -> Integer,
@@ -114,7 +114,7 @@ diesel::table! {
 diesel::table! {
     playlist_items (playlist_id, episode) {
         playlist_id -> Text,
-        episode -> Integer,
+        episode -> Text,
         position -> Integer,
     }
 }
@@ -123,14 +123,14 @@ diesel::table! {
     playlists (id) {
         id -> Text,
         name -> Text,
-        user_id -> Integer,
+        user_id -> Text,
     }
 }
 
 diesel::table! {
     podcast_episode_chapters (id) {
         id -> Text,
-        episode_id -> Integer,
+        episode_id -> Text,
         title -> Text,
         start_time -> Integer,
         end_time -> Integer,
@@ -143,8 +143,9 @@ diesel::table! {
 
 diesel::table! {
     podcast_episodes (id) {
-        id -> Integer,
-        podcast_id -> Integer,
+        id -> Text,
+        legacy_id -> Nullable<BigInt>,
+        podcast_id -> Text,
         episode_id -> Text,
         name -> Text,
         url -> Text,
@@ -164,7 +165,7 @@ diesel::table! {
 
 diesel::table! {
     podcast_settings (podcast_id) {
-        podcast_id -> Integer,
+        podcast_id -> Text,
         episode_numbering -> Bool,
         auto_download -> Bool,
         auto_update -> Bool,
@@ -184,7 +185,8 @@ diesel::table! {
 
 diesel::table! {
     podcasts (id) {
-        id -> Integer,
+        id -> Text,
+        legacy_id -> Nullable<BigInt>,
         name -> Text,
         directory_id -> Text,
         rssfeed -> Text,
@@ -200,14 +202,14 @@ diesel::table! {
         directory_name -> Text,
         download_location -> Nullable<Text>,
         guid -> Nullable<Text>,
-        added_by -> Nullable<Integer>,
+        added_by -> Nullable<Text>,
     }
 }
 
 diesel::table! {
     sessions (user_id, session_id) {
         username -> Text,
-        user_id -> Integer,
+        user_id -> Text,
         session_id -> Text,
         expires -> Timestamp,
     }
@@ -215,7 +217,7 @@ diesel::table! {
 
 diesel::table! {
     settings (id) {
-        id -> Integer,
+        id -> Text,
         auto_download -> Bool,
         auto_update -> Bool,
         auto_cleanup -> Bool,
@@ -234,8 +236,8 @@ diesel::table! {
 
 diesel::table! {
     subscriptions (id) {
-        id -> Integer,
-        user_id -> Integer,
+        id -> Text,
+        user_id -> Text,
         device -> Text,
         podcast -> Text,
         created -> Timestamp,
@@ -247,7 +249,7 @@ diesel::table! {
     tags (id) {
         id -> Text,
         name -> Text,
-        user_id -> Integer,
+        user_id -> Text,
         description -> Nullable<Text>,
         created_at -> Timestamp,
         color -> Text,
@@ -257,13 +259,13 @@ diesel::table! {
 diesel::table! {
     tags_podcasts (tag_id, podcast_id) {
         tag_id -> Text,
-        podcast_id -> Integer,
+        podcast_id -> Text,
     }
 }
 
 diesel::table! {
     users (id) {
-        id -> Integer,
+        id -> Text,
         username -> Text,
         role -> Text,
         password -> Nullable<Text>,

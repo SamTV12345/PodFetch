@@ -27,7 +27,7 @@ pub mod tests {
 
         pub fn build(self) -> Notification {
             Notification {
-                id: 0,
+                id: uuid::Uuid::nil(),
                 message: Faker.fake::<String>(),
                 status: self.status,
                 created_at: Time().fake(),

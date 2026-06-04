@@ -2,19 +2,20 @@ use crate::db::{Database, PersistenceError};
 use diesel::prelude::{Insertable, Queryable, Selectable};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use podfetch_domain::playlist::{Playlist, PlaylistItem, PlaylistRepository};
+use uuid::Uuid;
 
 diesel::table! {
     playlists (id) {
         id -> Text,
         name -> Text,
-        user_id -> Integer,
+        user_id -> Text,
     }
 }
 
 diesel::table! {
     playlist_items (playlist_id, episode) {
         playlist_id -> Text,
-        episode -> Integer,
+        episode -> Text,
         position -> Integer,
     }
 }
@@ -24,7 +25,7 @@ diesel::table! {
 struct PlaylistEntity {
     id: String,
     name: String,
-    user_id: i32,
+    user_id: String,
 }
 
 #[derive(Insertable, Clone)]
@@ -32,14 +33,14 @@ struct PlaylistEntity {
 struct PlaylistInsertEntity {
     id: String,
     name: String,
-    user_id: i32,
+    user_id: String,
 }
 
 #[derive(Queryable, Selectable, Clone)]
 #[diesel(table_name = playlist_items)]
 struct PlaylistItemEntity {
     playlist_id: String,
-    episode: i32,
+    episode: String,
     position: i32,
 }
 
@@ -47,7 +48,7 @@ struct PlaylistItemEntity {
 #[diesel(table_name = playlist_items)]
 struct PlaylistItemInsertEntity {
     playlist_id: String,
-    episode: i32,
+    episode: String,
     position: i32,
 }
 
@@ -56,7 +57,7 @@ impl From<PlaylistEntity> for Playlist {
         Self {
             id: value.id,
             name: value.name,
-            user_id: value.user_id,
+            user_id: Uuid::parse_str(&value.user_id).expect("valid uuid in db"),
         }
     }
 }
@@ -66,7 +67,7 @@ impl From<Playlist> for PlaylistInsertEntity {
         Self {
             id: value.id,
             name: value.name,
-            user_id: value.user_id,
+            user_id: value.user_id.to_string(),
         }
     }
 }
@@ -75,7 +76,7 @@ impl From<PlaylistItemEntity> for PlaylistItem {
     fn from(value: PlaylistItemEntity) -> Self {
         Self {
             playlist_id: value.playlist_id,
-            episode: value.episode,
+            episode: Uuid::parse_str(&value.episode).expect("valid uuid in db"),
             position: value.position,
         }
     }
@@ -85,7 +86,7 @@ impl From<PlaylistItem> for PlaylistItemInsertEntity {
     fn from(value: PlaylistItem) -> Self {
         Self {
             playlist_id: value.playlist_id,
-            episode: value.episode,
+            episode: value.episode.to_string(),
             position: value.position,
         }
     }
@@ -141,26 +142,26 @@ impl PlaylistRepository for DieselPlaylistRepository {
     fn find_by_user_and_id(
         &self,
         playlist_id_to_search: &str,
-        playlist_user_id: i32,
+        playlist_user_id: Uuid,
     ) -> Result<Option<Playlist>, Self::Error> {
         use self::playlists::dsl as p_dsl;
         use self::playlists::table as p_table;
 
         p_table
             .filter(p_dsl::id.eq(playlist_id_to_search))
-            .filter(p_dsl::user_id.eq(playlist_user_id))
+            .filter(p_dsl::user_id.eq(playlist_user_id.to_string()))
             .first::<PlaylistEntity>(&mut self.database.connection()?)
             .optional()
             .map(|playlist| playlist.map(Into::into))
             .map_err(Into::into)
     }
 
-    fn list_by_user(&self, playlist_user_id: i32) -> Result<Vec<Playlist>, Self::Error> {
+    fn list_by_user(&self, playlist_user_id: Uuid) -> Result<Vec<Playlist>, Self::Error> {
         use self::playlists::dsl as p_dsl;
         use self::playlists::table as p_table;
 
         p_table
-            .filter(p_dsl::user_id.eq(playlist_user_id))
+            .filter(p_dsl::user_id.eq(playlist_user_id.to_string()))
             .load::<PlaylistEntity>(&mut self.database.connection()?)
             .map(|playlists| playlists.into_iter().map(Into::into).collect())
             .map_err(Into::into)
@@ -169,7 +170,7 @@ impl PlaylistRepository for DieselPlaylistRepository {
     fn update_playlist_name(
         &self,
         playlist_id_to_update: &str,
-        playlist_user_id: i32,
+        playlist_user_id: Uuid,
         new_name: &str,
     ) -> Result<usize, Self::Error> {
         use self::playlists::dsl as p_dsl;
@@ -178,7 +179,7 @@ impl PlaylistRepository for DieselPlaylistRepository {
         diesel::update(
             p_table
                 .filter(p_dsl::id.eq(playlist_id_to_update))
-                .filter(p_dsl::user_id.eq(playlist_user_id)),
+                .filter(p_dsl::user_id.eq(playlist_user_id.to_string())),
         )
         .set(p_dsl::name.eq(new_name))
         .execute(&mut self.database.connection()?)
@@ -188,7 +189,7 @@ impl PlaylistRepository for DieselPlaylistRepository {
     fn delete_playlist(
         &self,
         playlist_id_to_delete: &str,
-        playlist_user_id: i32,
+        playlist_user_id: Uuid,
     ) -> Result<usize, Self::Error> {
         use self::playlists::dsl as p_dsl;
         use self::playlists::table as p_table;
@@ -196,7 +197,7 @@ impl PlaylistRepository for DieselPlaylistRepository {
         diesel::delete(
             p_table
                 .filter(p_dsl::id.eq(playlist_id_to_delete))
-                .filter(p_dsl::user_id.eq(playlist_user_id)),
+                .filter(p_dsl::user_id.eq(playlist_user_id.to_string())),
         )
         .execute(&mut self.database.connection()?)
         .map_err(Into::into)
@@ -208,7 +209,7 @@ impl PlaylistRepository for DieselPlaylistRepository {
 
         let existing = pi_table
             .filter(pi_dsl::playlist_id.eq(&item.playlist_id))
-            .filter(pi_dsl::episode.eq(item.episode))
+            .filter(pi_dsl::episode.eq(item.episode.to_string()))
             .first::<PlaylistItemEntity>(&mut self.database.connection()?)
             .optional()?;
 
@@ -253,7 +254,7 @@ impl PlaylistRepository for DieselPlaylistRepository {
     fn delete_playlist_item(
         &self,
         playlist_id_to_delete: &str,
-        episode_id_to_delete: i32,
+        episode_id_to_delete: Uuid,
     ) -> Result<usize, Self::Error> {
         use self::playlist_items::dsl as pi_dsl;
         use self::playlist_items::table as pi_table;
@@ -261,17 +262,17 @@ impl PlaylistRepository for DieselPlaylistRepository {
         diesel::delete(
             pi_table
                 .filter(pi_dsl::playlist_id.eq(playlist_id_to_delete))
-                .filter(pi_dsl::episode.eq(episode_id_to_delete)),
+                .filter(pi_dsl::episode.eq(episode_id_to_delete.to_string())),
         )
         .execute(&mut self.database.connection()?)
         .map_err(Into::into)
     }
 
-    fn delete_items_by_episode_id(&self, episode_id_to_delete: i32) -> Result<usize, Self::Error> {
+    fn delete_items_by_episode_id(&self, episode_id_to_delete: Uuid) -> Result<usize, Self::Error> {
         use self::playlist_items::dsl as pi_dsl;
         use self::playlist_items::table as pi_table;
 
-        diesel::delete(pi_table.filter(pi_dsl::episode.eq(episode_id_to_delete)))
+        diesel::delete(pi_table.filter(pi_dsl::episode.eq(episode_id_to_delete.to_string())))
             .execute(&mut self.database.connection()?)
             .map_err(Into::into)
     }

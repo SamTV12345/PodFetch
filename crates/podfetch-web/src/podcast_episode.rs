@@ -107,7 +107,7 @@ where
 }
 
 pub fn get_podcast_episodes_with_history<E, H, Err, FetchEpisodes>(
-    podcast_id: &str,
+    podcast_id: uuid::Uuid,
     username: &str,
     last_podcast_episode: Option<String>,
     only_unlistened: Option<bool>,
@@ -115,14 +115,14 @@ pub fn get_podcast_episodes_with_history<E, H, Err, FetchEpisodes>(
 ) -> Result<Vec<PodcastEpisodeWithHistory<E, H>>, PodcastEpisodeControllerError<Err>>
 where
     Err: Display,
-    FetchEpisodes:
-        FnOnce(i32, Option<String>, Option<bool>, &str) -> Result<Vec<(E, Option<H>)>, Err>,
+    FetchEpisodes: FnOnce(
+        uuid::Uuid,
+        Option<String>,
+        Option<bool>,
+        &str,
+    ) -> Result<Vec<(E, Option<H>)>, Err>,
 {
-    let parsed_id = podcast_id.parse::<i32>().map_err(|_| {
-        PodcastEpisodeControllerError::BadRequest("podcast id must be an integer".to_string())
-    })?;
-
-    let episodes = fetch_episodes(parsed_id, last_podcast_episode, only_unlistened, username)
+    let episodes = fetch_episodes(podcast_id, last_podcast_episode, only_unlistened, username)
         .map_err(PodcastEpisodeControllerError::Service)?;
 
     Ok(episodes

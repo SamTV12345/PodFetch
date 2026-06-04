@@ -25,6 +25,7 @@ use podfetch_persistence::user_admin::DieselUserAdminRepository;
 use common_infrastructure::error::CustomErrorInner;
 use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::runtime::DEFAULT_DEVICE;
+use uuid::Uuid;
 
 #[derive(Clone, Default)]
 pub struct WatchtimeUseCase;
@@ -40,11 +41,17 @@ impl WatchtimeUseCase {
         DieselEpisodeRepository::new(database())
     }
 
-    fn get_user_id_by_username(username: &str) -> Result<i32, CustomError> {
+    fn get_user_id_by_username(username: &str) -> Result<Uuid, CustomError> {
         DieselUserAdminRepository::new(database())
             .find_by_username(username)?
             .map(|user| user.id)
             .ok_or_else(|| CustomErrorInner::NotFound(Warning).into())
+    }
+
+    /// Parse a stored podfetch id (entity rows carry the canonical UUID as a
+    /// `String`) into a `Uuid`.
+    fn parse_id(id: &str) -> Result<Uuid, CustomError> {
+        Uuid::parse_str(id).map_err(|_| CustomErrorInner::NotFound(Warning).into())
     }
 
     pub fn insert_episode(
@@ -141,7 +148,7 @@ impl WatchtimeUseCase {
             .map_err(Into::into)
     }
 
-    pub fn delete_watchtime(podcast_id: i32) -> Result<(), CustomError> {
+    pub fn delete_watchtime(podcast_id: Uuid) -> Result<(), CustomError> {
         ListeningEventService::default_service().delete_by_podcast_id(podcast_id)?;
         Self::repo()
             .delete_by_podcast_id(podcast_id)
@@ -170,9 +177,9 @@ impl WatchtimeUseCase {
             return Err(CustomErrorInner::NotFound(Warning).into());
         };
 
-        let podcast = crate::services::podcast::service::PodcastService::get_podcast(
-            found_episode.podcast_id,
-        )?;
+        let podcast_uuid = Self::parse_id(&found_episode.podcast_id)?;
+        let podcast =
+            crate::services::podcast::service::PodcastService::get_podcast(podcast_uuid)?;
 
         let now = Utc::now().naive_utc();
         let user_id = Self::get_user_id_by_username(&username)?;
@@ -194,8 +201,8 @@ impl WatchtimeUseCase {
                         user_id,
                         device: DEFAULT_DEVICE.to_string(),
                         podcast_episode_id: found_episode.episode_id.clone(),
-                        podcast_id: found_episode.podcast_id,
-                        podcast_episode_db_id: found_episode.id,
+                        podcast_id: podcast_uuid,
+                        podcast_episode_db_id: Self::parse_id(&found_episode.id)?,
                         delta_seconds: listened_delta_seconds,
                         start_position: watch_time.saturating_sub(listened_delta_seconds),
                         end_position: watch_time,

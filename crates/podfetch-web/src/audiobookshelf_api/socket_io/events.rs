@@ -191,7 +191,7 @@ mod tests {
             .unwrap()
             .naive_utc();
         User {
-            id: 7,
+            id: uuid::Uuid::from_u128(7),
             username: "sam".to_string(),
             role: "admin".to_string(),
             password: None,
@@ -210,7 +210,7 @@ mod tests {
             .naive_utc();
         MediaProgress {
             id: "li_pod_42-ep_7".to_string(),
-            user_id: 7,
+            user_id: uuid::Uuid::from_u128(7),
             library_item_id: "li_pod_42".to_string(),
             episode_id: Some("ep_7".to_string()),
             media_type: "podcast".to_string(),
@@ -229,7 +229,7 @@ mod tests {
     fn init_payload_has_audiobookshelf_shape() {
         let user = fixture_user();
         let payload = build_init_payload(&user);
-        assert_eq!(payload["userId"], json!("7"));
+        assert_eq!(payload["userId"], json!(user.id.to_string()));
         assert_eq!(payload["username"], json!("sam"));
         // No extra fields beyond the upstream init payload (usersOnline elided)
         assert_eq!(payload.as_object().unwrap().len(), 2);
@@ -274,7 +274,7 @@ mod tests {
         let user = fixture_user();
         let progress = fixture_progress();
         let payload = build_user_updated_payload(&user, &[progress]);
-        assert_eq!(payload["id"], json!("7"));
+        assert_eq!(payload["id"], json!(user.id.to_string()));
         assert_eq!(payload["username"], json!("sam"));
         assert_eq!(payload["type"], json!("root"));
         assert_eq!(payload["token"], json!("abs_token_xyz"));

@@ -1,6 +1,8 @@
+use uuid::Uuid;
+
 pub struct GpodderSetting {
-    pub id: i32,
-    pub user_id: i32,
+    pub id: Uuid,
+    pub user_id: Uuid,
     pub scope: String,
     pub scope_id: Option<String>,
     pub data: String, // JSON string
@@ -11,7 +13,7 @@ pub trait GpodderSettingRepository: Send + Sync {
 
     fn get_setting(
         &self,
-        user_id: i32,
+        user_id: Uuid,
         scope: &str,
         scope_id: Option<&str>,
     ) -> Result<Option<GpodderSetting>, Self::Error>;

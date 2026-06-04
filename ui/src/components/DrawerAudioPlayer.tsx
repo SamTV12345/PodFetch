@@ -19,7 +19,7 @@ export const DrawerAudioPlayer: FC<DrawerAudioPlayerProps> = ({ audioAmplifier }
     const podcast = $api.useQuery('get','/api/v1/podcasts/{id}', {
         params: {
             path: {
-                id: String(podcastEpisode?.podcastEpisode.podcast_id)
+                id: podcastEpisode?.podcastEpisode.podcast_id ?? ''
             }
         }
     })

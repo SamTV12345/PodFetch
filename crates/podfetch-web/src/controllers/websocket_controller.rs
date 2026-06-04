@@ -1,4 +1,5 @@
 use crate::app_state::AppState;
+use crate::controllers::id_resolver::{ResolvedId, parse_resolved_id};
 use crate::services::podcast::service::PodcastService;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use axum::extract::{Path, State};
@@ -145,6 +146,19 @@ fn generate_itunes_extension_conditionally(
     channel_builder.itunes_ext(itunes_ext).build()
 }
 
+/// Resolve a podcast `{id}` path segment (UUID or legacy integer) to the
+/// canonical podcast `Uuid`.
+fn resolve_podcast_uuid(id: &str) -> Result<uuid::Uuid, CustomError> {
+    match parse_resolved_id(id)? {
+        ResolvedId::Uuid(uuid) => Ok(uuid),
+        ResolvedId::Legacy(legacy) => {
+            let podcast = PodcastService::get_podcast_by_legacy_id(legacy)?;
+            uuid::Uuid::parse_str(&podcast.id)
+                .map_err(|_| CustomErrorInner::NotFound(Warning).into())
+        }
+    }
+}
+
 #[utoipa::path(
 get,
 path="/rss/{id}",
@@ -154,7 +168,7 @@ responses(
 pub async fn get_rss_feed_for_podcast(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Path(id): Path<i32>,
+    Path(id): Path<String>,
     OptionalQuery(api_key): OptionalQuery<RSSAPiKey>,
 ) -> Result<impl IntoResponse, CustomError> {
     let server_url = resolve_server_url_from_headers(&headers);
@@ -172,10 +186,11 @@ pub async fn get_rss_feed_for_podcast(
         }
     }
     let api_key = api_key.and_then(|c| c.api_key);
-    let podcast = PodcastService::get_podcast(id)?;
+    let podcast_uuid = resolve_podcast_uuid(&id)?;
+    let podcast = PodcastService::get_podcast(podcast_uuid)?;
 
     let downloaded_episodes: Vec<PodcastEpisodeDto> =
-        PodcastEpisodeService::find_all_downloaded_podcast_episodes_by_podcast_id(id)?
+        PodcastEpisodeService::find_all_downloaded_podcast_episodes_by_podcast_id(podcast_uuid)?
             .into_iter()
             .map(|c| {
                 PodcastEpisodeDto::from_episode_with_api_key(
@@ -345,7 +360,7 @@ responses(
 pub async fn get_rss_feed_for_podcast_with_path_api_key(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Path((api_key, id)): Path<(String, i32)>,
+    Path((api_key, id)): Path<(String, String)>,
 ) -> Result<impl IntoResponse, CustomError> {
     let api_key_query = OptionalQuery(Some(RSSAPiKey {
         api_key: Some(api_key),
@@ -412,7 +427,7 @@ mod tests {
     }
 
     fn insert_downloaded_episode(
-        podcast_id: i32,
+        podcast_id: &str,
         episode_id: &str,
         guid: &str,
         file_episode_path: &str,
@@ -423,7 +438,8 @@ mod tests {
 
         diesel::insert_into(pe_dsl::podcast_episodes)
             .values((
-                pe_dsl::podcast_id.eq(podcast_id),
+                pe_dsl::id.eq(Uuid::new_v4().to_string()),
+                pe_dsl::podcast_id.eq(podcast_id.to_string()),
                 pe_dsl::episode_id.eq(episode_id.to_string()),
                 pe_dsl::name.eq("RSS Rewrite Episode".to_string()),
                 pe_dsl::url.eq(format!("https://example.com/{episode_id}.mp3")),
@@ -562,7 +578,7 @@ mod tests {
         let file_episode_path = format!("podcasts/rss-rewrite-{unique}/episode.mp3");
         let file_image_path = format!("podcasts/rss-rewrite-{unique}/image.jpg");
         let _episode = insert_downloaded_episode(
-            podcast.id,
+            &podcast.id.to_string(),
             &format!("rss-rewrite-ep-{unique}"),
             &format!("rss-rewrite-guid-{unique}"),
             &file_episode_path,

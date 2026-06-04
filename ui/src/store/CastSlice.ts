@@ -1,13 +1,13 @@
 import { create } from "zustand";
 import { components } from "../../schema";
 
-export type CastSessionState = components["schemas"]["CastSessionState"];
+export type CastSessionState = components["schemas"]["CastStateDto"];
 
 export type ActiveCastSession = {
     sessionId: string;
     chromecastUuid: string;
     deviceName: string;
-    episodeId?: number | null;
+    episodeId?: string | null;
     state: CastSessionState;
     positionSecs: number;
     volume: number;

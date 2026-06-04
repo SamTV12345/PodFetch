@@ -12,11 +12,13 @@ use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::podcast_episode::{
     NewPodcastEpisode, PodcastEpisode, PodcastEpisodeRepository, PodcastEpisodeWithHistory,
 };
+use uuid::Uuid;
 
 diesel::table! {
     podcast_episodes (id) {
-        id -> Integer,
-        podcast_id -> Integer,
+        id -> Text,
+        legacy_id -> Nullable<BigInt>,
+        podcast_id -> Text,
         episode_id -> Text,
         name -> Text,
         url -> Text,
@@ -37,8 +39,8 @@ diesel::table! {
 // Re-declare episode and favorite tables here for joins
 diesel::table! {
     episodes (id) {
-        id -> Integer,
-        user_id -> Integer,
+        id -> Text,
+        user_id -> Text,
         device -> Text,
         podcast -> Text,
         episode -> Text,
@@ -53,22 +55,22 @@ diesel::table! {
 
 diesel::table! {
     favorite_podcast_episodes (user_id, episode_id) {
-        user_id -> Integer,
-        episode_id -> Integer,
+        user_id -> Text,
+        episode_id -> Text,
         favorite -> Bool,
     }
 }
 
 diesel::table! {
     users (id) {
-        id -> Integer,
+        id -> Text,
         username -> Text,
     }
 }
 
 diesel::table! {
     podcasts (id) {
-        id -> Integer,
+        id -> Text,
         name -> Text,
         directory_id -> Text,
         rssfeed -> Text,
@@ -98,8 +100,9 @@ diesel::allow_tables_to_appear_in_same_query!(
 )]
 #[diesel(table_name = podcast_episodes)]
 pub struct PodcastEpisodeEntity {
-    pub id: i32,
-    pub podcast_id: i32,
+    pub id: String,
+    pub legacy_id: Option<i64>,
+    pub podcast_id: String,
     pub episode_id: String,
     pub name: String,
     pub url: String,
@@ -119,7 +122,9 @@ pub struct PodcastEpisodeEntity {
 #[derive(Insertable, Debug, Clone)]
 #[diesel(table_name = podcast_episodes)]
 struct NewPodcastEpisodeEntity {
-    podcast_id: i32,
+    id: String,
+    legacy_id: Option<i64>,
+    podcast_id: String,
     episode_id: String,
     name: String,
     url: String,
@@ -134,8 +139,8 @@ struct NewPodcastEpisodeEntity {
 #[derive(Queryable, Selectable, Debug, Clone)]
 #[diesel(table_name = episodes)]
 struct EpisodeEntity {
-    id: i32,
-    user_id: i32,
+    id: String,
+    user_id: String,
     device: String,
     podcast: String,
     episode: String,
@@ -151,16 +156,17 @@ struct EpisodeEntity {
 #[derive(Queryable, Selectable, Debug, Clone)]
 #[diesel(table_name = favorite_podcast_episodes)]
 struct FavoritePodcastEpisodeEntity {
-    user_id: i32,
-    episode_id: i32,
+    user_id: String,
+    episode_id: String,
     favorite: bool,
 }
 
 impl From<PodcastEpisodeEntity> for PodcastEpisode {
     fn from(entity: PodcastEpisodeEntity) -> Self {
         Self {
-            id: entity.id,
-            podcast_id: entity.podcast_id,
+            id: uuid::Uuid::parse_str(&entity.id).expect("valid uuid in db"),
+            legacy_id: entity.legacy_id,
+            podcast_id: uuid::Uuid::parse_str(&entity.podcast_id).expect("valid uuid in db"),
             episode_id: entity.episode_id,
             name: entity.name,
             url: entity.url,
@@ -182,8 +188,9 @@ impl From<PodcastEpisodeEntity> for PodcastEpisode {
 impl From<&PodcastEpisode> for PodcastEpisodeEntity {
     fn from(episode: &PodcastEpisode) -> Self {
         Self {
-            id: episode.id,
-            podcast_id: episode.podcast_id,
+            id: episode.id.to_string(),
+            legacy_id: episode.legacy_id,
+            podcast_id: episode.podcast_id.to_string(),
             episode_id: episode.episode_id.clone(),
             name: episode.name.clone(),
             url: episode.url.clone(),
@@ -205,7 +212,9 @@ impl From<&PodcastEpisode> for PodcastEpisodeEntity {
 impl From<NewPodcastEpisode> for NewPodcastEpisodeEntity {
     fn from(episode: NewPodcastEpisode) -> Self {
         Self {
-            podcast_id: episode.podcast_id,
+            id: podfetch_domain::ids::new_id().to_string(),
+            legacy_id: None,
+            podcast_id: episode.podcast_id.to_string(),
             episode_id: episode.episode_id,
             name: episode.name,
             url: episode.url,
@@ -221,8 +230,8 @@ impl From<NewPodcastEpisode> for NewPodcastEpisodeEntity {
 impl From<FavoritePodcastEpisodeEntity> for FavoritePodcastEpisode {
     fn from(entity: FavoritePodcastEpisodeEntity) -> Self {
         Self {
-            user_id: entity.user_id,
-            episode_id: entity.episode_id,
+            user_id: uuid::Uuid::parse_str(&entity.user_id).expect("valid uuid in db"),
+            episode_id: uuid::Uuid::parse_str(&entity.episode_id).expect("valid uuid in db"),
             favorite: entity.favorite,
         }
     }
@@ -231,8 +240,9 @@ impl From<FavoritePodcastEpisodeEntity> for FavoritePodcastEpisode {
 impl From<PodcastEpisode> for PodcastEpisodeEntity {
     fn from(episode: PodcastEpisode) -> Self {
         Self {
-            id: episode.id,
-            podcast_id: episode.podcast_id,
+            id: episode.id.to_string(),
+            legacy_id: episode.legacy_id,
+            podcast_id: episode.podcast_id.to_string(),
             episode_id: episode.episode_id,
             name: episode.name,
             url: episode.url,
@@ -278,9 +288,18 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
             .map_err(Into::into)
     }
 
-    fn find_by_id(&self, id: i32) -> Result<Option<PodcastEpisode>, Self::Error> {
+    fn find_by_id(&self, id: Uuid) -> Result<Option<PodcastEpisode>, Self::Error> {
         podcast_episodes::table
-            .filter(podcast_episodes::id.eq(id))
+            .filter(podcast_episodes::id.eq(id.to_string()))
+            .first::<PodcastEpisodeEntity>(&mut self.database.connection()?)
+            .optional()
+            .map(|opt| opt.map(Into::into))
+            .map_err(Into::into)
+    }
+
+    fn find_by_legacy_id(&self, legacy_id: i64) -> Result<Option<PodcastEpisode>, Self::Error> {
+        podcast_episodes::table
+            .filter(podcast_episodes::legacy_id.eq(legacy_id))
             .first::<PodcastEpisodeEntity>(&mut self.database.connection()?)
             .optional()
             .map(|opt| opt.map(Into::into))
@@ -299,14 +318,14 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
     fn find_by_url(
         &self,
         url: &str,
-        podcast_id: Option<i32>,
+        podcast_id: Option<Uuid>,
     ) -> Result<Option<PodcastEpisode>, Self::Error> {
         let mut query = podcast_episodes::table
             .filter(podcast_episodes::url.eq(url))
             .into_boxed();
 
         if let Some(pid) = podcast_id {
-            query = query.filter(podcast_episodes::podcast_id.eq(pid));
+            query = query.filter(podcast_episodes::podcast_id.eq(pid.to_string()));
         }
 
         query
@@ -325,9 +344,9 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
             .map_err(Into::into)
     }
 
-    fn find_by_podcast_id(&self, podcast_id: i32) -> Result<Vec<PodcastEpisode>, Self::Error> {
+    fn find_by_podcast_id(&self, podcast_id: Uuid) -> Result<Vec<PodcastEpisode>, Self::Error> {
         podcast_episodes::table
-            .filter(podcast_episodes::podcast_id.eq(podcast_id))
+            .filter(podcast_episodes::podcast_id.eq(podcast_id.to_string()))
             .load::<PodcastEpisodeEntity>(&mut self.database.connection()?)
             .map(|entities| entities.into_iter().map(Into::into).collect())
             .map_err(Into::into)
@@ -348,25 +367,30 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
 
     fn update(&self, episode: &PodcastEpisode) -> Result<(), Self::Error> {
         let entity = PodcastEpisodeEntity::from(episode);
-        diesel::update(podcast_episodes::table.filter(podcast_episodes::id.eq(episode.id)))
-            .set(&entity)
+        diesel::update(
+            podcast_episodes::table.filter(podcast_episodes::id.eq(episode.id.to_string())),
+        )
+        .set(&entity)
+        .execute(&mut self.database.connection()?)
+        .map(|_| ())
+        .map_err(Into::into)
+    }
+
+    fn delete(&self, id: Uuid) -> Result<(), Self::Error> {
+        diesel::delete(podcast_episodes::table.filter(podcast_episodes::id.eq(id.to_string())))
             .execute(&mut self.database.connection()?)
             .map(|_| ())
             .map_err(Into::into)
     }
 
-    fn delete(&self, id: i32) -> Result<(), Self::Error> {
-        diesel::delete(podcast_episodes::table.filter(podcast_episodes::id.eq(id)))
-            .execute(&mut self.database.connection()?)
-            .map(|_| ())
-            .map_err(Into::into)
-    }
-
-    fn delete_by_podcast_id(&self, podcast_id: i32) -> Result<(), Self::Error> {
-        diesel::delete(podcast_episodes::table.filter(podcast_episodes::podcast_id.eq(podcast_id)))
-            .execute(&mut self.database.connection()?)
-            .map(|_| ())
-            .map_err(Into::into)
+    fn delete_by_podcast_id(&self, podcast_id: Uuid) -> Result<(), Self::Error> {
+        diesel::delete(
+            podcast_episodes::table
+                .filter(podcast_episodes::podcast_id.eq(podcast_id.to_string())),
+        )
+        .execute(&mut self.database.connection()?)
+        .map(|_| ())
+        .map_err(Into::into)
     }
 
     fn query_by_url_like(&self, url_pattern: &str) -> Result<Option<PodcastEpisode>, Self::Error> {
@@ -379,9 +403,9 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
             .map_err(Into::into)
     }
 
-    fn get_nth_page(&self, last_id: i32, limit: i64) -> Result<Vec<PodcastEpisode>, Self::Error> {
+    fn get_nth_page(&self, last_id: Uuid, limit: i64) -> Result<Vec<PodcastEpisode>, Self::Error> {
         podcast_episodes::table
-            .filter(podcast_episodes::id.gt(last_id))
+            .filter(podcast_episodes::id.gt(last_id.to_string()))
             .filter(podcast_episodes::file_episode_path.is_not_null())
             .order(podcast_episodes::id.asc())
             .limit(limit)
@@ -392,40 +416,42 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
 
     fn get_episodes_with_history(
         &self,
-        podcast_id: i32,
+        podcast_id: Uuid,
         username: &str,
         last_date: Option<&str>,
         only_unlistened: bool,
         limit: i64,
     ) -> Result<PodcastEpisodeWithHistory, Self::Error> {
+        // Empty string is used as a "no such user" sentinel; it can never match
+        // a stored UUID, so unmatched users yield no history rows.
         let user_id = users::table
             .filter(users::username.eq(username))
             .select(users::id)
-            .first::<i32>(&mut self.database.connection()?)
+            .first::<String>(&mut self.database.connection()?)
             .optional()?
-            .unwrap_or(-1);
+            .unwrap_or_default();
 
         let (ep1, ep2) = diesel::alias!(episodes as ep1, episodes as ep2);
 
         // Subquery to get the latest timestamp per episode guid for this user
         let subquery = ep2
             .select(max(ep2.field(episodes::timestamp)))
-            .filter(ep2.field(episodes::user_id).eq(user_id))
+            .filter(ep2.field(episodes::user_id).eq(user_id.clone()))
             .filter(ep2.field(episodes::guid).eq(ep1.field(episodes::guid)))
             .group_by(ep2.field(episodes::guid));
 
         let mut query = podcast_episodes::table
-            .filter(podcast_episodes::podcast_id.eq(podcast_id))
+            .filter(podcast_episodes::podcast_id.eq(podcast_id.to_string()))
             .left_join(
                 ep1.on(ep1
                     .field(episodes::guid)
                     .eq(podcast_episodes::guid.nullable())
-                    .and(ep1.field(episodes::user_id).eq(user_id))),
+                    .and(ep1.field(episodes::user_id).eq(user_id.clone()))),
             )
             .left_join(
                 favorite_podcast_episodes::table.on(favorite_podcast_episodes::episode_id
                     .eq(podcast_episodes::id)
-                    .and(favorite_podcast_episodes::user_id.eq(user_id))),
+                    .and(favorite_podcast_episodes::user_id.eq(user_id.clone()))),
             )
             .filter(
                 ep1.field(episodes::timestamp)
@@ -463,7 +489,8 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
                             ep.map(|entity| {
                                 let _user_id = entity.user_id;
                                 Episode {
-                                    id: entity.id,
+                                    id: uuid::Uuid::parse_str(&entity.id)
+                                        .expect("valid uuid in db"),
                                     username: username.to_string(),
                                     device: entity.device,
                                     podcast: entity.podcast,
@@ -487,10 +514,10 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
     fn get_position_of_episode(
         &self,
         timestamp: &str,
-        podcast_id: i32,
+        podcast_id: Uuid,
     ) -> Result<usize, Self::Error> {
         let result = podcast_episodes::table
-            .filter(podcast_episodes::podcast_id.eq(podcast_id))
+            .filter(podcast_episodes::podcast_id.eq(podcast_id.to_string()))
             .filter(podcast_episodes::date_of_recording.le(timestamp))
             .order(podcast_episodes::date_of_recording.desc())
             .execute(&mut self.database.connection()?)
@@ -500,11 +527,11 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
 
     fn get_last_n_episodes(
         &self,
-        podcast_id: i32,
+        podcast_id: Uuid,
         n: i64,
     ) -> Result<Vec<PodcastEpisode>, Self::Error> {
         podcast_episodes::table
-            .filter(podcast_episodes::podcast_id.eq(podcast_id))
+            .filter(podcast_episodes::podcast_id.eq(podcast_id.to_string()))
             .limit(n)
             .order(podcast_episodes::date_of_recording.desc())
             .load::<PodcastEpisodeEntity>(&mut self.database.connection()?)
@@ -532,12 +559,12 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
     fn get_episodes_older_than_days(
         &self,
         days: i64,
-        podcast_id: i32,
+        podcast_id: Uuid,
     ) -> Result<Vec<PodcastEpisode>, Self::Error> {
         let cutoff = Utc::now().naive_utc() - Duration::days(days);
         podcast_episodes::table
             .filter(podcast_episodes::download_time.lt(cutoff))
-            .filter(podcast_episodes::podcast_id.eq(podcast_id))
+            .filter(podcast_episodes::podcast_id.eq(podcast_id.to_string()))
             .load::<PodcastEpisodeEntity>(&mut self.database.connection()?)
             .map(|entities| entities.into_iter().map(Into::into).collect())
             .map_err(Into::into)
@@ -603,8 +630,8 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
             .map_err(Into::into)
     }
 
-    fn remove_download_status(&self, id: i32) -> Result<(), Self::Error> {
-        diesel::update(podcast_episodes::table.filter(podcast_episodes::id.eq(id)))
+    fn remove_download_status(&self, id: Uuid) -> Result<(), Self::Error> {
+        diesel::update(podcast_episodes::table.filter(podcast_episodes::id.eq(id.to_string())))
             .set((
                 podcast_episodes::download_location.eq::<Option<String>>(None),
                 podcast_episodes::download_time.eq::<Option<NaiveDateTime>>(None),

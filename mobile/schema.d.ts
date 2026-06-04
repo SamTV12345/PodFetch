@@ -4,6 +4,150 @@
  */
 
 export interface paths {
+    "/api/v1/cast/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_cast_devices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cast/devices/discover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["discover_cast_devices"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cast/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["start_cast_session"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cast/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_cast_session_status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cast/sessions/{session_id}/control": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["control_cast_session"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/discover/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_categories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/discover/charts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_charts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/discover/for-you": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_for_you"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/discover/trending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_trending"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/episodes/formatting": {
         parameters: {
             query?: never;
@@ -126,7 +270,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["login"];
+        post: operations["sys_login"];
         delete?: never;
         options?: never;
         head?: never;
@@ -550,6 +694,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/podcasts/{id}/episodes/download-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["download_all_missing_episodes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/podcasts/{id}/episodes/downloads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["delete_all_downloaded_files"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/podcasts/{id}/episodes/favor": {
         parameters: {
             query?: never;
@@ -561,6 +737,38 @@ export interface paths {
         /** * id is the episode id (uuid) */
         put: operations["like_podcast_episode"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/podcasts/{id}/episodes/resync-db": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resync_db_for_podcast"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/podcasts/{id}/episodes/resync-files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resync_files_for_podcast"];
         delete?: never;
         options?: never;
         head?: never;
@@ -654,7 +862,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_settings"];
+        get: operations["get_app_settings"];
         put: operations["update_settings"];
         post?: never;
         delete?: never;
@@ -720,6 +928,22 @@ export interface paths {
         };
         get?: never;
         put: operations["run_cleanup"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stats/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_stats_overview"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -839,6 +1063,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/users/me/locale": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["update_locale"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/{username}": {
         parameters: {
             query?: never;
@@ -887,6 +1127,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/proxy/podcast/apiKey/{apiKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["proxy_podcast_with_path_api_key"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/rss": {
         parameters: {
             query?: never;
@@ -895,6 +1151,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["get_rss_feed"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rss/apiKey/{apiKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_rss_feed_with_path_api_key"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rss/apiKey/{apiKey}/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_rss_feed_for_podcast_with_path_api_key"];
         put?: never;
         post?: never;
         delete?: never;
@@ -935,65 +1223,96 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/cast/devices": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
-        get: operations["list_cast_devices"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/cast/devices/discover": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
-        get?: never;
-        put?: never;
-        post: operations["discover_cast_devices"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/cast/sessions": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
-        get?: never;
-        put?: never;
-        post: operations["start_cast_session"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/cast/sessions/{id}": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
-        get: operations["get_cast_session"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/cast/sessions/{id}/control": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
-        get?: never;
-        put?: never;
-        post: operations["control_cast_session"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        BatchActionResponse: {
+            affected: number;
+        };
+        /** @description Request body for `POST /cast/sessions/:id/control`. */
+        CastControlRequest: {
+            /** @enum {string} */
+            cmd: "pause";
+        } | {
+            /** @enum {string} */
+            cmd: "resume";
+        } | {
+            /** @enum {string} */
+            cmd: "stop";
+        } | {
+            /** @enum {string} */
+            cmd: "seek";
+            /** Format: double */
+            position_secs: number;
+        } | {
+            /** @enum {string} */
+            cmd: "set_volume";
+            /** Format: float */
+            volume: number;
+        };
+        /** @description One Chromecast device as exposed to the UI. */
+        CastDeviceResponse: {
+            /**
+             * @description `None` for devices on the same LAN as the server, otherwise the
+             *     agent that contributed this device.
+             */
+            agent_id?: string | null;
+            chromecast_uuid: string;
+            ip?: string | null;
+            /** @description `chromecast_personal` or `chromecast_shared`. */
+            kind: string;
+            /** Format: date-time */
+            last_seen_at?: string | null;
+            name: string;
+        };
+        CastSessionResponse: {
+            chromecast_uuid: string;
+            episode_id?: string | null;
+            /** Format: double */
+            position_secs: number;
+            session_id: string;
+            state: components["schemas"]["CastStateDto"];
+            /** Format: float */
+            volume: number;
+        };
+        /** @description Request body for `POST /cast/sessions`. */
+        CastStartRequest: {
+            artwork_url?: string | null;
+            chromecast_uuid: string;
+            /** Format: double */
+            duration_secs?: number | null;
+            episode_id: string;
+            mime: string;
+            title: string;
+            /**
+             * @description Direct URL the Chromecast should fetch. For local server scenarios
+             *     the caller resolves this from the episode (proxied or direct file
+             *     URL); the controller passes it through unchanged.
+             */
+            url: string;
+        };
+        /**
+         * @description Wire-friendly mirror of [`podfetch_cast::CastState`] — gives utoipa a
+         *     schema without leaking the cast crate's enum into the OpenAPI surface.
+         * @enum {string}
+         */
+        CastStateDto: "idle" | "buffering" | "playing" | "paused" | "stopped";
+        CastStatusResponse: {
+            /** Format: double */
+            position_secs: number;
+            session_id: string;
+            state: components["schemas"]["CastStateDto"];
+            /** Format: float */
+            volume: number;
+        };
+        CategoryDto: {
+            /** Format: int32 */
+            itunesGenreId: number;
+            name: string;
+            /** Format: int32 */
+            podindexId: number;
+        };
         /** @enum {string} */
         Color: "Red" | "Green" | "Blue";
         ConfigModel: {
@@ -1026,6 +1345,19 @@ export interface components {
         DeletePodcast: {
             delete_files: boolean;
         };
+        /**
+         * @description One device returned by an explicit discovery scan. Distinct from
+         *     `CastDeviceResponse` because discovery results are *not yet persisted*
+         *     and have no `kind` until an admin promotes them.
+         */
+        DiscoveredCastDeviceResponse: {
+            friendly_name: string;
+            ip?: string | null;
+            model?: string | null;
+            /** Format: int32 */
+            port: number;
+            uuid: string;
+        };
         /** @enum {string} */
         EpisodeAction: "new" | "download" | "play" | "delete";
         EpisodeDto: {
@@ -1046,23 +1378,21 @@ export interface components {
         EpisodeFormatDto: {
             content: string;
         };
-        Favorite: {
-            favored: boolean;
-            /** Format: int32 */
-            podcast_id: number;
-            username: string;
-        };
         FavoritePut: {
             favored: boolean;
         };
         Feed: {
             artwork?: string | null;
             author?: string | null;
+            categories?: {
+                [key: string]: string;
+            } | null;
             description?: string | null;
             explicit?: boolean | null;
             /** Format: int32 */
             id?: number | null;
             image?: string | null;
+            language?: string | null;
             /** Format: int32 */
             lastCrawlTime?: number | null;
             /** Format: int32 */
@@ -1081,11 +1411,11 @@ export interface components {
         Filter: {
             ascending: boolean;
             filter?: string | null;
-            onlyFavored: boolean;
+            only_favored: boolean;
             title?: string | null;
-            username: string;
+            user_id: string;
         };
-        GPodderAvailablePodcasts: {
+        GPodderAvailablePodcast: {
             device: string;
             podcast: string;
         };
@@ -1103,6 +1433,15 @@ export interface components {
         InvitePostModel: {
             explicitConsent: boolean;
             role: string;
+        };
+        ItunesChartEntry: {
+            artist?: string | null;
+            feedUrl?: string | null;
+            genre?: string | null;
+            id: string;
+            image?: string | null;
+            name: string;
+            releaseDate?: string | null;
         };
         ItunesModel: {
             /** Format: int64 */
@@ -1159,15 +1498,13 @@ export interface components {
         };
         Notification: {
             createdAt: string;
-            /** Format: int32 */
-            id: number;
+            id: string;
             message: string;
             status: string;
             typeOfMessage: string;
         };
         NotificationId: {
-            /** Format: int32 */
-            id: number;
+            id: string;
         };
         OidcConfig: {
             authority: string;
@@ -1191,8 +1528,7 @@ export interface components {
             name: string;
         };
         PlaylistItem: {
-            /** Format: int32 */
-            episode: number;
+            episode: string;
         };
         PodcastAddModel: {
             /** Format: int32 */
@@ -1215,12 +1551,13 @@ export interface components {
             directory_name: string;
             explicit?: string | null;
             favorites: boolean;
-            /** Format: int32 */
-            id: number;
+            id: string;
             image_url: string;
             keywords?: string | null;
             language?: string | null;
             last_build_date?: string | null;
+            /** Format: int64 */
+            legacyId?: number | null;
             name: string;
             original_image_url: string;
             podfetch_feed: string;
@@ -1238,14 +1575,14 @@ export interface components {
             episode_numbering_processed: boolean;
             favored?: boolean | null;
             guid: string;
-            /** Format: int32 */
-            id: number;
+            id: string;
             image_url: string;
+            /** Format: int64 */
+            legacyId?: number | null;
             local_image_url: string;
             local_url: string;
             name: string;
-            /** Format: int32 */
-            podcast_id: number;
+            podcast_id: string;
             status: boolean;
             /** Format: int32 */
             total_time: number;
@@ -1257,8 +1594,7 @@ export interface components {
         };
         PodcastFavorUpdateModel: {
             favored: boolean;
-            /** Format: int32 */
-            id: number;
+            id: string;
         };
         PodcastRSSAddModel: {
             rssFeedUrl: string;
@@ -1275,13 +1611,13 @@ export interface components {
             episodeFormat: string;
             episodeNumbering: boolean;
             podcastFormat: string;
-            /** Format: int32 */
-            podcastId: number;
+            podcastId: string;
             /** Format: int32 */
             podcastPrefill: number;
             replaceInvalidCharacters: boolean;
             replacementStrategy: string;
             useExistingFilename: boolean;
+            useOneCoverForAllEpisodes: boolean;
         };
         PodcastUpdateNameRequest: {
             name: string;
@@ -1298,28 +1634,58 @@ export interface components {
         };
         PodindexResponse: {
             feeds: components["schemas"]["Feed"][];
-            status: boolean;
+            status: string;
         };
         /** @enum {string} */
         ReplacementStrategy: "replace-with-dash-and-underscore" | "remove" | "replace-with-dash";
-        /** @enum {string} */
-        Role: "admin" | "uploader" | "user";
+        /**
+         * @description Toggles for re-applying the current settings to already-downloaded
+         *     episodes. Each field is opt-in so an empty body keeps the historical
+         *     "chapter rescan only" behaviour of `/settings/rescan-episodes`.
+         */
+        RescanOptions: {
+            /**
+             * @description If `use_one_cover_for_all_episodes` is on, remove the per-episode
+             *     cover image from disk.
+             * @default false
+             */
+            applyCovers: boolean;
+            /**
+             * @description Rename / move the audio + image file to the path the current naming
+             *     settings would produce.
+             * @default false
+             */
+            applyFilenames: boolean;
+            /**
+             * @description Rewrite embedded ID3 / MP4 tags (title, artist, album, track, cover,
+             *     episode-number prefix).
+             * @default false
+             */
+            applyMetadata: boolean;
+            /**
+             * @description If `auto_transcode_opus` is on and the file is still mp3, convert it
+             *     to opus (same ffmpeg call the downloader uses).
+             * @default false
+             */
+            applyTranscode: boolean;
+        };
         Setting: {
             autoCleanup: boolean;
             /** Format: int32 */
             autoCleanupDays: number;
             autoDownload: boolean;
+            autoTranscodeOpus: boolean;
             autoUpdate: boolean;
             directPaths: boolean;
             episodeFormat: string;
-            /** Format: int32 */
-            id: number;
+            id: string;
             podcastFormat: string;
             /** Format: int32 */
             podcastPrefill: number;
             replaceInvalidCharacters: boolean;
             replacementStrategy: string;
             useExistingFilename: boolean;
+            useOneCoverForAllEpisodes: boolean;
         };
         SimplifiedDisk: {
             /** Format: int64 */
@@ -1327,6 +1693,20 @@ export interface components {
             name: string;
             /** Format: int64 */
             total_space: number;
+        };
+        StatsOverview: {
+            activeWeekdays: components["schemas"]["WeekdayStats"][];
+            /** Format: date-time */
+            from?: string | null;
+            /** Format: int64 */
+            listenedEpisodes: number;
+            /** Format: int64 */
+            listenedPodcasts: number;
+            /** Format: date-time */
+            to?: string | null;
+            topPodcasts: components["schemas"]["TopPodcastStats"][];
+            /** Format: int64 */
+            totalListenedSeconds: number;
         };
         SysExtraInfo: {
             disks: components["schemas"]["SimplifiedDisk"][];
@@ -1352,7 +1732,7 @@ export interface components {
             description?: string | null;
             id: string;
             name: string;
-            username: string;
+            user_id: string;
         };
         TagCreate: {
             color: components["schemas"]["Color"];
@@ -1360,12 +1740,11 @@ export interface components {
             name: string;
         };
         TagsPodcast: {
-            /** Format: int32 */
-            podcast_id: number;
+            podcast_id: string;
             tag_id: string;
         };
         TimeLinePodcastEpisode: {
-            favorite?: null | components["schemas"]["Favorite"];
+            favorite?: null | components["schemas"]["TimelineFavorite"];
             history?: null | components["schemas"]["EpisodeDto"];
             podcast: components["schemas"]["PodcastDto"];
             podcast_episode: components["schemas"]["PodcastEpisodeDto"];
@@ -1374,6 +1753,18 @@ export interface components {
             data: components["schemas"]["TimeLinePodcastEpisode"][];
             /** Format: int64 */
             totalElements: number;
+        };
+        TimelineFavorite: {
+            favored: boolean;
+        };
+        TopPodcastStats: {
+            imageUrl: string;
+            /** Format: int64 */
+            listenedEpisodes: number;
+            /** Format: int64 */
+            listenedSeconds: number;
+            podcastId: string;
+            podcastName: string;
         };
         UpdateNameSettings: {
             directPaths: boolean;
@@ -1388,6 +1779,10 @@ export interface components {
             password?: string | null;
             username: string;
         };
+        UserLocaleUpdate: {
+            country?: string | null;
+            language?: string | null;
+        };
         UserOnboardingModel: {
             inviteId: string;
             password: string;
@@ -1395,25 +1790,25 @@ export interface components {
         };
         UserRoleUpdateModel: {
             explicitConsent: boolean;
-            role: components["schemas"]["Role"];
+            role: string;
         };
-        UserWithAPiKey: {
-            apiKey?: string | null;
+        UserSummary: {
             /** Format: date-time */
             createdAt: string;
             explicitConsent: boolean;
-            /** Format: int32 */
-            id: number;
-            readOnly: boolean;
+            id: string;
             role: string;
             username: string;
         };
-        UserWithoutPassword: {
+        UserWithApiKey: {
+            apiKey?: string | null;
+            country?: string | null;
             /** Format: date-time */
             createdAt: string;
             explicitConsent: boolean;
-            /** Format: int32 */
-            id: number;
+            id: string;
+            language?: string | null;
+            readOnly: boolean;
             role: string;
             username: string;
         };
@@ -1425,56 +1820,13 @@ export interface components {
             time: string;
             version: string;
         };
-        CastDeviceResponse: {
-            chromecast_uuid: string;
-            name: string;
-            /** @enum {string} */
-            kind: "chromecast_personal" | "chromecast_shared";
-            agent_id?: string | null;
-            last_seen_at?: string | null;
-            ip?: string | null;
-        };
-        DiscoveredCastDeviceResponse: {
-            uuid: string;
-            friendly_name: string;
-            model?: string | null;
-            ip?: string | null;
+        WeekdayStats: {
             /** Format: int32 */
-            port: number;
+            dayIndex: number;
+            /** Format: int64 */
+            listenedSeconds: number;
+            weekday: string;
         };
-        CastSessionStartRequest: {
-            chromecast_uuid: string;
-            episode_id: string;
-            url: string;
-            mime: string;
-            title: string;
-            artwork_url?: string | null;
-            duration_secs?: number | null;
-        };
-        /** @enum {string} */
-        CastSessionState: "idle" | "buffering" | "playing" | "paused" | "stopped";
-        CastSessionResponse: {
-            session_id: string;
-            chromecast_uuid: string;
-            episode_id?: string | null;
-            state: components["schemas"]["CastSessionState"];
-            position_secs: number;
-            volume: number;
-        };
-        CastStatusResponse: {
-            session_id: string;
-            chromecast_uuid: string;
-            episode_id?: string | null;
-            state: components["schemas"]["CastSessionState"];
-            position_secs: number;
-            volume: number;
-        };
-        CastControlRequest:
-            | { cmd: "pause" }
-            | { cmd: "resume" }
-            | { cmd: "stop" }
-            | { cmd: "seek"; position_secs: number }
-            | { cmd: "set_volume"; volume: number };
     };
     responses: never;
     parameters: never;
@@ -1484,6 +1836,257 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_cast_devices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Chromecast devices visible to the caller */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CastDeviceResponse"][];
+                };
+            };
+        };
+    };
+    discover_cast_devices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Newly discovered Chromecasts on the server's LAN */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscoveredCastDeviceResponse"][];
+                };
+            };
+            /** @description Only admins can trigger discovery */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    start_cast_session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CastStartRequest"];
+            };
+        };
+        responses: {
+            /** @description Started a new cast session */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CastSessionResponse"];
+                };
+            };
+            /** @description Device not found or not visible to caller */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_cast_session_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Snapshot of session status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CastStatusResponse"];
+                };
+            };
+            /** @description Caller does not own this session */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    control_cast_session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CastControlRequest"];
+            };
+        };
+        responses: {
+            /** @description Command accepted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Caller does not own this session */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_categories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Known podcast categories and their iTunes/Podcastindex IDs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryDto"][];
+                };
+            };
+        };
+    };
+    get_charts: {
+        parameters: {
+            query: {
+                /** @description ISO-3166-1 alpha-2 country code, e.g. "de", "us". */
+                country: string;
+                /** @description iTunes genre ID. Omit for the overall country top-chart. */
+                genre?: number | null;
+                /** @description How many results to return (capped at 200 by iTunes). */
+                limit?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description iTunes country top-podcasts chart */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ItunesChartEntry"][];
+                };
+            };
+        };
+    };
+    get_for_you: {
+        parameters: {
+            query?: {
+                limit?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Trending feeds matching the user's subscribed categories */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Feed"][];
+                };
+            };
+        };
+    };
+    get_trending: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Comma-separated list of Podcastindex category IDs to narrow the
+                 *     trending list. Omit to get globally trending podcasts.
+                 */
+                cat?: string | null;
+                /** @description Optional ISO language code ("de", "en"). Filter trending by language. */
+                lang?: string | null;
+                /** @description How many results to return, capped at 50. */
+                limit?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Globally or filtered trending podcasts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PodindexResponse"];
+                };
+            };
+        };
+    };
     retrieve_episode_sample_format: {
         parameters: {
             query?: never;
@@ -1678,7 +2281,7 @@ export interface operations {
             };
         };
     };
-    login: {
+    sys_login: {
         parameters: {
             query?: never;
             header?: never;
@@ -1862,7 +2465,7 @@ export interface operations {
             header?: never;
             path: {
                 playlist_id: string;
-                episode_id: number;
+                episode_id: string;
             };
             cookie?: never;
         };
@@ -1930,7 +2533,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GPodderAvailablePodcasts"][];
+                    "application/json": components["schemas"]["GPodderAvailablePodcast"][];
                 };
             };
         };
@@ -2004,7 +2607,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -2147,7 +2750,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PodcastDto"];
+                };
             };
         };
     };
@@ -2200,7 +2805,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -2246,7 +2851,7 @@ export interface operations {
     get_timeline: {
         parameters: {
             query: {
-                favoredOnly: boolean;
+                favoredOnly?: boolean | null;
                 lastTimestamp?: string | null;
                 notListened: boolean;
                 favoredEpisodes: boolean;
@@ -2295,7 +2900,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -2379,12 +2984,54 @@ export interface operations {
             };
         };
     };
+    download_all_missing_episodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queues every missing episode of the podcast for download. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    delete_all_downloaded_files: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removes every downloaded file for this podcast and clears the matching DB flags. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchActionResponse"];
+                };
+            };
+        };
+    };
     like_podcast_episode: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -2405,12 +3052,54 @@ export interface operations {
             };
         };
     };
+    resync_db_for_podcast: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Clears DB download flags for episodes whose file is missing on disk. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchActionResponse"];
+                };
+            };
+        };
+    };
+    resync_files_for_podcast: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Re-downloads episodes whose file is missing on disk. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     update_name_of_podcast: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -2456,7 +3145,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -2478,7 +3167,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -2545,7 +3234,7 @@ export interface operations {
             };
         };
     };
-    get_settings: {
+    get_app_settings: {
         parameters: {
             query?: never;
             header?: never;
@@ -2642,7 +3331,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RescanOptions"];
+            };
+        };
         responses: {
             /** @description Rescans all episodes for metadata */
             200: {
@@ -2668,6 +3361,30 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    get_stats_overview: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                topLimit?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Gets listening statistics overview for the current user. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatsOverview"];
+                };
             };
         };
     };
@@ -2805,7 +3522,7 @@ export interface operations {
             header?: never;
             path: {
                 tag_id: string;
-                podcast_id: number;
+                podcast_id: string;
             };
             cookie?: never;
         };
@@ -2828,7 +3545,7 @@ export interface operations {
             header?: never;
             path: {
                 tag_id: string;
-                podcast_id: number;
+                podcast_id: string;
             };
             cookie?: never;
         };
@@ -2858,7 +3575,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserWithoutPassword"][];
+                    "application/json": components["schemas"]["UserSummary"][];
                 };
             };
         };
@@ -2882,7 +3599,31 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserWithoutPassword"];
+                    "application/json": components["schemas"]["UserSummary"];
+                };
+            };
+        };
+    };
+    update_locale: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserLocaleUpdate"];
+            };
+        };
+        responses: {
+            /** @description Updates the authenticated user's country/language preference */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserWithApiKey"];
                 };
             };
         };
@@ -2904,7 +3645,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": null | components["schemas"]["UserWithAPiKey"];
+                    "application/json": null | components["schemas"]["UserWithApiKey"];
                 };
             };
         };
@@ -2930,7 +3671,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserWithAPiKey"];
+                    "application/json": components["schemas"]["UserWithApiKey"];
                 };
             };
         };
@@ -2976,7 +3717,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": null | components["schemas"]["UserWithoutPassword"];
+                    "application/json": null | components["schemas"]["UserSummary"];
                 };
             };
         };
@@ -2991,6 +3732,26 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Proxies a podcast so people can stream podcasts from the remote server */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    proxy_podcast_with_path_api_key: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                apiKey: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Proxies a podcast (API key in path) */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -3017,12 +3778,53 @@ export interface operations {
             };
         };
     };
+    get_rss_feed_with_path_api_key: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                apiKey: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Gets the complete rss feed (API key in path) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_rss_feed_for_podcast_with_path_api_key: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                apiKey: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Gets a specific rss feed (API key in path) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     get_rss_feed_for_podcast: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -3046,69 +3848,5 @@ export interface operations {
         };
         requestBody?: never;
         responses: never;
-    };
-    list_cast_devices: {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: { [name: string]: unknown; };
-                content: { "application/json": components["schemas"]["CastDeviceResponse"][]; };
-            };
-        };
-    };
-    discover_cast_devices: {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: { [name: string]: unknown; };
-                content: { "application/json": components["schemas"]["DiscoveredCastDeviceResponse"][]; };
-            };
-        };
-    };
-    start_cast_session: {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
-        requestBody: {
-            content: { "application/json": components["schemas"]["CastSessionStartRequest"]; };
-        };
-        responses: {
-            200: {
-                headers: { [name: string]: unknown; };
-                content: { "application/json": components["schemas"]["CastSessionResponse"]; };
-            };
-        };
-    };
-    get_cast_session: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: { id: string; };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: { [name: string]: unknown; };
-                content: { "application/json": components["schemas"]["CastStatusResponse"]; };
-            };
-        };
-    };
-    control_cast_session: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: { id: string; };
-            cookie?: never;
-        };
-        requestBody: {
-            content: { "application/json": components["schemas"]["CastControlRequest"]; };
-        };
-        responses: {
-            204: {
-                headers: { [name: string]: unknown; };
-                content?: never;
-            };
-        };
     };
 }

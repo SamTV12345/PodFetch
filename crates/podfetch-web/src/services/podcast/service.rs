@@ -34,11 +34,21 @@ use sha1::{Digest, Sha1};
 use std::thread;
 use std::time::SystemTime;
 use tokio::task::spawn_blocking;
+use uuid::Uuid;
 
 pub struct PodcastService;
 
 fn podcast_repo() -> DieselPodcastRepository {
     DieselPodcastRepository::new(database())
+}
+
+/// Parse a stored podfetch id (entity rows carry the canonical UUID as a
+/// `String`) into a `Uuid` for the repository layer.
+fn parse_id(id: &str) -> Result<Uuid, CustomError> {
+    Uuid::parse_str(id).map_err(|_| {
+        CustomErrorInner::BadRequest(format!("'{id}' is not a valid id"), ErrorSeverity::Warning)
+            .into()
+    })
 }
 
 fn favorite_repo() -> DieselFavoriteRepository {
@@ -160,7 +170,7 @@ impl PodcastService {
 
     pub async fn insert_podcast_from_podindex(
         id: i32,
-        added_by: Option<i32>,
+        added_by: Option<Uuid>,
     ) -> Result<Podcast, CustomError> {
         let resp = get_http_client(&ENVIRONMENT_SERVICE)
             .get(format!(
@@ -192,7 +202,7 @@ impl PodcastService {
     pub async fn handle_insert_of_podcast(
         podcast_insert: PodcastInsertModel,
         channel: Option<Channel>,
-        added_by: Option<i32>,
+        added_by: Option<Uuid>,
     ) -> Result<Podcast, CustomError> {
         let opt_podcast = podcast_repo()
             .find_by_rss_feed(&podcast_insert.feed_url)
@@ -274,7 +284,8 @@ impl PodcastService {
         const MAX_PARALLEL_DOWNLOADS: usize = 3;
         let settings =
             crate::services::settings::service::SettingsService::shared().get_settings()?;
-        let podcast_settings = PodcastSettingsService::get_settings_for_podcast(podcast.id)?;
+        let podcast_settings =
+            PodcastSettingsService::get_settings_for_podcast(parse_id(&podcast.id)?)?;
         match settings {
             Some(settings) => {
                 if (podcast_settings.is_some() && podcast_settings.unwrap().auto_download)
@@ -325,7 +336,7 @@ impl PodcastService {
         Self::schedule_episode_download(podcast)
     }
 
-    pub fn get_podcast_by_episode_id(id: i32) -> Result<Podcast, CustomError> {
+    pub fn get_podcast_by_episode_id(id: Uuid) -> Result<Podcast, CustomError> {
         podcast_repo()
             .find_by_episode_id(id)
             .map_err(CustomError::from)?
@@ -333,7 +344,10 @@ impl PodcastService {
             .ok_or_else(|| CustomErrorInner::NotFound(ErrorSeverity::Warning).into())
     }
 
-    pub fn get_favorite_state(user_id: i32, podcast_id: i32) -> Result<Option<bool>, CustomError> {
+    pub fn get_favorite_state(
+        user_id: Uuid,
+        podcast_id: Uuid,
+    ) -> Result<Option<bool>, CustomError> {
         favorite_repo()
             .find_by_user_id_and_podcast_id(user_id, podcast_id)
             .map(|opt| opt.map(|f| f.favored))
@@ -370,17 +384,17 @@ impl PodcastService {
             .map(|opt| opt.map(Into::into))
     }
 
-    pub fn update_podcast_name(id: i32, new_name: &str) -> Result<(), CustomError> {
+    pub fn update_podcast_name(id: Uuid, new_name: &str) -> Result<(), CustomError> {
         podcast_repo()
             .update_name(id, new_name)
             .map_err(CustomError::from)
     }
 
-    pub fn delete_podcast(id: i32) -> Result<(), CustomError> {
+    pub fn delete_podcast(id: Uuid) -> Result<(), CustomError> {
         podcast_repo().delete(id).map_err(CustomError::from)
     }
 
-    pub fn delete_favorites_by_user_id(user_id: i32) -> Result<(), CustomError> {
+    pub fn delete_favorites_by_user_id(user_id: Uuid) -> Result<(), CustomError> {
         favorite_repo()
             .delete_by_user_id(user_id)
             .map_err(CustomError::from)
@@ -444,7 +458,7 @@ impl PodcastService {
 
     pub fn update_original_image_url(
         original_image_url_to_set: &str,
-        podcast_id_to_find: i32,
+        podcast_id_to_find: Uuid,
     ) -> Result<(), CustomError> {
         podcast_repo()
             .update_original_image_url(podcast_id_to_find, original_image_url_to_set)
@@ -461,7 +475,7 @@ impl PodcastService {
             .map_err(CustomError::from)
     }
 
-    pub fn update_podcast_urls_on_redirect(podcast_id_to_update: i32, new_url: &str) {
+    pub fn update_podcast_urls_on_redirect(podcast_id_to_update: Uuid, new_url: &str) {
         podcast_repo()
             .update_rss_feed(podcast_id_to_update, new_url)
             .expect("Error updating podcast episode");
@@ -484,7 +498,7 @@ impl PodcastService {
             .map_err(|e| common_infrastructure::error::map_db_error(e, ErrorSeverity::Critical))
     }
 
-    pub fn update_favor_podcast(id: i32, favored: bool, user_id: i32) -> Result<(), CustomError> {
+    pub fn update_favor_podcast(id: Uuid, favored: bool, user_id: Uuid) -> Result<(), CustomError> {
         favorite_repo()
             .update_podcast_favor(id, favored, user_id)
             .map_err(CustomError::from)?;
@@ -504,13 +518,32 @@ impl PodcastService {
         Ok(())
     }
 
-    pub fn get_podcast_by_id(id: i32) -> Podcast {
+    pub fn get_podcast_by_id(id: Uuid) -> Podcast {
         podcast_repo()
             .find_by_id(id)
             .ok()
             .flatten()
             .map(Into::into)
             .unwrap()
+    }
+
+    /// Resolve a podcast by its pre-migration integer id (backwards-compat).
+    pub fn get_podcast_by_legacy_id(legacy_id: i64) -> Result<Podcast, CustomError> {
+        podcast_repo()
+            .find_by_legacy_id(legacy_id)
+            .map_err(CustomError::from)?
+            .map(Into::into)
+            .ok_or_else(|| CustomErrorInner::NotFound(ErrorSeverity::Warning).into())
+    }
+
+    /// Resolve a podcast by its pre-migration integer id, returning the raw row
+    /// (panics on db error, mirroring [`get_podcast_by_id`]).
+    pub fn get_podcast_by_legacy_id_raw(legacy_id: i64) -> Option<Podcast> {
+        podcast_repo()
+            .find_by_legacy_id(legacy_id)
+            .ok()
+            .flatten()
+            .map(Into::into)
     }
 
     pub fn get_favored_podcasts(requester: User, server_url: &str) -> Result<Vec<PodcastDto>, CustomError> {
@@ -535,7 +568,7 @@ impl PodcastService {
         Ok(mapped_result)
     }
 
-    pub fn update_active_podcast(id: i32) -> Result<(), CustomError> {
+    pub fn update_active_podcast(id: Uuid) -> Result<(), CustomError> {
         let found = podcast_repo()
             .find_by_id(id)
             .map_err(CustomError::from)?
@@ -587,7 +620,7 @@ impl PodcastService {
         headers
     }
 
-    pub fn get_podcast(podcast_id_to_be_searched: i32) -> Result<Podcast, CustomError> {
+    pub fn get_podcast(podcast_id_to_be_searched: Uuid) -> Result<Podcast, CustomError> {
         podcast_repo()
             .find_by_id(podcast_id_to_be_searched)
             .map_err(CustomError::from)?
@@ -621,7 +654,7 @@ impl PodcastService {
         order: OrderCriteria,
         title: Option<String>,
         latest_pub: OrderOption,
-        designated_user_id: i32,
+        designated_user_id: Uuid,
         tag: Option<String>,
         requester: &User,
         server_url: &str,

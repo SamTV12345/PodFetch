@@ -35,16 +35,16 @@ pub struct TimelineItem {
 #[derive(Queryable, Clone)]
 #[diesel(table_name = podfetch_persistence::schema::favorite_podcast_episodes)]
 struct JoinedFavoritePodcastEpisode {
-    user_id: i32,
-    episode_id: i32,
+    user_id: String,
+    episode_id: String,
     favorite: bool,
 }
 
 #[derive(Queryable, Clone)]
 #[diesel(table_name = podfetch_persistence::schema::episodes)]
 struct JoinedEpisode {
-    id: i32,
-    _user_id: i32,
+    id: String,
+    _user_id: String,
     device: String,
     podcast: String,
     episode: String,
@@ -59,8 +59,9 @@ struct JoinedEpisode {
 impl From<JoinedFavoritePodcastEpisode> for FavoritePodcastEpisode {
     fn from(value: JoinedFavoritePodcastEpisode) -> Self {
         Self {
-            user_id: value.user_id,
-            episode_id: value.episode_id,
+            user_id: uuid::Uuid::parse_str(&value.user_id).unwrap_or_else(|_| uuid::Uuid::nil()),
+            episode_id: uuid::Uuid::parse_str(&value.episode_id)
+                .unwrap_or_else(|_| uuid::Uuid::nil()),
             favorite: value.favorite,
         }
     }
@@ -91,10 +92,10 @@ impl TimelineItem {
         use podfetch_persistence::schema::podcast_episodes::id as e_p_id;
         use podfetch_persistence::schema::podcast_episodes::podcast_id as e_podcast_id;
 
-        let user_id_to_search = user.id;
+        let user_id_to_search = user.id.to_string();
 
         let _ = FilterService::default_service().save_timeline_decision(
-            user_id_to_search,
+            user.id,
             favored_only.favored_only.unwrap_or(false),
         );
 
@@ -102,14 +103,14 @@ impl TimelineItem {
 
         let subquery = ph2
             .select(max(ph2.field(phistory_date)))
-            .filter(ph2.field(phi_user_id).eq(user_id_to_search))
+            .filter(ph2.field(phi_user_id).eq(user_id_to_search.clone()))
             .group_by(ph2.field(ehid));
 
         let part_query = podcast_episodes
             .inner_join(podcasts.on(e_podcast_id.eq(pid)))
             .left_join(
                 favorite_podcast_episodes
-                    .on(e_p_id.eq(fpe_fav).and(idpe_fav.eq(user_id_to_search))),
+                    .on(e_p_id.eq(fpe_fav).and(idpe_fav.eq(user_id_to_search.clone()))),
             )
             .left_join(ph1.on(ph1.field(eguid).eq(pguid.nullable())))
             .filter(
@@ -118,9 +119,12 @@ impl TimelineItem {
                     .eq_any(subquery)
                     .or(ph1.field(phistory_date).is_null()),
             )
-            .left_join(favorites.on(f_user_id.eq(user_id_to_search).and(f_podcast_id.eq(pid))));
+            .left_join(
+                favorites.on(f_user_id.eq(user_id_to_search.clone()).and(f_podcast_id.eq(pid))),
+            );
 
         let mut query = part_query
+            .clone()
             .order(date_of_recording.desc())
             .limit(20)
             .into_boxed();
@@ -133,9 +137,9 @@ impl TimelineItem {
                     query = query.filter(date_of_recording.lt(last_id.clone()));
                 }
 
-                query = query.filter(f_user_id.eq(user_id_to_search));
+                query = query.filter(f_user_id.eq(user_id_to_search.clone()));
                 query = query.filter(favored.eq(true));
-                total_count = total_count.filter(f_user_id.eq(user_id_to_search));
+                total_count = total_count.filter(f_user_id.eq(user_id_to_search.clone()));
             }
             false => {
                 if let Some(last_id) = favored_only.last_timestamp {
@@ -171,7 +175,8 @@ impl TimelineItem {
                 |(podcast_episode, podcast, fav_episode, history, favorite)| {
                     let history_dto = history.as_ref().map(|episode| {
                         map_episode_to_dto(&Episode {
-                            id: episode.id,
+                            id: uuid::Uuid::parse_str(&episode.id)
+                                .unwrap_or_else(|_| uuid::Uuid::nil()),
                             username: user.username.clone(),
                             device: episode.device.clone(),
                             podcast: episode.podcast.clone(),

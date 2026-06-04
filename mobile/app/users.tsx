@@ -11,7 +11,7 @@ const UsersScreen = () => {
     const { t } = useTranslation();
     const serverUrl = useStore((state) => state.serverUrl);
     const basicAuthUsername = useStore((state) => state.basicAuthUsername);
-    const [isDeleting, setIsDeleting] = useState<number | null>(null);
+    const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
     const { data: users, isLoading, refetch } = $api.useQuery('get', '/api/v1/users', {}, {
         enabled: !!serverUrl,
@@ -36,7 +36,7 @@ const UsersScreen = () => {
         }
     });
 
-    const handleDeleteUser = (username: string, userId: number) => {
+    const handleDeleteUser = (username: string, userId: string) => {
         Alert.alert(
             t('delete-user-confirm-title', { defaultValue: 'Benutzer löschen?' }),
             t('delete-user-confirm-message', { defaultValue: `Möchtest du den Benutzer "${username}" wirklich löschen?` }),

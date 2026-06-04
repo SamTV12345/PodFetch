@@ -5,11 +5,12 @@ use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use podfetch_domain::audiobookshelf::listening_session::{
     ListeningSession, ListeningSessionRepository,
 };
+use uuid::Uuid;
 
 diesel::table! {
     audiobookshelf_listening_sessions (id) {
         id -> Text,
-        user_id -> Integer,
+        user_id -> Text,
         library_id -> Nullable<Text>,
         library_item_id -> Text,
         episode_id -> Nullable<Text>,
@@ -30,7 +31,7 @@ diesel::table! {
 #[diesel(table_name = audiobookshelf_listening_sessions)]
 struct ListeningSessionEntity {
     id: String,
-    user_id: i32,
+    user_id: String,
     library_id: Option<String>,
     library_item_id: String,
     episode_id: Option<String>,
@@ -50,7 +51,7 @@ impl From<ListeningSessionEntity> for ListeningSession {
     fn from(value: ListeningSessionEntity) -> Self {
         Self {
             id: value.id,
-            user_id: value.user_id,
+            user_id: Uuid::parse_str(&value.user_id).expect("valid uuid in db"),
             library_id: value.library_id,
             library_item_id: value.library_item_id,
             episode_id: value.episode_id,
@@ -72,7 +73,7 @@ impl From<ListeningSession> for ListeningSessionEntity {
     fn from(value: ListeningSession) -> Self {
         Self {
             id: value.id,
-            user_id: value.user_id,
+            user_id: value.user_id.to_string(),
             library_id: value.library_id,
             library_item_id: value.library_item_id,
             episode_id: value.episode_id,
@@ -117,14 +118,14 @@ impl ListeningSessionRepository for DieselListeningSessionRepository {
 
     fn list_for_user(
         &self,
-        lookup_user_id: i32,
+        lookup_user_id: Uuid,
         limit: i64,
     ) -> Result<Vec<ListeningSession>, Self::Error> {
         use self::audiobookshelf_listening_sessions::dsl::*;
 
         let mut conn = self.database.connection()?;
         audiobookshelf_listening_sessions
-            .filter(user_id.eq(lookup_user_id))
+            .filter(user_id.eq(lookup_user_id.to_string()))
             .order(updated_at.desc())
             .limit(limit)
             .load::<ListeningSessionEntity>(&mut conn)

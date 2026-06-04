@@ -1,5 +1,5 @@
 export interface Filter {
-    user_id: number
+    user_id: string
     title?: string | null
     ascending: boolean
     filter?: string | null

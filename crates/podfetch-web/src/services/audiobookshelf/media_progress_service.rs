@@ -12,13 +12,13 @@ impl AudiobookshelfMediaProgressService {
         Self { repository }
     }
 
-    pub fn list_for_user(&self, user_id: i32) -> Result<Vec<MediaProgress>, CustomError> {
+    pub fn list_for_user(&self, user_id: uuid::Uuid) -> Result<Vec<MediaProgress>, CustomError> {
         self.repository.list_for_user(user_id)
     }
 
     pub fn find(
         &self,
-        user_id: i32,
+        user_id: uuid::Uuid,
         library_item_id: &str,
         episode_id: Option<&str>,
     ) -> Result<Option<MediaProgress>, CustomError> {

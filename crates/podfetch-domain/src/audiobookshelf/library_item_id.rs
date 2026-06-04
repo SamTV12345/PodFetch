@@ -2,17 +2,19 @@
 //!
 //! Audiobookshelf models everything as a `library_item_id` (book or podcast),
 //! optionally paired with an `episode_id` (for podcasts) or a chapter index (for
-//! books). PodFetch reuses its existing integer primary keys, so we encode them
+//! books). PodFetch reuses its existing primary keys, so we encode them
 //! with a `li_pod_<id>` / `li_book_<id>` prefix and `ep_<id>` for episodes.
+
+use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LibraryItemId {
-    Podcast(i32),
+    Podcast(Uuid),
     Book(String),
 }
 
 impl LibraryItemId {
-    pub fn podcast(id: i32) -> Self {
+    pub fn podcast(id: Uuid) -> Self {
         Self::Podcast(id)
     }
 
@@ -22,7 +24,7 @@ impl LibraryItemId {
 
     pub fn parse(value: &str) -> Option<Self> {
         if let Some(rest) = value.strip_prefix("li_pod_") {
-            rest.parse::<i32>().ok().map(Self::Podcast)
+            Uuid::parse_str(rest).ok().map(Self::Podcast)
         } else {
             value
                 .strip_prefix("li_book_")
@@ -46,11 +48,11 @@ impl LibraryItemId {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct EpisodeId(pub i32);
+pub struct EpisodeId(pub Uuid);
 
 impl EpisodeId {
     pub fn parse(value: &str) -> Option<Self> {
-        value.strip_prefix("ep_")?.parse::<i32>().ok().map(Self)
+        Uuid::parse_str(value.strip_prefix("ep_")?).ok().map(Self)
     }
 
     pub fn as_string(&self) -> String {
@@ -64,10 +66,11 @@ mod tests {
 
     #[test]
     fn roundtrip_podcast_id() {
-        let id = LibraryItemId::Podcast(42);
+        let uuid = Uuid::new_v4();
+        let id = LibraryItemId::Podcast(uuid);
         let s = id.as_string();
-        assert_eq!(s, "li_pod_42");
-        assert_eq!(LibraryItemId::parse(&s), Some(LibraryItemId::Podcast(42)));
+        assert_eq!(s, format!("li_pod_{uuid}"));
+        assert_eq!(LibraryItemId::parse(&s), Some(LibraryItemId::Podcast(uuid)));
     }
 
     #[test]
@@ -88,9 +91,10 @@ mod tests {
 
     #[test]
     fn episode_id_roundtrip() {
-        let id = EpisodeId(7);
+        let uuid = Uuid::new_v4();
+        let id = EpisodeId(uuid);
         let s = id.as_string();
-        assert_eq!(s, "ep_7");
-        assert_eq!(EpisodeId::parse(&s), Some(EpisodeId(7)));
+        assert_eq!(s, format!("ep_{uuid}"));
+        assert_eq!(EpisodeId::parse(&s), Some(EpisodeId(uuid)));
     }
 }

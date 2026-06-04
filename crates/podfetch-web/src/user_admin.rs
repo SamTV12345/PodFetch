@@ -1,11 +1,12 @@
 use serde::Deserialize;
 use std::fmt::Display;
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UserSummary {
-    pub id: i32,
+    pub id: String,
     pub username: String,
     pub role: String,
     pub created_at: chrono::NaiveDateTime,
@@ -15,7 +16,7 @@ pub struct UserSummary {
 impl From<podfetch_domain::user_admin::UserSummary> for UserSummary {
     fn from(value: podfetch_domain::user_admin::UserSummary) -> Self {
         Self {
-            id: value.id,
+            id: value.id.to_string(),
             username: value.username,
             role: value.role,
             created_at: value.created_at,
@@ -27,7 +28,7 @@ impl From<podfetch_domain::user_admin::UserSummary> for UserSummary {
 impl From<UserSummary> for podfetch_domain::user_admin::UserSummary {
     fn from(value: UserSummary) -> Self {
         Self {
-            id: value.id,
+            id: Uuid::parse_str(&value.id).unwrap_or_else(|_| Uuid::nil()),
             username: value.username,
             role: value.role,
             created_at: value.created_at,
@@ -39,7 +40,7 @@ impl From<UserSummary> for podfetch_domain::user_admin::UserSummary {
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UserWithApiKey {
-    pub id: i32,
+    pub id: String,
     pub username: String,
     pub role: String,
     pub created_at: chrono::NaiveDateTime,
@@ -53,7 +54,7 @@ pub struct UserWithApiKey {
 impl From<podfetch_domain::user_admin::UserWithApiKey> for UserWithApiKey {
     fn from(value: podfetch_domain::user_admin::UserWithApiKey) -> Self {
         Self {
-            id: value.id,
+            id: value.id.to_string(),
             username: value.username,
             role: value.role,
             created_at: value.created_at,
@@ -68,7 +69,7 @@ impl From<podfetch_domain::user_admin::UserWithApiKey> for UserWithApiKey {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ManagedUser {
-    pub id: i32,
+    pub id: Uuid,
     pub username: String,
     pub role: String,
     pub password: Option<String>,
@@ -118,7 +119,7 @@ impl ManagedUser {
 
     pub fn to_summary(&self) -> UserSummary {
         UserSummary {
-            id: self.id,
+            id: self.id.to_string(),
             username: self.username.clone(),
             role: self.role.clone(),
             created_at: self.created_at,
@@ -128,7 +129,7 @@ impl ManagedUser {
 
     pub fn to_api_dto(&self, read_only: bool) -> UserWithApiKey {
         UserWithApiKey {
-            id: self.id,
+            id: self.id.to_string(),
             username: self.username.clone(),
             role: self.role.clone(),
             created_at: self.created_at,
@@ -203,7 +204,7 @@ pub fn get_user<S>(
     service: &S,
     username: &str,
     requester: &ManagedUser,
-    read_only_admin_id: i32,
+    read_only_admin_id: Uuid,
 ) -> Result<UserWithApiKey, UserAdminControllerError<S::Error>>
 where
     S: UserAdminApplicationService,
@@ -256,7 +257,7 @@ pub fn update_user<S>(
     path_username: &str,
     requester: &ManagedUser,
     user_update: UserCoreUpdateModel,
-    read_only_admin_id: i32,
+    read_only_admin_id: Uuid,
     oidc_configured: bool,
 ) -> Result<UserWithApiKey, UserAdminControllerError<S::Error>>
 where

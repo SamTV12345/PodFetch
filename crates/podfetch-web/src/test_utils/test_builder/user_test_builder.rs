@@ -6,7 +6,7 @@ pub mod tests {
     use podfetch_domain::user::User;
 
     pub struct UserTestDataBuilder {
-        id: i32,
+        id: uuid::Uuid,
         username: String,
         role: String,
         password: Option<String>,
@@ -24,7 +24,7 @@ pub mod tests {
     impl UserTestDataBuilder {
         pub fn new() -> UserTestDataBuilder {
             UserTestDataBuilder {
-                id: 1,
+                id: podfetch_domain::ids::new_id(),
                 username: Username(EN).fake(),
                 role: "user".to_string(),
                 password: Some(sha256::digest("password".to_string())),

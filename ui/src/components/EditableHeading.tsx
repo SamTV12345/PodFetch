@@ -7,7 +7,7 @@ import {components} from "../../schema";
 export type EditableHeadingProps = {
     initialText: string;
     allowedToEdit?: boolean;
-    podcastId: number
+    podcastId: string
 }
 
 export const EditableHeading: FC<EditableHeadingProps> = ({initialText, allowedToEdit, podcastId})=>{
@@ -17,7 +17,7 @@ export const EditableHeading: FC<EditableHeadingProps> = ({initialText, allowedT
     const queryClient2 = $api.useQuery('get', '/api/v1/podcasts/{id}', {
         params: {
             path: {
-                id: String(podcastId)
+                id: podcastId
             }
         }
     })
@@ -36,7 +36,7 @@ export const EditableHeading: FC<EditableHeadingProps> = ({initialText, allowedT
             }).then(()=>{
                 queryClient.setQueryData(['get', '/api/v1/podcasts/{id}',        { params: {
                     path: {
-                        id: String(podcastId)
+                        id: podcastId
                     }
                 }}], (oldData: components['schemas']['PodcastDto'])=>({...oldData, name: text}))
             })

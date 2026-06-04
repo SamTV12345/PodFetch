@@ -64,8 +64,9 @@ impl SettingsService {
         };
 
         let sample_episode = PodcastEpisode {
-            id: 0,
-            podcast_id: 0,
+            id: uuid::Uuid::nil().to_string(),
+            legacy_id: None,
+            podcast_id: uuid::Uuid::nil().to_string(),
             episode_id: "2".to_string(),
             name: "My Homelab".to_string(),
             url: "http://podigee.com/rss/123".to_string(),
@@ -91,7 +92,7 @@ impl SettingsService {
 
 fn build_name_only_setting(update: &UpdateNameSettings) -> podfetch_domain::settings::Setting {
     podfetch_domain::settings::Setting {
-        id: 0,
+        id: uuid::Uuid::nil(),
         auto_download: false,
         auto_update: false,
         auto_cleanup: false,

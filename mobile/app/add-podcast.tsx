@@ -83,7 +83,10 @@ const AddPodcastScreen = () => {
             await addItunesMutation.mutateAsync({
                 body: {
                     trackId: podcast.collectionId,
-                    userId: userProfile?.id ?? 0,
+                    // userId is a legacy numeric field that the server derives from
+                    // the authenticated session; the schema still types it as number,
+                    // so we send a placeholder (user ids are now UUID strings).
+                    userId: 0,
                 },
             });
 
@@ -120,7 +123,10 @@ const AddPodcastScreen = () => {
             await addPodindexMutation.mutateAsync({
                 body: {
                     trackId: podcast.id,
-                    userId: userProfile?.id ?? 0,
+                    // userId is a legacy numeric field that the server derives from
+                    // the authenticated session; the schema still types it as number,
+                    // so we send a placeholder (user ids are now UUID strings).
+                    userId: 0,
                 },
             });
 

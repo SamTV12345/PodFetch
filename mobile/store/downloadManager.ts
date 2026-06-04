@@ -268,7 +268,7 @@ class DownloadManagerClass {
     /**
      * Holt Downloads für einen bestimmten Podcast
      */
-    async getDownloadsForPodcast(podcastId: number): Promise<DownloadedEpisode[]> {
+    async getDownloadsForPodcast(podcastId: string): Promise<DownloadedEpisode[]> {
         return offlineDB.getDownloadedEpisodesByPodcast(podcastId);
     }
 

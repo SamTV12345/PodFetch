@@ -1,14 +1,16 @@
+use uuid::Uuid;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Playlist {
     pub id: String,
     pub name: String,
-    pub user_id: i32,
+    pub user_id: Uuid,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlaylistItem {
     pub playlist_id: String,
-    pub episode: i32,
+    pub episode: Uuid,
     pub position: i32,
 }
 
@@ -21,16 +23,16 @@ pub trait PlaylistRepository: Send + Sync {
     fn find_by_user_and_id(
         &self,
         playlist_id: &str,
-        user_id: i32,
+        user_id: Uuid,
     ) -> Result<Option<Playlist>, Self::Error>;
-    fn list_by_user(&self, user_id: i32) -> Result<Vec<Playlist>, Self::Error>;
+    fn list_by_user(&self, user_id: Uuid) -> Result<Vec<Playlist>, Self::Error>;
     fn update_playlist_name(
         &self,
         playlist_id: &str,
-        user_id: i32,
+        user_id: Uuid,
         name: &str,
     ) -> Result<usize, Self::Error>;
-    fn delete_playlist(&self, playlist_id: &str, user_id: i32) -> Result<usize, Self::Error>;
+    fn delete_playlist(&self, playlist_id: &str, user_id: Uuid) -> Result<usize, Self::Error>;
     fn insert_playlist_item(&self, item: PlaylistItem) -> Result<PlaylistItem, Self::Error>;
     fn list_items_by_playlist_id(
         &self,
@@ -40,7 +42,7 @@ pub trait PlaylistRepository: Send + Sync {
     fn delete_playlist_item(
         &self,
         playlist_id: &str,
-        episode_id: i32,
+        episode_id: Uuid,
     ) -> Result<usize, Self::Error>;
-    fn delete_items_by_episode_id(&self, episode_id: i32) -> Result<usize, Self::Error>;
+    fn delete_items_by_episode_id(&self, episode_id: Uuid) -> Result<usize, Self::Error>;
 }

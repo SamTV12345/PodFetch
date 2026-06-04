@@ -14,7 +14,7 @@ pub struct WeekdayStats {
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct TopPodcastStats {
-    pub podcast_id: i32,
+    pub podcast_id: String,
     pub podcast_name: String,
     pub image_url: String,
     pub listened_seconds: i64,

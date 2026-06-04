@@ -1,7 +1,8 @@
 use rss::extension::itunes::ITunesCategory;
+use uuid::Uuid;
 
 pub struct PodcastBuilder {
-    id: i32,
+    id: Uuid,
     description: String,
     language: String,
     keywords: String,
@@ -13,7 +14,7 @@ pub struct PodcastBuilder {
 
 #[derive(Clone)]
 pub struct PodcastExtra {
-    pub id: i32,
+    pub id: Uuid,
     pub description: String,
     pub language: String,
     pub keywords: String,
@@ -24,7 +25,7 @@ pub struct PodcastExtra {
 }
 
 impl PodcastBuilder {
-    pub fn new(podcast_id: i32) -> PodcastBuilder {
+    pub fn new(podcast_id: Uuid) -> PodcastBuilder {
         PodcastBuilder {
             id: podcast_id,
             description: String::new(),
@@ -106,13 +107,18 @@ impl PodcastBuilder {
 mod tests {
     use crate::services::podcast::metadata::PodcastBuilder;
     use serial_test::serial;
+    use uuid::Uuid;
+
+    fn id() -> Uuid {
+        Uuid::parse_str("0192f3a1-7c42-7e8b-8b2a-2b1c3d4e5f60").unwrap()
+    }
 
     #[test]
     #[serial]
     fn test_raw_podcast_builder() {
-        let podcast_builder = PodcastBuilder::new(1).build();
+        let podcast_builder = PodcastBuilder::new(id()).build();
 
-        assert_eq!(podcast_builder.id, 1);
+        assert_eq!(podcast_builder.id, id());
         assert_eq!(podcast_builder.description, "");
         assert_eq!(podcast_builder.language, "");
         assert_eq!(podcast_builder.keywords, "");
@@ -124,11 +130,11 @@ mod tests {
     #[test]
     #[serial]
     fn test_only_description() {
-        let podcast_builder = PodcastBuilder::new(2)
+        let podcast_builder = PodcastBuilder::new(id())
             .description("test".to_string())
             .build();
 
-        assert_eq!(podcast_builder.id, 2);
+        assert_eq!(podcast_builder.id, id());
         assert_eq!(podcast_builder.description, "test");
         assert_eq!(podcast_builder.language, "");
         assert_eq!(podcast_builder.keywords, "");
@@ -140,11 +146,11 @@ mod tests {
     #[test]
     #[serial]
     fn test_only_language() {
-        let podcast_builder = PodcastBuilder::new(3)
+        let podcast_builder = PodcastBuilder::new(id())
             .language(Some("en".to_string()))
             .build();
 
-        assert_eq!(podcast_builder.id, 3);
+        assert_eq!(podcast_builder.id, id());
         assert_eq!(podcast_builder.description, "");
         assert_eq!(podcast_builder.language, "en");
         assert_eq!(podcast_builder.keywords, "");
@@ -166,9 +172,9 @@ mod tests {
                 subcategory: None,
             },
         ];
-        let podcast_builder = PodcastBuilder::new(4).keywords(keywords).build();
+        let podcast_builder = PodcastBuilder::new(id()).keywords(keywords).build();
 
-        assert_eq!(podcast_builder.id, 4);
+        assert_eq!(podcast_builder.id, id());
         assert_eq!(podcast_builder.description, "");
         assert_eq!(podcast_builder.language, "");
         assert_eq!(podcast_builder.keywords, "test,test2");
@@ -180,11 +186,11 @@ mod tests {
     #[test]
     #[serial]
     fn test_only_last_build_date() {
-        let podcast_builder = PodcastBuilder::new(5)
+        let podcast_builder = PodcastBuilder::new(id())
             .last_build_date(Some("22.03.2023".to_string()))
             .build();
 
-        assert_eq!(podcast_builder.id, 5);
+        assert_eq!(podcast_builder.id, id());
         assert_eq!(podcast_builder.description, "");
         assert_eq!(podcast_builder.language, "");
         assert_eq!(podcast_builder.keywords, "");
@@ -196,11 +202,11 @@ mod tests {
     #[test]
     #[serial]
     fn test_only_explicit() {
-        let podcast_builder = PodcastBuilder::new(6)
+        let podcast_builder = PodcastBuilder::new(id())
             .explicit(Some("yes".to_string()))
             .build();
 
-        assert_eq!(podcast_builder.id, 6);
+        assert_eq!(podcast_builder.id, id());
         assert_eq!(podcast_builder.description, "");
         assert_eq!(podcast_builder.language, "");
         assert_eq!(podcast_builder.keywords, "");
@@ -212,11 +218,11 @@ mod tests {
     #[test]
     #[serial]
     fn test_only_author() {
-        let podcast_builder = PodcastBuilder::new(6)
+        let podcast_builder = PodcastBuilder::new(id())
             .author(Some("yes".to_string()))
             .build();
 
-        assert_eq!(podcast_builder.id, 6);
+        assert_eq!(podcast_builder.id, id());
         assert_eq!(podcast_builder.description, "");
         assert_eq!(podcast_builder.language, "");
         assert_eq!(podcast_builder.keywords, "");
@@ -228,7 +234,7 @@ mod tests {
     #[test]
     #[serial]
     fn test_combined() {
-        let podcast_builder = PodcastBuilder::new(7)
+        let podcast_builder = PodcastBuilder::new(id())
             .description("test".to_string())
             .language(Some("en".to_string()))
             .keywords(vec![
@@ -246,7 +252,7 @@ mod tests {
             .author(Some("yes".to_string()))
             .build();
 
-        assert_eq!(podcast_builder.id, 7);
+        assert_eq!(podcast_builder.id, id());
         assert_eq!(podcast_builder.description, "test");
         assert_eq!(podcast_builder.language, "en");
         assert_eq!(podcast_builder.keywords, "test,test2");

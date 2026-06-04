@@ -1,9 +1,10 @@
 use chrono::NaiveDateTime;
+use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct ListeningSession {
     pub id: String,
-    pub user_id: i32,
+    pub user_id: Uuid,
     pub library_id: Option<String>,
     pub library_item_id: String,
     pub episode_id: Option<String>,
@@ -23,6 +24,6 @@ pub trait ListeningSessionRepository: Send + Sync {
     type Error;
 
     fn create(&self, session: ListeningSession) -> Result<ListeningSession, Self::Error>;
-    fn list_for_user(&self, user_id: i32, limit: i64)
+    fn list_for_user(&self, user_id: Uuid, limit: i64)
     -> Result<Vec<ListeningSession>, Self::Error>;
 }

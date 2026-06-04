@@ -1,9 +1,10 @@
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Setting {
-    pub id: i32,
+    pub id: Uuid,
     pub auto_download: bool,
     pub auto_update: bool,
     pub auto_cleanup: bool,

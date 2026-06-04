@@ -93,7 +93,7 @@ export const PlaylistPage = () => {
                                 onClick={async () => {
                                     const response = await playlistDetailQuery.mutateAsync({
                                         params: {
-                                            path: {playlist_id: String(item.id)}
+                                            path: {playlist_id: item.id}
                                         }
                                     })
                                     setPlaylistToEdit(response)
@@ -107,7 +107,7 @@ export const PlaylistPage = () => {
                                 onClick={async () => {
                                     await deletePlaylistMutation.mutateAsync({
                                         params: {
-                                            path: {playlist_id: String(item.id)}
+                                            path: {playlist_id: item.id}
                                         }
                                     })
                                     enqueueSnackbar(t('invite-deleted'), {variant: "success"})

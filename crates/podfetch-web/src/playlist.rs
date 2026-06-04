@@ -1,10 +1,11 @@
 use podfetch_domain::user::User;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct PlaylistItem {
-    pub episode: i32,
+    pub episode: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
@@ -41,12 +42,12 @@ pub trait PlaylistApplicationService {
         user: User,
         playlist_id: String,
     ) -> Result<Self::PlaylistDto, Self::Error>;
-    fn delete_playlist_by_id(&self, user_id: i32, playlist_id: String) -> Result<(), Self::Error>;
+    fn delete_playlist_by_id(&self, user_id: Uuid, playlist_id: String) -> Result<(), Self::Error>;
     fn delete_playlist_item(
         &self,
-        user_id: i32,
+        user_id: Uuid,
         playlist_id: String,
-        episode_id: i32,
+        episode_id: Uuid,
     ) -> Result<(), Self::Error>;
 }
 
@@ -93,7 +94,7 @@ where
 
 pub fn delete_playlist_by_id<S>(
     service: &S,
-    user_id: i32,
+    user_id: Uuid,
     playlist_id: String,
 ) -> Result<(), S::Error>
 where
@@ -104,9 +105,9 @@ where
 
 pub fn delete_playlist_item<S>(
     service: &S,
-    user_id: i32,
+    user_id: Uuid,
     playlist_id: String,
-    episode_id: i32,
+    episode_id: Uuid,
 ) -> Result<(), S::Error>
 where
     S: PlaylistApplicationService,

@@ -1,5 +1,5 @@
 export type PodcastSetting = {
-    podcastId: number,
+    podcastId: string,
     episodeNumbering: boolean,
     autoDownload: boolean,
     autoUpdate: boolean,

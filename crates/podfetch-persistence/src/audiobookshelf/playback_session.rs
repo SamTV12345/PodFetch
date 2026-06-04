@@ -5,11 +5,12 @@ use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use podfetch_domain::audiobookshelf::playback_session::{
     PlayMethod, PlaybackSession, PlaybackSessionRepository,
 };
+use uuid::Uuid;
 
 diesel::table! {
     audiobookshelf_playback_sessions (id) {
         id -> Text,
-        user_id -> Integer,
+        user_id -> Text,
         library_id -> Nullable<Text>,
         library_item_id -> Text,
         episode_id -> Nullable<Text>,
@@ -33,7 +34,7 @@ diesel::table! {
 #[diesel(table_name = audiobookshelf_playback_sessions)]
 struct PlaybackSessionEntity {
     id: String,
-    user_id: i32,
+    user_id: String,
     library_id: Option<String>,
     library_item_id: String,
     episode_id: Option<String>,
@@ -56,7 +57,7 @@ impl From<PlaybackSessionEntity> for PlaybackSession {
     fn from(value: PlaybackSessionEntity) -> Self {
         Self {
             id: value.id,
-            user_id: value.user_id,
+            user_id: Uuid::parse_str(&value.user_id).expect("valid uuid in db"),
             library_id: value.library_id,
             library_item_id: value.library_item_id,
             episode_id: value.episode_id,
@@ -81,7 +82,7 @@ impl From<PlaybackSession> for PlaybackSessionEntity {
     fn from(value: PlaybackSession) -> Self {
         Self {
             id: value.id,
-            user_id: value.user_id,
+            user_id: value.user_id.to_string(),
             library_id: value.library_id,
             library_item_id: value.library_item_id,
             episode_id: value.episode_id,

@@ -85,7 +85,7 @@ export const Notifications: FC = () => {
         previousUnreadCount.current = unreadCount
     }, [unreadCount])
 
-    const dismissNotification = async (notificationId: number) => {
+    const dismissNotification = async (notificationId: string) => {
         const previous = queryClient.getQueryData<NotificationModel[]>(unreadNotificationsQueryKey) ?? []
 
         queryClient.setQueryData<NotificationModel[]>(unreadNotificationsQueryKey, (oldData) => {

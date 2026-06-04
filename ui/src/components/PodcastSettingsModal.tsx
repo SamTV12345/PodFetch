@@ -291,7 +291,7 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                             <CustomButtonSecondary
                                 onClick={() => {
                                     downloadAllMissingMutation.mutate(
-                                        { params: { path: { id: String(podcast.id) } } },
+                                        { params: { path: { id: podcast.id } } },
                                         {
                                             onSuccess: () => {
                                                 enqueueSnackbar(t('download-all-missing'), { variant: 'success' })
@@ -312,7 +312,7 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                             <CustomButtonSecondary
                                 onClick={() => {
                                     resyncFilesMutation.mutate(
-                                        { params: { path: { id: String(podcast.id) } } },
+                                        { params: { path: { id: podcast.id } } },
                                         {
                                             onSuccess: () => {
                                                 enqueueSnackbar(t('redownload-missing-files'), { variant: 'success' })
@@ -339,7 +339,7 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                                         rejectText: t('cancel'),
                                         onAccept: () => {
                                             resyncDbMutation.mutate(
-                                                { params: { path: { id: String(podcast.id) } } },
+                                                { params: { path: { id: podcast.id } } },
                                                 {
                                                     onSuccess: (data) => {
                                                         enqueueSnackbar(
@@ -374,7 +374,7 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                                         rejectText: t('cancel'),
                                         onAccept: () => {
                                             deleteAllDownloadsMutation.mutate(
-                                                { params: { path: { id: String(podcast.id) } } },
+                                                { params: { path: { id: podcast.id } } },
                                                 {
                                                     onSuccess: (data) => {
                                                         enqueueSnackbar(

@@ -5,12 +5,13 @@ use diesel::OptionalExtension;
 use diesel::prelude::{AsChangeset, Insertable, Queryable};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use podfetch_domain::tag::{Tag, TagRepository, TagUpdate, TagsPodcast};
+use uuid::Uuid;
 
 diesel::table! {
     tags (id) {
         id -> Text,
         name -> Text,
-        user_id -> Integer,
+        user_id -> Text,
         description -> Nullable<Text>,
         created_at -> Timestamp,
         color -> Text,
@@ -20,7 +21,7 @@ diesel::table! {
 diesel::table! {
     tags_podcasts (tag_id, podcast_id) {
         tag_id -> Text,
-        podcast_id -> Integer,
+        podcast_id -> Text,
     }
 }
 
@@ -32,7 +33,7 @@ diesel::allow_tables_to_appear_in_same_query!(tags, tags_podcasts);
 struct TagEntity {
     id: String,
     name: String,
-    user_id: i32,
+    user_id: String,
     description: Option<String>,
     created_at: chrono::NaiveDateTime,
     color: String,
@@ -42,7 +43,7 @@ struct TagEntity {
 #[diesel(table_name = tags_podcasts)]
 struct TagsPodcastEntity {
     tag_id: String,
-    podcast_id: i32,
+    podcast_id: String,
 }
 
 impl From<TagEntity> for Tag {
@@ -50,7 +51,7 @@ impl From<TagEntity> for Tag {
         Self {
             id: value.id,
             name: value.name,
-            user_id: value.user_id,
+            user_id: Uuid::parse_str(&value.user_id).expect("valid uuid in db"),
             description: value.description,
             created_at: value.created_at,
             color: value.color,
@@ -63,7 +64,7 @@ impl From<Tag> for TagEntity {
         Self {
             id: value.id,
             name: value.name,
-            user_id: value.user_id,
+            user_id: value.user_id.to_string(),
             description: value.description,
             created_at: value.created_at,
             color: value.color,
@@ -75,7 +76,7 @@ impl From<TagsPodcastEntity> for TagsPodcast {
     fn from(value: TagsPodcastEntity) -> Self {
         Self {
             tag_id: value.tag_id,
-            podcast_id: value.podcast_id,
+            podcast_id: Uuid::parse_str(&value.podcast_id).expect("valid uuid in db"),
         }
     }
 }
@@ -101,11 +102,11 @@ impl TagRepository for DieselTagRepository {
             .map_err(Into::into)
     }
 
-    fn get_tags(&self, user_id_to_find: i32) -> Result<Vec<Tag>, Self::Error> {
+    fn get_tags(&self, user_id_to_find: Uuid) -> Result<Vec<Tag>, Self::Error> {
         use self::tags::dsl as tags_dsl;
 
         tags_dsl::tags
-            .filter(tags_dsl::user_id.eq(user_id_to_find))
+            .filter(tags_dsl::user_id.eq(user_id_to_find.to_string()))
             .load::<TagEntity>(&mut self.database.connection()?)
             .map(|tags| tags.into_iter().map(Into::into).collect())
             .map_err(Into::into)
@@ -113,8 +114,8 @@ impl TagRepository for DieselTagRepository {
 
     fn get_tags_of_podcast(
         &self,
-        podcast_id: i32,
-        user_id_to_find: i32,
+        podcast_id: Uuid,
+        user_id_to_find: Uuid,
     ) -> Result<Vec<Tag>, Self::Error> {
         use self::tags::dsl as tags_dsl;
         use self::tags_podcasts::dsl as tags_podcasts_dsl;
@@ -122,8 +123,8 @@ impl TagRepository for DieselTagRepository {
         tags_dsl::tags
             .inner_join(tags_podcasts::table.on(tags_dsl::id.eq(tags_podcasts_dsl::tag_id)))
             .select(tags::all_columns)
-            .filter(tags_podcasts_dsl::podcast_id.eq(podcast_id))
-            .filter(tags_dsl::user_id.eq(user_id_to_find))
+            .filter(tags_podcasts_dsl::podcast_id.eq(podcast_id.to_string()))
+            .filter(tags_dsl::user_id.eq(user_id_to_find.to_string()))
             .load::<TagEntity>(&mut self.database.connection()?)
             .map(|tags: Vec<TagEntity>| tags.into_iter().map(Into::into).collect())
             .map_err(Into::into)
@@ -132,13 +133,13 @@ impl TagRepository for DieselTagRepository {
     fn get_tag_by_id_and_user_id(
         &self,
         tag_id: &str,
-        user_id_to_find: i32,
+        user_id_to_find: Uuid,
     ) -> Result<Option<Tag>, Self::Error> {
         use self::tags::dsl as tags_dsl;
 
         tags_dsl::tags
             .filter(tags_dsl::id.eq(tag_id))
-            .filter(tags_dsl::user_id.eq(user_id_to_find))
+            .filter(tags_dsl::user_id.eq(user_id_to_find.to_string()))
             .first::<TagEntity>(&mut self.database.connection()?)
             .optional()
             .map(|tag| tag.map(Into::into))
@@ -171,12 +172,12 @@ impl TagRepository for DieselTagRepository {
     fn add_podcast_to_tag(
         &self,
         tag_id_to_insert: String,
-        podcast_id_to_insert: i32,
+        podcast_id_to_insert: Uuid,
     ) -> Result<TagsPodcast, Self::Error> {
         diesel::insert_into(tags_podcasts::table)
             .values(TagsPodcastEntity {
                 tag_id: tag_id_to_insert,
-                podcast_id: podcast_id_to_insert,
+                podcast_id: podcast_id_to_insert.to_string(),
             })
             .get_result::<TagsPodcastEntity>(&mut self.database.connection()?)
             .map(Into::into)
@@ -194,7 +195,7 @@ impl TagRepository for DieselTagRepository {
 
     fn delete_tag_podcasts_by_podcast_id_tag_id(
         &self,
-        podcast_id: i32,
+        podcast_id: Uuid,
         tag_id: &str,
     ) -> Result<(), Self::Error> {
         use self::tags_podcasts::dsl as tags_podcasts_dsl;
@@ -202,7 +203,7 @@ impl TagRepository for DieselTagRepository {
         diesel::delete(
             tags_podcasts::table.filter(
                 tags_podcasts_dsl::podcast_id
-                    .eq(podcast_id)
+                    .eq(podcast_id.to_string())
                     .and(tags_podcasts_dsl::tag_id.eq(tag_id)),
             ),
         )
@@ -211,10 +212,12 @@ impl TagRepository for DieselTagRepository {
         .map_err(Into::into)
     }
 
-    fn delete_tag_podcasts_by_podcast_id(&self, podcast_id: i32) -> Result<(), Self::Error> {
+    fn delete_tag_podcasts_by_podcast_id(&self, podcast_id: Uuid) -> Result<(), Self::Error> {
         use self::tags_podcasts::dsl as tags_podcasts_dsl;
 
-        diesel::delete(tags_podcasts::table.filter(tags_podcasts_dsl::podcast_id.eq(podcast_id)))
+        diesel::delete(
+            tags_podcasts::table.filter(tags_podcasts_dsl::podcast_id.eq(podcast_id.to_string())),
+        )
             .execute(&mut self.database.connection()?)
             .map(|_| ())
             .map_err(Into::into)

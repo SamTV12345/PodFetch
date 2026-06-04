@@ -31,7 +31,9 @@ pub mod tests {
         use testcontainers_modules::postgres::Postgres;
 
         fn setup_container() -> ContainerRequest<Postgres> {
-            Postgres::default().with_mapped_port(55002, 5432.into())
+            Postgres::default()
+                .with_tag("18-alpine")
+                .with_mapped_port(55002, 5432.into())
         }
 
         if tokio::net::TcpStream::connect("127.0.0.1:55002")

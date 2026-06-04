@@ -1,4 +1,5 @@
 use crate::app_state::AppState;
+use crate::controllers::podcast_episode_controller::resolve_episode_uuid;
 use crate::controllers::podcast_episode_controller::PodcastEpisodeWithHistory;
 use crate::playlist;
 use crate::playlist::PlaylistDto as WebPlaylistDto;
@@ -105,13 +106,14 @@ tag="playlist"
 pub async fn delete_playlist_item(
     State(state): State<AppState>,
     requester: Extension<User>,
-    Path(path): Path<(String, i32)>,
+    Path(path): Path<(String, String)>,
 ) -> Result<StatusCode, CustomError> {
+    let episode_uuid = resolve_episode_uuid(&path.1)?;
     playlist::delete_playlist_item(
         state.playlist_service.as_ref(),
         requester.id,
         path.0,
-        path.1,
+        episode_uuid,
     )?;
     Ok(StatusCode::OK)
 }
@@ -149,14 +151,15 @@ mod tests {
     use uuid::Uuid;
 
     fn insert_episode(
-        podcast_id: i32,
+        podcast_id: &str,
         episode_id: &str,
         guid: &str,
         title: &str,
     ) -> PodcastEpisode {
         diesel::insert_into(pe_dsl::podcast_episodes)
             .values((
-                pe_dsl::podcast_id.eq(podcast_id),
+                pe_dsl::id.eq(podfetch_domain::ids::new_id().to_string()),
+                pe_dsl::podcast_id.eq(podcast_id.to_string()),
                 pe_dsl::episode_id.eq(episode_id.to_string()),
                 pe_dsl::name.eq(title.to_string()),
                 pe_dsl::url.eq(format!("https://example.com/{episode_id}.mp3")),
@@ -174,7 +177,7 @@ mod tests {
 
     fn build_other_user() -> User {
         let mut user = UserTestDataBuilder::new().build();
-        user.id = 999_999;
+        user.id = Uuid::from_u128(999_999);
         user
     }
 
@@ -384,7 +387,7 @@ mod tests {
         )
         .unwrap();
         let episode = insert_episode(
-            podcast.id,
+            &podcast.id,
             &format!("forbidden-item-episode-{unique}"),
             &format!("forbidden-item-guid-{unique}"),
             "Forbidden Item Episode 1",
@@ -395,7 +398,7 @@ mod tests {
             .post("/api/v1/playlist")
             .json(&json!({
                 "name": playlist_name,
-                "items": [{"episode": episode.id}]
+                "items": [{"episode": episode.id.clone()}]
             }))
             .await;
         assert_eq!(create_response.status_code(), 200);
@@ -434,7 +437,7 @@ mod tests {
         )
         .unwrap();
         let episode = insert_episode(
-            podcast.id,
+            &podcast.id,
             &format!("playlist-episode-{unique}"),
             &format!("playlist-guid-{unique}"),
             "Playlist Episode 1",
@@ -445,7 +448,7 @@ mod tests {
             .post("/api/v1/playlist")
             .json(&json!({
                 "name": playlist_name,
-                "items": [{"episode": episode.id}]
+                "items": [{"episode": episode.id.clone()}]
             }))
             .await;
         assert_eq!(create_response.status_code(), 200);
@@ -454,7 +457,7 @@ mod tests {
 
         let rows_before = pli_dsl::playlist_items
             .filter(pli_dsl::playlist_id.eq(playlist_id))
-            .filter(pli_dsl::episode.eq(episode.id))
+            .filter(pli_dsl::episode.eq(episode.id.clone()))
             .select(count_star())
             .get_result::<i64>(&mut get_connection())
             .unwrap();
@@ -471,7 +474,7 @@ mod tests {
 
         let rows_after = pli_dsl::playlist_items
             .filter(pli_dsl::playlist_id.eq(playlist_id))
-            .filter(pli_dsl::episode.eq(episode.id))
+            .filter(pli_dsl::episode.eq(episode.id.clone()))
             .select(count_star())
             .get_result::<i64>(&mut get_connection())
             .unwrap();
@@ -540,13 +543,13 @@ mod tests {
         .unwrap();
 
         let first_episode = insert_episode(
-            podcast.id,
+            &podcast.id,
             &format!("update-item-episode-1-{unique}"),
             &format!("update-item-guid-1-{unique}"),
             "Update Item Episode 1",
         );
         let second_episode = insert_episode(
-            podcast.id,
+            &podcast.id,
             &format!("update-item-episode-2-{unique}"),
             &format!("update-item-guid-2-{unique}"),
             "Update Item Episode 2",
@@ -557,7 +560,7 @@ mod tests {
             .post("/api/v1/playlist")
             .json(&json!({
                 "name": playlist_name,
-                "items": [{"episode": first_episode.id}]
+                "items": [{"episode": first_episode.id.clone()}]
             }))
             .await;
         assert_eq!(create_response.status_code(), 200);
@@ -571,14 +574,14 @@ mod tests {
             .put(&format!("/api/v1/playlist/{playlist_id}"))
             .json(&json!({
                 "name": unique_name("Replace Items Playlist Updated"),
-                "items": [{"episode": second_episode.id}]
+                "items": [{"episode": second_episode.id.clone()}]
             }))
             .await;
         assert_eq!(update_response.status_code(), 200);
 
         let first_episode_rows = pli_dsl::playlist_items
             .filter(pli_dsl::playlist_id.eq(playlist_id.clone()))
-            .filter(pli_dsl::episode.eq(first_episode.id))
+            .filter(pli_dsl::episode.eq(first_episode.id.clone()))
             .select(count_star())
             .get_result::<i64>(&mut get_connection())
             .unwrap();
@@ -586,7 +589,7 @@ mod tests {
 
         let second_episode_rows = pli_dsl::playlist_items
             .filter(pli_dsl::playlist_id.eq(playlist_id))
-            .filter(pli_dsl::episode.eq(second_episode.id))
+            .filter(pli_dsl::episode.eq(second_episode.id.clone()))
             .select(count_star())
             .get_result::<i64>(&mut get_connection())
             .unwrap();
@@ -610,7 +613,7 @@ mod tests {
         )
         .unwrap();
         let episode = insert_episode(
-            podcast.id,
+            &podcast.id,
             &format!("noop-delete-item-episode-{unique}"),
             &format!("noop-delete-item-guid-{unique}"),
             "Noop Delete Item Episode",
@@ -621,7 +624,7 @@ mod tests {
             .post("/api/v1/playlist")
             .json(&json!({
                 "name": playlist_name,
-                "items": [{"episode": episode.id}]
+                "items": [{"episode": episode.id.clone()}]
             }))
             .await;
         assert_eq!(create_response.status_code(), 200);
@@ -635,14 +638,14 @@ mod tests {
             .delete(&format!(
                 "/api/v1/playlist/{}/episode/{}",
                 playlist_id,
-                episode.id + 1_000_000
+                Uuid::new_v4()
             ))
             .await;
         assert_eq!(delete_missing_item_response.status_code(), 200);
 
         let rows_after = pli_dsl::playlist_items
             .filter(pli_dsl::playlist_id.eq(playlist_id))
-            .filter(pli_dsl::episode.eq(episode.id))
+            .filter(pli_dsl::episode.eq(episode.id.clone()))
             .select(count_star())
             .get_result::<i64>(&mut get_connection())
             .unwrap();
@@ -666,7 +669,7 @@ mod tests {
         )
         .unwrap();
         let episode = insert_episode(
-            podcast.id,
+            &podcast.id,
             &format!("add-item-response-episode-{unique}"),
             &format!("add-item-response-guid-{unique}"),
             "Add Item Response Episode",
@@ -677,7 +680,7 @@ mod tests {
             .post("/api/v1/playlist")
             .json(&json!({
                 "name": playlist_name,
-                "items": [{"episode": episode.id}]
+                "items": [{"episode": episode.id.clone()}]
             }))
             .await;
         assert_eq!(create_response.status_code(), 200);
@@ -686,7 +689,7 @@ mod tests {
 
         let inserted_rows = pli_dsl::playlist_items
             .filter(pli_dsl::playlist_id.eq(playlist_id))
-            .filter(pli_dsl::episode.eq(episode.id))
+            .filter(pli_dsl::episode.eq(episode.id.clone()))
             .select(count_star())
             .get_result::<i64>(&mut get_connection())
             .unwrap();
@@ -840,13 +843,13 @@ mod tests {
         )
         .unwrap();
         let first_episode = insert_episode(
-            podcast.id,
+            &podcast.id,
             &format!("playlist-order-episode-1-{unique}"),
             &format!("playlist-order-guid-1-{unique}"),
             "Playlist Order Episode 1",
         );
         let second_episode = insert_episode(
-            podcast.id,
+            &podcast.id,
             &format!("playlist-order-episode-2-{unique}"),
             &format!("playlist-order-guid-2-{unique}"),
             "Playlist Order Episode 2",
@@ -858,8 +861,8 @@ mod tests {
             .json(&json!({
                 "name": unique_name("Ordered Playlist"),
                 "items": [
-                    {"episode": second_episode.id},
-                    {"episode": first_episode.id}
+                    {"episode": second_episode.id.clone()},
+                    {"episode": first_episode.id.clone()}
                 ]
             }))
             .await;
@@ -873,7 +876,7 @@ mod tests {
             .filter(pli_dsl::playlist_id.eq(playlist_id))
             .order(pli_dsl::position.asc())
             .select((pli_dsl::episode, pli_dsl::position))
-            .load::<(i32, i32)>(&mut get_connection())
+            .load::<(String, i32)>(&mut get_connection())
             .unwrap();
 
         assert_eq!(persisted_items.len(), 2);
@@ -991,7 +994,7 @@ mod tests {
         )
         .unwrap();
         let episode = insert_episode(
-            podcast.id,
+            &podcast.id,
             &format!("delete-item-after-delete-episode-{unique}"),
             &format!("delete-item-after-delete-guid-{unique}"),
             "Delete Item After Delete Episode",
@@ -1002,7 +1005,7 @@ mod tests {
             .post("/api/v1/playlist")
             .json(&json!({
                 "name": unique_name("Delete Item After Delete Playlist"),
-                "items": [{"episode": episode.id}]
+                "items": [{"episode": episode.id.clone()}]
             }))
             .await;
         assert_eq!(create_response.status_code(), 200);
@@ -1043,7 +1046,7 @@ mod tests {
         )
         .unwrap();
         let episode = insert_episode(
-            podcast.id,
+            &podcast.id,
             &format!("idempotent-delete-item-episode-{unique}"),
             &format!("idempotent-delete-item-guid-{unique}"),
             "Idempotent Delete Item Episode",
@@ -1054,7 +1057,7 @@ mod tests {
             .post("/api/v1/playlist")
             .json(&json!({
                 "name": unique_name("Idempotent Delete Item Playlist"),
-                "items": [{"episode": episode.id}]
+                "items": [{"episode": episode.id.clone()}]
             }))
             .await;
         assert_eq!(create_response.status_code(), 200);
@@ -1083,7 +1086,7 @@ mod tests {
 
         let rows_after = pli_dsl::playlist_items
             .filter(pli_dsl::playlist_id.eq(playlist_id))
-            .filter(pli_dsl::episode.eq(episode.id))
+            .filter(pli_dsl::episode.eq(episode.id.clone()))
             .select(count_star())
             .get_result::<i64>(&mut get_connection())
             .unwrap();

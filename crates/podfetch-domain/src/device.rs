@@ -1,4 +1,5 @@
 use chrono::NaiveDateTime;
+use uuid::Uuid;
 
 /// Discriminator values used in the `kind` column.
 pub mod kind {
@@ -27,11 +28,11 @@ pub mod kind {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Device {
-    pub id: Option<i32>,
+    pub id: Option<Uuid>,
     pub deviceid: String,
     pub kind: String,
     pub name: String,
-    pub user_id: i32,
+    pub user_id: Uuid,
     pub chromecast_uuid: Option<String>,
     pub agent_id: Option<String>,
     pub last_seen_at: Option<NaiveDateTime>,
@@ -42,12 +43,12 @@ pub trait DeviceRepository: Send + Sync {
     type Error;
 
     fn create(&self, device: Device) -> Result<Device, Self::Error>;
-    fn get_devices_of_user(&self, user_id: i32) -> Result<Vec<Device>, Self::Error>;
-    fn delete_by_user_id(&self, user_id: i32) -> Result<(), Self::Error>;
+    fn get_devices_of_user(&self, user_id: Uuid) -> Result<Vec<Device>, Self::Error>;
+    fn delete_by_user_id(&self, user_id: Uuid) -> Result<(), Self::Error>;
 
     /// Chromecast devices the given user is allowed to see — their own
     /// personal devices plus any shared/household devices on the instance.
-    fn list_castable_for_user(&self, user_id: i32) -> Result<Vec<Device>, Self::Error>;
+    fn list_castable_for_user(&self, user_id: Uuid) -> Result<Vec<Device>, Self::Error>;
 
     fn find_by_chromecast_uuid(&self, chromecast_uuid: &str)
     -> Result<Option<Device>, Self::Error>;
@@ -60,7 +61,7 @@ pub trait DeviceRepository: Send + Sync {
         &self,
         chromecast_uuid: &str,
         agent_id: &str,
-        owner_user_id: i32,
+        owner_user_id: Uuid,
         name: &str,
         ip: Option<&str>,
         last_seen_at: NaiveDateTime,

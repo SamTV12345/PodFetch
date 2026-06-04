@@ -5,7 +5,7 @@ import {AgnosticPodcastDataModel} from "../models/PodcastAddModel";
 
 export type Podcast = {
     directory: string,
-    id: number,
+    id: string,
     name: string,
     rssfeed: string,
     image_url: string,
@@ -22,8 +22,8 @@ export type Podcast = {
 }
 
 export type PodcastEpisode = {
-    id: number,
-    podcast_id: number,
+    id: string,
+    podcast_id: string,
     episode_id: string,
     name: string,
     url: string,
@@ -46,7 +46,7 @@ interface CommonProps {
     podcastAlreadyPlayed: boolean,
     detailedAudioPlayerOpen: boolean,
     detailedAudioPlayerTab: 'description' | 'chapters' | 'video',
-    currentDetailedPodcastId: number|undefined,
+    currentDetailedPodcastId: string|undefined,
     loginData: Partial<LoginData>|undefined,
     users: components["schemas"]["UserSummary"][],
     invites: components["schemas"]["Invite"][],
@@ -61,7 +61,7 @@ interface CommonProps {
     setEpisodeDownloaded: (episode_id: string) => void,
     setDetailedAudioPlayerOpen: (detailedAudioPlayerOpen: boolean) => void,
     setDetailedAudioPlayerTab: (tab: 'description' | 'chapters' | 'video') => void,
-    setCurrentDetailedPodcastId: (currentDetailedPodcastId: number) => void,
+    setCurrentDetailedPodcastId: (currentDetailedPodcastId: string) => void,
     setLoginData: (loginData: Partial<LoginData>) => void,
     setUsers: (users: components["schemas"]["UserSummary"][]) => void,
     setInvites: (invites: components["schemas"]["Invite"][]) => void,
@@ -104,7 +104,7 @@ const useCommon = create<CommonProps>((set, get) => ({
     },
     setDetailedAudioPlayerOpen: (detailedAudioPlayerOpen: boolean) => set({detailedAudioPlayerOpen}),
     setDetailedAudioPlayerTab: (tab) => set({detailedAudioPlayerTab: tab}),
-    setCurrentDetailedPodcastId: (currentDetailedPodcastId: number) => set({currentDetailedPodcastId}),
+    setCurrentDetailedPodcastId: (currentDetailedPodcastId: string) => set({currentDetailedPodcastId}),
     setLoginData: (loginData: Partial<LoginData>) => set({loginData}),
     setUsers: (users: components["schemas"]["UserSummary"][]) => set({users}),
     setInvites: (invites) => set({invites}),

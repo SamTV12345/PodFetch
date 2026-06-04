@@ -2,12 +2,13 @@ use podfetch_domain::device::Device;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 pub struct DeviceCreate {
     pub id: String,
     pub caption: String,
     pub type_: String,
-    pub user_id: i32,
+    pub user_id: Uuid,
 }
 
 impl From<DeviceCreate> for Device {
@@ -57,7 +58,7 @@ pub trait DeviceApplicationService {
     type Error;
 
     fn create(&self, device: Device) -> Result<Device, Self::Error>;
-    fn query_by_user_id(&self, user_id: i32) -> Result<Vec<Device>, Self::Error>;
+    fn query_by_user_id(&self, user_id: Uuid) -> Result<Vec<Device>, Self::Error>;
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -71,7 +72,7 @@ pub enum DeviceControllerError<E: Display> {
 pub fn post_device<S>(
     service: &S,
     session_username: &str,
-    session_user_id: i32,
+    session_user_id: Uuid,
     username: &str,
     device_id: &str,
     device_post: DevicePost,
@@ -102,7 +103,7 @@ where
 pub fn get_devices_of_user<S>(
     service: &S,
     session_username: &str,
-    session_user_id: i32,
+    session_user_id: Uuid,
     username: &str,
 ) -> Result<Vec<DeviceResponse>, DeviceControllerError<S::Error>>
 where

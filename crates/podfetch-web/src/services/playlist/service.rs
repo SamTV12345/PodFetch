@@ -13,6 +13,18 @@ use podfetch_persistence::db::database;
 use podfetch_persistence::episode::EpisodeEntity as Episode;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use std::sync::Arc;
+use uuid::Uuid;
+
+/// Parse a JSON-supplied episode id (UUID string) into a `Uuid`.
+fn parse_episode_id(episode: &str) -> Result<Uuid, CustomError> {
+    Uuid::parse_str(episode).map_err(|_| {
+        common_infrastructure::error::CustomErrorInner::BadRequest(
+            format!("'{episode}' is not a valid episode id"),
+            common_infrastructure::error::ErrorSeverity::Warning,
+        )
+        .into()
+    })
+}
 
 #[derive(Clone)]
 pub struct PlaylistService {
@@ -94,7 +106,7 @@ impl PlaylistService {
     fn find_playlist_by_user_and_id(
         &self,
         playlist_id: &str,
-        user_id: i32,
+        user_id: Uuid,
     ) -> Result<Playlist, CustomError> {
         self.repository
             .find_by_user_and_id(playlist_id, user_id)?
@@ -124,7 +136,7 @@ impl PlaylistService {
         for (position, item) in playlist.items.iter().enumerate() {
             self.repository.insert_playlist_item(PlaylistItem {
                 playlist_id: inserted.id.clone(),
-                episode: item.episode,
+                episode: parse_episode_id(&item.episode)?,
                 position: position as i32,
             })?;
         }
@@ -132,7 +144,7 @@ impl PlaylistService {
         Ok(inserted)
     }
 
-    pub fn delete_playlist_items_by_episode_id(&self, episode_id: i32) -> Result<(), CustomError> {
+    pub fn delete_playlist_items_by_episode_id(&self, episode_id: Uuid) -> Result<(), CustomError> {
         self.repository.delete_items_by_episode_id(episode_id)?;
         Ok(())
     }
@@ -172,7 +184,7 @@ impl PlaylistApplicationService for PlaylistService {
         for (position, item) in playlist.items.iter().enumerate() {
             self.repository.insert_playlist_item(PlaylistItem {
                 playlist_id: playlist_id.clone(),
-                episode: item.episode,
+                episode: parse_episode_id(&item.episode)?,
                 position: position as i32,
             })?;
         }
@@ -203,7 +215,7 @@ impl PlaylistApplicationService for PlaylistService {
         Ok(Self::to_playlist_dto(playlist, items, user))
     }
 
-    fn delete_playlist_by_id(&self, user_id: i32, playlist_id: String) -> Result<(), Self::Error> {
+    fn delete_playlist_by_id(&self, user_id: Uuid, playlist_id: String) -> Result<(), Self::Error> {
         let playlist = self.find_playlist_by_id(&playlist_id)?;
         if playlist.user_id != user_id {
             return Err(common_infrastructure::error::CustomErrorInner::Forbidden(
@@ -219,9 +231,9 @@ impl PlaylistApplicationService for PlaylistService {
 
     fn delete_playlist_item(
         &self,
-        user_id: i32,
+        user_id: Uuid,
         playlist_id: String,
-        episode_id: i32,
+        episode_id: Uuid,
     ) -> Result<(), Self::Error> {
         let playlist = self.find_playlist_by_id(&playlist_id)?;
         if playlist.user_id != user_id {

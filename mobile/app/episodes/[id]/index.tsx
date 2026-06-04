@@ -123,7 +123,7 @@ export default function EpisodeDetailScreen() {
             deleted: false,
             episode_numbering_processed: true,
             guid: offlineEpisode.episodeId,
-            id: offlineEpisode.id || 0,
+            id: offlineEpisode.episodeId,
             status: true,
         };
 

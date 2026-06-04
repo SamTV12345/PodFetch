@@ -34,6 +34,7 @@ use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisod
 use podfetch_storage::{FileHandleWrapper, FileRequest};
 use reqwest::header::{ACCEPT, HeaderMap};
 use reqwest::redirect::Policy;
+use uuid::Uuid;
 use rss::{Channel, Guid, Item};
 use std::collections::HashSet;
 use std::ffi::OsStr;
@@ -73,6 +74,14 @@ impl PodcastEpisodeUseCase {
         DieselPodcastEpisodeRepository::new(database())
     }
 
+    /// Parse a stored podfetch id (entity rows carry the canonical UUID as a
+    /// `String`) into a `Uuid` for the repository layer.
+    fn parse_id(id: &str) -> Result<Uuid, CustomError> {
+        Uuid::parse_str(id).map_err(|_| {
+            CustomErrorInner::BadRequest(format!("'{id}' is not a valid id"), Warning).into()
+        })
+    }
+
     fn try_acquire_download_guard(episode_id: &str) -> Option<InProgressDownloadGuard> {
         let mut downloads = IN_PROGRESS_DOWNLOADS.lock().ignore_poison();
         if downloads.contains(episode_id) {
@@ -92,7 +101,7 @@ impl PodcastEpisodeUseCase {
     }
 
     pub fn get_podcast_episode_by_internal_id(
-        podcast_episode_id: i32,
+        podcast_episode_id: Uuid,
     ) -> Result<Option<PodcastEpisode>, CustomError> {
         Self::repo()
             .find_by_id(podcast_episode_id)
@@ -100,14 +109,24 @@ impl PodcastEpisodeUseCase {
             .map_err(Into::into)
     }
 
-    pub fn get_position_of_episode(timestamp: &str, podcast_id: i32) -> Result<usize, CustomError> {
+    /// Resolve an episode by its pre-migration integer id (backwards-compat).
+    pub fn get_podcast_episode_by_legacy_id(
+        legacy_id: i64,
+    ) -> Result<Option<PodcastEpisode>, CustomError> {
+        Self::repo()
+            .find_by_legacy_id(legacy_id)
+            .map(|episode| episode.map(Into::into))
+            .map_err(Into::into)
+    }
+
+    pub fn get_position_of_episode(timestamp: &str, podcast_id: Uuid) -> Result<usize, CustomError> {
         Self::repo()
             .get_position_of_episode(timestamp, podcast_id)
             .map_err(Into::into)
     }
 
     pub fn get_nth_page_of_podcast_episodes(
-        last_podcast_episode_id: i32,
+        last_podcast_episode_id: Uuid,
     ) -> Result<Vec<PodcastEpisode>, CustomError> {
         Self::repo()
             .get_nth_page(last_podcast_episode_id, 100)
@@ -124,7 +143,7 @@ impl PodcastEpisodeUseCase {
 
     pub fn get_podcast_episode_by_url(
         url: &str,
-        podcast_id: Option<i32>,
+        podcast_id: Option<Uuid>,
     ) -> Result<Option<PodcastEpisode>, CustomError> {
         Self::repo()
             .find_by_url(url, podcast_id)
@@ -173,7 +192,7 @@ impl PodcastEpisodeUseCase {
 
         Self::repo()
             .create(NewPodcastEpisode {
-                podcast_id: podcast.id,
+                podcast_id: Self::parse_id(&podcast.id)?,
                 episode_id: uuid::Uuid::new_v4().to_string(),
                 name: item
                     .title
@@ -191,7 +210,7 @@ impl PodcastEpisodeUseCase {
     }
 
     pub fn get_podcast_episodes_of_podcast(
-        podcast_id: i32,
+        podcast_id: Uuid,
         last_id: Option<String>,
         only_unlistened: Option<bool>,
         user: &User,
@@ -215,7 +234,7 @@ impl PodcastEpisodeUseCase {
     }
 
     pub fn get_last_n_podcast_episodes_by_count(
-        podcast_id: i32,
+        podcast_id: Uuid,
         n_episodes: i32,
     ) -> Result<Vec<PodcastEpisode>, CustomError> {
         Self::repo()
@@ -234,11 +253,12 @@ impl PodcastEpisodeUseCase {
             .map_err(Into::into)
     }
 
-    pub fn delete_episodes_of_podcast(podcast_id: i32) -> Result<(), CustomError> {
+    pub fn delete_episodes_of_podcast(podcast_id: Uuid) -> Result<(), CustomError> {
         Self::get_episodes_by_podcast_id(podcast_id)?
             .iter()
             .try_for_each(|episode| {
-                PlaylistService::default_service().delete_playlist_items_by_episode_id(episode.id)
+                PlaylistService::default_service()
+                    .delete_playlist_items_by_episode_id(Self::parse_id(&episode.id)?)
             })?;
 
         Self::repo()
@@ -283,7 +303,7 @@ impl PodcastEpisodeUseCase {
 
     pub fn get_podcast_episodes_older_than_days(
         days: i32,
-        podcast_id: i32,
+        podcast_id: Uuid,
     ) -> Result<Vec<PodcastEpisode>, CustomError> {
         Self::repo()
             .get_episodes_older_than_days(i64::from(days), podcast_id)
@@ -291,11 +311,11 @@ impl PodcastEpisodeUseCase {
             .map_err(Into::into)
     }
 
-    pub fn remove_download_status_of_episode(id: i32) -> Result<(), CustomError> {
+    pub fn remove_download_status_of_episode(id: Uuid) -> Result<(), CustomError> {
         do_retry(|| Self::repo().remove_download_status(id).map_err(Into::into))
     }
 
-    pub fn get_episodes_by_podcast_id(id: i32) -> Result<Vec<PodcastEpisode>, CustomError> {
+    pub fn get_episodes_by_podcast_id(id: Uuid) -> Result<Vec<PodcastEpisode>, CustomError> {
         Self::repo()
             .find_by_podcast_id(id)
             .map(|episodes| episodes.into_iter().map(Into::into).collect())
@@ -378,7 +398,7 @@ impl PodcastEpisodeUseCase {
             DownloadService::download_podcast_episode(podcast_episode.clone(), podcast_cloned)
         {
             if let Err(notification_err) = NotificationService::create_notification(Notification {
-                id: 0,
+                id: String::new(),
                 message: format!("{} ({})", podcast_episode.name, err.inner),
                 created_at: chrono::Utc::now().naive_utc().to_string(),
                 type_of_message: "DownloadFailed".to_string(),
@@ -397,7 +417,7 @@ impl PodcastEpisodeUseCase {
             Some(ENVIRONMENT_SERVICE.default_file_handler.clone()),
         )?;
         let notification = Notification {
-            id: 0,
+            id: String::new(),
             message: podcast_episode.name.to_string(),
             created_at: chrono::Utc::now().naive_utc().to_string(),
             type_of_message: "Download".to_string(),
@@ -410,7 +430,8 @@ impl PodcastEpisodeUseCase {
     pub fn get_last_n_podcast_episodes(
         podcast: Podcast,
     ) -> Result<Vec<PodcastEpisode>, CustomError> {
-        let podcast_settings = PodcastSettingsService::get_settings_for_podcast(podcast.id)?;
+        let podcast_settings =
+            PodcastSettingsService::get_settings_for_podcast(Self::parse_id(&podcast.id)?)?;
         let settings = SettingsService::shared().get_settings()?.unwrap();
         let n_episodes;
 
@@ -424,7 +445,7 @@ impl PodcastEpisodeUseCase {
             n_episodes = settings.podcast_prefill;
         }
 
-        Self::get_last_n_podcast_episodes_by_count(podcast.id, n_episodes)
+        Self::get_last_n_podcast_episodes_by_count(Self::parse_id(&podcast.id)?, n_episodes)
     }
 
     // Used for creating/updating podcasts
@@ -446,7 +467,7 @@ impl PodcastEpisodeUseCase {
                         returned_data_from_podcast_insert.url
                     );
                     crate::services::podcast::service::PodcastService::update_podcast_urls_on_redirect(
-                        podcast.id,
+                        Self::parse_id(&podcast.id)?,
                         &returned_data_from_podcast_insert.url,
                     );
                     Self::update_episodes_on_redirect(channel.items())?;
@@ -454,7 +475,7 @@ impl PodcastEpisodeUseCase {
 
                 Self::handle_itunes_extension(podcast, &channel)?;
 
-                Self::update_podcast_fields(channel.clone(), podcast.id)?;
+                Self::update_podcast_fields(channel.clone(), Self::parse_id(&podcast.id)?)?;
 
                 let mut podcast_inserted = Vec::new();
 
@@ -476,7 +497,7 @@ impl PodcastEpisodeUseCase {
                             if let Some(enclosure) = &item.enclosure {
                                 Self::get_podcast_episode_by_url(
                                     &enclosure.url.to_string(),
-                                    Some(podcast.id),
+                                    Some(Self::parse_id(&podcast.id)?),
                                 )?
                             } else {
                                 None
@@ -581,13 +602,13 @@ impl PodcastEpisodeUseCase {
             Some(image) => {
                 crate::services::podcast::service::PodcastService::update_original_image_url(
                     &image.url.to_string(),
-                    podcast.id,
+                    Self::parse_id(&podcast.id)?,
                 )?;
             }
             None => {
                 crate::services::podcast::service::PodcastService::update_original_image_url(
                     "",
-                    podcast.id,
+                    Self::parse_id(&podcast.id)?,
                 )?;
             }
         }
@@ -600,7 +621,8 @@ impl PodcastEpisodeUseCase {
         {
             let new_url = new_feed;
             crate::services::podcast::service::PodcastService::update_podcast_urls_on_redirect(
-                podcast.id, new_url,
+                Self::parse_id(&podcast.id)?,
+                new_url,
             );
 
             let returned_data_from_server = Self::do_request_to_podcast_server(podcast.clone())?;
@@ -702,12 +724,12 @@ impl PodcastEpisodeUseCase {
     }
 
     pub fn find_all_downloaded_podcast_episodes_by_podcast_id(
-        podcast_id: i32,
+        podcast_id: Uuid,
     ) -> Result<Vec<PodcastEpisode>, CustomError> {
         Self::get_episodes_by_podcast_id(podcast_id)
     }
 
-    fn update_podcast_fields(feed: Channel, podcast_id: i32) -> Result<(), CustomError> {
+    fn update_podcast_fields(feed: Channel, podcast_id: Uuid) -> Result<(), CustomError> {
         let itunes = feed.clone().itunes_ext;
 
         let ext = feed
@@ -742,7 +764,11 @@ impl PodcastEpisodeUseCase {
         }
 
         for p in podcasts.unwrap() {
-            let podcast_settings = PodcastSettingsService::get_settings_for_podcast(p.id);
+            let p_uuid = match Self::parse_id(&p.id) {
+                Ok(id) => id,
+                Err(_) => continue,
+            };
+            let podcast_settings = PodcastSettingsService::get_settings_for_podcast(p_uuid);
             if podcast_settings.is_err() {
                 continue;
             }
@@ -753,7 +779,8 @@ impl PodcastEpisodeUseCase {
                 _ => days_from_settings,
             };
 
-            let old_podcast_episodes = match Self::get_podcast_episodes_older_than_days(days, p.id)
+            let old_podcast_episodes =
+                match Self::get_podcast_episodes_older_than_days(days, p_uuid)
             {
                 Ok(episodes) => episodes,
                 Err(err) => {
@@ -768,8 +795,15 @@ impl PodcastEpisodeUseCase {
 
             tracing::info!("Cleaning up {} old episodes", old_podcast_episodes.len());
             for old_podcast_episode in old_podcast_episodes {
+                let episode_id = match Self::parse_id(&old_podcast_episode.id) {
+                    Ok(id) => id,
+                    Err(err) => {
+                        tracing::error!("Invalid episode id {}: {}", old_podcast_episode.id, err);
+                        continue;
+                    }
+                };
                 match FavoritePodcastEpisodeService::default_service()
-                    .is_liked_by_someone(old_podcast_episode.id)
+                    .is_liked_by_someone(episode_id)
                 {
                     Ok(true) => {
                         continue;
@@ -785,7 +819,7 @@ impl PodcastEpisodeUseCase {
                 match res {
                     Ok(_) => {
                         if let Err(err) =
-                            Self::remove_download_status_of_episode(old_podcast_episode.clone().id)
+                            Self::remove_download_status_of_episode(episode_id)
                         {
                             tracing::error!(
                                 "Error clearing download status for episode {}: {}",
@@ -846,7 +880,7 @@ impl PodcastEpisodeUseCase {
         match episode {
             Some(episode) => {
                 FileService::cleanup_old_episode(&episode)?;
-                Self::remove_download_status_of_episode(episode.id)?;
+                Self::remove_download_status_of_episode(Self::parse_id(&episode.id)?)?;
                 Self::update_deleted(episode_id, true)?;
                 Ok(episode)
             }
@@ -860,7 +894,7 @@ impl PodcastEpisodeUseCase {
     /// Returns the number of episodes that were queued.
     pub fn download_missing_episodes_for_podcast(podcast: &Podcast) -> Result<usize, CustomError> {
         const MAX_PARALLEL_DOWNLOADS: usize = 3;
-        let episodes = Self::get_episodes_by_podcast_id(podcast.id)?;
+        let episodes = Self::get_episodes_by_podcast_id(Self::parse_id(&podcast.id)?)?;
         let missing: Vec<PodcastEpisode> = episodes
             .into_iter()
             .filter(|e| !e.deleted && !e.is_downloaded())
@@ -900,7 +934,7 @@ impl PodcastEpisodeUseCase {
     /// number of episodes that were queued.
     pub fn redownload_missing_files_for_podcast(podcast: &Podcast) -> Result<usize, CustomError> {
         const MAX_PARALLEL_DOWNLOADS: usize = 3;
-        let episodes = Self::get_episodes_by_podcast_id(podcast.id)?;
+        let episodes = Self::get_episodes_by_podcast_id(Self::parse_id(&podcast.id)?)?;
         let to_redownload: Vec<PodcastEpisode> = episodes
             .into_iter()
             .filter(|e| !e.deleted && e.is_downloaded() && Self::episode_file_missing(e))
@@ -945,7 +979,7 @@ impl PodcastEpisodeUseCase {
     /// Clears DB download flags for episodes whose file is missing on disk.
     /// Filesystem is source of truth; no downloads happen. Returns the number
     /// of episodes whose flags were cleared.
-    pub fn resync_db_for_podcast(podcast_id: i32) -> Result<usize, CustomError> {
+    pub fn resync_db_for_podcast(podcast_id: Uuid) -> Result<usize, CustomError> {
         let episodes = Self::get_episodes_by_podcast_id(podcast_id)?;
         let mut affected = 0usize;
         for episode in episodes {
@@ -955,7 +989,7 @@ impl PodcastEpisodeUseCase {
             if !Self::episode_file_missing(&episode) {
                 continue;
             }
-            Self::remove_download_status_of_episode(episode.id)?;
+            Self::remove_download_status_of_episode(Self::parse_id(&episode.id)?)?;
             ChatServerHandle::broadcast_podcast_episode_deleted_locally(&episode);
             affected += 1;
         }
@@ -968,7 +1002,7 @@ impl PodcastEpisodeUseCase {
     /// marked as favorite are skipped — same convention as the auto-cleanup
     /// path (see `cleanup_old_episodes`). Returns the number of episodes
     /// whose files were removed.
-    pub fn delete_all_downloaded_files_for_podcast(podcast_id: i32) -> Result<usize, CustomError> {
+    pub fn delete_all_downloaded_files_for_podcast(podcast_id: Uuid) -> Result<usize, CustomError> {
         let favorite_service = FavoritePodcastEpisodeService::default_service();
         let episodes = Self::get_episodes_by_podcast_id(podcast_id)?;
         let mut affected = 0usize;
@@ -976,14 +1010,15 @@ impl PodcastEpisodeUseCase {
             if !episode.is_downloaded() {
                 continue;
             }
+            let episode_id = Self::parse_id(&episode.id)?;
             if favorite_service
-                .is_liked_by_someone(episode.id)
+                .is_liked_by_someone(episode_id)
                 .unwrap_or(false)
             {
                 continue;
             }
             FileService::cleanup_old_episode(&episode)?;
-            Self::remove_download_status_of_episode(episode.id)?;
+            Self::remove_download_status_of_episode(episode_id)?;
             ChatServerHandle::broadcast_podcast_episode_deleted_locally(&episode);
             affected += 1;
         }
@@ -1002,13 +1037,16 @@ impl PodcastEpisodeUseCase {
     }
 
     pub fn get_track_number_for_episode(
-        podcast_id: i32,
+        podcast_id: Uuid,
         date_of_recording_to_search: &str,
     ) -> Result<i64, CustomError> {
         use podfetch_persistence::schema::podcast_episodes::dsl::podcast_episodes;
 
         podcast_episodes
-            .filter(podfetch_persistence::schema::podcast_episodes::podcast_id.eq(podcast_id))
+            .filter(
+                podfetch_persistence::schema::podcast_episodes::podcast_id
+                    .eq(podcast_id.to_string()),
+            )
             .filter(
                 podfetch_persistence::schema::podcast_episodes::date_of_recording
                     .le(date_of_recording_to_search),

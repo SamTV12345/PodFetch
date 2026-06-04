@@ -307,7 +307,7 @@ pub fn read_user_account(state: &AppState) -> Result<User, CustomError> {
     api_key_generated = api_key_generated.replace('-', "");
 
     let user = User {
-        id: 0,
+        id: uuid::Uuid::new_v4(),
         username: trim_string(&username),
         role: assigned_role.to_string(),
         password: Some(trim_string(&password)),

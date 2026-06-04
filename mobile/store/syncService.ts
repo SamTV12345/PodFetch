@@ -168,7 +168,7 @@ class SyncServiceClass {
      * @param episodeId Die Episode-ID
      * @param podcastId Optional: Die Podcast-ID (wird für neue Server-Daten benötigt)
      */
-    async pullProgressFromServer(episodeId: string, podcastId?: number): Promise<LocalWatchProgress | null> {
+    async pullProgressFromServer(episodeId: string, podcastId?: string): Promise<LocalWatchProgress | null> {
         const client = this.getAuthenticatedClient();
         if (!client || !(await this.isOnline())) {
             return offlineDB.getWatchProgress(episodeId);
@@ -189,7 +189,7 @@ class SyncServiceClass {
                 }
 
                 if (serverData.position !== undefined && serverData.position !== null) {
-                    const resolvedPodcastId = podcastId ?? localProgress?.podcastId ?? 0;
+                    const resolvedPodcastId = podcastId ?? localProgress?.podcastId ?? '';
 
                     const serverProgress: Omit<LocalWatchProgress, 'id'> = {
                         episodeId: episodeId,

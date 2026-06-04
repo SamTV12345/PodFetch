@@ -13,8 +13,10 @@ use crate::url_rewriting::resolve_image_url;
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct PodcastEpisodeDto {
-    pub id: i32,
-    pub podcast_id: i32,
+    pub id: String,
+    #[serde(rename = "legacyId")]
+    pub legacy_id: Option<i64>,
+    pub podcast_id: String,
     pub episode_id: String,
     pub name: String,
     pub url: String,
@@ -64,8 +66,9 @@ impl PodcastEpisodeDto {
             server_url,
         );
         PodcastEpisodeDto {
-            id: episode.id,
-            podcast_id: episode.podcast_id,
+            id: episode.id.clone(),
+            legacy_id: episode.legacy_id,
+            podcast_id: episode.podcast_id.clone(),
             episode_id: episode.episode_id.to_string(),
             name: episode.name.to_string(),
             url: episode.url.clone(),
@@ -108,8 +111,9 @@ impl PodcastEpisodeDto {
             server_url,
         );
         PodcastEpisodeDto {
-            id: episode.id,
-            podcast_id: episode.podcast_id,
+            id: episode.id.clone(),
+            legacy_id: episode.legacy_id,
+            podcast_id: episode.podcast_id.clone(),
             episode_id: episode.episode_id.to_string(),
             name: episode.name.to_string(),
             url: episode.url.clone(),

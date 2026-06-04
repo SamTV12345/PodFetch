@@ -83,7 +83,7 @@ fn apply_settings_to_downloaded_episodes(
     use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 
     let mut apply_stats = RescanApplyStats::default();
-    let mut last_id = 0;
+    let mut last_id = uuid::Uuid::nil();
     loop {
         let page = PodcastEpisodeService::get_nth_page_of_podcast_episodes(last_id)?;
         if page.is_empty() {
@@ -100,7 +100,10 @@ fn apply_settings_to_downloaded_episodes(
                 apply_stats.errors += 1;
             }
         }
-        last_id = page.last().map(|e| e.id).unwrap_or(last_id);
+        last_id = page
+            .last()
+            .and_then(|e| uuid::Uuid::parse_str(&e.id).ok())
+            .unwrap_or(last_id);
     }
     Ok(apply_stats)
 }
@@ -289,7 +292,7 @@ mod tests {
         assert_eq!(response.status_code(), 200);
 
         let settings = response.json::<Setting>();
-        assert_eq!(settings.id, 1);
+        assert!(uuid::Uuid::parse_str(&settings.id).is_ok());
         assert!(settings.auto_download);
         assert!(settings.auto_update);
     }
@@ -350,7 +353,7 @@ mod tests {
             .test_server
             .put("/api/v1/settings")
             .json(&json!({
-                "id": 1,
+                "id": uuid::Uuid::nil().to_string(),
                 "autoDownload": false,
                 "autoUpdate": false,
                 "autoCleanup": true,
@@ -392,7 +395,7 @@ mod tests {
             .test_server
             .put("/api/v1/settings")
             .json(&json!({
-                "id": 1,
+                "id": uuid::Uuid::nil().to_string(),
                 "autoDownload": true,
                 "autoUpdate": true,
                 "autoCleanup": true,
@@ -530,7 +533,7 @@ mod tests {
             State(app_state()),
             Extension(user.clone()),
             Json(Setting {
-                id: 1,
+                id: uuid::Uuid::new_v4().to_string(),
                 auto_download: true,
                 auto_update: true,
                 auto_cleanup: false,

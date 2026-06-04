@@ -1,12 +1,13 @@
 use crate::podcast::Podcast;
 use crate::podcast_episode::PodcastEpisode;
 use chrono::NaiveDateTime;
+use uuid::Uuid;
 
 /// An episode watch/action log entry - technology-agnostic domain entity.
 /// This tracks user actions on episodes (play, download, etc.) for gPodder sync.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Episode {
-    pub id: i32,
+    pub id: Uuid,
     pub username: String,
     pub device: String,
     pub podcast: String,
@@ -112,7 +113,7 @@ pub trait EpisodeRepository: Send + Sync {
     /// Update the position/timestamp for an episode action.
     fn update_position(
         &self,
-        id: i32,
+        id: Uuid,
         position: i32,
         timestamp: NaiveDateTime,
     ) -> Result<(), Self::Error>;
@@ -124,5 +125,5 @@ pub trait EpisodeRepository: Send + Sync {
     fn delete_by_podcast_feed(&self, podcast_feed: &str) -> Result<(), Self::Error>;
 
     /// Delete all episode actions for a podcast by ID (looks up the podcast's RSS feed first).
-    fn delete_by_podcast_id(&self, podcast_id: i32) -> Result<(), Self::Error>;
+    fn delete_by_podcast_id(&self, podcast_id: Uuid) -> Result<(), Self::Error>;
 }

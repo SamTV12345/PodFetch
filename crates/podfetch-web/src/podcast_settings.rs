@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, ToSchema, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastSetting {
-    pub podcast_id: i32,
+    pub podcast_id: String,
     pub episode_numbering: bool,
     pub auto_download: bool,
     pub auto_update: bool,
@@ -24,7 +25,7 @@ pub struct PodcastSetting {
 impl From<podfetch_domain::podcast_settings::PodcastSetting> for PodcastSetting {
     fn from(value: podfetch_domain::podcast_settings::PodcastSetting) -> Self {
         Self {
-            podcast_id: value.podcast_id,
+            podcast_id: value.podcast_id.to_string(),
             episode_numbering: value.episode_numbering,
             auto_download: value.auto_download,
             auto_update: value.auto_update,
@@ -46,7 +47,7 @@ impl From<podfetch_domain::podcast_settings::PodcastSetting> for PodcastSetting 
 impl From<PodcastSetting> for podfetch_domain::podcast_settings::PodcastSetting {
     fn from(value: PodcastSetting) -> Self {
         Self {
-            podcast_id: value.podcast_id,
+            podcast_id: Uuid::parse_str(&value.podcast_id).unwrap_or_else(|_| Uuid::nil()),
             episode_numbering: value.episode_numbering,
             auto_download: value.auto_download,
             auto_update: value.auto_update,

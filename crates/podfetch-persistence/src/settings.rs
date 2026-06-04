@@ -3,10 +3,11 @@ use diesel::insert_into;
 use diesel::prelude::{AsChangeset, Identifiable, Insertable, Queryable};
 use diesel::{ExpressionMethods, OptionalExtension, RunQueryDsl};
 use podfetch_domain::settings::{Setting, SettingRepository};
+use uuid::Uuid;
 
 diesel::table! {
     settings (id) {
-        id -> Integer,
+        id -> Text,
         auto_download -> Bool,
         auto_update -> Bool,
         auto_cleanup -> Bool,
@@ -26,7 +27,7 @@ diesel::table! {
 #[derive(Queryable, Insertable, Identifiable, AsChangeset, Debug, Clone)]
 #[diesel(table_name = settings)]
 struct SettingEntity {
-    id: i32,
+    id: String,
     auto_download: bool,
     auto_update: bool,
     auto_cleanup: bool,
@@ -45,7 +46,7 @@ struct SettingEntity {
 impl From<SettingEntity> for Setting {
     fn from(value: SettingEntity) -> Self {
         Self {
-            id: value.id,
+            id: Uuid::parse_str(&value.id).expect("valid uuid in db"),
             auto_download: value.auto_download,
             auto_update: value.auto_update,
             auto_cleanup: value.auto_cleanup,
@@ -66,7 +67,7 @@ impl From<SettingEntity> for Setting {
 impl From<Setting> for SettingEntity {
     fn from(value: Setting) -> Self {
         Self {
-            id: value.id,
+            id: value.id.to_string(),
             auto_download: value.auto_download,
             auto_update: value.auto_update,
             auto_cleanup: value.auto_cleanup,
@@ -126,7 +127,7 @@ impl SettingRepository for DieselSettingsRepository {
         let mut conn = self.database.connection()?;
         insert_into(settings)
             .values((
-                id.eq(1),
+                id.eq(podfetch_domain::ids::new_id().to_string()),
                 auto_update.eq(true),
                 auto_download.eq(true),
                 auto_cleanup.eq(true),
