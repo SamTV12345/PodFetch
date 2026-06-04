@@ -6,6 +6,7 @@ use podfetch_domain::listening_event::{
 use podfetch_persistence::adapters::ListeningEventRepositoryImpl;
 use podfetch_persistence::db::database;
 use std::sync::Arc;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct ListeningEventService {
@@ -31,18 +32,18 @@ impl ListeningEventService {
 
     pub fn get_by_user_and_range(
         &self,
-        user_id: i32,
+        user_id: Uuid,
         from: Option<NaiveDateTime>,
         to: Option<NaiveDateTime>,
     ) -> Result<Vec<ListeningEvent>, CustomError> {
         self.repository.get_by_user_and_range(user_id, from, to)
     }
 
-    pub fn delete_by_user_id(&self, user_id: i32) -> Result<usize, CustomError> {
+    pub fn delete_by_user_id(&self, user_id: Uuid) -> Result<usize, CustomError> {
         self.repository.delete_by_user_id(user_id)
     }
 
-    pub fn delete_by_podcast_id(&self, podcast_id: i32) -> Result<usize, CustomError> {
+    pub fn delete_by_podcast_id(&self, podcast_id: Uuid) -> Result<usize, CustomError> {
         self.repository.delete_by_podcast_id(podcast_id)
     }
 }

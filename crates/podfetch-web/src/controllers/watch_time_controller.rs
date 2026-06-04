@@ -112,7 +112,7 @@ mod tests {
     use uuid::Uuid;
 
     fn insert_episode(
-        podcast_id: i32,
+        podcast_id: &str,
         episode_id: &str,
         guid: &str,
         title: &str,
@@ -122,7 +122,7 @@ mod tests {
 
         diesel::insert_into(pe_dsl::podcast_episodes)
             .values((
-                pe_dsl::podcast_id.eq(podcast_id),
+                pe_dsl::podcast_id.eq(podcast_id.to_string()),
                 pe_dsl::episode_id.eq(episode_id.to_string()),
                 pe_dsl::name.eq(title.to_string()),
                 pe_dsl::url.eq(format!("https://example.com/{episode_id}.mp3")),
@@ -159,7 +159,7 @@ mod tests {
         )
         .unwrap();
         let podcast_episode = insert_episode(
-            podcast.id,
+            &podcast.id.to_string(),
             "watchtime-episode-1",
             "watchtime-guid-1",
             "Watchtime Episode 1",
@@ -269,7 +269,7 @@ mod tests {
         )
         .unwrap();
         let podcast_episode = insert_episode(
-            podcast.id,
+            &podcast.id.to_string(),
             &format!("watchtime-rewrite-episode-{unique}"),
             &format!("watchtime-rewrite-guid-{unique}"),
             "Watchtime Rewrite Episode",
@@ -347,7 +347,7 @@ mod tests {
         )
         .unwrap();
         let podcast_episode = insert_episode(
-            podcast.id,
+            &podcast.id.to_string(),
             &episode_id,
             &format!("watchtime-update-guid-{unique}"),
             "Watchtime Update Episode",
@@ -400,7 +400,7 @@ mod tests {
         )
         .unwrap();
         let podcast_episode = insert_episode(
-            podcast.id,
+            &podcast.id.to_string(),
             &episode_id,
             &format!("watchtime-seekback-guid-{unique}"),
             "Watchtime Seekback Episode",
@@ -452,7 +452,7 @@ mod tests {
         )
         .unwrap();
         let podcast_episode = insert_episode(
-            podcast.id,
+            &podcast.id.to_string(),
             &format!("watchtime-host-fallback-episode-{unique}"),
             &format!("watchtime-host-fallback-guid-{unique}"),
             "Watchtime Host Fallback Episode",

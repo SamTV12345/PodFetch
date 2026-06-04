@@ -181,7 +181,7 @@ fn title_ignore_prefix(title: &str) -> String {
 pub fn map_episode(
     episode: &PodcastEpisode,
     library_item_id: &str,
-    podcast_id: i32,
+    podcast_id: uuid::Uuid,
     index: i32,
 ) -> Value {
     let published_at_naive: Option<NaiveDateTime> =
@@ -265,7 +265,7 @@ pub fn map_episode(
     };
     json!({
         "libraryItemId": library_item_id,
-        "podcastId": podcast_id,
+        "podcastId": podcast_id.to_string(),
         "id": EpisodeId(episode.id).as_string(),
         "oldEpisodeId": Value::Null,
         "index": index,

@@ -4,6 +4,7 @@ use podfetch_domain::session::{Session, SessionRepository};
 use podfetch_persistence::adapters::SessionRepositoryImpl;
 use podfetch_persistence::db::database;
 use std::sync::Arc;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct SessionService {
@@ -19,7 +20,7 @@ impl SessionService {
         Self::new(Arc::new(SessionRepositoryImpl::new(database())))
     }
 
-    pub fn create_session(&self, username: String, user_id: i32) -> Result<Session, CustomError> {
+    pub fn create_session(&self, username: String, user_id: Uuid) -> Result<Session, CustomError> {
         self.repository.create(Session::new(username, user_id))
     }
 
@@ -31,7 +32,7 @@ impl SessionService {
         self.repository.find_by_session_id(session_id)
     }
 
-    pub fn delete_by_user_id(&self, user_id: i32) -> Result<usize, CustomError> {
+    pub fn delete_by_user_id(&self, user_id: Uuid) -> Result<usize, CustomError> {
         self.repository.delete_by_user_id(user_id)
     }
 

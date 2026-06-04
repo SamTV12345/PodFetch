@@ -9,6 +9,7 @@ use podfetch_persistence::adapters::PodcastSettingsRepositoryImpl;
 use podfetch_persistence::db::database;
 use podfetch_storage::FilenameBuilderReturn;
 use std::sync::Arc;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct PodcastSettingsService {
@@ -25,7 +26,7 @@ impl PodcastSettingsService {
     }
 
     pub fn get_settings_for_podcast(
-        podcast_id: i32,
+        podcast_id: Uuid,
     ) -> Result<Option<PodcastSetting>, CustomError> {
         Self::default_service().get_settings(podcast_id)
     }
@@ -36,7 +37,7 @@ impl PodcastSettingsService {
         Self::default_service().update_settings(setting_to_insert)
     }
 
-    pub fn get_settings(&self, podcast_id: i32) -> Result<Option<PodcastSetting>, CustomError> {
+    pub fn get_settings(&self, podcast_id: Uuid) -> Result<Option<PodcastSetting>, CustomError> {
         self.repository
             .get_settings(podcast_id)
             .map(|setting| setting.map(Into::into))
@@ -49,11 +50,10 @@ impl PodcastSettingsService {
         let updated_setting = self
             .repository
             .upsert_settings(setting_to_insert.clone().into())?;
+        let podcast_uuid = updated_setting.podcast_id;
         let available_episodes =
-            PodcastEpisodeService::get_episodes_by_podcast_id(updated_setting.podcast_id)?;
-        let podcast = crate::services::podcast::service::PodcastService::get_podcast(
-            updated_setting.podcast_id,
-        )
+            PodcastEpisodeService::get_episodes_by_podcast_id(podcast_uuid)?;
+        let podcast = crate::services::podcast::service::PodcastService::get_podcast(podcast_uuid)
         .map_err(|_| {
             CustomError::from(CustomErrorInner::Conflict(
                 "Podcast not found".to_string(),

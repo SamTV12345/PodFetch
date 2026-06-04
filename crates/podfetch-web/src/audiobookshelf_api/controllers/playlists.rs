@@ -9,6 +9,7 @@
 
 use crate::app_state::AppState;
 use crate::audiobookshelf_api::auth_middleware::AuthenticatedUser;
+use crate::audiobookshelf_api::id_resolution::{resolve_episode, resolve_podcast_library_item};
 use crate::audiobookshelf_api::mapping::podcast::{map_episode, map_podcast_without_episodes};
 use crate::services::podcast::service::PodcastService;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
@@ -26,6 +27,7 @@ use serde_json::{Value, json};
 use std::collections::HashSet;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
+use uuid::Uuid;
 
 fn repo() -> PlaylistRepositoryImpl {
     PlaylistRepositoryImpl::new(database())
@@ -236,9 +238,10 @@ pub async fn remove_item_by_library_item(
     Path((id, library_item_id)): Path<(String, String)>,
 ) -> Result<Json<Value>, CustomError> {
     remove_items_in(&id, user.id, |items| {
-        let podcast_id = match LibraryItemId::parse(&library_item_id) {
-            Some(LibraryItemId::Podcast(p)) => p,
-            _ => return Vec::new(),
+        // Accept legacy `li_pod_{int}` as well as `li_pod_{uuid}`.
+        let podcast_id = match resolve_podcast_library_item(&library_item_id) {
+            Ok(p) => p,
+            Err(_) => return Vec::new(),
         };
         items
             .iter()
@@ -246,7 +249,7 @@ pub async fn remove_item_by_library_item(
                 PodcastEpisodeService::get_podcast_episode_by_internal_id(i.episode)
                     .ok()
                     .flatten()
-                    .map(|e| e.podcast_id == podcast_id)
+                    .map(|e| e.podcast_id == podcast_id.to_string())
                     .unwrap_or(false)
             })
             .map(|i| i.episode)
@@ -273,9 +276,9 @@ pub async fn remove_item_by_episode(
     AuthenticatedUser(user): AuthenticatedUser,
     Path((id, _library_item_id, episode_id)): Path<(String, String, String)>,
 ) -> Result<Json<Value>, CustomError> {
-    let ep = EpisodeId::parse(&episode_id)
-        .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
-    remove_items_in(&id, user.id, |_| vec![ep.0])?;
+    // Accept legacy `ep_{int}` as well as `ep_{uuid}`.
+    let ep = resolve_episode(&episode_id)?;
+    remove_items_in(&id, user.id, |_| vec![ep])?;
     let playlist = ensure_owned(&id, user.id)?;
     let library_id = library_id(&state)?;
     Ok(Json(expand_playlist(&playlist, &library_id)?))
@@ -330,10 +333,12 @@ pub async fn batch_remove(
     Path(id): Path<String>,
     Json(body): Json<BatchItemsRequest>,
 ) -> Result<Json<Value>, CustomError> {
-    let mut to_remove: Vec<i32> = Vec::with_capacity(body.items.len());
+    let mut to_remove: Vec<Uuid> = Vec::with_capacity(body.items.len());
     for item in &body.items {
-        if let Some(ep) = item.episode_id.as_deref().and_then(EpisodeId::parse) {
-            to_remove.push(ep.0);
+        // Accept legacy `ep_{int}` as well as `ep_{uuid}`; silently skip ids
+        // that don't resolve (mirrors the previous `and_then(parse)` skip).
+        if let Some(ep) = item.episode_id.as_deref().and_then(|e| resolve_episode(e).ok()) {
+            to_remove.push(ep);
         }
     }
     remove_items_in(&id, user.id, |_| to_remove.clone())?;
@@ -344,7 +349,7 @@ pub async fn batch_remove(
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
-fn ensure_owned(playlist_id: &str, user_id: i32) -> Result<Playlist, CustomError> {
+fn ensure_owned(playlist_id: &str, user_id: Uuid) -> Result<Playlist, CustomError> {
     repo()
         .find_by_user_and_id(playlist_id, user_id)?
         .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))
@@ -358,11 +363,11 @@ fn library_id(state: &AppState) -> Result<String, CustomError> {
         .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))
 }
 
-fn require_episode_id(item: &PlaylistItemInput) -> Result<i32, CustomError> {
+fn require_episode_id(item: &PlaylistItemInput) -> Result<Uuid, CustomError> {
+    // Accept legacy `ep_{int}` as well as `ep_{uuid}`.
     item.episode_id
         .as_deref()
-        .and_then(EpisodeId::parse)
-        .map(|e| e.0)
+        .and_then(|e| resolve_episode(e).ok())
         .ok_or_else(|| {
             CustomError::from(CustomErrorInner::BadRequest(
                 "episodeId in 'ep_<id>' form is required (PodFetch does not yet host book playlists)".into(),
@@ -377,8 +382,8 @@ fn require_episode_id(item: &PlaylistItemInput) -> Result<i32, CustomError> {
 /// need the same cleanup.
 fn remove_items_in(
     playlist_id: &str,
-    user_id: i32,
-    selector: impl FnOnce(&[PlaylistItem]) -> Vec<i32>,
+    user_id: Uuid,
+    selector: impl FnOnce(&[PlaylistItem]) -> Vec<Uuid>,
 ) -> Result<(), CustomError> {
     let playlist = ensure_owned(playlist_id, user_id)?;
     let items = repo().list_items_by_playlist_id(&playlist.id)?;
@@ -413,7 +418,9 @@ pub fn expand_playlist(playlist: &Playlist, library_id: &str) -> Result<Value, C
         else {
             continue;
         };
-        let podcast = PodcastService::get_podcast_by_episode_id(episode.id)?;
+        let episode_uuid = Uuid::parse_str(&episode.id)
+            .map_err(|_| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
+        let podcast = PodcastService::get_podcast_by_episode_id(episode_uuid)?;
         let podcast_domain: podfetch_domain::podcast::Podcast = podcast.into();
         let episode_domain: podfetch_domain::podcast_episode::PodcastEpisode = episode.into();
         let library_item_id = LibraryItemId::Podcast(podcast_domain.id).as_string();

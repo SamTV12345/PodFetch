@@ -15,14 +15,14 @@ use podfetch_domain::audiobookshelf::library::Library;
 use podfetch_domain::audiobookshelf::media_progress::MediaProgress;
 use podfetch_domain::user::User;
 
-pub fn user_room(user_id: i32) -> String {
+pub fn user_room(user_id: uuid::Uuid) -> String {
     user_id.to_string()
 }
 
 /// Emit `user_item_progress_updated` to all of the given user's sockets.
 /// No-op when the socket.io layer is not yet initialised (tests, startup).
 pub fn emit_progress_updated(
-    user_id: i32,
+    user_id: uuid::Uuid,
     progress: &MediaProgress,
     session_id: &str,
     device_description: &str,
@@ -55,7 +55,7 @@ pub fn emit_item_event(event: &str, payload: serde_json::Value) {
     emit_broadcast(event, payload);
 }
 
-fn emit_to_user_room(user_id: i32, event: &str, payload: serde_json::Value) {
+fn emit_to_user_room(user_id: uuid::Uuid, event: &str, payload: serde_json::Value) {
     let Some(io) = SOCKET_IO_LAYER.get() else {
         tracing::trace!(
             "audiobookshelf socket.io not initialised; dropping event {event} for user {user_id}"
@@ -96,8 +96,9 @@ mod tests {
 
     #[test]
     fn user_room_is_string_id_per_upstream_clientemitter() {
-        assert_eq!(user_room(42), "42".to_string());
-        assert_eq!(user_room(0), "0".to_string());
+        let id = uuid::Uuid::from_u128(42);
+        assert_eq!(user_room(id), id.to_string());
+        assert_eq!(user_room(uuid::Uuid::nil()), uuid::Uuid::nil().to_string());
     }
 
     #[test]
@@ -107,7 +108,7 @@ mod tests {
         let now = chrono::Utc::now().naive_utc();
         let progress = MediaProgress {
             id: "abc".to_string(),
-            user_id: 1,
+            user_id: uuid::Uuid::from_u128(1),
             library_item_id: "li_pod_1".to_string(),
             episode_id: Some("ep_1".to_string()),
             media_type: "podcast".to_string(),
@@ -121,6 +122,6 @@ mod tests {
             finished_at: None,
         };
         // Should not panic even when SOCKET_IO_LAYER may or may not be initialised.
-        emit_progress_updated(1, &progress, "play_x", "Test Device");
+        emit_progress_updated(uuid::Uuid::from_u128(1), &progress, "play_x", "Test Device");
     }
 }

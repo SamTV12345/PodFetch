@@ -1,4 +1,5 @@
 use crate::app_state::AppState;
+use crate::controllers::id_resolver::{ResolvedId, parse_resolved_id};
 use crate::history::EpisodeDto;
 use crate::history::map_episode_to_dto;
 pub use crate::podcast_episode::{
@@ -59,13 +60,14 @@ fn map_podcast_episode_controller_error(
 )]
 pub async fn find_all_chapters_of_podcast_episode(
     State(state): State<AppState>,
-    Path(id): Path<i32>,
+    Path(id): Path<String>,
 ) -> Result<Json<Vec<PodcastChapterDto>>, CustomError> {
     // no auth needed for this endpoint
+    let episode_id = resolve_episode_uuid(&id)?;
 
     let chapters_of_podcast: Vec<PodcastChapterDto> = state
         .podcast_episode_chapter_service
-        .get_chapters_by_episode_id(id)?
+        .get_chapters_by_episode_id(episode_id)?
         .into_iter()
         .map(|v| PodcastChapterDto {
             id: v.id,
@@ -135,8 +137,9 @@ pub async fn find_all_podcast_episodes_of_podcast(
     headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastEpisodeWithHistory>>, CustomError> {
     let server_url = resolve_server_url_from_headers(&headers);
+    let podcast_uuid = resolve_podcast_uuid(&id)?;
     let mapped_podcasts = web_get_podcast_episodes_with_history(
-        &id,
+        podcast_uuid,
         &user.username,
         last_podcast_episode.last_podcast_episode.clone(),
         last_podcast_episode.only_unlistened,
@@ -243,14 +246,15 @@ path="/podcasts/{id}/episodes/favor",
 )]
 pub async fn like_podcast_episode(
     State(state): State<AppState>,
-    Path(id): Path<i32>,
+    Path(id): Path<String>,
     Extension(requester): Extension<User>,
     Json(fav): Json<FavoritePut>,
 ) -> Result<StatusCode, CustomError> {
-    println!("User id is {}, Episode id is {}", requester.id, id.clone());
+    let episode_id = resolve_episode_uuid(&id)?;
+    println!("User id is {}, Episode id is {}", requester.id, episode_id);
     state
         .favorite_podcast_episode_service
-        .set_favorite(requester.id, id, fav.favored)?;
+        .set_favorite(requester.id, episode_id, fav.favored)?;
 
     Ok(StatusCode::OK)
 }
@@ -275,7 +279,18 @@ pub async fn download_podcast_episodes_of_podcast(
     tokio::task::spawn_blocking(move || {
         match PodcastEpisodeService::get_podcast_episode_by_id(&id) {
             Ok(Some(podcast_episode)) => {
-                match PodcastService::get_podcast(podcast_episode.podcast_id) {
+                let podcast_uuid = match uuid::Uuid::parse_str(&podcast_episode.podcast_id) {
+                    Ok(uuid) => uuid,
+                    Err(_) => {
+                        tracing::error!(
+                            "Invalid podcast id {} for episode {}",
+                            podcast_episode.podcast_id,
+                            podcast_episode.episode_id
+                        );
+                        return;
+                    }
+                };
+                match PodcastService::get_podcast(podcast_uuid) {
                     Ok(podcast_found) => {
                         if let Err(err) = PodcastEpisodeService::perform_download(
                             &podcast_episode,
@@ -359,10 +374,31 @@ pub struct BatchActionResponse {
     pub affected: usize,
 }
 
-fn parse_podcast_id(id: &str) -> Result<i32, CustomError> {
-    id.parse::<i32>().map_err(|_| {
-        CustomErrorInner::BadRequest("podcast id must be an integer".to_string(), Warning).into()
-    })
+/// Resolve a podcast `{id}` path segment (UUID or legacy integer) to the
+/// canonical podcast `Uuid`.
+pub(crate) fn resolve_podcast_uuid(id: &str) -> Result<uuid::Uuid, CustomError> {
+    match parse_resolved_id(id)? {
+        ResolvedId::Uuid(uuid) => Ok(uuid),
+        ResolvedId::Legacy(legacy) => {
+            let podcast = PodcastService::get_podcast_by_legacy_id(legacy)?;
+            uuid::Uuid::parse_str(&podcast.id)
+                .map_err(|_| CustomErrorInner::NotFound(Warning).into())
+        }
+    }
+}
+
+/// Resolve an episode `{id}` path segment (UUID or legacy integer) to the
+/// canonical episode `Uuid`.
+pub(crate) fn resolve_episode_uuid(id: &str) -> Result<uuid::Uuid, CustomError> {
+    match parse_resolved_id(id)? {
+        ResolvedId::Uuid(uuid) => Ok(uuid),
+        ResolvedId::Legacy(legacy) => {
+            let episode = PodcastEpisodeService::get_podcast_episode_by_legacy_id(legacy)?
+                .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Warning)))?;
+            uuid::Uuid::parse_str(&episode.id)
+                .map_err(|_| CustomErrorInner::NotFound(Warning).into())
+        }
+    }
 }
 
 #[utoipa::path(
@@ -378,7 +414,7 @@ pub async fn download_all_missing_episodes(
 ) -> Result<StatusCode, CustomError> {
     web_require_privileged::<CustomError>(requester.is_admin())
         .map_err(map_podcast_episode_controller_error)?;
-    let podcast_id = parse_podcast_id(&id)?;
+    let podcast_id = resolve_podcast_uuid(&id)?;
 
     tokio::task::spawn_blocking(move || {
         let podcast = PodcastService::get_podcast_by_id(podcast_id);
@@ -403,7 +439,7 @@ pub async fn resync_files_for_podcast(
 ) -> Result<StatusCode, CustomError> {
     web_require_privileged::<CustomError>(requester.is_admin())
         .map_err(map_podcast_episode_controller_error)?;
-    let podcast_id = parse_podcast_id(&id)?;
+    let podcast_id = resolve_podcast_uuid(&id)?;
 
     tokio::task::spawn_blocking(move || {
         let podcast = PodcastService::get_podcast_by_id(podcast_id);
@@ -428,7 +464,7 @@ pub async fn resync_db_for_podcast(
 ) -> Result<Json<BatchActionResponse>, CustomError> {
     web_require_privileged::<CustomError>(requester.is_admin())
         .map_err(map_podcast_episode_controller_error)?;
-    let podcast_id = parse_podcast_id(&id)?;
+    let podcast_id = resolve_podcast_uuid(&id)?;
 
     let affected = tokio::task::spawn_blocking(move || {
         PodcastEpisodeService::resync_db_for_podcast(podcast_id)
@@ -452,7 +488,7 @@ pub async fn delete_all_downloaded_files(
 ) -> Result<Json<BatchActionResponse>, CustomError> {
     web_require_privileged::<CustomError>(requester.is_admin())
         .map_err(map_podcast_episode_controller_error)?;
-    let podcast_id = parse_podcast_id(&id)?;
+    let podcast_id = resolve_podcast_uuid(&id)?;
 
     let affected = tokio::task::spawn_blocking(move || {
         PodcastEpisodeService::delete_all_downloaded_files_for_podcast(podcast_id)
@@ -475,8 +511,9 @@ pub async fn retrieve_episode_sample_format(
 ) -> Result<String, CustomError> {
     // Sample episode for formatting
     let episode: PodcastEpisode = PodcastEpisode {
-        id: 0,
-        podcast_id: 0,
+        id: uuid::Uuid::nil().to_string(),
+        legacy_id: None,
+        podcast_id: uuid::Uuid::nil().to_string(),
         episode_id: "0218342".to_string(),
         name: "My Homelab".to_string(),
         url: "http://podigee.com/rss/123".to_string(),
@@ -493,7 +530,7 @@ pub async fn retrieve_episode_sample_format(
         download_location: None,
     };
     let settings = Setting {
-        id: 0,
+        id: uuid::Uuid::nil().to_string(),
         auto_download: false,
         auto_update: false,
         auto_cleanup: false,
@@ -565,7 +602,7 @@ mod tests {
         AppState::new()
     }
 
-    fn admin_user_id() -> i32 {
+    fn admin_user_id() -> uuid::Uuid {
         let username = ENVIRONMENT_SERVICE
             .username
             .clone()
@@ -585,14 +622,15 @@ mod tests {
     }
 
     fn insert_episode(
-        podcast_id: i32,
+        podcast_id: &str,
         episode_id: &str,
         guid: &str,
         title: &str,
     ) -> PodcastEpisode {
         diesel::insert_into(pe_dsl::podcast_episodes)
             .values((
-                pe_dsl::podcast_id.eq(podcast_id),
+                pe_dsl::id.eq(podfetch_domain::ids::new_id().to_string()),
+                pe_dsl::podcast_id.eq(podcast_id.to_string()),
                 pe_dsl::episode_id.eq(episode_id.to_string()),
                 pe_dsl::name.eq(title.to_string()),
                 pe_dsl::url.eq(format!("https://example.com/{episode_id}.mp3")),
@@ -638,7 +676,7 @@ mod tests {
         )
         .unwrap();
         let inserted_episode = insert_episode(
-            podcast.id,
+            &podcast.id,
             "episode-query-1",
             "episode-query-guid-1",
             "Episode Query 1",
@@ -694,7 +732,7 @@ mod tests {
         )
         .unwrap();
         let inserted_episode = insert_episode(
-            podcast.id,
+            &podcast.id,
             "like-episode-1",
             "like-guid-1",
             "Like Episode 1",
@@ -711,7 +749,10 @@ mod tests {
         assert_eq!(response.status_code(), 200);
 
         let favorite = FavoritePodcastEpisodeService::default_service()
-            .get_by_user_id_and_episode_id(admin_user_id(), inserted_episode.id)
+            .get_by_user_id_and_episode_id(
+                admin_user_id(),
+                uuid::Uuid::parse_str(&inserted_episode.id).unwrap(),
+            )
             .unwrap();
         assert!(favorite.is_some());
         assert!(favorite.unwrap().favorite);
@@ -724,7 +765,7 @@ mod tests {
 
         diesel::insert_into(subs_dsl::subscriptions)
             .values((
-                subs_dsl::user_id.eq(admin_user_id()),
+                subs_dsl::user_id.eq(admin_user_id().to_string()),
                 subs_dsl::device.eq("phone".to_string()),
                 subs_dsl::podcast.eq("https://example.com/not-present.xml".to_string()),
                 subs_dsl::created.eq(Utc::now().naive_utc()),
@@ -762,7 +803,7 @@ mod tests {
         )
         .unwrap();
         insert_episode(
-            podcast.id,
+            &podcast.id,
             "timeline-episode-1",
             "timeline-guid-1",
             "Timeline Episode 1",
@@ -792,7 +833,7 @@ mod tests {
         )
         .unwrap();
         let episode = insert_episode(
-            podcast.id,
+            &podcast.id,
             "chapter-episode-1",
             "chapter-guid-1",
             "Chapter Episode 1",
@@ -826,7 +867,7 @@ mod tests {
         )
         .unwrap();
         let episode = insert_episode(
-            podcast.id,
+            &podcast.id,
             &format!("delete-local-episode-{unique}"),
             &format!("delete-local-guid-{unique}"),
             "Delete Local Episode",
@@ -873,7 +914,7 @@ mod tests {
         )
         .unwrap();
         let episode = insert_episode(
-            podcast.id,
+            &podcast.id,
             &format!("invalid-like-episode-{unique}"),
             &format!("invalid-like-guid-{unique}"),
             "Invalid Like Episode",
@@ -936,7 +977,7 @@ mod tests {
     }
 
     fn mark_episode_downloaded(episode: &PodcastEpisode, file_episode_path: &str) {
-        diesel::update(pe_dsl::podcast_episodes.filter(pe_dsl::id.eq(episode.id)))
+        diesel::update(pe_dsl::podcast_episodes.filter(pe_dsl::id.eq(episode.id.clone())))
             .set((
                 pe_dsl::download_location.eq("Local".to_string()),
                 pe_dsl::download_time.eq(Some(Utc::now().naive_utc())),
@@ -963,7 +1004,7 @@ mod tests {
         )
         .unwrap();
         let episode = insert_episode(
-            podcast.id,
+            &podcast.id,
             &format!("resync-db-episode-{unique}"),
             &format!("resync-db-guid-{unique}"),
             "Resync DB Episode",
@@ -983,7 +1024,7 @@ mod tests {
         assert_eq!(body["affected"], json!(1));
 
         let persisted = pe_dsl::podcast_episodes
-            .filter(pe_dsl::id.eq(episode.id))
+            .filter(pe_dsl::id.eq(episode.id.clone()))
             .first::<PodcastEpisode>(&mut get_connection())
             .unwrap();
         assert!(persisted.download_location.is_none());
@@ -1007,7 +1048,7 @@ mod tests {
         )
         .unwrap();
         let episode = insert_episode(
-            podcast.id,
+            &podcast.id,
             &format!("delete-all-episode-{unique}"),
             &format!("delete-all-guid-{unique}"),
             "Delete All Episode",
@@ -1036,7 +1077,7 @@ mod tests {
             "file should have been removed"
         );
         let persisted = pe_dsl::podcast_episodes
-            .filter(pe_dsl::id.eq(episode.id))
+            .filter(pe_dsl::id.eq(episode.id.clone()))
             .first::<PodcastEpisode>(&mut get_connection())
             .unwrap();
         assert!(persisted.download_location.is_none());
@@ -1161,13 +1202,13 @@ mod tests {
         )
         .unwrap();
         let fav_episode = insert_episode(
-            podcast.id,
+            &podcast.id,
             &format!("fav-episode-{unique}"),
             &format!("fav-guid-{unique}"),
             "Favorite Episode",
         );
         let plain_episode = insert_episode(
-            podcast.id,
+            &podcast.id,
             &format!("plain-episode-{unique}"),
             &format!("plain-guid-{unique}"),
             "Plain Episode",
@@ -1185,7 +1226,11 @@ mod tests {
         mark_episode_downloaded(&fav_episode, &fav_file);
         mark_episode_downloaded(&plain_episode, &plain_file);
         FavoritePodcastEpisodeService::default_service()
-            .set_favorite(admin_user_id(), fav_episode.id, true)
+            .set_favorite(
+                admin_user_id(),
+                uuid::Uuid::parse_str(&fav_episode.id).unwrap(),
+                true,
+            )
             .unwrap();
 
         let response = server

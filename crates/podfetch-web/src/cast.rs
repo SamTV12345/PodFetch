@@ -75,7 +75,7 @@ impl From<DiscoveredCastDevice> for DiscoveredCastDeviceResponse {
 #[derive(Deserialize, Debug, Clone, ToSchema)]
 pub struct CastStartRequest {
     pub chromecast_uuid: String,
-    pub episode_id: i32,
+    pub episode_id: String,
     /// Direct URL the Chromecast should fetch. For local server scenarios
     /// the caller resolves this from the episode (proxied or direct file
     /// URL); the controller passes it through unchanged.
@@ -113,7 +113,7 @@ impl From<CastControlRequest> for ControlCmd {
 pub struct CastSessionResponse {
     pub session_id: String,
     pub chromecast_uuid: String,
-    pub episode_id: Option<i32>,
+    pub episode_id: Option<String>,
     pub state: CastStateDto,
     pub position_secs: f64,
     pub volume: f32,
@@ -124,7 +124,7 @@ impl CastSessionResponse {
         Self {
             session_id: session.session_id.0.clone(),
             chromecast_uuid: session.device_uuid.0.clone(),
-            episode_id: session.episode_id,
+            episode_id: session.episode_id.map(|id| id.to_string()),
             state: session.last_status.state.into(),
             position_secs: session.last_status.position_secs,
             volume: session.last_status.volume,

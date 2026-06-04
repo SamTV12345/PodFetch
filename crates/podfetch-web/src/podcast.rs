@@ -10,6 +10,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
 use std::thread;
 use utoipa::{IntoParams, ToSchema};
+use uuid::Uuid;
 
 use crate::filter::Filter;
 use crate::tags::Tag;
@@ -32,13 +33,13 @@ pub struct PodcastSearchPlan {
     pub title: Option<String>,
     pub tag: Option<String>,
     pub favored_only: bool,
-    pub user_id: i32,
+    pub user_id: Uuid,
     pub filter: Filter,
 }
 
 pub fn build_podcast_search_plan(
     query: PodcastSearchModelUtoipa,
-    user_id: i32,
+    user_id: Uuid,
     existing_filter: Option<Filter>,
 ) -> PodcastSearchPlan {
     let order = query.order.map(|o| o.into()).unwrap_or(OrderCriteria::Asc);
@@ -98,7 +99,7 @@ pub struct OpmlModel {
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct PodcastFavorUpdateModel {
-    pub id: i32,
+    pub id: String,
     pub favored: bool,
 }
 
@@ -112,7 +113,9 @@ pub struct PodcastInsertModel {
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct PodcastDto {
-    pub id: i32,
+    pub id: String,
+    #[serde(rename = "legacyId")]
+    pub legacy_id: Option<i64>,
     pub name: String,
     pub directory_id: String,
     pub directory_name: String,
@@ -138,7 +141,8 @@ pub fn map_podcast_to_dto(value: Podcast, server_url: &str) -> PodcastDto {
     let podfetch_rss_feed = build_podfetch_feed(value.id, None, server_url);
 
     PodcastDto {
-        id: value.id,
+        id: value.id.to_string(),
+        legacy_id: value.legacy_id,
         name: value.name.clone(),
         directory_id: value.directory_id.clone(),
         rssfeed: value.rssfeed.clone(),
@@ -177,7 +181,8 @@ pub fn map_podcast_with_context_to_dto(
     };
 
     PodcastDto {
-        id: value.id,
+        id: value.id.to_string(),
+        legacy_id: value.legacy_id,
         name: value.name.clone(),
         directory_id: value.directory_id.clone(),
         rssfeed: value.rssfeed.clone(),
@@ -215,7 +220,7 @@ fn dedupe_keywords(keywords: Option<String>) -> Option<String> {
     })
 }
 
-fn build_podfetch_feed(podcast_id: i32, api_key: Option<&str>, server_url: &str) -> String {
+fn build_podfetch_feed(podcast_id: Uuid, api_key: Option<&str>, server_url: &str) -> String {
     if server_url.is_empty() {
         // No Host headers present — emit a root-relative URL. The browser
         // (or the eventual proxy) will resolve it against the page origin.
@@ -515,22 +520,29 @@ pub fn ensure_podindex_configured<Err: Display>(
 #[cfg(test)]
 mod tests {
     use super::build_podfetch_feed;
+    use uuid::Uuid;
+
+    fn sample_id() -> Uuid {
+        Uuid::parse_str("0192f3a1-7c42-7e8b-8b2a-2b1c3d4e5f60").unwrap()
+    }
 
     #[test]
     fn build_podfetch_feed_appends_podcast_id_to_rss_path() {
-        let url = build_podfetch_feed(42, None, "http://localhost:8000/");
+        let id = sample_id();
+        let url = build_podfetch_feed(id, None, "http://localhost:8000/");
         assert!(
-            url.ends_with("/rss/42"),
-            "expected per-podcast feed URL to end with /rss/42, got: {url}"
+            url.ends_with(&format!("/rss/{id}")),
+            "expected per-podcast feed URL to end with /rss/{id}, got: {url}"
         );
     }
 
     #[test]
     fn build_podfetch_feed_appends_api_key_query_param() {
-        let url = build_podfetch_feed(42, Some("secret-key"), "http://localhost:8000/");
+        let id = sample_id();
+        let url = build_podfetch_feed(id, Some("secret-key"), "http://localhost:8000/");
         assert!(
-            url.contains("/rss/42"),
-            "expected per-podcast feed URL to contain /rss/42, got: {url}"
+            url.contains(&format!("/rss/{id}")),
+            "expected per-podcast feed URL to contain /rss/{id}, got: {url}"
         );
         assert!(
             url.contains("apiKey=secret-key"),
@@ -540,19 +552,22 @@ mod tests {
 
     #[test]
     fn build_podfetch_feed_uses_provided_server_url() {
-        let url = build_podfetch_feed(7, None, "https://podfetch.example.com/");
-        assert_eq!(url, "https://podfetch.example.com/rss/7");
+        let id = sample_id();
+        let url = build_podfetch_feed(id, None, "https://podfetch.example.com/");
+        assert_eq!(url, format!("https://podfetch.example.com/rss/{id}"));
     }
 
     #[test]
     fn build_podfetch_feed_empty_server_url_returns_root_relative() {
-        let url = build_podfetch_feed(42, None, "");
-        assert_eq!(url, "/rss/42");
+        let id = sample_id();
+        let url = build_podfetch_feed(id, None, "");
+        assert_eq!(url, format!("/rss/{id}"));
     }
 
     #[test]
     fn build_podfetch_feed_empty_server_url_with_api_key_appends_query() {
-        let url = build_podfetch_feed(42, Some("secret"), "");
-        assert_eq!(url, "/rss/42?apiKey=secret");
+        let id = sample_id();
+        let url = build_podfetch_feed(id, Some("secret"), "");
+        assert_eq!(url, format!("/rss/{id}?apiKey=secret"));
     }
 }

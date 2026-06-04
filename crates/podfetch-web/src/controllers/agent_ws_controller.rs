@@ -116,7 +116,7 @@ async fn handle_agent_socket(state: AppState, user: User, socket: WebSocket) {
     if displaced.is_some() {
         info!(agent_id = %agent_id, "displaced previous agent connection");
     }
-    info!(agent_id = %agent_id, user_id = user.id, "agent connected");
+    info!(agent_id = %agent_id, user_id = %user.id, "agent connected");
 
     // Outbound pump: forwards anything pushed into the channel out over
     // the websocket.
@@ -161,7 +161,12 @@ async fn handle_agent_socket(state: AppState, user: User, socket: WebSocket) {
     info!(agent_id = %agent_id, "agent disconnected");
 }
 
-async fn handle_agent_message(state: &AppState, agent_id: &str, user_id: i32, msg: AgentMsg) {
+async fn handle_agent_message(
+    state: &AppState,
+    agent_id: &str,
+    user_id: uuid::Uuid,
+    msg: AgentMsg,
+) {
     match msg {
         AgentMsg::HelloAck { .. } => {
             warn!(agent_id, "unexpected duplicate HelloAck");

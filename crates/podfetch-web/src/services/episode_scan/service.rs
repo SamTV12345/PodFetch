@@ -36,15 +36,16 @@ impl EpisodeScanService for EpisodeScanServiceImpl {
 
     fn get_episodes_with_paths_after(
         &self,
-        last_id: i32,
+        last_id: uuid::Uuid,
         _limit: usize,
     ) -> Result<Vec<EpisodeWithPath>, Self::Error> {
         let episodes = PodcastEpisodeService::get_nth_page_of_podcast_episodes(last_id)?;
         Ok(episodes
             .into_iter()
             .filter_map(|e| {
+                let id = uuid::Uuid::parse_str(&e.id).ok()?;
                 e.file_episode_path.map(|path| EpisodeWithPath {
-                    id: e.id,
+                    id,
                     name: e.name,
                     file_path: path,
                 })

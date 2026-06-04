@@ -4,6 +4,7 @@ use podfetch_domain::filter::FilterRepository;
 use podfetch_persistence::adapters::FilterRepositoryImpl;
 use podfetch_persistence::db::database;
 use std::sync::Arc;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct FilterService {
@@ -19,7 +20,7 @@ impl FilterService {
         Self::new(Arc::new(FilterRepositoryImpl::new(database())))
     }
 
-    pub fn get_filter_by_user_id(&self, user_id: i32) -> Result<Option<Filter>, CustomError> {
+    pub fn get_filter_by_user_id(&self, user_id: Uuid) -> Result<Option<Filter>, CustomError> {
         self.repository
             .get_by_user_id(user_id)
             .map(|filter| filter.map(Into::into))
@@ -31,7 +32,7 @@ impl FilterService {
 
     pub fn save_timeline_decision(
         &self,
-        user_id: i32,
+        user_id: Uuid,
         only_favored: bool,
     ) -> Result<(), CustomError> {
         self.repository

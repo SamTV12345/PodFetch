@@ -68,7 +68,7 @@ mod tests {
     #[derive(Debug, Deserialize)]
     #[serde(rename_all = "camelCase")]
     struct TopPodcastStatsResponse {
-        podcast_id: i32,
+        podcast_id: String,
         podcast_name: String,
         listened_seconds: i64,
         listened_episodes: i64,
@@ -110,14 +110,15 @@ mod tests {
     }
 
     fn insert_episode(
-        podcast_id: i32,
+        podcast_id: &str,
         episode_id: &str,
         guid: &str,
         title: &str,
     ) -> PodcastEpisode {
         diesel::insert_into(pe_dsl::podcast_episodes)
             .values((
-                pe_dsl::podcast_id.eq(podcast_id),
+                pe_dsl::id.eq(podfetch_domain::ids::new_id().to_string()),
+                pe_dsl::podcast_id.eq(podcast_id.to_string()),
                 pe_dsl::episode_id.eq(episode_id.to_string()),
                 pe_dsl::name.eq(title.to_string()),
                 pe_dsl::url.eq(format!("https://example.com/{episode_id}.mp3")),
@@ -133,7 +134,7 @@ mod tests {
             .unwrap()
     }
 
-    fn admin_user_id() -> i32 {
+    fn admin_user_id() -> uuid::Uuid {
         let username = ENVIRONMENT_SERVICE
             .username
             .clone()
@@ -171,17 +172,17 @@ mod tests {
         )
         .unwrap();
 
-        let episode_a1 = insert_episode(podcast_a.id, "stats-ep-a1", "stats-guid-a1", "A1");
-        let episode_a2 = insert_episode(podcast_a.id, "stats-ep-a2", "stats-guid-a2", "A2");
-        let episode_b1 = insert_episode(podcast_b.id, "stats-ep-b1", "stats-guid-b1", "B1");
+        let episode_a1 = insert_episode(&podcast_a.id, "stats-ep-a1", "stats-guid-a1", "A1");
+        let episode_a2 = insert_episode(&podcast_a.id, "stats-ep-a2", "stats-guid-a2", "A2");
+        let episode_b1 = insert_episode(&podcast_b.id, "stats-ep-b1", "stats-guid-b1", "B1");
         let user_id = admin_user_id();
 
         ListeningEventService::create_event(NewListeningEvent {
             user_id,
             device: "webview".to_string(),
             podcast_episode_id: episode_a1.episode_id.clone(),
-            podcast_id: podcast_a.id,
-            podcast_episode_db_id: episode_a1.id,
+            podcast_id: uuid::Uuid::parse_str(&podcast_a.id).unwrap(),
+            podcast_episode_db_id: uuid::Uuid::parse_str(&episode_a1.id).unwrap(),
             delta_seconds: 120,
             start_position: 10,
             end_position: 130,
@@ -192,8 +193,8 @@ mod tests {
             user_id,
             device: "webview".to_string(),
             podcast_episode_id: episode_a2.episode_id.clone(),
-            podcast_id: podcast_a.id,
-            podcast_episode_db_id: episode_a2.id,
+            podcast_id: uuid::Uuid::parse_str(&podcast_a.id).unwrap(),
+            podcast_episode_db_id: uuid::Uuid::parse_str(&episode_a2.id).unwrap(),
             delta_seconds: 240,
             start_position: 0,
             end_position: 240,
@@ -204,8 +205,8 @@ mod tests {
             user_id,
             device: "webview".to_string(),
             podcast_episode_id: episode_b1.episode_id.clone(),
-            podcast_id: podcast_b.id,
-            podcast_episode_db_id: episode_b1.id,
+            podcast_id: uuid::Uuid::parse_str(&podcast_b.id).unwrap(),
+            podcast_episode_db_id: uuid::Uuid::parse_str(&episode_b1.id).unwrap(),
             delta_seconds: 180,
             start_position: 100,
             end_position: 280,
@@ -251,15 +252,15 @@ mod tests {
             "stats-date",
         )
         .unwrap();
-        let episode = insert_episode(podcast.id, "stats-ep-range", "stats-guid-range", "Range");
+        let episode = insert_episode(&podcast.id, "stats-ep-range", "stats-guid-range", "Range");
         let user_id = admin_user_id();
 
         ListeningEventService::create_event(NewListeningEvent {
             user_id,
             device: "webview".to_string(),
             podcast_episode_id: episode.episode_id.clone(),
-            podcast_id: podcast.id,
-            podcast_episode_db_id: episode.id,
+            podcast_id: uuid::Uuid::parse_str(&podcast.id).unwrap(),
+            podcast_episode_db_id: uuid::Uuid::parse_str(&episode.id).unwrap(),
             delta_seconds: 300,
             start_position: 0,
             end_position: 300,
@@ -270,8 +271,8 @@ mod tests {
             user_id,
             device: "webview".to_string(),
             podcast_episode_id: episode.episode_id,
-            podcast_id: podcast.id,
-            podcast_episode_db_id: episode.id,
+            podcast_id: uuid::Uuid::parse_str(&podcast.id).unwrap(),
+            podcast_episode_db_id: uuid::Uuid::parse_str(&episode.id).unwrap(),
             delta_seconds: 60,
             start_position: 300,
             end_position: 360,
@@ -340,7 +341,7 @@ mod tests {
                 )
                 .unwrap();
             let episode = insert_episode(
-                podcast.id,
+                &podcast.id,
                 &format!("stats-top-limit-ep-{i}-{unique}"),
                 &format!("stats-top-limit-guid-{i}-{unique}"),
                 "Top Limit Episode",
@@ -350,8 +351,8 @@ mod tests {
                 user_id,
                 device: "webview".to_string(),
                 podcast_episode_id: episode.episode_id,
-                podcast_id: podcast.id,
-                podcast_episode_db_id: episode.id,
+                podcast_id: uuid::Uuid::parse_str(&podcast.id).unwrap(),
+                podcast_episode_db_id: uuid::Uuid::parse_str(&episode.id).unwrap(),
                 delta_seconds: 30,
                 start_position: 0,
                 end_position: 30,
@@ -404,7 +405,7 @@ mod tests {
         )
         .unwrap();
         let episode = insert_episode(
-            podcast.id,
+            &podcast.id,
             &format!("stats-rfc3339-episode-{unique}"),
             &format!("stats-rfc3339-guid-{unique}"),
             "Stats RFC3339 Episode",
@@ -415,8 +416,8 @@ mod tests {
             user_id,
             device: "webview".to_string(),
             podcast_episode_id: episode.episode_id,
-            podcast_id: podcast.id,
-            podcast_episode_db_id: episode.id,
+            podcast_id: uuid::Uuid::parse_str(&podcast.id).unwrap(),
+            podcast_episode_db_id: uuid::Uuid::parse_str(&episode.id).unwrap(),
             delta_seconds: 90,
             start_position: 0,
             end_position: 90,
@@ -459,7 +460,7 @@ mod tests {
                 )
                 .unwrap();
             let episode = insert_episode(
-                podcast.id,
+                &podcast.id,
                 &format!("stats-min-top-limit-episode-{i}-{unique}"),
                 &format!("stats-min-top-limit-guid-{i}-{unique}"),
                 "Stats Min Top Limit Episode",
@@ -469,8 +470,8 @@ mod tests {
                 user_id,
                 device: "webview".to_string(),
                 podcast_episode_id: episode.episode_id,
-                podcast_id: podcast.id,
-                podcast_episode_db_id: episode.id,
+                podcast_id: uuid::Uuid::parse_str(&podcast.id).unwrap(),
+                podcast_episode_db_id: uuid::Uuid::parse_str(&episode.id).unwrap(),
                 delta_seconds: 30 + (i * 10),
                 start_position: 0,
                 end_position: 40,
@@ -510,7 +511,7 @@ mod tests {
         )
         .unwrap();
         let episode = insert_episode(
-            podcast.id,
+            &podcast.id,
             &format!("stats-rewrite-episode-{unique}"),
             &format!("stats-rewrite-guid-{unique}"),
             "Stats Rewrite Episode",
@@ -521,8 +522,8 @@ mod tests {
             user_id,
             device: "webview".to_string(),
             podcast_episode_id: episode.episode_id,
-            podcast_id: podcast.id,
-            podcast_episode_db_id: episode.id,
+            podcast_id: uuid::Uuid::parse_str(&podcast.id).unwrap(),
+            podcast_episode_db_id: uuid::Uuid::parse_str(&episode.id).unwrap(),
             delta_seconds: 42,
             start_position: 0,
             end_position: 42,

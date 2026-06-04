@@ -250,7 +250,7 @@ pub async fn post_sync_devices(
             sync_groups.retain(|g| !group.contains(&g.device_id));
             for device_id in group {
                 sync_groups.push(DeviceSyncGroup {
-                    id: 0,
+                    id: podfetch_domain::ids::new_id(),
                     user_id: flag.user_id,
                     group_id,
                     device_id: device_id.clone(),

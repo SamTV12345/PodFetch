@@ -47,7 +47,8 @@ impl StatsApplicationService for StatsService {
             .map(|event| i64::from(event.delta_seconds))
             .sum::<i64>();
 
-        let mut podcast_aggregation: HashMap<i32, (i64, HashSet<i32>)> = HashMap::new();
+        let mut podcast_aggregation: HashMap<uuid::Uuid, (i64, HashSet<uuid::Uuid>)> =
+            HashMap::new();
         let mut weekday_seconds = [0i64; 7];
 
         for event in events {
@@ -70,15 +71,15 @@ impl StatsApplicationService for StatsService {
         let podcasts = crate::services::podcast::service::PodcastService::get_all_podcasts_raw()?;
         let podcast_index = podcasts
             .into_iter()
-            .map(|podcast| (podcast.id, podcast))
-            .collect::<HashMap<_, _>>();
+            .map(|podcast| (podcast.id.clone(), podcast))
+            .collect::<HashMap<String, _>>();
 
         let mut top_podcasts = podcast_aggregation
             .into_iter()
             .map(|(podcast_id, (seconds, episodes))| {
-                let podcast = podcast_index.get(&podcast_id);
+                let podcast = podcast_index.get(&podcast_id.to_string());
                 TopPodcastStats {
-                    podcast_id,
+                    podcast_id: podcast_id.to_string(),
                     podcast_name: podcast
                         .map(|podcast| podcast.name.clone())
                         .unwrap_or_else(|| "Unknown Podcast".to_string()),

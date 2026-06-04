@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::fmt::Formatter;
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, ToSchema)]
 #[serde(rename_all = "lowercase")]
@@ -41,4 +42,5 @@ impl Role {
 }
 
 pub const STANDARD_USER: &str = "user123";
-pub const STANDARD_USER_ID: i32 = 9999;
+/// Fixed identity for the no-auth standard admin user. Stable across installs.
+pub const STANDARD_USER_ID: Uuid = Uuid::from_u128(0x00000000_0000_7000_8000_000000009999);

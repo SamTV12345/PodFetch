@@ -241,7 +241,7 @@ mod tests {
     #[test]
     #[serial]
     fn test_create_session_cookie() {
-        let session = Session::new("test".to_string(), 1);
+        let session = Session::new("test".to_string(), podfetch_domain::ids::new_id());
         let cookie = create_session_cookie(session.clone());
 
         let cookie = cookie.get("sessionid").unwrap();

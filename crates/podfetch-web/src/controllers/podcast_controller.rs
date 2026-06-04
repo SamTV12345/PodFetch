@@ -1,5 +1,6 @@
 use crate::app_state::AppState;
 use crate::controllers::controller_utils::{get_default_image, unwrap_string};
+use crate::controllers::id_resolver::{ResolvedId, parse_resolved_id};
 use crate::services::podcast::service::PodcastService;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use async_recursion::async_recursion;
@@ -30,7 +31,7 @@ pub use crate::podcast::{
 };
 use crate::podcast::{
     build_podcast_search_plan, check_podcast_add_permission, ensure_podindex_configured,
-    ensure_proxy_api_access, map_podcast_error, map_proxy_podcast_error, parse_podcast_id,
+    ensure_proxy_api_access, map_podcast_error, map_proxy_podcast_error,
     parse_search_type, require_admin, require_privileged, require_proxy_episode,
     sanitize_proxy_request_headers, spawn_podindex_download,
 };
@@ -46,6 +47,20 @@ use podfetch_persistence::db::database;
 use podfetch_persistence::podcast::DieselPodcastRepository;
 use reqwest::header::HeaderMap as ReqwestHeaderMap;
 use tokio::runtime::Runtime;
+
+/// Resolve a `{id}` podcast path segment (UUID or legacy integer) to the
+/// loaded podcast, returning the canonical `Uuid` alongside it.
+fn resolve_podcast(
+    id: &str,
+) -> Result<(uuid::Uuid, podfetch_persistence::podcast::PodcastEntity), CustomError> {
+    let podcast = match parse_resolved_id(id)? {
+        ResolvedId::Uuid(uuid) => PodcastService::get_podcast(uuid)?,
+        ResolvedId::Legacy(legacy) => PodcastService::get_podcast_by_legacy_id(legacy)?,
+    };
+    let uuid = uuid::Uuid::parse_str(&podcast.id)
+        .map_err(|_| CustomErrorInner::NotFound(ErrorSeverity::Warning))?;
+    Ok((uuid, podcast))
+}
 
 #[utoipa::path(
 get,
@@ -75,11 +90,20 @@ Vec<PodcastDto>)),
     tag="podcasts"
 )]
 pub async fn search_podcast_of_episode(
-    Path(id): Path<i32>,
+    Path(id): Path<String>,
     headers: HeaderMap,
 ) -> Result<Json<PodcastDto>, CustomError> {
     let server_url = resolve_server_url_from_headers(&headers);
-    let podcast = PodcastService::get_podcast_by_episode_id(id)?;
+    let podcast = match parse_resolved_id(&id)? {
+        ResolvedId::Uuid(uuid) => PodcastService::get_podcast_by_episode_id(uuid)?,
+        ResolvedId::Legacy(legacy) => {
+            let episode = PodcastEpisodeService::get_podcast_episode_by_legacy_id(legacy)?
+                .ok_or_else(|| CustomErrorInner::NotFound(ErrorSeverity::Warning))?;
+            let episode_uuid = uuid::Uuid::parse_str(&episode.id)
+                .map_err(|_| CustomErrorInner::NotFound(ErrorSeverity::Warning))?;
+            PodcastService::get_podcast_by_episode_id(episode_uuid)?
+        }
+    };
     let dto = map_podcast_to_dto(podcast.into(), &server_url);
     Ok(Json(dto))
 }
@@ -145,12 +169,11 @@ pub async fn find_podcast_by_id(
     Extension(user): Extension<User>,
     headers: HeaderMap,
 ) -> Result<Json<PodcastDto>, CustomError> {
-    let id_num = parse_podcast_id::<CustomError>(&id).map_err(map_podcast_error)?;
     let server_url = resolve_server_url_from_headers(&headers);
 
-    let podcast = PodcastService::get_podcast(id_num)?;
-    let tags = state.tag_service.get_tags_of_podcast(id_num, user.id)?;
-    let favorite = PodcastService::get_favorite_state(user.id, id_num)?;
+    let (podcast_uuid, podcast) = resolve_podcast(&id)?;
+    let tags = state.tag_service.get_tags_of_podcast(podcast_uuid, user.id)?;
+    let favorite = PodcastService::get_favorite_state(user.id, podcast_uuid)?;
     let podcast_dto = map_podcast_with_context_to_dto(podcast.into(), favorite, tags, &user, &server_url);
     Ok(Json(podcast_dto))
 }
@@ -481,8 +504,7 @@ pub async fn download_podcast(
 ) -> Result<impl IntoResponse, CustomError> {
     require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
 
-    let id_num = parse_podcast_id::<CustomError>(&id).map_err(map_podcast_error)?;
-    let podcast = PodcastService::get_podcast_by_id(id_num);
+    let (_podcast_uuid, podcast) = resolve_podcast(&id)?;
     thread::spawn(move || {
         match PodcastService::refresh_podcast(&podcast) {
             Ok(_) => {
@@ -515,7 +537,8 @@ pub async fn favorite_podcast(
     requester: Extension<User>,
     update_model: Json<PodcastFavorUpdateModel>,
 ) -> Result<StatusCode, CustomError> {
-    PodcastService::update_favor_podcast(update_model.id, update_model.favored, requester.id)?;
+    let (podcast_uuid, _) = resolve_podcast(&update_model.id)?;
+    PodcastService::update_favor_podcast(podcast_uuid, update_model.favored, requester.id)?;
     Ok(StatusCode::OK)
 }
 
@@ -528,17 +551,17 @@ responses(
 tag="podcasts"
 )]
 pub async fn update_name_of_podcast(
-    Path(id): Path<i32>,
+    Path(id): Path<String>,
     Extension(requester): Extension<User>,
     req: Json<PodcastUpdateNameRequest>,
 ) -> Result<StatusCode, CustomError> {
     require_admin::<CustomError>(requester.is_admin()).map_err(map_podcast_error)?;
-    let found_podcast = match PodcastService::get_podcast(id) {
+    let (podcast_uuid, _found_podcast) = match resolve_podcast(&id) {
         Ok(p) => Ok(p),
         Err(..) => Err(CustomErrorInner::NotFound(ErrorSeverity::Debug)),
     }?;
 
-    PodcastService::update_podcast_name(found_podcast.id, &req.name)?;
+    PodcastService::update_podcast_name(podcast_uuid, &req.name)?;
 
     Ok(StatusCode::OK)
 }
@@ -573,13 +596,13 @@ pub async fn update_active_podcast(
 ) -> Result<StatusCode, CustomError> {
     require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
 
-    let id_num = parse_podcast_id::<CustomError>(&id).map_err(map_podcast_error)?;
-    PodcastService::update_active_podcast(id_num)?;
+    let (podcast_uuid, _) = resolve_podcast(&id)?;
+    PodcastService::update_active_podcast(podcast_uuid)?;
     Ok(StatusCode::OK)
 }
 
 #[async_recursion(?Send)]
-async fn insert_outline(podcast: Outline, mut rng: ThreadRng, added_by: Option<i32>) {
+async fn insert_outline(podcast: Outline, mut rng: ThreadRng, added_by: Option<uuid::Uuid>) {
     if !podcast.outlines.is_empty() {
         for outline_nested in podcast.clone().outlines {
             insert_outline(outline_nested, rng.clone(), added_by).await;
@@ -667,13 +690,13 @@ tag="podcasts"
 )]
 pub async fn delete_podcast(
     State(state): State<AppState>,
-    Path(id): Path<i32>,
+    Path(id): Path<String>,
     Extension(requester): Extension<User>,
     Json(data): Json<DeletePodcast>,
 ) -> Result<StatusCode, CustomError> {
     require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
 
-    let podcast = PodcastService::get_podcast(id)?;
+    let (podcast_uuid, podcast) = resolve_podcast(&id)?;
     if data.delete_files {
         spawn_blocking(move || FileService::delete_podcast_files(&podcast))
             .await
@@ -682,11 +705,11 @@ pub async fn delete_podcast(
         files",
             );
     }
-    WatchtimeService::delete_watchtime(id)?;
-    PodcastEpisodeService::delete_episodes_of_podcast(id)?;
-    state.tag_service.delete_podcast_tags(id)?;
+    WatchtimeService::delete_watchtime(podcast_uuid)?;
+    PodcastEpisodeService::delete_episodes_of_podcast(podcast_uuid)?;
+    state.tag_service.delete_podcast_tags(podcast_uuid)?;
 
-    PodcastService::delete_podcast(id)?;
+    PodcastService::delete_podcast(podcast_uuid)?;
     Ok(StatusCode::OK)
 }
 use axum::response::Response;
@@ -788,12 +811,13 @@ pub(crate) async fn proxy_podcast_with_path_api_key(
 )]
 pub async fn update_podcast_settings(
     State(state): State<AppState>,
-    Path(id_num): Path<i32>,
+    Path(id): Path<String>,
     Extension(requester): Extension<User>,
     Json(mut settings): Json<PodcastSetting>,
 ) -> Result<Json<PodcastSetting>, CustomError> {
     require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
-    settings.podcast_id = id_num;
+    let (podcast_uuid, _) = resolve_podcast(&id)?;
+    settings.podcast_id = podcast_uuid.to_string();
     let updated_podcast = state.podcast_settings_service.update_settings(settings)?;
 
     Ok(Json(updated_podcast))
@@ -808,11 +832,12 @@ pub async fn update_podcast_settings(
 )]
 pub async fn get_podcast_settings(
     State(state): State<AppState>,
-    Path(id): Path<i32>,
+    Path(id): Path<String>,
     Extension(requester): Extension<User>,
 ) -> Result<Json<PodcastSetting>, CustomError> {
     require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
-    let settings = state.podcast_settings_service.get_settings(id)?;
+    let (podcast_uuid, _) = resolve_podcast(&id)?;
+    let settings = state.podcast_settings_service.get_settings(podcast_uuid)?;
 
     match settings {
         None => Err(CustomErrorInner::NotFound(Debug).into()),
@@ -839,7 +864,7 @@ pub async fn retrieve_podcast_sample_format(
         explicit: "false".to_string(),
     };
     let settings = Setting {
-        id: 0,
+        id: uuid::Uuid::nil().to_string(),
         auto_download: false,
         auto_update: false,
         auto_cleanup: false,
@@ -981,7 +1006,9 @@ pub mod tests {
             .await;
         assert_eq!(resp.status_code(), 200);
         assert_eq!(
-            crate::services::podcast::service::PodcastService::get_podcast(saved_podcast.id)
+            crate::services::podcast::service::PodcastService::get_podcast(
+                uuid::Uuid::parse_str(&saved_podcast.id).unwrap()
+            )
                 .unwrap()
                 .name,
             "New Podcast Name"
@@ -1098,7 +1125,9 @@ pub mod tests {
         assert_eq!(resp.status_code(), 200);
 
         let persisted =
-            crate::services::podcast::service::PodcastService::get_podcast(saved_podcast.id)
+            crate::services::podcast::service::PodcastService::get_podcast(
+                uuid::Uuid::parse_str(&saved_podcast.id).unwrap()
+            )
                 .unwrap();
         assert_eq!(persisted.name, original_name);
     }
@@ -1169,7 +1198,7 @@ pub mod tests {
             .unwrap();
 
         let update_payload = PodcastSetting {
-            podcast_id: 0,
+            podcast_id: saved_podcast.id.clone(),
             episode_numbering: true,
             auto_download: true,
             auto_update: false,
@@ -1362,7 +1391,7 @@ pub mod tests {
 
         let delete_podcast_result = super::delete_podcast(
             State(app_state()),
-            Path(1),
+            Path("1".to_string()),
             Extension(non_privileged.clone()),
             Json(super::DeletePodcast {
                 delete_files: false,
@@ -1376,7 +1405,7 @@ pub mod tests {
 
         let update_settings_result = super::update_podcast_settings(
             State(app_state()),
-            Path(1),
+            Path("1".to_string()),
             Extension(non_privileged.clone()),
             Json(PodcastSetting::default()),
         )
@@ -1387,7 +1416,7 @@ pub mod tests {
         }
 
         let get_settings_result =
-            super::get_podcast_settings(State(app_state()), Path(1), Extension(non_privileged))
+            super::get_podcast_settings(State(app_state()), Path("1".to_string()), Extension(non_privileged))
                 .await;
         match get_settings_result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),

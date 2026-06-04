@@ -31,7 +31,13 @@ pub async fn dismiss_notifications(
     State(state): State<AppState>,
     Json(id): Json<NotificationId>,
 ) -> Result<StatusCode, CustomError> {
-    notification::dismiss_notification(state.notification_service.as_ref(), id.id)?;
+    let notification_uuid = uuid::Uuid::parse_str(&id.id).map_err(|_| {
+        CustomError::from(common_infrastructure::error::CustomErrorInner::BadRequest(
+            "notification id must be a valid id".to_string(),
+            common_infrastructure::error::ErrorSeverity::Warning,
+        ))
+    })?;
+    notification::dismiss_notification(state.notification_service.as_ref(), notification_uuid)?;
     Ok(StatusCode::OK)
 }
 
@@ -108,7 +114,7 @@ mod tests {
         assert!(before.status_code().is_success());
         let unread_before = before.json::<Vec<Notification>>();
         assert_eq!(unread_before.len(), 1);
-        let notification_id = unread_before[0].id;
+        let notification_id = unread_before[0].id.clone();
 
         let dismiss_response = test_server
             .test_server
@@ -188,7 +194,7 @@ mod tests {
         let test_server = handle_test_startup().await;
 
         NotificationService::create_notification(Notification {
-            id: 0,
+            id: String::new(),
             type_of_message: "Download".to_string(),
             message: "should-be-returned".to_string(),
             created_at: "2026-03-14 10:00:00".to_string(),
@@ -196,7 +202,7 @@ mod tests {
         })
         .unwrap();
         NotificationService::create_notification(Notification {
-            id: 0,
+            id: String::new(),
             type_of_message: "Download".to_string(),
             message: "should-be-filtered".to_string(),
             created_at: "2026-03-14 11:00:00".to_string(),
@@ -221,7 +227,7 @@ mod tests {
         let test_server = handle_test_startup().await;
 
         NotificationService::create_notification(Notification {
-            id: 0,
+            id: String::new(),
             type_of_message: "Download".to_string(),
             message: "older-message".to_string(),
             created_at: "2026-03-14 08:00:00".to_string(),
@@ -229,7 +235,7 @@ mod tests {
         })
         .unwrap();
         NotificationService::create_notification(Notification {
-            id: 0,
+            id: String::new(),
             type_of_message: "Download".to_string(),
             message: "newer-message".to_string(),
             created_at: "2026-03-14 12:00:00".to_string(),
@@ -263,7 +269,7 @@ mod tests {
             .await
             .json::<Vec<Notification>>();
         assert_eq!(unread_before.len(), 1);
-        let notification_id = unread_before[0].id;
+        let notification_id = unread_before[0].id.clone();
 
         let first_dismiss = test_server
             .test_server

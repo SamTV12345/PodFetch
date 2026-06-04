@@ -35,6 +35,13 @@ use std::time::Duration as StdDuration;
 pub struct DownloadService {}
 const DEFAULT_FALLBACK_IMAGE_BYTES: &[u8] = include_bytes!("../../../../../ui/public/default.jpg");
 
+/// Parse a stored podfetch id (entity rows carry the canonical UUID as a
+/// `String`) into a `Uuid`.
+fn parse_id(id: &str) -> Result<uuid::Uuid, CustomError> {
+    uuid::Uuid::parse_str(id)
+        .map_err(|_| CustomErrorInner::NotFound(ErrorSeverity::Warning).into())
+}
+
 impl DownloadService {
     pub fn is_default_fallback_image_url(url: &str) -> bool {
         let trimmed = url.trim();
@@ -199,7 +206,7 @@ impl DownloadService {
             .get_settings()?
             .unwrap();
         let podcast_settings_override =
-            PodcastSettingsService::get_settings_for_podcast(podcast.id)?;
+            PodcastSettingsService::get_settings_for_podcast(parse_id(&podcast.id)?)?;
         let use_one_cover_for_all_episodes = podcast_settings_override
             .as_ref()
             .map(|s| s.use_one_cover_for_all_episodes)
@@ -455,10 +462,11 @@ impl DownloadService {
 
         let index = PodcastEpisodeService::get_position_of_episode(
             &podcast_episode.date_of_recording,
-            podcast_episode.podcast_id,
+            parse_id(&podcast_episode.podcast_id)?,
         )?;
 
-        let settings_for_podcast = PodcastSettingsService::get_settings_for_podcast(podcast.id)?;
+        let settings_for_podcast =
+            PodcastSettingsService::get_settings_for_podcast(parse_id(&podcast.id)?)?;
 
         if let Some(settings_for_podcast) = settings_for_podcast {
             if settings_for_podcast.episode_numbering {
@@ -507,7 +515,7 @@ impl DownloadService {
         }
 
         let track_number = PodcastEpisodeService::get_track_number_for_episode(
-            podcast.id,
+            parse_id(&podcast.id)?,
             &podcast_episode.date_of_recording,
         );
 
@@ -548,7 +556,7 @@ impl DownloadService {
 
                 tag.set_comment(&podcast_episode.description);
                 let track_number = PodcastEpisodeService::get_track_number_for_episode(
-                    podcast.id,
+                    parse_id(&podcast.id)?,
                     &podcast_episode.date_of_recording,
                 );
 
@@ -707,7 +715,8 @@ mod tests {
 
     fn make_podcast() -> Podcast {
         Podcast {
-            id: 1,
+            id: uuid::Uuid::nil().to_string(),
+            legacy_id: None,
             name: "p".into(),
             directory_id: "1".into(),
             rssfeed: "https://x".into(),

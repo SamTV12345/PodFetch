@@ -2,6 +2,9 @@
 
 use crate::app_state::AppState;
 use crate::audiobookshelf_api::auth_middleware::AuthenticatedUser;
+use crate::audiobookshelf_api::id_resolution::{
+    LibraryItemKind, resolve_episode, resolve_podcast_library_item,
+};
 use crate::audiobookshelf_api::dto::playback_session::{
     AudioTrackMetadataDto, PlayRequestBody, PlaybackAudioTrackDto, PlaybackSessionDto,
     SyncRequestBody,
@@ -74,18 +77,16 @@ async fn start_session(
     episode_id: Option<&str>,
     _body: Option<PlayRequestBody>,
 ) -> Result<Json<PlaybackSessionDto>, CustomError> {
-    let parsed_item = LibraryItemId::parse(item_id)
-        .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
-
-    if let LibraryItemId::Book(_) = parsed_item {
-        return start_book_session(state, user, item_id, _body).await;
+    match LibraryItemKind::classify(item_id) {
+        LibraryItemKind::Book => return start_book_session(state, user, item_id, _body).await,
+        LibraryItemKind::Unknown => return Err(CustomErrorInner::NotFound(Debug).into()),
+        LibraryItemKind::Podcast => {}
     }
-    let LibraryItemId::Podcast(podcast_id) = parsed_item else {
-        return Err(CustomErrorInner::NotFound(Debug).into());
-    };
-    let ep_id_value = episode_id
-        .and_then(EpisodeId::parse)
-        .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
+    // Accept legacy `li_pod_{int}` / `ep_{int}` as well as the UUID forms.
+    let podcast_id = resolve_podcast_library_item(item_id)?;
+    let episode_uuid = episode_id
+        .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))
+        .and_then(resolve_episode)?;
 
     let podcast: podfetch_domain::podcast::Podcast =
         PodcastService::get_podcast(podcast_id)?.into();
@@ -96,9 +97,16 @@ async fn start_session(
             .collect();
     let episode = episodes
         .iter()
-        .find(|e| e.id == ep_id_value.0)
+        .find(|e| e.id == episode_uuid)
         .cloned()
         .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
+
+    // Store + emit the canonical UUID-form item id, never the (possibly
+    // legacy) wire id the client sent. The session's `library_item_id` is
+    // later re-parsed by the streaming endpoints with the UUID-only
+    // `LibraryItemId::parse`, so it must be UUID-shaped.
+    let canonical_item_id = LibraryItemId::Podcast(podcast_id).as_string();
+    let item_id = canonical_item_id.as_str();
 
     let library = state
         .audiobookshelf_library_service

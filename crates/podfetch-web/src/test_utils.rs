@@ -8,7 +8,7 @@ pub mod test {
 
     pub fn create_random_user() -> User {
         User::new(
-            0,
+            podfetch_domain::ids::new_id(),
             "testuser",
             Role::User,
             Some(digest("testuser")),

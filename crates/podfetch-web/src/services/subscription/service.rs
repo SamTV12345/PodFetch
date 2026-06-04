@@ -6,6 +6,7 @@ use chrono::DateTime;
 use common_infrastructure::error::CustomError;
 use podfetch_domain::subscription::SubscriptionRepository;
 use std::sync::Arc;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct SubscriptionService {
@@ -17,14 +18,14 @@ impl SubscriptionService {
         Self { repository }
     }
 
-    pub fn delete_by_user_id(&self, user_id: i32) -> Result<(), CustomError> {
+    pub fn delete_by_user_id(&self, user_id: Uuid) -> Result<(), CustomError> {
         self.repository.delete_by_user_id(user_id)
     }
 
     pub fn get_device_subscriptions(
         &self,
         device_id: &str,
-        user_id: i32,
+        user_id: Uuid,
         since: i32,
     ) -> Result<SubscriptionChangesToClient, CustomError> {
         let timestamp = common_infrastructure::time::get_current_timestamp();
@@ -37,7 +38,7 @@ impl SubscriptionService {
 
     pub fn get_user_subscriptions(
         &self,
-        user_id: i32,
+        user_id: Uuid,
         since: i32,
     ) -> Result<SubscriptionModelChanges, CustomError> {
         let timestamp = common_infrastructure::time::get_current_timestamp();
@@ -50,7 +51,7 @@ impl SubscriptionService {
     pub fn update_subscriptions(
         &self,
         device_id: &str,
-        user_id: i32,
+        user_id: Uuid,
         request: SubscriptionUpdateRequest,
     ) -> Result<Vec<Vec<String>>, CustomError> {
         self.repository
@@ -60,7 +61,7 @@ impl SubscriptionService {
     pub fn get_active_device_podcast_urls(
         &self,
         device_id: &str,
-        user_id: i32,
+        user_id: Uuid,
     ) -> Result<Vec<String>, CustomError> {
         self.repository
             .get_active_device_podcast_urls(device_id, user_id)
@@ -87,7 +88,7 @@ impl SubscriptionApplicationService for SubscriptionService {
     fn get_device_subscriptions(
         &self,
         device_id: &str,
-        user_id: i32,
+        user_id: Uuid,
         since: i32,
     ) -> Result<SubscriptionChangesToClient, Self::Error> {
         self.get_device_subscriptions(device_id, user_id, since)
@@ -95,7 +96,7 @@ impl SubscriptionApplicationService for SubscriptionService {
 
     fn get_user_subscriptions(
         &self,
-        user_id: i32,
+        user_id: Uuid,
         since: i32,
     ) -> Result<SubscriptionModelChanges, Self::Error> {
         self.get_user_subscriptions(user_id, since)
@@ -104,7 +105,7 @@ impl SubscriptionApplicationService for SubscriptionService {
     fn update_subscriptions(
         &self,
         device_id: &str,
-        user_id: i32,
+        user_id: Uuid,
         request: SubscriptionUpdateRequest,
     ) -> Result<Vec<Vec<String>>, Self::Error> {
         self.update_subscriptions(device_id, user_id, request)

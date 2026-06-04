@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::sync::RwLock;
 use tokio::sync::mpsc;
 use tracing::warn;
+use uuid::Uuid;
 
 /// Per-connection state held by the registry. The registry never owns the
 /// websocket directly — the WS task does — but it does own the sender half
@@ -10,7 +11,7 @@ use tracing::warn;
 #[derive(Debug)]
 pub struct AgentSessionHandle {
     pub agent_id: String,
-    pub user_id: i32,
+    pub user_id: Uuid,
     pub agent_version: String,
     sender: mpsc::Sender<ServerMsg>,
 }
@@ -18,7 +19,7 @@ pub struct AgentSessionHandle {
 impl AgentSessionHandle {
     pub fn new(
         agent_id: String,
-        user_id: i32,
+        user_id: Uuid,
         agent_version: String,
         sender: mpsc::Sender<ServerMsg>,
     ) -> Self {
@@ -101,7 +102,7 @@ mod tests {
     fn make_handle(agent_id: &str) -> (AgentSessionHandle, mpsc::Receiver<ServerMsg>) {
         let (tx, rx) = mpsc::channel(8);
         (
-            AgentSessionHandle::new(agent_id.into(), 1, "0.1.0".into(), tx),
+            AgentSessionHandle::new(agent_id.into(), podfetch_domain::ids::new_id(), "0.1.0".into(), tx),
             rx,
         )
     }

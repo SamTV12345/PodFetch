@@ -67,6 +67,8 @@ impl EpisodeRescanService {
         let Some(current_audio_path) = episode.file_episode_path.clone() else {
             return Ok(());
         };
+        let podcast_uuid = uuid::Uuid::parse_str(&episode.podcast_id)
+            .map_err(|_| CustomError::from(CustomErrorInner::NotFound(ErrorSeverity::Warning)))?;
 
         let download_location =
             FileHandlerType::from(episode.download_location.as_deref().unwrap_or("Local"));
@@ -92,7 +94,7 @@ impl EpisodeRescanService {
             // accumulate dead directories.
             if opts.apply_filenames && download_location == FileHandlerType::Local {
                 let podcast_root =
-                    PodcastService::get_podcast_by_id(episode.podcast_id).directory_name;
+                    PodcastService::get_podcast_by_id(podcast_uuid).directory_name;
                 if let Some(parent) = Path::new(&current_audio_path).parent()
                     && let Some(parent_str) = parent.to_str()
                 {
@@ -102,7 +104,7 @@ impl EpisodeRescanService {
             return Ok(());
         }
 
-        let podcast = PodcastService::get_podcast_by_id(episode.podcast_id);
+        let podcast = PodcastService::get_podcast_by_id(podcast_uuid);
         let settings =
             SettingsService::shared()
                 .get_settings()?
@@ -494,7 +496,8 @@ mod tests {
 
     fn make_podcast(image_url: &str, directory_name: &str) -> Podcast {
         Podcast {
-            id: 1,
+            id: uuid::Uuid::nil().to_string(),
+            legacy_id: None,
             name: "p".into(),
             directory_id: "1".into(),
             rssfeed: "https://x".into(),

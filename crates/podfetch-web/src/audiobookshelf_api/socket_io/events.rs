@@ -191,7 +191,7 @@ mod tests {
             .unwrap()
             .naive_utc();
         User {
-            id: 7,
+            id: uuid::Uuid::from_u128(7),
             username: "sam".to_string(),
             role: "admin".to_string(),
             password: None,
@@ -210,7 +210,7 @@ mod tests {
             .naive_utc();
         MediaProgress {
             id: "li_pod_42-ep_7".to_string(),
-            user_id: 7,
+            user_id: uuid::Uuid::from_u128(7),
             library_item_id: "li_pod_42".to_string(),
             episode_id: Some("ep_7".to_string()),
             media_type: "podcast".to_string(),

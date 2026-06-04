@@ -9,7 +9,8 @@ pub mod tests {
     #[derive(Default, Builder, Debug)]
     #[builder(setter(into), default)]
     pub struct PodcastTestData {
-        pub id: i32,
+        pub id: String,
+        pub legacy_id: Option<i64>,
         pub name: String,
         pub directory_id: String,
         pub rssfeed: String,
@@ -25,7 +26,7 @@ pub mod tests {
         pub directory_name: String,
         pub download_location: Option<String>,
         pub guid: Option<String>,
-        pub added_by: Option<i32>,
+        pub added_by: Option<String>,
     }
 
     impl PodcastTestData {
@@ -37,7 +38,8 @@ pub mod tests {
                 .join(",");
 
             PodcastTestData {
-                id: Faker.fake(),
+                id: podfetch_domain::ids::new_id().to_string(),
+                legacy_id: None,
                 name: Faker.fake(),
                 directory_id: Faker.fake(),
                 rssfeed: Faker.fake(),
@@ -60,6 +62,7 @@ pub mod tests {
         pub fn build(self) -> Podcast {
             Podcast {
                 id: self.id,
+                legacy_id: self.legacy_id,
                 name: self.name,
                 directory_id: self.directory_id,
                 rssfeed: self.rssfeed,
@@ -84,6 +87,7 @@ pub mod tests {
         fn from(value: PodcastTestData) -> Self {
             Podcast {
                 id: value.id,
+                legacy_id: value.legacy_id,
                 name: value.name,
                 directory_id: value.directory_id,
                 keywords: value.keywords,

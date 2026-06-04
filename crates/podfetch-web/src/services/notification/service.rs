@@ -33,7 +33,11 @@ impl NotificationService {
             .map(|notifications| notifications.into_iter().map(Into::into).collect())
     }
 
-    pub fn update_status_of_notification(&self, id: i32, status: &str) -> Result<(), CustomError> {
+    pub fn update_status_of_notification(
+        &self,
+        id: uuid::Uuid,
+        status: &str,
+    ) -> Result<(), CustomError> {
         self.repository.update_status_of_notification(id, status)
     }
 }
@@ -45,7 +49,7 @@ impl NotificationApplicationService for NotificationService {
         self.get_unread_notifications()
     }
 
-    fn dismiss_notification(&self, id: i32) -> Result<(), Self::Error> {
+    fn dismiss_notification(&self, id: uuid::Uuid) -> Result<(), Self::Error> {
         self.update_status_of_notification(id, "dismissed")
     }
 }

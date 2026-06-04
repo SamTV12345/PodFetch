@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, ToSchema)]
 pub enum Color {
@@ -22,7 +23,7 @@ impl std::fmt::Display for Color {
 pub struct Tag {
     pub id: String,
     pub name: String,
-    pub user_id: i32,
+    pub user_id: String,
     pub description: Option<String>,
     pub created_at: chrono::NaiveDateTime,
     pub color: String,
@@ -33,7 +34,7 @@ impl From<podfetch_domain::tag::Tag> for Tag {
         Self {
             id: value.id,
             name: value.name,
-            user_id: value.user_id,
+            user_id: value.user_id.to_string(),
             description: value.description,
             created_at: value.created_at,
             color: value.color,
@@ -44,14 +45,14 @@ impl From<podfetch_domain::tag::Tag> for Tag {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, ToSchema)]
 pub struct TagsPodcast {
     pub tag_id: String,
-    pub podcast_id: i32,
+    pub podcast_id: String,
 }
 
 impl From<podfetch_domain::tag::TagsPodcast> for TagsPodcast {
     fn from(value: podfetch_domain::tag::TagsPodcast) -> Self {
         Self {
             tag_id: value.tag_id,
-            podcast_id: value.podcast_id,
+            podcast_id: value.podcast_id.to_string(),
         }
     }
 }
@@ -68,30 +69,30 @@ pub trait TagsApplicationService {
 
     fn create_tag(
         &self,
-        user_id: i32,
+        user_id: Uuid,
         name: String,
         description: Option<String>,
         color: String,
     ) -> Result<Tag, Self::Error>;
-    fn get_tags(&self, user_id: i32) -> Result<Vec<Tag>, Self::Error>;
-    fn update_tag(&self, user_id: i32, tag_id: &str, update: TagCreate)
+    fn get_tags(&self, user_id: Uuid) -> Result<Vec<Tag>, Self::Error>;
+    fn update_tag(&self, user_id: Uuid, tag_id: &str, update: TagCreate)
     -> Result<Tag, Self::Error>;
-    fn delete_tag(&self, user_id: i32, tag_id: &str) -> Result<(), Self::Error>;
+    fn delete_tag(&self, user_id: Uuid, tag_id: &str) -> Result<(), Self::Error>;
     fn add_podcast_to_tag(
         &self,
-        user_id: i32,
+        user_id: Uuid,
         tag_id: &str,
-        podcast_id: i32,
+        podcast_id: Uuid,
     ) -> Result<TagsPodcast, Self::Error>;
     fn delete_podcast_from_tag(
         &self,
-        user_id: i32,
+        user_id: Uuid,
         tag_id: &str,
-        podcast_id: i32,
+        podcast_id: Uuid,
     ) -> Result<(), Self::Error>;
 }
 
-pub fn create_tag<S>(service: &S, user_id: i32, payload: TagCreate) -> Result<Tag, S::Error>
+pub fn create_tag<S>(service: &S, user_id: Uuid, payload: TagCreate) -> Result<Tag, S::Error>
 where
     S: TagsApplicationService,
 {
@@ -103,7 +104,7 @@ where
     )
 }
 
-pub fn get_tags<S>(service: &S, user_id: i32) -> Result<Vec<Tag>, S::Error>
+pub fn get_tags<S>(service: &S, user_id: Uuid) -> Result<Vec<Tag>, S::Error>
 where
     S: TagsApplicationService,
 {
@@ -112,7 +113,7 @@ where
 
 pub fn update_tag<S>(
     service: &S,
-    user_id: i32,
+    user_id: Uuid,
     tag_id: &str,
     payload: TagCreate,
 ) -> Result<Tag, S::Error>
@@ -122,7 +123,7 @@ where
     service.update_tag(user_id, tag_id, payload)
 }
 
-pub fn delete_tag<S>(service: &S, user_id: i32, tag_id: &str) -> Result<(), S::Error>
+pub fn delete_tag<S>(service: &S, user_id: Uuid, tag_id: &str) -> Result<(), S::Error>
 where
     S: TagsApplicationService,
 {
@@ -131,9 +132,9 @@ where
 
 pub fn add_podcast_to_tag<S>(
     service: &S,
-    user_id: i32,
+    user_id: Uuid,
     tag_id: &str,
-    podcast_id: i32,
+    podcast_id: Uuid,
 ) -> Result<TagsPodcast, S::Error>
 where
     S: TagsApplicationService,
@@ -143,9 +144,9 @@ where
 
 pub fn delete_podcast_from_tag<S>(
     service: &S,
-    user_id: i32,
+    user_id: Uuid,
     tag_id: &str,
-    podcast_id: i32,
+    podcast_id: Uuid,
 ) -> Result<(), S::Error>
 where
     S: TagsApplicationService,

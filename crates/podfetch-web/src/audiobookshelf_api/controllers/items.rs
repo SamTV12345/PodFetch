@@ -1,5 +1,8 @@
 use crate::app_state::AppState;
 use crate::audiobookshelf_api::auth_middleware::AuthenticatedUser;
+use crate::audiobookshelf_api::id_resolution::{
+    LibraryItemKind, resolve_episode_ino, resolve_podcast_library_item,
+};
 use crate::audiobookshelf_api::mapping::book::map_book;
 use crate::audiobookshelf_api::mapping::podcast::map_podcast;
 use crate::services::podcast::service::PodcastService;
@@ -11,7 +14,6 @@ use axum::response::{IntoResponse, Json, Response};
 use common_infrastructure::error::ErrorSeverity::Debug;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use podfetch_domain::audiobookshelf::library::MediaType;
-use podfetch_domain::audiobookshelf::library_item_id::LibraryItemId;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::path::PathBuf;
@@ -106,11 +108,10 @@ pub async fn get_library_item(
     _user: AuthenticatedUser,
     Path(id): Path<String>,
 ) -> Result<Json<Value>, CustomError> {
-    let parsed = LibraryItemId::parse(&id)
-        .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
-
-    match parsed {
-        LibraryItemId::Podcast(podcast_id) => {
+    match LibraryItemKind::classify(&id) {
+        LibraryItemKind::Podcast => {
+            // Accept legacy `li_pod_{int}` as well as `li_pod_{uuid}`.
+            let podcast_id = resolve_podcast_library_item(&id)?;
             let podcast_entity = PodcastService::get_podcast(podcast_id)?;
             let domain_podcast: podfetch_domain::podcast::Podcast = podcast_entity.into();
             let episodes: Vec<podfetch_domain::podcast_episode::PodcastEpisode> =
@@ -124,7 +125,7 @@ pub async fn get_library_item(
                 .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
             Ok(Json(map_podcast(&domain_podcast, &episodes, &library.id)))
         }
-        LibraryItemId::Book(_) => {
+        LibraryItemKind::Book => {
             let book = state
                 .audiobookshelf_book_service
                 .find_by_id(&id)?
@@ -132,6 +133,7 @@ pub async fn get_library_item(
             let aggregate = state.audiobookshelf_book_service.hydrate(book)?;
             Ok(Json(map_book(&aggregate)))
         }
+        LibraryItemKind::Unknown => Err(CustomErrorInner::NotFound(Debug).into()),
     }
 }
 
@@ -150,16 +152,15 @@ pub async fn get_item_cover(
     _user: AuthenticatedUser,
     Path(id): Path<String>,
 ) -> Result<Response, CustomError> {
-    let parsed = LibraryItemId::parse(&id)
-        .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
-
-    match parsed {
-        LibraryItemId::Podcast(pid) => {
+    match LibraryItemKind::classify(&id) {
+        LibraryItemKind::Podcast => {
+            // Accept legacy `li_pod_{int}` as well as `li_pod_{uuid}`.
+            let pid = resolve_podcast_library_item(&id)?;
             let podcast_entity = PodcastService::get_podcast(pid)?;
             let podcast: podfetch_domain::podcast::Podcast = podcast_entity.into();
             serve_podcast_cover(&podcast).await
         }
-        LibraryItemId::Book(_) => {
+        LibraryItemKind::Book => {
             let book = state
                 .audiobookshelf_book_service
                 .find_by_id(&id)?
@@ -172,6 +173,7 @@ pub async fn get_item_cover(
             }
             Err(CustomErrorInner::NotFound(Debug).into())
         }
+        LibraryItemKind::Unknown => Err(CustomErrorInner::NotFound(Debug).into()),
     }
 }
 
@@ -250,14 +252,12 @@ pub async fn get_item_file(
     Path((id, ino)): Path<(String, String)>,
     headers: HeaderMap,
 ) -> Result<Response, CustomError> {
-    let parsed = LibraryItemId::parse(&id)
-        .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
-    let local_path: PathBuf = match parsed {
-        LibraryItemId::Podcast(podcast_id) => {
-            let episode_db_id = ino
-                .strip_prefix("ino_ep_")
-                .and_then(|s| s.parse::<i32>().ok())
-                .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
+    let local_path: PathBuf = match LibraryItemKind::classify(&id) {
+        LibraryItemKind::Podcast => {
+            // Accept legacy `li_pod_{int}` + `ino_ep_{int}` as well as the
+            // UUID forms.
+            let podcast_id = resolve_podcast_library_item(&id)?;
+            let episode_db_id = resolve_episode_ino(&ino)?;
             let _ = PodcastService::get_podcast(podcast_id)?;
             let episode = PodcastEpisodeService::get_episodes_by_podcast_id(podcast_id)?
                 .into_iter()
@@ -291,7 +291,7 @@ pub async fn get_item_file(
                 }
             }
         }
-        LibraryItemId::Book(_) => {
+        LibraryItemKind::Book => {
             let book = state
                 .audiobookshelf_book_service
                 .find_by_id(&id)?
@@ -304,6 +304,7 @@ pub async fn get_item_file(
                 .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
             PathBuf::from(file.path.clone())
         }
+        LibraryItemKind::Unknown => return Err(CustomErrorInner::NotFound(Debug).into()),
     };
     crate::audiobookshelf_api::controllers::public_session::serve_file_with_range(
         &local_path,

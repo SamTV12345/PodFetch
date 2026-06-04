@@ -75,8 +75,14 @@ pub async fn start_cast_session(
     // Resolve the GUID-like string id used by the watchtime store. If
     // the episode isn't found we still allow the cast to start — the
     // session simply won't persist watchtime.
+    let episode_uuid = uuid::Uuid::parse_str(&req.episode_id).map_err(|_| {
+        CustomError::from(common_infrastructure::error::CustomErrorInner::BadRequest(
+            "episode id must be a valid id".to_string(),
+            common_infrastructure::error::ErrorSeverity::Warning,
+        ))
+    })?;
     let episode_string_id =
-        PodcastEpisodeUseCase::get_podcast_episode_by_internal_id(req.episode_id)?
+        PodcastEpisodeUseCase::get_podcast_episode_by_internal_id(episode_uuid)?
             .map(|e| e.episode_id);
 
     let media = CastMedia {
@@ -85,11 +91,11 @@ pub async fn start_cast_session(
         title: req.title,
         artwork_url: req.artwork_url,
         duration_secs: req.duration_secs,
-        episode_id: Some(req.episode_id),
+        episode_id: None,
     };
     let session = state
         .cast_orchestrator
-        .start(&user, &req.chromecast_uuid, media, episode_string_id)
+        .start(&user, &req.chromecast_uuid, media, Some(episode_uuid), episode_string_id)
         .await
         .map_err(CustomError::from)?;
     Ok(Json(CastSessionResponse::from_active(&session)))

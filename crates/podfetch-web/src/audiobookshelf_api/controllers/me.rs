@@ -2,12 +2,15 @@ use crate::app_state::AppState;
 use crate::audiobookshelf_api::auth_middleware::AuthenticatedUser;
 use crate::audiobookshelf_api::dto::media_progress::MediaProgressDto;
 use crate::audiobookshelf_api::dto::user::AbsUserDto;
+use crate::audiobookshelf_api::id_resolution::{
+    LibraryItemKind, resolve_episode, resolve_podcast_library_item,
+};
 use crate::audiobookshelf_api::socket_io::broadcaster;
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use chrono::{Datelike, Utc};
 use common_infrastructure::error::CustomError;
-use podfetch_domain::audiobookshelf::library_item_id::LibraryItemId;
+use podfetch_domain::audiobookshelf::library_item_id::{EpisodeId, LibraryItemId};
 use podfetch_domain::audiobookshelf::listening_session::ListeningSession;
 use podfetch_domain::audiobookshelf::media_progress::MediaProgress;
 use serde::Deserialize;
@@ -221,10 +224,33 @@ fn upsert_progress_from_payload(
     episode_id: Option<String>,
     payload: ProgressUpdatePayload,
 ) -> Result<MediaProgress, CustomError> {
-    // Validate the library_item_id shape so we don't store garbage.
-    let media_type = LibraryItemId::parse(library_item_id)
-        .map(|id| id.media_type_str().to_string())
-        .unwrap_or_else(|| "podcast".to_string());
+    // Classify the library_item_id shape so we don't store garbage and so we
+    // tag the row with the right mediaType.
+    let kind = LibraryItemKind::classify(library_item_id);
+    let media_type = kind.media_type_str().to_string();
+
+    // Normalize a (possibly legacy `li_pod_{int}` / `ep_{int}`) podcast id to
+    // its canonical UUID form before keying the progress row, so legacy and
+    // UUID clients converge on the same row and stay consistent with the
+    // session/streaming flow. Books / unknown ids are stored verbatim (no DB
+    // resolution exists). Resolution is best-effort: an id that doesn't
+    // resolve is stored as-sent rather than rejected (matches the lenient
+    // batch-update path).
+    let library_item_id: String = match kind {
+        LibraryItemKind::Podcast => match resolve_podcast_library_item(library_item_id) {
+            Ok(uuid) => LibraryItemId::Podcast(uuid).as_string(),
+            Err(_) => library_item_id.to_string(),
+        },
+        _ => library_item_id.to_string(),
+    };
+    let library_item_id = library_item_id.as_str();
+    let episode_id: Option<String> = match (kind, episode_id) {
+        (LibraryItemKind::Podcast, Some(ep)) => match resolve_episode(&ep) {
+            Ok(uuid) => Some(EpisodeId(uuid).as_string()),
+            Err(_) => Some(ep),
+        },
+        (_, other) => other,
+    };
 
     let now = Utc::now().naive_utc();
     let existing = state.audiobookshelf_media_progress_service.find(

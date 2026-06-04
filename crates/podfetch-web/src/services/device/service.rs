@@ -2,6 +2,7 @@ use crate::device::DeviceApplicationService;
 use common_infrastructure::error::CustomError;
 use podfetch_domain::device::{Device, DeviceRepository};
 use std::sync::Arc;
+use uuid::Uuid;
 
 pub struct DeviceService {
     repository: Arc<dyn DeviceRepository<Error = CustomError>>,
@@ -16,15 +17,15 @@ impl DeviceService {
         self.repository.create(device_to_safe)
     }
 
-    pub fn query_by_user_id(&self, user_id: i32) -> Result<Vec<Device>, CustomError> {
+    pub fn query_by_user_id(&self, user_id: Uuid) -> Result<Vec<Device>, CustomError> {
         self.repository.get_devices_of_user(user_id)
     }
 
-    pub fn delete_by_user_id(&self, user_id: i32) -> Result<(), CustomError> {
+    pub fn delete_by_user_id(&self, user_id: Uuid) -> Result<(), CustomError> {
         self.repository.delete_by_user_id(user_id)
     }
 
-    pub fn list_castable_for_user(&self, user_id: i32) -> Result<Vec<Device>, CustomError> {
+    pub fn list_castable_for_user(&self, user_id: Uuid) -> Result<Vec<Device>, CustomError> {
         self.repository.list_castable_for_user(user_id)
     }
 
@@ -39,7 +40,7 @@ impl DeviceService {
         &self,
         chromecast_uuid: &str,
         agent_id: &str,
-        owner_user_id: i32,
+        owner_user_id: Uuid,
         name: &str,
         ip: Option<&str>,
         last_seen_at: chrono::NaiveDateTime,
@@ -62,7 +63,7 @@ impl DeviceApplicationService for DeviceService {
         self.create(device)
     }
 
-    fn query_by_user_id(&self, user_id: i32) -> Result<Vec<Device>, Self::Error> {
+    fn query_by_user_id(&self, user_id: Uuid) -> Result<Vec<Device>, Self::Error> {
         self.query_by_user_id(user_id)
     }
 }

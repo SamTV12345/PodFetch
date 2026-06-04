@@ -70,7 +70,7 @@ impl UserOnboardingService {
         }
 
         let user = self.repository.create(ManagedUser {
-            id: 0,
+            id: podfetch_domain::ids::new_id(),
             username,
             role: invite.role,
             password: Some(digest(password)),

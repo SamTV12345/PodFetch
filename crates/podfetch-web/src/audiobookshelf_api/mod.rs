@@ -9,6 +9,7 @@
 pub mod auth_middleware;
 pub mod controllers;
 pub mod dto;
+pub mod id_resolution;
 pub mod mapping;
 pub mod socket_io;
 

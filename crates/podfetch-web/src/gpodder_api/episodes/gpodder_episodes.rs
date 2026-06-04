@@ -120,8 +120,9 @@ pub async fn get_favorites(
     for fav in favorites {
         if let Ok(Some(episode)) =
             PodcastEpisodeUseCase::get_podcast_episode_by_internal_id(fav.episode_id)
+            && let Ok(podcast_uuid) = uuid::Uuid::parse_str(&episode.podcast_id)
         {
-            let podcast = PodcastService::get_podcast_by_id(episode.podcast_id);
+            let podcast = PodcastService::get_podcast_by_id(podcast_uuid);
 
             result.push(GpodderFavoriteEpisode {
                 title: episode.name,

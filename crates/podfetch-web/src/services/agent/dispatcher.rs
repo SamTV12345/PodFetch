@@ -234,7 +234,7 @@ mod tests {
         let (tx, rx) = mpsc::channel(16);
         registry.register(AgentSessionHandle::new(
             agent_id.into(),
-            1,
+            podfetch_domain::ids::new_id(),
             "0.1.0".into(),
             tx,
         ));

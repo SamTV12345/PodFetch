@@ -20,7 +20,7 @@ impl AudiobookshelfListeningSessionService {
 
     pub fn list_for_user(
         &self,
-        user_id: i32,
+        user_id: uuid::Uuid,
         limit: i64,
     ) -> Result<Vec<ListeningSession>, CustomError> {
         self.repository.list_for_user(user_id, limit)

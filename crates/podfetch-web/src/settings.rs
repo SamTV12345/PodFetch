@@ -1,6 +1,7 @@
 use chrono::Local;
 use serde::Deserialize;
 use std::fmt::Display;
+use uuid::Uuid;
 use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
 
 #[derive(
@@ -8,7 +9,7 @@ use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
 )]
 #[serde(rename_all = "camelCase")]
 pub struct Setting {
-    pub id: i32,
+    pub id: String,
     pub auto_download: bool,
     pub auto_update: bool,
     pub auto_cleanup: bool,
@@ -27,7 +28,7 @@ pub struct Setting {
 impl From<podfetch_domain::settings::Setting> for Setting {
     fn from(value: podfetch_domain::settings::Setting) -> Self {
         Self {
-            id: value.id,
+            id: value.id.to_string(),
             auto_download: value.auto_download,
             auto_update: value.auto_update,
             auto_cleanup: value.auto_cleanup,
@@ -48,7 +49,7 @@ impl From<podfetch_domain::settings::Setting> for Setting {
 impl From<Setting> for podfetch_domain::settings::Setting {
     fn from(value: Setting) -> Self {
         Self {
-            id: value.id,
+            id: Uuid::parse_str(&value.id).unwrap_or_else(|_| Uuid::nil()),
             auto_download: value.auto_download,
             auto_update: value.auto_update,
             auto_cleanup: value.auto_cleanup,
@@ -125,7 +126,7 @@ impl UpdateNameSettings {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UpsertPodcastEpisodeChapter {
-    pub episode_id: i32,
+    pub episode_id: Uuid,
     pub title: String,
     pub start_time: i32,
     pub end_time: i32,
@@ -158,7 +159,7 @@ pub trait SettingsApplicationService {
 
 /// Represents a podcast episode with file path for chapter scanning
 pub struct EpisodeWithPath {
-    pub id: i32,
+    pub id: Uuid,
     pub name: String,
     pub file_path: String,
 }
@@ -174,7 +175,7 @@ pub struct ParsedChapter {
 }
 
 impl ParsedChapter {
-    pub fn to_upsert(&self, episode_id: i32) -> UpsertPodcastEpisodeChapter {
+    pub fn to_upsert(&self, episode_id: Uuid) -> UpsertPodcastEpisodeChapter {
         UpsertPodcastEpisodeChapter {
             episode_id,
             title: self.title.clone(),
@@ -201,7 +202,7 @@ pub trait EpisodeScanService {
     /// Get paginated episodes with file paths, starting after the given ID
     fn get_episodes_with_paths_after(
         &self,
-        last_id: i32,
+        last_id: Uuid,
         limit: usize,
     ) -> Result<Vec<EpisodeWithPath>, Self::Error>;
 
@@ -238,7 +239,7 @@ where
     }
 
     let mut stats = RescanStats::default();
-    let mut last_id = 0;
+    let mut last_id = Uuid::nil();
     const PAGE_SIZE: usize = 100;
 
     loop {
@@ -413,7 +414,7 @@ impl From<String> for Mode {
 
 #[derive(Clone)]
 pub struct OpmlPodcast {
-    pub id: i32,
+    pub id: String,
     pub name: String,
     pub summary: Option<String>,
     pub rssfeed: String,
