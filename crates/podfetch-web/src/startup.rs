@@ -461,6 +461,15 @@ pub fn build_server_router() -> Router {
         // namespace handler above (mobile apps don't connect to custom NSs).
         start_audiobookshelf_file_watcher(&state);
     }
+    if ENVIRONMENT_SERVICE.mopidy_integration_enabled
+        && tokio::runtime::Handle::try_current().is_ok()
+    {
+        if let Ok(mut guard) = state.mopidy_event_rx.try_lock() {
+            if let Some(rx) = guard.take() {
+                crate::services::mopidy::consumer::spawn_status_consumer(state.clone(), rx);
+            }
+        }
+    }
     SOCKET_IO_LAYER.get_or_init(|| io);
 
     let api_config = get_api_config(state.clone());
