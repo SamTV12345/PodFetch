@@ -1,6 +1,6 @@
 import {FC, useMemo} from 'react'
 import {useTranslation} from 'react-i18next'
-import {Archive, CirclePlay, CloudDownload, X} from 'lucide-react'
+import {Archive, CirclePlay, ListPlus, X} from 'lucide-react'
 import {components} from "../../schema"
 import {removeHTML, formatTime} from '../utils/Utilities'
 import useCommon from "../store/CommonSlice"
@@ -9,13 +9,15 @@ import {startAudioPlayer} from "../utils/audioPlayer"
 
 type EpisodeTriageRowProps = {
     item: components["schemas"]["PodcastEpisodeWithHistory"],
-    /** Queue the episode for download (inbox view). */
+    /** Add the episode to the waiting list (inbox view). Downloads it first if needed. */
     onQueue?: () => void,
     /** Dismiss the episode / remove it from the list. */
     onDismiss?: () => void,
     /** Move the episode to the archive (waiting list view). */
     onArchive?: () => void,
 }
+
+const ICON_SIZE = 20
 
 export const EpisodeTriageRow: FC<EpisodeTriageRowProps> = ({item, onQueue, onDismiss, onArchive}) => {
     const {t} = useTranslation()
@@ -36,31 +38,38 @@ export const EpisodeTriageRow: FC<EpisodeTriageRowProps> = ({item, onQueue, onDi
     }
 
     return (
-        <div className="grid grid-cols-[auto_1fr_auto] gap-x-4 gap-y-1 items-center group mb-8">
+        <div className="flex items-start gap-4 group mb-6 border-b ui-border pb-6 last:border-b-0">
             {/* Thumbnail */}
             <img
                 src={episode.local_image_url}
                 alt={episode.name}
-                className="hidden xs:block self-start rounded-lg w-20 h-20 object-cover row-span-3"
+                className="hidden xs:block shrink-0 rounded-lg w-16 h-16 object-cover"
             />
 
-            {/* Meta row */}
-            <div className="col-start-1 xs:col-start-2 col-end-4 flex flex-wrap items-center gap-x-4 gap-y-1">
-                <span className="text-xs ui-text-muted">{formatTime(episode.date_of_recording)}</span>
-                {!episode.status && (
-                    <span className="text-xs ui-text-muted">{t('not-downloaded')}</span>
-                )}
+            {/* Main content — `min-w-0` lets long titles/descriptions wrap and
+                truncate instead of forcing the row wider than the viewport. */}
+            <div className="flex-1 min-w-0">
+                <span className="block text-xs ui-text-muted mb-1">
+                    {formatTime(episode.date_of_recording)}
+                </span>
+                <span className="block font-bold leading-tight ui-text break-words group-hover:ui-text-hover">
+                    {episode.name}
+                </span>
+                <div
+                    className="mt-1 line-clamp-2 overflow-hidden text-sm ui-text-muted break-words"
+                    dangerouslySetInnerHTML={removeHTML(episode.description)}
+                />
+                {history?.total && history.position ? (
+                    <div className="mt-2 max-w-md ui-bg-foreground h-1 rounded-full overflow-hidden">
+                        <div className="ui-bg-accent h-1 rounded-full" style={{width: playPercentage + "%"}}/>
+                    </div>
+                ) : null}
             </div>
 
-            {/* Title */}
-            <span className="col-start-1 xs:col-start-2 font-bold leading-tight ui-text">
-                {episode.name}
-            </span>
-
             {/* Actions */}
-            <span className="row-start-1 row-span-3 col-start-3 flex items-center gap-4 self-center">
+            <div className="flex items-center gap-3 shrink-0 self-center">
                 <CirclePlay
-                    size={40}
+                    size={32}
                     strokeWidth={1.5}
                     aria-label={t('play') as string}
                     className="cursor-pointer ui-text hover:ui-text-hover active:scale-90"
@@ -70,14 +79,9 @@ export const EpisodeTriageRow: FC<EpisodeTriageRowProps> = ({item, onQueue, onDi
                     }}
                 />
                 {onQueue && (
-                    // The inbox holds episodes regardless of download state.
-                    // Queueing always adds the episode to the waiting list; if
-                    // it isn't downloaded yet the server also starts the
-                    // download. A filled icon just signals it's already local.
-                    <CloudDownload
-                        size={22}
+                    <ListPlus
+                        size={ICON_SIZE}
                         aria-label={t('triage-queue') as string}
-                        fill={episode.status ? 'currentColor' : 'transparent'}
                         className="cursor-pointer ui-icon hover:ui-icon-hover active:scale-90"
                         onClick={(e) => {
                             e.stopPropagation()
@@ -87,7 +91,7 @@ export const EpisodeTriageRow: FC<EpisodeTriageRowProps> = ({item, onQueue, onDi
                 )}
                 {onArchive && (
                     <Archive
-                        size={22}
+                        size={ICON_SIZE}
                         aria-label={t('triage-archive') as string}
                         className="cursor-pointer ui-icon hover:ui-icon-hover active:scale-90"
                         onClick={(e) => {
@@ -98,7 +102,7 @@ export const EpisodeTriageRow: FC<EpisodeTriageRowProps> = ({item, onQueue, onDi
                 )}
                 {onDismiss && (
                     <X
-                        size={22}
+                        size={ICON_SIZE}
                         aria-label={t('triage-dismiss') as string}
                         className="cursor-pointer ui-icon hover:ui-icon-hover active:scale-90"
                         onClick={(e) => {
@@ -107,20 +111,7 @@ export const EpisodeTriageRow: FC<EpisodeTriageRowProps> = ({item, onQueue, onDi
                         }}
                     />
                 )}
-            </span>
-
-            {/* Description */}
-            <div
-                className="col-start-1 xs:col-start-2 col-end-4 line-clamp-2 text-sm ui-text-muted"
-                dangerouslySetInnerHTML={removeHTML(episode.description)}
-            />
-
-            {/* Progress bar */}
-            {history?.total && history.position ? (
-                <div className="col-start-1 xs:col-start-2 col-end-4 ui-bg-foreground h-1 rounded-full overflow-hidden">
-                    <div className="ui-bg-accent h-1" style={{width: playPercentage + "%"}}/>
-                </div>
-            ) : null}
+            </div>
         </div>
     )
 }
