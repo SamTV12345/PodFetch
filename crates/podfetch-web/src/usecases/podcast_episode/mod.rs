@@ -1,6 +1,7 @@
 use crate::notification::Notification;
 use crate::server::ChatServerHandle;
 use crate::services::download::service::DownloadService;
+use crate::services::episode_triage::service::EpisodeTriageService;
 use crate::services::favorite_podcast_episode::service::FavoritePodcastEpisodeService;
 use crate::services::file::service::FileService;
 use crate::services::notification::service::NotificationService;
@@ -134,6 +135,30 @@ impl PodcastEpisodeUseCase {
             .map_err(Into::into)
     }
 
+    /// Inbox listing: not-yet-downloaded, non-deleted episodes the user has not
+    /// triaged yet, newest first.
+    pub fn get_inbox_episodes(
+        exclude_episode_ids: &[Uuid],
+        last_date: Option<&str>,
+        limit: i64,
+    ) -> Result<Vec<PodcastEpisode>, CustomError> {
+        Self::repo()
+            .get_inbox_episodes(exclude_episode_ids, last_date, limit)
+            .map(|episodes| episodes.into_iter().map(Into::into).collect())
+            .map_err(Into::into)
+    }
+
+    /// Archive listing: every downloaded, non-deleted episode, newest first.
+    pub fn get_downloaded_episodes_paginated(
+        last_date: Option<&str>,
+        limit: i64,
+    ) -> Result<Vec<PodcastEpisode>, CustomError> {
+        Self::repo()
+            .get_downloaded_episodes_paginated(last_date, limit)
+            .map(|episodes| episodes.into_iter().map(Into::into).collect())
+            .map_err(Into::into)
+    }
+
     pub fn get_podcast_episode_by_id(id: &str) -> Result<Option<PodcastEpisode>, CustomError> {
         Self::repo()
             .find_by_episode_id(id)
@@ -254,11 +279,14 @@ impl PodcastEpisodeUseCase {
     }
 
     pub fn delete_episodes_of_podcast(podcast_id: Uuid) -> Result<(), CustomError> {
+        let triage_service = EpisodeTriageService::default_service();
         Self::get_episodes_by_podcast_id(podcast_id)?
             .iter()
             .try_for_each(|episode| {
+                let episode_uuid = Self::parse_id(&episode.id)?;
                 PlaylistService::default_service()
-                    .delete_playlist_items_by_episode_id(Self::parse_id(&episode.id)?)
+                    .delete_playlist_items_by_episode_id(episode_uuid)?;
+                triage_service.delete_triage_for_episode(episode_uuid)
             })?;
 
         Self::repo()

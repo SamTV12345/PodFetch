@@ -546,6 +546,59 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
             .map_err(Into::into)
     }
 
+    fn get_inbox_episodes(
+        &self,
+        exclude_episode_ids: &[Uuid],
+        last_date: Option<&str>,
+        limit: i64,
+    ) -> Result<Vec<PodcastEpisode>, Self::Error> {
+        let exclude: Vec<String> = exclude_episode_ids
+            .iter()
+            .map(|id| id.to_string())
+            .collect();
+
+        // `ne_all` on an empty list renders as an always-true predicate in
+        // Diesel, so an untouched inbox correctly returns every candidate.
+        let mut query = podcast_episodes::table
+            .filter(podcast_episodes::download_location.is_null())
+            .filter(podcast_episodes::deleted.eq(false))
+            .filter(podcast_episodes::id.ne_all(exclude))
+            .order(podcast_episodes::date_of_recording.desc())
+            .limit(limit)
+            .into_boxed();
+
+        if let Some(last_date_str) = last_date {
+            query = query.filter(podcast_episodes::date_of_recording.lt(last_date_str));
+        }
+
+        query
+            .load::<PodcastEpisodeEntity>(&mut self.database.connection()?)
+            .map(|entities| entities.into_iter().map(Into::into).collect())
+            .map_err(Into::into)
+    }
+
+    fn get_downloaded_episodes_paginated(
+        &self,
+        last_date: Option<&str>,
+        limit: i64,
+    ) -> Result<Vec<PodcastEpisode>, Self::Error> {
+        let mut query = podcast_episodes::table
+            .filter(podcast_episodes::download_location.is_not_null())
+            .filter(podcast_episodes::deleted.eq(false))
+            .order(podcast_episodes::date_of_recording.desc())
+            .limit(limit)
+            .into_boxed();
+
+        if let Some(last_date_str) = last_date {
+            query = query.filter(podcast_episodes::date_of_recording.lt(last_date_str));
+        }
+
+        query
+            .load::<PodcastEpisodeEntity>(&mut self.database.connection()?)
+            .map(|entities| entities.into_iter().map(Into::into).collect())
+            .map_err(Into::into)
+    }
+
     fn check_if_downloaded(&self, url: &str) -> Result<bool, Self::Error> {
         let result = podcast_episodes::table
             .filter(podcast_episodes::download_location.is_not_null())

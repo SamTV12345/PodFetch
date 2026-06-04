@@ -276,8 +276,17 @@ pub async fn download_podcast_episodes_of_podcast(
     web_require_privileged::<CustomError>(requester.is_privileged_user())
         .map_err(map_podcast_episode_controller_error)?;
 
+    spawn_single_episode_download(id);
+
+    Ok(StatusCode::from_u16(200).unwrap())
+}
+
+/// Download a single episode (identified by its RSS `episode_id`) on a blocking
+/// worker, then mark it available and broadcast the change. Shared by the
+/// per-episode download endpoint and the inbox "queue for download" action.
+pub(crate) fn spawn_single_episode_download(episode_id: String) {
     tokio::task::spawn_blocking(move || {
-        match PodcastEpisodeService::get_podcast_episode_by_id(&id) {
+        match PodcastEpisodeService::get_podcast_episode_by_id(&episode_id) {
             Ok(Some(podcast_episode)) => {
                 let podcast_uuid = match uuid::Uuid::parse_str(&podcast_episode.podcast_id) {
                     Ok(uuid) => uuid,
@@ -329,15 +338,13 @@ pub async fn download_podcast_episodes_of_podcast(
                 }
             }
             Ok(None) => {
-                tracing::error!("Episode with id {} not found", id);
+                tracing::error!("Episode with id {} not found", episode_id);
             }
             Err(err) => {
-                tracing::error!("Error retrieving episode {}: {}", id, err);
+                tracing::error!("Error retrieving episode {}: {}", episode_id, err);
             }
         }
     });
-
-    Ok(StatusCode::from_u16(200).unwrap())
 }
 
 /**

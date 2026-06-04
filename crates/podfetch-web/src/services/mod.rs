@@ -7,6 +7,7 @@ pub mod discover;
 pub mod download;
 pub mod episode_rescan;
 pub mod episode_scan;
+pub mod episode_triage;
 pub mod favorite_podcast_episode;
 pub mod file;
 pub mod filter;

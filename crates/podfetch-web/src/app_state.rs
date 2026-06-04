@@ -15,6 +15,7 @@ use crate::services::audiobookshelf::playback_session_service::AudiobookshelfPla
 use crate::services::cast::service::CastOrchestrator;
 use crate::services::device::service::DeviceService;
 use crate::services::device_sync_group::service::DeviceSyncGroupService;
+use crate::services::episode_triage::service::EpisodeTriageService;
 use crate::services::favorite_podcast_episode::service::FavoritePodcastEpisodeService;
 use crate::services::filter::service::FilterService;
 use crate::services::gpodder_setting::service::GpodderSettingService;
@@ -42,6 +43,7 @@ use podfetch_persistence::adapters::BookChapterRepositoryImpl;
 use podfetch_persistence::adapters::BookRepositoryImpl;
 use podfetch_persistence::adapters::DeviceRepositoryImpl;
 use podfetch_persistence::adapters::DeviceSyncGroupRepositoryImpl;
+use podfetch_persistence::adapters::EpisodeTriageRepositoryImpl;
 use podfetch_persistence::adapters::FavoritePodcastEpisodeRepositoryImpl;
 use podfetch_persistence::adapters::FilterRepositoryImpl;
 use podfetch_persistence::adapters::GpodderSettingRepositoryImpl;
@@ -81,6 +83,7 @@ pub struct AppState {
     pub mopidy_event_rx: Arc<AsyncMutex<Option<mpsc::Receiver<MopidyEvent>>>>,
     pub device_sync_group_service: Arc<DeviceSyncGroupService>,
     pub environment: Arc<EnvironmentService>,
+    pub episode_triage_service: Arc<EpisodeTriageService>,
     pub favorite_podcast_episode_service: Arc<FavoritePodcastEpisodeService>,
     pub filter_service: Arc<FilterService>,
     pub gpodder_setting_service: Arc<GpodderSettingService>,
@@ -130,6 +133,9 @@ impl AppState {
         let favorite_podcast_episode_service = Arc::new(FavoritePodcastEpisodeService::new(
             Arc::new(FavoritePodcastEpisodeRepositoryImpl::new(database.clone())),
         ));
+        let episode_triage_service = Arc::new(EpisodeTriageService::new(Arc::new(
+            EpisodeTriageRepositoryImpl::new(database.clone()),
+        )));
         let filter_service = Arc::new(FilterService::new(Arc::new(FilterRepositoryImpl::new(
             database.clone(),
         ))));
@@ -252,6 +258,7 @@ impl AppState {
             mopidy_event_rx: Arc::new(AsyncMutex::new(Some(mopidy_rx))),
             device_sync_group_service,
             environment,
+            episode_triage_service,
             favorite_podcast_episode_service,
             filter_service,
             gpodder_setting_service,
