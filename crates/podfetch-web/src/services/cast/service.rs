@@ -400,6 +400,7 @@ mod tests {
             agent_id: None,
             last_seen_at: None,
             ip: Some("192.168.1.10".to_string()),
+            base_url: None,
         }
     }
 
