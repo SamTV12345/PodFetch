@@ -1,6 +1,9 @@
 use crate::cast::ServerCastOrchestrator;
 use crate::services::agent::dispatcher::AgentDispatcher;
 use crate::services::agent::registry::AgentRegistry;
+use crate::services::mopidy::driver::{MopidyDriver, MopidyEvent};
+use tokio::sync::Mutex as AsyncMutex;
+use tokio::sync::mpsc;
 use crate::services::audiobookshelf::audiobook_scanner::AudiobookScanner;
 use crate::services::audiobookshelf::book_service::AudiobookshelfBookService;
 use crate::services::audiobookshelf::hls_transcoder::HlsTranscoder;
@@ -75,6 +78,7 @@ pub struct AppState {
     pub audiobookshelf_scanner: Arc<AudiobookScanner>,
     pub cast_orchestrator: Arc<ServerCastOrchestrator>,
     pub device_service: Arc<DeviceService>,
+    pub mopidy_event_rx: Arc<AsyncMutex<Option<mpsc::Receiver<MopidyEvent>>>>,
     pub device_sync_group_service: Arc<DeviceSyncGroupService>,
     pub environment: Arc<EnvironmentService>,
     pub favorite_podcast_episode_service: Arc<FavoritePodcastEpisodeService>,
@@ -112,10 +116,13 @@ impl AppState {
         ))));
         let agent_registry = Arc::new(AgentRegistry::new());
         let agent_dispatcher = Arc::new(AgentDispatcher::new(agent_registry.clone()));
+        let (mopidy_tx, mopidy_rx) = mpsc::channel::<MopidyEvent>(64);
+        let mopidy_driver = Arc::new(MopidyDriver::new(mopidy_tx));
         let cast_orchestrator = Arc::new(CastOrchestrator::new(
             device_service.clone(),
             Arc::new(StubCastDriver),
             agent_dispatcher.clone(),
+            mopidy_driver,
         ));
         let device_sync_group_service = Arc::new(DeviceSyncGroupService::new(Arc::new(
             DeviceSyncGroupRepositoryImpl::new(database.clone()),
@@ -242,6 +249,7 @@ impl AppState {
             audiobookshelf_scanner,
             cast_orchestrator,
             device_service,
+            mopidy_event_rx: Arc::new(AsyncMutex::new(Some(mopidy_rx))),
             device_sync_group_service,
             environment,
             favorite_podcast_episode_service,

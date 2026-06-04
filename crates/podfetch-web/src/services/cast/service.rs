@@ -1,5 +1,6 @@
 use crate::services::agent::dispatcher::AgentDispatcher;
 use crate::services::device::service::DeviceService;
+use crate::services::mopidy::driver::{MopidyDriveError, MopidyDriver, MopidyTarget};
 use chrono::Utc;
 use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use podfetch_cast::{
@@ -32,6 +33,8 @@ pub struct ActiveSession {
     /// Set when the session is being driven through a remote agent;
     /// `None` means the session is on the server's own LAN.
     pub agent_id: Option<String>,
+    /// Device kind string — used at control time to route Mopidy vs Chromecast.
+    pub device_kind: String,
     pub last_status: CastStatus,
 }
 
@@ -45,6 +48,7 @@ pub struct CastOrchestrator<L: CastDriver> {
     device_service: Arc<DeviceService>,
     local_driver: Arc<L>,
     agent_dispatcher: Arc<AgentDispatcher>,
+    mopidy_driver: Arc<MopidyDriver>,
     sessions: RwLock<HashMap<CastSessionId, ActiveSession>>,
 }
 
@@ -60,6 +64,8 @@ pub enum OrchestratorError {
     DeviceUnreachable,
     #[error("cast: {0}")]
     Cast(#[from] CastError),
+    #[error("mopidy: {0}")]
+    Mopidy(#[from] MopidyDriveError),
     #[error(transparent)]
     Persistence(#[from] CustomError),
 }
@@ -85,6 +91,9 @@ impl From<OrchestratorError> for CustomError {
             OrchestratorError::Cast(e) => {
                 CustomErrorInner::BadRequest(e.to_string(), ErrorSeverity::Warning).into()
             }
+            OrchestratorError::Mopidy(e) => {
+                CustomErrorInner::BadRequest(e.to_string(), ErrorSeverity::Warning).into()
+            }
         }
     }
 }
@@ -94,11 +103,13 @@ impl<L: CastDriver> CastOrchestrator<L> {
         device_service: Arc<DeviceService>,
         local_driver: Arc<L>,
         agent_dispatcher: Arc<AgentDispatcher>,
+        mopidy_driver: Arc<MopidyDriver>,
     ) -> Self {
         Self {
             device_service,
             local_driver,
             agent_dispatcher,
+            mopidy_driver,
             sessions: RwLock::new(HashMap::new()),
         }
     }
@@ -151,13 +162,35 @@ impl<L: CastDriver> CastOrchestrator<L> {
         episode_string_id: Option<String>,
     ) -> Result<ActiveSession, OrchestratorError> {
         let device = self.resolve_castable(user, chromecast_uuid)?;
-        let target = build_target(&device)?;
-        let agent_id = device.agent_id.clone();
+        let device_kind_str = device.kind.clone();
+        let device_uuid = CastDeviceUuid(
+            device
+                .chromecast_uuid
+                .clone()
+                .ok_or(OrchestratorError::DeviceNotFound)?,
+        );
 
-        let session_id = match &agent_id {
-            Some(id) => self.agent_dispatcher.play(id, &target, &media).await?,
-            None => self.local_driver.play(&target, &media).await?,
+        let (session_id, agent_id) = if device_kind::is_mopidy(&device.kind) {
+            let base_url = device
+                .base_url
+                .clone()
+                .ok_or(OrchestratorError::DeviceUnreachable)?;
+            let target = MopidyTarget { base_url };
+            let sid = self
+                .mopidy_driver
+                .play(&target, &media, episode_string_id_position(&episode_string_id))
+                .await?;
+            (sid, None)
+        } else {
+            let target = build_target(&device)?;
+            let agent_id = device.agent_id.clone();
+            let sid = match &agent_id {
+                Some(id) => self.agent_dispatcher.play(id, &target, &media).await?,
+                None => self.local_driver.play(&target, &media).await?,
+            };
+            (sid, agent_id)
         };
+
         let status = CastStatus {
             session_id: session_id.clone(),
             state: CastState::Buffering,
@@ -167,12 +200,13 @@ impl<L: CastDriver> CastOrchestrator<L> {
         };
         let active = ActiveSession {
             session_id: session_id.clone(),
-            device_uuid: target.uuid,
+            device_uuid,
             user_id: user.id,
             username: user.username.clone(),
             episode_id,
             episode_string_id,
             agent_id,
+            device_kind: device_kind_str,
             last_status: status,
         };
         self.sessions
@@ -191,13 +225,17 @@ impl<L: CastDriver> CastOrchestrator<L> {
         cmd: ControlCmd,
     ) -> Result<(), OrchestratorError> {
         let session = self.lookup_session(user, session_id)?;
-        match &session.agent_id {
-            Some(id) => {
-                self.agent_dispatcher
-                    .control(id, &session.session_id, &cmd)
-                    .await?
+        if device_kind::is_mopidy(&session.device_kind) {
+            self.mopidy_driver.control(&session.session_id, &cmd).await?;
+        } else {
+            match &session.agent_id {
+                Some(id) => {
+                    self.agent_dispatcher
+                        .control(id, &session.session_id, &cmd)
+                        .await?
+                }
+                None => self.local_driver.control(&session.session_id, &cmd).await?,
             }
-            None => self.local_driver.control(&session.session_id, &cmd).await?,
         }
         Ok(())
     }
@@ -259,6 +297,11 @@ impl<L: CastDriver> CastOrchestrator<L> {
         }
         Ok(session.clone())
     }
+}
+
+/// v1 does not resume mid-episode on Mopidy; always start from the beginning.
+fn episode_string_id_position(_episode_string_id: &Option<String>) -> Option<f64> {
+    None
 }
 
 fn build_target(device: &Device) -> Result<CastTarget, OrchestratorError> {
@@ -342,7 +385,9 @@ mod tests {
                 .iter()
                 .filter(|d| {
                     d.kind == device_kind::CHROMECAST_SHARED
-                        || (d.kind == device_kind::CHROMECAST_PERSONAL
+                        || d.kind == device_kind::MOPIDY_SHARED
+                        || ((d.kind == device_kind::CHROMECAST_PERSONAL
+                            || d.kind == device_kind::MOPIDY_PERSONAL)
                             && d.user_id == viewer_user_id)
                 })
                 .cloned()
@@ -421,7 +466,11 @@ mod tests {
         // Tests that need the registry construct the dispatcher from a
         // shared registry; tests that don't can use the simple helper.
         let registry = Arc::new(AgentRegistry::new());
-        let orch = CastOrchestrator::new(device_service, Arc::new(StubCastDriver), dispatcher);
+        let (mopidy_tx, _mopidy_rx) = tokio::sync::mpsc::channel(8);
+        let mopidy_driver = Arc::new(
+            crate::services::mopidy::driver::MopidyDriver::new(mopidy_tx),
+        );
+        let orch = CastOrchestrator::new(device_service, Arc::new(StubCastDriver), dispatcher, mopidy_driver);
         (orch, registry)
     }
 
@@ -515,8 +564,10 @@ mod tests {
 
         let repo = Arc::new(FakeDeviceRepo::new(vec![device]));
         let device_service = Arc::new(DeviceService::new(repo));
+        let (mopidy_tx2, _mopidy_rx2) = tokio::sync::mpsc::channel(8);
+        let mopidy_driver2 = Arc::new(crate::services::mopidy::driver::MopidyDriver::new(mopidy_tx2));
         let orch =
-            CastOrchestrator::new(device_service, Arc::new(StubCastDriver), dispatcher.clone());
+            CastOrchestrator::new(device_service, Arc::new(StubCastDriver), dispatcher.clone(), mopidy_driver2);
 
         // Drive `start` and intercept the Play that leaves for the agent.
         let alice_clone = alice.clone();
@@ -588,6 +639,30 @@ mod tests {
         }
     }
 
+    #[tokio::test]
+    async fn start_against_mopidy_device_routes_to_mopidy_driver() {
+        let alice = user(1, "user");
+        let mut device = make_device(20, alice.id, device_kind::MOPIDY_SHARED, "mopidy-uuid");
+        device.base_url = Some("http://127.0.0.1:1/".to_string()); // unreachable on purpose
+        let orch = orchestrator(vec![device]);
+
+        let media = CastMedia {
+            url: "https://example.com/a.mp3".into(),
+            mime: "audio/mpeg".into(),
+            title: "Ep".into(),
+            artwork_url: None,
+            duration_secs: None,
+            episode_id: None,
+        };
+        // The mopidy server is unreachable, so start() returns a Cast/transport
+        // error — proving the request was routed to the Mopidy branch (the
+        // StubCastDriver would have returned NotImplemented instead).
+        let err = orch
+            .start(&alice, "mopidy-uuid", media, None, None)
+            .await;
+        assert!(matches!(err, Err(OrchestratorError::Mopidy(_))));
+    }
+
     #[test]
     fn record_status_returns_owning_user() {
         let orch = orchestrator(vec![]);
@@ -603,6 +678,7 @@ mod tests {
                 episode_id: None,
                 episode_string_id: None,
                 agent_id: None,
+                device_kind: device_kind::CHROMECAST_PERSONAL.to_string(),
                 last_status: CastStatus {
                     session_id: session_id.clone(),
                     state: CastState::Idle,
