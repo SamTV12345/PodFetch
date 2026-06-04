@@ -245,11 +245,31 @@ impl DeviceRepository for DieselDeviceRepository {
     }
 }
 
-#[cfg(test)]
+// Gated to the sqlite feature: these exercise the device repository against the
+// shared sqlite test DB via `database()`. The postgres CI job provides no DB to
+// this (separate) test binary — postgres migration coverage comes from
+// podfetch-web's testcontainer-backed tests. Mirrors `tests/fresh_chain_migrations.rs`.
+#[cfg(all(test, feature = "sqlite"))]
 mod mopidy_persistence_tests {
     use super::*;
     use crate::db::{database, run_migrations};
     use podfetch_domain::device::kind as device_kind;
+    use std::sync::{Mutex, MutexGuard};
+
+    // Serialize the DB-touching tests in this module: they share the sqlite
+    // test DB (./podcast.db), so calling `run_migrations()` from parallel test
+    // threads on a fresh DB races on `__diesel_schema_migrations` (UNIQUE
+    // violation). Mirrors the GLOBAL_MUTEX pattern in podfetch-web's
+    // test_support. Each test holds the guard for its whole body.
+    static TEST_DB_LOCK: Mutex<()> = Mutex::new(());
+
+    fn setup() -> MutexGuard<'static, ()> {
+        let guard = TEST_DB_LOCK
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        run_migrations();
+        guard
+    }
 
     mod seed_schema {
         diesel::table! {
@@ -293,7 +313,7 @@ mod mopidy_persistence_tests {
 
     #[test]
     fn create_persists_base_url_and_list_castable_includes_shared_mopidy() {
-        run_migrations();
+        let _guard = setup();
         let repo = DieselDeviceRepository::new(database());
         let owner = seed_user();
         let viewer = seed_user();
@@ -314,7 +334,7 @@ mod mopidy_persistence_tests {
 
     #[test]
     fn list_castable_hides_personal_mopidy_from_other_user() {
-        run_migrations();
+        let _guard = setup();
         let repo = DieselDeviceRepository::new(database());
         let owner = seed_user();
         let other = seed_user();
