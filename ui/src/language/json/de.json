@@ -122,6 +122,8 @@
   "data-retention": "Podcastaufbewahrung",
   "auto-transcode-opus": "Zu Opus konvertieren",
   "auto-transcode-opus-explanation": "Heruntergeladene Episoden automatisch ins Opus-Format konvertieren. Dies kann den Speicherverbrauch im Vergleich zu MP3 um bis zu 50% reduzieren. Erfordert ffmpeg auf dem Server.",
+  "max-parallel-downloads": "Maximale parallele Downloads",
+  "max-parallel-downloads-explanation": "Wie viele Episoden gleichzeitig heruntergeladen werden (mindestens 1, Standard 3). Da die Opus-Konvertierung Teil jedes Downloads ist, begrenzt dies auch, wie viele Episoden gleichzeitig konvertiert werden — bei langsamer CPU niedriger setzen.",
   "use-one-cover-for-all-episodes": "Ein Cover für alle Episoden verwenden",
   "use-one-cover-for-all-episodes-explanation": "Wenn aktiviert, wird kein separates Cover pro Episode heruntergeladen. Stattdessen wird das gemeinsame Podcast-Cover (image.jpg) verwendet, um Speicherplatz zu sparen.",
   "rescan-audio-files": "Audiodateien neu scannen",

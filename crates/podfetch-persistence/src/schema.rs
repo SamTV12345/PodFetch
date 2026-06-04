@@ -231,6 +231,7 @@ diesel::table! {
         direct_paths -> Bool,
         auto_transcode_opus -> Bool,
         use_one_cover_for_all_episodes -> Bool,
+        max_parallel_downloads -> Integer,
     }
 }
 

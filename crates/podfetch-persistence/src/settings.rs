@@ -21,6 +21,7 @@ diesel::table! {
         direct_paths -> Bool,
         auto_transcode_opus -> Bool,
         use_one_cover_for_all_episodes -> Bool,
+        max_parallel_downloads -> Integer,
     }
 }
 
@@ -41,6 +42,7 @@ struct SettingEntity {
     direct_paths: bool,
     auto_transcode_opus: bool,
     use_one_cover_for_all_episodes: bool,
+    max_parallel_downloads: i32,
 }
 
 impl From<SettingEntity> for Setting {
@@ -60,6 +62,7 @@ impl From<SettingEntity> for Setting {
             direct_paths: value.direct_paths,
             auto_transcode_opus: value.auto_transcode_opus,
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
+            max_parallel_downloads: value.max_parallel_downloads,
         }
     }
 }
@@ -81,6 +84,7 @@ impl From<Setting> for SettingEntity {
             direct_paths: value.direct_paths,
             auto_transcode_opus: value.auto_transcode_opus,
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
+            max_parallel_downloads: value.max_parallel_downloads,
         }
     }
 }
@@ -141,6 +145,7 @@ impl SettingRepository for DieselSettingsRepository {
                 direct_paths.eq(false),
                 auto_transcode_opus.eq(false),
                 use_one_cover_for_all_episodes.eq(false),
+                max_parallel_downloads.eq(3),
             ))
             .execute(&mut conn)
             .map(|_| ())

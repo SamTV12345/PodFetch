@@ -521,6 +521,7 @@ mod tests {
             direct_paths: false,
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
+            max_parallel_downloads: 3,
         };
 
         let result = perform_replacement(title, settings, None);
@@ -548,6 +549,7 @@ mod tests {
             direct_paths: false,
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
+            max_parallel_downloads: 3,
         };
 
         let result = perform_replacement(title, settings, None);
@@ -575,6 +577,7 @@ mod tests {
             direct_paths: false,
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
+            max_parallel_downloads: 3,
         };
 
         let result = perform_replacement(title, settings, None);
@@ -600,6 +603,7 @@ mod tests {
             direct_paths: false,
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
+            max_parallel_downloads: 3,
         };
 
         let podcast_episode = PodcastEpisode {
@@ -644,6 +648,7 @@ mod tests {
             direct_paths: false,
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
+            max_parallel_downloads: 3,
         };
 
         let podcast_episode = PodcastEpisode {
@@ -688,6 +693,7 @@ mod tests {
             direct_paths: false,
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
+            max_parallel_downloads: 3,
         };
 
         let podcast_episode = PodcastEpisode {
@@ -732,6 +738,7 @@ mod tests {
             direct_paths: false,
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
+            max_parallel_downloads: 3,
         };
 
         let podcast_episode = PodcastParsed {
@@ -764,6 +771,7 @@ mod tests {
             direct_paths: false,
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
+            max_parallel_downloads: 3,
         };
 
         let podcast_episode = PodcastParsed {
