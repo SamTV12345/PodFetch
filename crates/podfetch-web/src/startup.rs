@@ -469,10 +469,15 @@ pub fn build_server_router() -> Router {
     if ENVIRONMENT_SERVICE.mopidy_integration_enabled
         && tokio::runtime::Handle::try_current().is_ok()
     {
-        if let Ok(mut guard) = state.mopidy_event_rx.try_lock() {
-            if let Some(rx) = guard.take() {
-                crate::services::mopidy::consumer::spawn_status_consumer(state.clone(), rx);
-            }
+        // Take the receiver once (try_lock is uncontended at startup) and spawn
+        // the consumer that drives Mopidy status into the cast orchestrator.
+        let rx = state
+            .mopidy_event_rx
+            .try_lock()
+            .ok()
+            .and_then(|mut guard| guard.take());
+        if let Some(rx) = rx {
+            crate::services::mopidy::consumer::spawn_status_consumer(state.clone(), rx);
         }
     }
     SOCKET_IO_LAYER.get_or_init(|| io);

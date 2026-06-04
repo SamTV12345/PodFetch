@@ -236,7 +236,7 @@ git commit -m "feat(mopidy): add mopidy device kinds and base_url to domain (#50
 - Modify: `crates/podfetch-persistence/src/adapters.rs`
 - Modify: `crates/podfetch-persistence/src/schema.rs`
 
-> The `base_url` column is a nullable trailing `ADD COLUMN` — **not** a table rebuild — so the SQLite FK-pragma `run_in_transaction=false` gotcha does not apply and no `metadata.toml` is needed.
+> **Correction applied during execution:** the SQLite `devices.kind` column carries a `CHECK(kind IN ('desktop','laptop','server','mobile','Other'))` constraint that blocks `mopidy_*` (and already blocks `chromecast_*`). SQLite can't alter a CHECK in place, so the SQLite migration is a **table rebuild** that drops the CHECK and adds `base_url`, and therefore needs `metadata.toml` with `run_in_transaction = false` (FK-pragma rule). Postgres has the same CHECK as the auto-named constraint `devices_kind_check`, dropped via `ALTER TABLE devices DROP CONSTRAINT IF EXISTS devices_kind_check` alongside the `ADD COLUMN`. Also note: the FK `devices.user_id → users(id)` is enforced, so the persistence test seeds a `users` row first. See commits on this branch for the as-built migrations.
 
 - [ ] **Step 1: Create the migrations**
 
