@@ -624,6 +624,7 @@ mod tests {
             deleted: false,
             episode_numbering_processed: false,
             download_location: None,
+            youtube_video_id: None,
         };
 
         let result = perform_episode_variable_replacement(settings, podcast_episode, None);
@@ -669,6 +670,7 @@ mod tests {
             deleted: false,
             episode_numbering_processed: false,
             download_location: None,
+            youtube_video_id: None,
         };
 
         let result = perform_episode_variable_replacement(settings, podcast_episode, None);
@@ -714,6 +716,7 @@ mod tests {
             deleted: false,
             episode_numbering_processed: false,
             download_location: None,
+            youtube_video_id: None,
         };
 
         let result = perform_episode_variable_replacement(settings, podcast_episode, None);

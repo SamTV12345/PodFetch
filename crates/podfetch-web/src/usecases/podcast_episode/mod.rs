@@ -229,6 +229,7 @@ impl PodcastEpisodeUseCase {
                 total_time: duration,
                 description: opt_or_empty_string(item.clone().description),
                 guid: item.guid.clone().unwrap_or(guid_to_insert).value,
+                youtube_video_id: None,
             })
             .map(Into::into)
             .map_err(Into::into)

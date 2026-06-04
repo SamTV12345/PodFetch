@@ -33,6 +33,7 @@ diesel::table! {
         file_image_path -> Nullable<Text>,
         episode_numbering_processed -> Bool,
         download_location -> Nullable<Text>,
+        youtube_video_id -> Nullable<Text>,
     }
 }
 
@@ -117,6 +118,7 @@ pub struct PodcastEpisodeEntity {
     pub file_image_path: Option<String>,
     pub episode_numbering_processed: bool,
     pub download_location: Option<String>,
+    pub youtube_video_id: Option<String>,
 }
 
 #[derive(Insertable, Debug, Clone)]
@@ -133,6 +135,7 @@ struct NewPodcastEpisodeEntity {
     total_time: i32,
     description: String,
     guid: String,
+    youtube_video_id: Option<String>,
 }
 
 // Entity for reading from episodes table in joins
@@ -181,6 +184,7 @@ impl From<PodcastEpisodeEntity> for PodcastEpisode {
             file_image_path: entity.file_image_path,
             episode_numbering_processed: entity.episode_numbering_processed,
             download_location: entity.download_location,
+            youtube_video_id: entity.youtube_video_id,
         }
     }
 }
@@ -205,6 +209,7 @@ impl From<&PodcastEpisode> for PodcastEpisodeEntity {
             file_image_path: episode.file_image_path.clone(),
             episode_numbering_processed: episode.episode_numbering_processed,
             download_location: episode.download_location.clone(),
+            youtube_video_id: episode.youtube_video_id.clone(),
         }
     }
 }
@@ -223,6 +228,7 @@ impl From<NewPodcastEpisode> for NewPodcastEpisodeEntity {
             total_time: episode.total_time,
             description: episode.description,
             guid: episode.guid,
+            youtube_video_id: episode.youtube_video_id,
         }
     }
 }
@@ -257,6 +263,7 @@ impl From<PodcastEpisode> for PodcastEpisodeEntity {
             file_image_path: episode.file_image_path,
             episode_numbering_processed: episode.episode_numbering_processed,
             download_location: episode.download_location,
+            youtube_video_id: episode.youtube_video_id,
         }
     }
 }

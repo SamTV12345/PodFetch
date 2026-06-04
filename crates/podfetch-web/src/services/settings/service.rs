@@ -81,6 +81,7 @@ impl SettingsService {
             file_image_path: None,
             episode_numbering_processed: false,
             download_location: None,
+            youtube_video_id: None,
         };
 
         let transient_setting = build_name_only_setting(&update_settings);

@@ -535,6 +535,7 @@ pub async fn retrieve_episode_sample_format(
         file_image_path: None,
         episode_numbering_processed: false,
         download_location: None,
+        youtube_video_id: None,
     };
     let settings = Setting {
         id: uuid::Uuid::nil().to_string(),
