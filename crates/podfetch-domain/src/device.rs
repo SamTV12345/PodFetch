@@ -24,6 +24,21 @@ pub mod kind {
     pub fn is_chromecast_shared(kind: &str) -> bool {
         kind == CHROMECAST_SHARED
     }
+
+    /// Personal Mopidy server — visible only to the owning user.
+    pub const MOPIDY_PERSONAL: &str = "mopidy_personal";
+    /// Shared/household Mopidy server — visible to every user on the instance.
+    pub const MOPIDY_SHARED: &str = "mopidy_shared";
+
+    /// True for any mopidy_* kind.
+    pub fn is_mopidy(kind: &str) -> bool {
+        matches!(kind, MOPIDY_PERSONAL | MOPIDY_SHARED)
+    }
+
+    /// True for any kind that can be a remote-playback target (chromecast or mopidy).
+    pub fn is_castable(kind: &str) -> bool {
+        is_chromecast(kind) || is_mopidy(kind)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -37,6 +52,8 @@ pub struct Device {
     pub agent_id: Option<String>,
     pub last_seen_at: Option<NaiveDateTime>,
     pub ip: Option<String>,
+    /// Mopidy RPC base URL (e.g. `http://mopidy.local:6680`). `None` for non-mopidy devices.
+    pub base_url: Option<String>,
 }
 
 pub trait DeviceRepository: Send + Sync {
@@ -53,6 +70,17 @@ pub trait DeviceRepository: Send + Sync {
     fn find_by_chromecast_uuid(&self, chromecast_uuid: &str)
     -> Result<Option<Device>, Self::Error>;
 
+    /// Look up a single device row by its primary id. Real implementors override this.
+    fn find_by_id(&self, _id: Uuid) -> Result<Option<Device>, Self::Error> {
+        Ok(None)
+    }
+
+    /// Delete a single device row by primary id; returns rows removed.
+    /// Real implementors override this.
+    fn delete_by_id(&self, _id: Uuid) -> Result<usize, Self::Error> {
+        Ok(0)
+    }
+
     /// Insert or update a Chromecast row reported by an agent. Lookup is
     /// keyed by `chromecast_uuid`. New rows default to `chromecast_personal`
     /// owned by the agent's user; an admin can later promote `kind` to
@@ -66,4 +94,22 @@ pub trait DeviceRepository: Send + Sync {
         ip: Option<&str>,
         last_seen_at: NaiveDateTime,
     ) -> Result<Device, Self::Error>;
+}
+
+#[cfg(test)]
+mod mopidy_kind_tests {
+    use super::kind;
+
+    #[test]
+    fn mopidy_kinds_are_mopidy_and_castable_but_not_chromecast() {
+        assert!(kind::is_mopidy(kind::MOPIDY_PERSONAL));
+        assert!(kind::is_mopidy(kind::MOPIDY_SHARED));
+        assert!(!kind::is_mopidy(kind::CHROMECAST_SHARED));
+
+        assert!(kind::is_castable(kind::MOPIDY_SHARED));
+        assert!(kind::is_castable(kind::CHROMECAST_PERSONAL));
+        assert!(!kind::is_castable(kind::DESKTOP));
+
+        assert!(!kind::is_chromecast(kind::MOPIDY_PERSONAL));
+    }
 }
