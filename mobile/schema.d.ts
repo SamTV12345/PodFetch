@@ -469,6 +469,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/podcasts/episodes/{id}/sponsorblock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_sponsorblock_episode_segments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/podcasts/favored": {
         parameters: {
             query?: never;
@@ -928,6 +944,22 @@ export interface paths {
         };
         get?: never;
         put: operations["run_cleanup"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings/sponsorblock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_sponsorblock_settings"];
+        put: operations["update_sponsorblock_settings"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1695,6 +1727,34 @@ export interface components {
             name: string;
             /** Format: int64 */
             total_space: number;
+        };
+        SponsorSegmentDto: {
+            uuid: string;
+            category: string;
+            actionType: string;
+            /** Format: int32 */
+            startMs: number;
+            /** Format: int32 */
+            endMs: number;
+            /** Format: int32 */
+            votes: number;
+            locked: boolean;
+            durationMismatch: boolean;
+        };
+        SponsorblockEpisodeResponse: {
+            segments: components["schemas"]["SponsorSegmentDto"][];
+            preferences: components["schemas"]["SponsorblockUserSettingsDto"];
+        };
+        SponsorblockUserSettingsDto: {
+            enabled: boolean;
+            skipSponsor: boolean;
+            skipSelfpromo: boolean;
+            skipInteraction: boolean;
+            skipIntro: boolean;
+            skipOutro: boolean;
+            skipPreview: boolean;
+            skipFiller: boolean;
+            skipMusicOfftopic: boolean;
         };
         StatsOverview: {
             activeWeekdays: components["schemas"]["WeekdayStats"][];
@@ -3276,6 +3336,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Setting"];
+                };
+            };
+        };
+    };
+    get_sponsorblock_episode_segments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Gets sponsorblock segments for a podcast episode. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SponsorblockEpisodeResponse"];
+                };
+            };
+        };
+    };
+    get_sponsorblock_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Gets the sponsorblock user settings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SponsorblockUserSettingsDto"];
+                };
+            };
+        };
+    };
+    update_sponsorblock_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SponsorblockUserSettingsDto"];
+            };
+        };
+        responses: {
+            /** @description Updates the sponsorblock user settings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SponsorblockUserSettingsDto"];
                 };
             };
         };
