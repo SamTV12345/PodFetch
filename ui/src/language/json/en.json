@@ -324,5 +324,18 @@
   "cast-ended-stopped": "Cast session stopped.",
   "cast-ended-finished": "Cast session finished.",
   "cast-ended-device_gone": "Chromecast disappeared from the network.",
-  "cast-ended-error": "Cast session ended due to an error."
+  "cast-ended-error": "Cast session ended due to an error.",
+  "mopidy": "Mopidy",
+  "manage-mopidy-servers": "Mopidy servers",
+  "mopidy-server-name": "Name",
+  "mopidy-server-url": "Server URL",
+  "mopidy-server-shared": "Shared with everyone",
+  "mopidy-add-server": "Add server",
+  "mopidy-test-connection": "Test connection",
+  "mopidy-connection-ok": "Connected to Mopidy {{version}}",
+  "mopidy-connection-failed": "Could not reach Mopidy: {{error}}",
+  "mopidy-server-added": "Mopidy server added",
+  "mopidy-server-deleted": "Mopidy server removed",
+  "mopidy-no-servers": "No Mopidy servers configured yet.",
+  "cast-kind-mopidy": "Mopidy"
 }

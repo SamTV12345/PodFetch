@@ -322,5 +322,18 @@
   "cast-ended-stopped": "投放会话已停止。",
   "cast-ended-finished": "投放会话已完成。",
   "cast-ended-device_gone": "Chromecast 已从网络中消失。",
-  "cast-ended-error": "投放会话因错误而结束。"
+  "cast-ended-error": "投放会话因错误而结束。",
+  "mopidy": "Mopidy",
+  "manage-mopidy-servers": "Mopidy 服务器",
+  "mopidy-server-name": "名称",
+  "mopidy-server-url": "服务器 URL",
+  "mopidy-server-shared": "与所有人共享",
+  "mopidy-add-server": "添加服务器",
+  "mopidy-test-connection": "测试连接",
+  "mopidy-connection-ok": "已连接到 Mopidy {{version}}",
+  "mopidy-connection-failed": "无法连接到 Mopidy：{{error}}",
+  "mopidy-server-added": "Mopidy 服务器已添加",
+  "mopidy-server-deleted": "Mopidy 服务器已删除",
+  "mopidy-no-servers": "尚未配置任何 Mopidy 服务器。",
+  "cast-kind-mopidy": "Mopidy"
 }

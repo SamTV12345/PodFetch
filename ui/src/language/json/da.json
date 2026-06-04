@@ -265,5 +265,18 @@
   "notifications-empty-description": "Du er helt opdateret.",
   "notifications-unread_one": "{{count}} ulæst notifikation",
   "notifications-unread_other": "{{count}} ulæste notifikationer",
-  "notifications-unread": "{{count}} ulæste notifikationer"
+  "notifications-unread": "{{count}} ulæste notifikationer",
+  "mopidy": "Mopidy",
+  "manage-mopidy-servers": "Mopidy-servere",
+  "mopidy-server-name": "Navn",
+  "mopidy-server-url": "Server-URL",
+  "mopidy-server-shared": "Delt med alle",
+  "mopidy-add-server": "Tilføj server",
+  "mopidy-test-connection": "Test forbindelsen",
+  "mopidy-connection-ok": "Forbundet til Mopidy {{version}}",
+  "mopidy-connection-failed": "Kunne ikke nå Mopidy: {{error}}",
+  "mopidy-server-added": "Mopidy-server tilføjet",
+  "mopidy-server-deleted": "Mopidy-server fjernet",
+  "mopidy-no-servers": "Ingen Mopidy-servere konfigureret endnu.",
+  "cast-kind-mopidy": "Mopidy"
 }

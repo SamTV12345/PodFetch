@@ -265,5 +265,18 @@
   "notifications-empty-description": "Wszystko nadrobione.",
   "notifications-unread_one": "{{count}} nieprzeczytane powiadomienie",
   "notifications-unread_other": "{{count}} nieprzeczytane powiadomienia",
-  "notifications-unread": "{{count}} nieprzeczytane powiadomienia"
+  "notifications-unread": "{{count}} nieprzeczytane powiadomienia",
+  "mopidy": "Mopidy",
+  "manage-mopidy-servers": "Serwery Mopidy",
+  "mopidy-server-name": "Nazwa",
+  "mopidy-server-url": "URL serwera",
+  "mopidy-server-shared": "Udostępniony wszystkim",
+  "mopidy-add-server": "Dodaj serwer",
+  "mopidy-test-connection": "Testuj połączenie",
+  "mopidy-connection-ok": "Połączono z Mopidy {{version}}",
+  "mopidy-connection-failed": "Nie można połączyć się z Mopidy: {{error}}",
+  "mopidy-server-added": "Serwer Mopidy dodany",
+  "mopidy-server-deleted": "Serwer Mopidy usunięty",
+  "mopidy-no-servers": "Brak skonfigurowanych serwerów Mopidy.",
+  "cast-kind-mopidy": "Mopidy"
 }

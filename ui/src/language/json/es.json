@@ -265,5 +265,18 @@
   "notifications-empty-description": "Estás al día.",
   "notifications-unread_one": "{{count}} notificación sin leer",
   "notifications-unread_other": "{{count}} notificaciones sin leer",
-  "notifications-unread": "{{count}} notificaciones sin leer"
+  "notifications-unread": "{{count}} notificaciones sin leer",
+  "mopidy": "Mopidy",
+  "manage-mopidy-servers": "Servidores Mopidy",
+  "mopidy-server-name": "Nombre",
+  "mopidy-server-url": "URL del servidor",
+  "mopidy-server-shared": "Compartido con todos",
+  "mopidy-add-server": "Añadir servidor",
+  "mopidy-test-connection": "Probar conexión",
+  "mopidy-connection-ok": "Conectado a Mopidy {{version}}",
+  "mopidy-connection-failed": "No se pudo alcanzar Mopidy: {{error}}",
+  "mopidy-server-added": "Servidor Mopidy añadido",
+  "mopidy-server-deleted": "Servidor Mopidy eliminado",
+  "mopidy-no-servers": "No hay servidores Mopidy configurados aún.",
+  "cast-kind-mopidy": "Mopidy"
 }

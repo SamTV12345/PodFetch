@@ -29,6 +29,7 @@ import {UserAdminUsers} from "./components/UserAdminUsers";
 import {UserAdminInvites} from "./components/UserAdminInvites";
 import {UserManagementPage} from "./pages/UserManagement";
 import {GPodderIntegration} from "./pages/GPodderIntegration";
+import {MopidyIntegration} from "./pages/MopidyIntegration";
 import {TagsPage} from "./pages/TagsPage";
 
 export const router = createBrowserRouter(createRoutesFromElements(
@@ -70,6 +71,7 @@ export const router = createBrowserRouter(createRoutesFromElements(
                 <Route path="podcasts" element={<SettingsPodcastDelete/>}/>
                 <Route path="rescan" element={<SettingsRescan/>}/>
                 <Route path="gpodder" element={<GPodderIntegration/>}/>
+                <Route path="mopidy" element={<MopidyIntegration/>}/>
             </Route>
             <Route path={"administration"} element={<Suspense><UserAdminViewLazyLoad /></Suspense>}>
                 <Route index element={<Navigate to="users"/>}/>

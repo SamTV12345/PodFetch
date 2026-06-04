@@ -162,7 +162,11 @@ export const CastButton: FC = () => {
                                     <Cast size={18} />
                                     <span className="grow truncate">{device.name}</span>
                                     <span className="text-xs ui-text-muted">
-                                        {device.kind === 'chromecast_shared' ? t('cast-kind-shared') : t('cast-kind-personal')}
+                                        {device.kind.startsWith('mopidy')
+                                            ? t('cast-kind-mopidy')
+                                            : device.kind === 'chromecast_shared'
+                                              ? t('cast-kind-shared')
+                                              : t('cast-kind-personal')}
                                     </span>
                                 </button>
                             </li>
