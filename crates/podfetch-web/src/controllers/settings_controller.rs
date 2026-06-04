@@ -437,6 +437,76 @@ mod tests {
 
     #[tokio::test]
     #[serial]
+    async fn test_max_parallel_downloads_defaults_persists_and_tolerates_omission() {
+        let server = handle_test_startup().await;
+
+        // Seeded default is 3.
+        let default_get = server.test_server.get("/api/v1/settings").await;
+        assert_eq!(default_get.status_code(), 200);
+        assert_eq!(default_get.json::<Setting>().max_parallel_downloads, 3);
+
+        // Updating to 1 round-trips.
+        let updated = server
+            .test_server
+            .put("/api/v1/settings")
+            .json(&json!({
+                "id": uuid::Uuid::nil().to_string(),
+                "autoDownload": true,
+                "autoUpdate": true,
+                "autoCleanup": true,
+                "autoCleanupDays": 30,
+                "podcastPrefill": 5,
+                "replaceInvalidCharacters": false,
+                "useExistingFilename": false,
+                "replacementStrategy": "replace-with-dash",
+                "episodeFormat": "{episodeTitle}",
+                "podcastFormat": "{podcastTitle}",
+                "directPaths": false,
+                "autoTranscodeOpus": false,
+                "useOneCoverForAllEpisodes": false,
+                "maxParallelDownloads": 1
+            }))
+            .await;
+        assert_eq!(updated.status_code(), 200);
+        assert_eq!(updated.json::<Setting>().max_parallel_downloads, 1);
+        assert_eq!(
+            server
+                .test_server
+                .get("/api/v1/settings")
+                .await
+                .json::<Setting>()
+                .max_parallel_downloads,
+            1
+        );
+
+        // Backward compatibility: a body that omits the field still succeeds
+        // (serde default of 3), so older clients keep working.
+        let legacy = server
+            .test_server
+            .put("/api/v1/settings")
+            .json(&json!({
+                "id": uuid::Uuid::nil().to_string(),
+                "autoDownload": true,
+                "autoUpdate": true,
+                "autoCleanup": true,
+                "autoCleanupDays": 30,
+                "podcastPrefill": 5,
+                "replaceInvalidCharacters": false,
+                "useExistingFilename": false,
+                "replacementStrategy": "replace-with-dash",
+                "episodeFormat": "{episodeTitle}",
+                "podcastFormat": "{podcastTitle}",
+                "directPaths": false,
+                "autoTranscodeOpus": false,
+                "useOneCoverForAllEpisodes": false
+            }))
+            .await;
+        assert_eq!(legacy.status_code(), 200);
+        assert_eq!(legacy.json::<Setting>().max_parallel_downloads, 3);
+    }
+
+    #[tokio::test]
+    #[serial]
     async fn test_update_settings_rejects_invalid_payload() {
         let server = handle_test_startup().await;
 
@@ -547,6 +617,7 @@ mod tests {
                 direct_paths: false,
                 auto_transcode_opus: false,
                 use_one_cover_for_all_episodes: false,
+                max_parallel_downloads: 3,
             }),
         )
         .await;

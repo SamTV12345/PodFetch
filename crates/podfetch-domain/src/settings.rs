@@ -18,6 +18,10 @@ pub struct Setting {
     pub direct_paths: bool,
     pub auto_transcode_opus: bool,
     pub use_one_cover_for_all_episodes: bool,
+    /// Maximum number of episodes downloaded in parallel. Because Opus
+    /// transcoding runs inline per download, this also bounds the number of
+    /// simultaneous transcodes. Clamped to at least 1 at the read site.
+    pub max_parallel_downloads: i32,
 }
 
 #[derive(Clone)]

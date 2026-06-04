@@ -76,6 +76,15 @@ export const Settings = () => {
                     }} type="number" value={settingsModel.data?.podcastPrefill} />
                 </div>
                 <div className="flex flex-col gap-2 xs:contents mb-4">
+                    <label htmlFor="max-parallel-downloads" className="flex gap-1">{t('max-parallel-downloads')} <SettingsInfoIcon headerKey="max-parallel-downloads" textKey="max-parallel-downloads-explanation" /></label>
+                    <CustomInput loading={settingsModel.isLoading} className="w-20" id="max-parallel-downloads" min={1} onChange={(e) => {
+                        queryClient.setQueryData(['get', '/api/v1/settings'], (oldData: Setting) => ({
+                            ...oldData,
+                            maxParallelDownloads: Math.max(1, parseInt(e.target.value) || 1)
+                        }))
+                    }} type="number" value={settingsModel.data?.maxParallelDownloads} />
+                </div>
+                <div className="flex flex-col gap-2 xs:contents mb-4">
                     <label htmlFor="auto-transcode-opus" className="flex gap-1">{t('auto-transcode-opus')} <SettingsInfoIcon headerKey="auto-transcode-opus" textKey="auto-transcode-opus-explanation" /></label>
                     <Switcher loading={settingsModel.isLoading} checked={settingsModel.data?.autoTranscodeOpus} className="xs:justify-self-end" id="auto-transcode-opus" onChange={() => {
                         queryClient.setQueryData(['get', '/api/v1/settings'], (oldData: Setting) => ({

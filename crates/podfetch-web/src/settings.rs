@@ -23,6 +23,13 @@ pub struct Setting {
     pub direct_paths: bool,
     pub auto_transcode_opus: bool,
     pub use_one_cover_for_all_episodes: bool,
+    /// Defaulted on deserialize so older clients that omit it keep working.
+    #[serde(default = "default_max_parallel_downloads")]
+    pub max_parallel_downloads: i32,
+}
+
+fn default_max_parallel_downloads() -> i32 {
+    3
 }
 
 impl From<podfetch_domain::settings::Setting> for Setting {
@@ -42,6 +49,7 @@ impl From<podfetch_domain::settings::Setting> for Setting {
             direct_paths: value.direct_paths,
             auto_transcode_opus: value.auto_transcode_opus,
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
+            max_parallel_downloads: value.max_parallel_downloads,
         }
     }
 }
@@ -63,6 +71,7 @@ impl From<Setting> for podfetch_domain::settings::Setting {
             direct_paths: value.direct_paths,
             auto_transcode_opus: value.auto_transcode_opus,
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
+            max_parallel_downloads: value.max_parallel_downloads,
         }
     }
 }

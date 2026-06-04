@@ -281,7 +281,6 @@ impl PodcastService {
 
     #[tracing::instrument(skip_all, fields(podcast_id = podcast.id, podcast_name = %podcast.name))]
     pub fn schedule_episode_download(podcast: &Podcast) -> Result<(), CustomError> {
-        const MAX_PARALLEL_DOWNLOADS: usize = 3;
         let settings =
             crate::services::settings::service::SettingsService::shared().get_settings()?;
         let podcast_settings =
@@ -293,7 +292,10 @@ impl PodcastService {
                 {
                     let result =
                         PodcastEpisodeService::get_last_n_podcast_episodes(podcast.clone())?;
-                    for chunk in result.chunks(MAX_PARALLEL_DOWNLOADS) {
+                    // Bound parallel downloads (and therefore inline Opus
+                    // transcodes) by the configured setting; never below 1.
+                    let max_parallel_downloads = settings.max_parallel_downloads.max(1) as usize;
+                    for chunk in result.chunks(max_parallel_downloads) {
                         let mut handles = Vec::with_capacity(chunk.len());
                         for podcast_episode in chunk.iter().cloned() {
                             if podcast_episode.deleted {

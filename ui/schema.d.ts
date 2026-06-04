@@ -1679,6 +1679,8 @@ export interface components {
             directPaths: boolean;
             episodeFormat: string;
             id: string;
+            /** Format: int32 */
+            maxParallelDownloads?: number;
             podcastFormat: string;
             /** Format: int32 */
             podcastPrefill: number;
