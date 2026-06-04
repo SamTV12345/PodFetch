@@ -20,6 +20,7 @@ diesel::table! {
         agent_id -> Nullable<Text>,
         last_seen_at -> Nullable<Timestamp>,
         ip -> Nullable<Text>,
+        base_url -> Nullable<Text>,
     }
 }
 

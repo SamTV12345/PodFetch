@@ -30,6 +30,7 @@ pub const PODINDEX_API_KEY: &str = "PODINDEX_API_KEY";
 pub const PODINDEX_API_SECRET: &str = "PODINDEX_API_SECRET";
 pub const GPODDER_INTEGRATION_ENABLED: &str = "GPODDER_INTEGRATION_ENABLED";
 pub const AUDIOBOOKSHELF_INTEGRATION_ENABLED: &str = "AUDIOBOOKSHELF_INTEGRATION_ENABLED";
+pub const MOPIDY_INTEGRATION_ENABLED: &str = "MOPIDY_INTEGRATION_ENABLED";
 pub const AUDIOBOOKSHELF_DATA_DIR: &str = "AUDIOBOOKSHELF_DATA_DIR";
 pub const AUDIOBOOKSHELF_HLS_CACHE_MAX_MB: &str = "AUDIOBOOKSHELF_HLS_CACHE_MAX_MB";
 pub const AUDIOBOOKSHELF_TRANSCODER_MAX_CONCURRENT: &str =
@@ -114,6 +115,7 @@ pub struct ConfigModel {
     pub oidc_configured: bool,
     pub oidc_config: Option<OidcConfig>,
     pub reverse_proxy: bool,
+    pub mopidy_integration_enabled: bool,
 }
 
 #[derive(Clone)]
@@ -131,6 +133,7 @@ pub struct EnvironmentService {
     pub reverse_proxy_config: Option<ReverseProxyConfig>,
     pub gpodder_integration_enabled: bool,
     pub audiobookshelf_integration_enabled: bool,
+    pub mopidy_integration_enabled: bool,
     pub audiobookshelf_data_dir: String,
     pub audiobookshelf_hls_cache_max_mb: u64,
     pub audiobookshelf_transcoder_max_concurrent: u32,
@@ -230,6 +233,7 @@ impl EnvironmentService {
             Some("a942b37ccfaf5a813b1432caa209a43b9d144e47ad0de1549c289c253e556cd5".to_string());
         environment.gpodder_integration_enabled = true;
         environment.audiobookshelf_integration_enabled = true;
+        environment.mopidy_integration_enabled = true;
         environment
     }
 
@@ -303,6 +307,7 @@ impl EnvironmentService {
             audiobookshelf_integration_enabled: is_env_var_present_and_true(
                 AUDIOBOOKSHELF_INTEGRATION_ENABLED,
             ),
+            mopidy_integration_enabled: is_env_var_present_and_true(MOPIDY_INTEGRATION_ENABLED),
             audiobookshelf_data_dir: var(AUDIOBOOKSHELF_DATA_DIR)
                 .unwrap_or(DEFAULT_AUDIOBOOKSHELF_DATA_DIR.to_string()),
             audiobookshelf_hls_cache_max_mb: var(AUDIOBOOKSHELF_HLS_CACHE_MAX_MB)
@@ -414,6 +419,10 @@ impl EnvironmentService {
             "Audiobookshelf integration enabled: {}",
             self.audiobookshelf_integration_enabled
         );
+        tracing::info!(
+            "Mopidy integration enabled: {}",
+            self.mopidy_integration_enabled
+        );
         tracing::debug!("Database url is set to: {}", &self.database_url);
         tracing::info!(
             "Podindex API key&secret configured: {}",
@@ -433,6 +442,7 @@ impl EnvironmentService {
             oidc_configured: self.oidc_configured,
             oidc_config: self.oidc_config.clone(),
             ws_url: String::new(),
+            mopidy_integration_enabled: self.mopidy_integration_enabled,
         }
     }
 
@@ -447,5 +457,18 @@ impl EnvironmentService {
 
         "
         )
+    }
+}
+
+#[cfg(test)]
+mod mopidy_config_tests {
+    use super::*;
+
+    #[test]
+    fn config_model_exposes_mopidy_flag() {
+        let mut env = EnvironmentService::new();
+        env.mopidy_integration_enabled = true;
+        let model = env.get_config("http://localhost:8000/");
+        assert!(model.mopidy_integration_enabled);
     }
 }

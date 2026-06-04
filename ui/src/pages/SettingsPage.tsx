@@ -1,9 +1,11 @@
 import { useTranslation } from 'react-i18next'
 import { Heading1 } from '../components/Heading1'
 import {NavLink, Outlet} from "react-router-dom";
+import {getConfigFromHtmlFile} from "../utils/config";
 
 export const SettingsPage = () => {
     const { t } = useTranslation()
+    const config = getConfigFromHtmlFile()
 
     return (
         <div>
@@ -47,6 +49,13 @@ export const SettingsPage = () => {
                             {t('manage-gpodder-podcasts')}
                         </NavLink>
                     </li>
+                    {config?.mopidyIntegrationEnabled && (
+                        <li className={`cursor-pointer inline-block px-2 py-4`}>
+                            <NavLink to="mopidy">
+                                {t('manage-mopidy-servers')}
+                            </NavLink>
+                        </li>
+                    )}
                 </ul>
             </div>
 

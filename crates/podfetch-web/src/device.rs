@@ -23,6 +23,7 @@ impl From<DeviceCreate> for Device {
             agent_id: None,
             last_seen_at: None,
             ip: None,
+            base_url: None,
         }
     }
 }

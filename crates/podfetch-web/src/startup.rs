@@ -4,6 +4,7 @@ use crate::auth_middleware::{
 };
 use crate::controllers::agent_ws_controller::get_agent_ws_router;
 use crate::controllers::cast_controller::get_cast_router;
+use crate::controllers::mopidy_controller::get_mopidy_router;
 use crate::controllers::discover_controller::get_discover_router;
 use crate::controllers::file_hosting::podcast_serving;
 use crate::controllers::manifest_controller::get_manifest_router;
@@ -339,7 +340,7 @@ fn config(state: AppState) -> OpenApiRouter {
 }
 
 fn get_private_api(state: AppState) -> OpenApiRouter {
-    let router = OpenApiRouter::new()
+    let mut router = OpenApiRouter::new()
         .merge(get_cast_router().with_state(state.clone()))
         .merge(get_discover_router().with_state(state.clone()))
         .merge(get_playlist_router().with_state(state.clone()))
@@ -352,6 +353,10 @@ fn get_private_api(state: AppState) -> OpenApiRouter {
         .merge(get_settings_router().with_state(state.clone()))
         .merge(get_tags_router().with_state(state.clone()))
         .merge(get_user_router().with_state(state.clone()));
+
+    if ENVIRONMENT_SERVICE.mopidy_integration_enabled {
+        router = router.merge(get_mopidy_router().with_state(state.clone()));
+    }
 
     if ENVIRONMENT_SERVICE.http_basic {
         router.layer(from_fn_with_state(state.clone(), handle_basic_auth))
@@ -460,6 +465,20 @@ pub fn build_server_router() -> Router {
         // Audiobookshelf event-based `auth` handler is installed in the `/`
         // namespace handler above (mobile apps don't connect to custom NSs).
         start_audiobookshelf_file_watcher(&state);
+    }
+    if ENVIRONMENT_SERVICE.mopidy_integration_enabled
+        && tokio::runtime::Handle::try_current().is_ok()
+    {
+        // Take the receiver once (try_lock is uncontended at startup) and spawn
+        // the consumer that drives Mopidy status into the cast orchestrator.
+        let rx = state
+            .mopidy_event_rx
+            .try_lock()
+            .ok()
+            .and_then(|mut guard| guard.take());
+        if let Some(rx) = rx {
+            crate::services::mopidy::consumer::spawn_status_consumer(state.clone(), rx);
+        }
     }
     SOCKET_IO_LAYER.get_or_init(|| io);
 

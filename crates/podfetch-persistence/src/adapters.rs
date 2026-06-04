@@ -80,6 +80,14 @@ impl DeviceRepository for DeviceRepositoryImpl {
             .map_err(Into::into)
     }
 
+    fn find_by_id(&self, id: Uuid) -> Result<Option<Device>, CustomError> {
+        self.inner.find_by_id(id).map_err(Into::into)
+    }
+
+    fn delete_by_id(&self, id: Uuid) -> Result<usize, CustomError> {
+        self.inner.delete_by_id(id).map_err(Into::into)
+    }
+
     fn upsert_chromecast_from_agent(
         &self,
         chromecast_uuid: &str,

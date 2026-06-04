@@ -14,6 +14,7 @@ pub mod gpodder_setting;
 pub mod invite;
 pub mod listening_event;
 pub mod login;
+pub mod mopidy;
 pub mod notification;
 pub mod playlist;
 pub mod podcast;
