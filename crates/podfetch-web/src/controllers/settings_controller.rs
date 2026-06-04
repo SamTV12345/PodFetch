@@ -353,7 +353,7 @@ mod tests {
             .test_server
             .put("/api/v1/settings")
             .json(&json!({
-                "id": 1,
+                "id": uuid::Uuid::nil().to_string(),
                 "autoDownload": false,
                 "autoUpdate": false,
                 "autoCleanup": true,
@@ -395,7 +395,7 @@ mod tests {
             .test_server
             .put("/api/v1/settings")
             .json(&json!({
-                "id": 1,
+                "id": uuid::Uuid::nil().to_string(),
                 "autoDownload": true,
                 "autoUpdate": true,
                 "autoCleanup": true,

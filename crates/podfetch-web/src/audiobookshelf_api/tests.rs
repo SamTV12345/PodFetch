@@ -1488,9 +1488,9 @@ async fn podcast_episode_shape_matches_audiobookshelf() {
             "episode payload missing field {field}: {ep:#?}"
         );
     }
-    // podcastId is an i32, not a string
-    assert!(ep["podcastId"].is_i64());
-    assert_eq!(ep["podcastId"], json!(podcast.id));
+    // podcastId is a uuid string
+    assert!(ep["podcastId"].is_string());
+    assert_eq!(ep["podcastId"], json!(podcast.id.to_string()));
     // audioTrack.contentUrl matches upstream's /api/items/<id>/file/<ino>
     let url = ep["audioTrack"]["contentUrl"].as_str().unwrap();
     let expected = format!(

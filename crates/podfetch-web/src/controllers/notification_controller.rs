@@ -142,7 +142,7 @@ mod tests {
         let dismiss_response = test_server
             .test_server
             .put("/api/v1/notifications/dismiss")
-            .json(&json!({ "id": 999_999_999 }))
+            .json(&json!({ "id": uuid::Uuid::new_v4().to_string() }))
             .await;
         assert_eq!(dismiss_response.status_code(), 200);
 
@@ -367,25 +367,26 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_dismiss_notification_with_zero_or_negative_id_is_noop() {
+    async fn test_dismiss_notification_with_unknown_uuids_is_noop() {
         let test_server = handle_test_startup().await;
 
         NotificationService::create_notification(NotificationTestDataBuilder::new().build().into())
             .unwrap();
 
-        let dismiss_zero = test_server
+        // Notification ids are pure uuids now; dismissing a valid but unknown uuid is a noop.
+        let dismiss_first = test_server
             .test_server
             .put("/api/v1/notifications/dismiss")
-            .json(&json!({ "id": 0 }))
+            .json(&json!({ "id": uuid::Uuid::new_v4().to_string() }))
             .await;
-        assert_eq!(dismiss_zero.status_code(), 200);
+        assert_eq!(dismiss_first.status_code(), 200);
 
-        let dismiss_negative = test_server
+        let dismiss_second = test_server
             .test_server
             .put("/api/v1/notifications/dismiss")
-            .json(&json!({ "id": -1 }))
+            .json(&json!({ "id": uuid::Uuid::new_v4().to_string() }))
             .await;
-        assert_eq!(dismiss_negative.status_code(), 200);
+        assert_eq!(dismiss_second.status_code(), 200);
 
         let unread_after = test_server
             .test_server

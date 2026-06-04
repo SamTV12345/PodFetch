@@ -765,6 +765,7 @@ mod tests {
 
         diesel::insert_into(subs_dsl::subscriptions)
             .values((
+                subs_dsl::id.eq(Uuid::new_v4().to_string()),
                 subs_dsl::user_id.eq(admin_user_id().to_string()),
                 subs_dsl::device.eq("phone".to_string()),
                 subs_dsl::podcast.eq("https://example.com/not-present.xml".to_string()),

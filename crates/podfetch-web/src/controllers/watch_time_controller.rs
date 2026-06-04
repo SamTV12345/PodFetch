@@ -122,6 +122,7 @@ mod tests {
 
         diesel::insert_into(pe_dsl::podcast_episodes)
             .values((
+                pe_dsl::id.eq(Uuid::new_v4().to_string()),
                 pe_dsl::podcast_id.eq(podcast_id.to_string()),
                 pe_dsl::episode_id.eq(episode_id.to_string()),
                 pe_dsl::name.eq(title.to_string()),

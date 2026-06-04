@@ -229,7 +229,7 @@ mod tests {
     fn init_payload_has_audiobookshelf_shape() {
         let user = fixture_user();
         let payload = build_init_payload(&user);
-        assert_eq!(payload["userId"], json!("7"));
+        assert_eq!(payload["userId"], json!(user.id.to_string()));
         assert_eq!(payload["username"], json!("sam"));
         // No extra fields beyond the upstream init payload (usersOnline elided)
         assert_eq!(payload.as_object().unwrap().len(), 2);
@@ -274,7 +274,7 @@ mod tests {
         let user = fixture_user();
         let progress = fixture_progress();
         let payload = build_user_updated_payload(&user, &[progress]);
-        assert_eq!(payload["id"], json!("7"));
+        assert_eq!(payload["id"], json!(user.id.to_string()));
         assert_eq!(payload["username"], json!("sam"));
         assert_eq!(payload["type"], json!("root"));
         assert_eq!(payload["token"], json!("abs_token_xyz"));
