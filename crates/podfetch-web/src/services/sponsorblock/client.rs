@@ -117,6 +117,7 @@ pub async fn fetch_segments(video_id: &str) -> Result<Vec<FetchedSegment>, Custo
 
     let resp = client
         .get(&url)
+        .timeout(std::time::Duration::from_secs(10))
         .header(USER_AGENT, COMMON_USER_AGENT)
         .query(&[("categories", categories.as_str()), ("actionTypes", "[\"skip\"]")])
         .send()

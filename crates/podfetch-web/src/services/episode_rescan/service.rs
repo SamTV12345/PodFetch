@@ -354,32 +354,16 @@ impl EpisodeRescanService {
                         Some(&episode.url),
                     );
             }
-            let join = std::thread::spawn(move || {
-                match tokio::runtime::Runtime::new() {
-                    Ok(rt) => rt.block_on(
-                        crate::services::sponsorblock::service::fetch_and_store(&episode_for_fetch),
-                    ),
-                    Err(e) => Err(common_infrastructure::error::CustomErrorInner::Conflict(
-                        format!("Could not start runtime for SponsorBlock refetch: {e}"),
-                        common_infrastructure::error::ErrorSeverity::Warning,
-                    )
-                    .into()),
-                }
-            });
-            match join.join() {
-                Ok(Ok(_n)) => {}
-                Ok(Err(err)) => {
-                    tracing::warn!(
-                        "SponsorBlock refetch failed for {}: {err}",
-                        episode.episode_id
-                    );
-                    stats.errors += 1;
-                }
-                Err(_) => {
-                    tracing::warn!(
-                        "SponsorBlock refetch thread panicked for {}",
-                        episode.episode_id
-                    );
+            match crate::services::sponsorblock::service::fetch_and_store_blocking(
+                &episode_for_fetch,
+            ) {
+                Ok(n) if n > 0 => tracing::info!(
+                    "Refetched {n} SponsorBlock segments for episode {}",
+                    episode.id
+                ),
+                Ok(_) => {}
+                Err(err) => {
+                    tracing::warn!("SponsorBlock refetch failed for {}: {err}", episode.id);
                     stats.errors += 1;
                 }
             }

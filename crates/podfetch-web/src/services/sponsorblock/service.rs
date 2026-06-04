@@ -19,6 +19,31 @@ fn durations_mismatch(episode_secs: i64, sb_secs: f64) -> bool {
     diff > tolerance
 }
 
+/// Blocking bridge for sync callers (the downloader and rescan): runs
+/// `fetch_and_store` on a fresh thread with its own tokio runtime so it is safe
+/// regardless of the caller's async context. Returns Ok(n) segments, or Err.
+pub fn fetch_and_store_blocking(episode: &PodcastEpisode) -> Result<usize, CustomError> {
+    let episode = episode.clone();
+    std::thread::spawn(move || {
+        match tokio::runtime::Runtime::new() {
+            Ok(rt) => rt.block_on(fetch_and_store(&episode)),
+            Err(e) => Err(common_infrastructure::error::CustomErrorInner::Conflict(
+                format!("Could not start runtime for SponsorBlock fetch: {e}"),
+                common_infrastructure::error::ErrorSeverity::Warning,
+            )
+            .into()),
+        }
+    })
+    .join()
+    .unwrap_or_else(|_| {
+        Err(common_infrastructure::error::CustomErrorInner::Conflict(
+            "SponsorBlock fetch thread panicked".to_string(),
+            common_infrastructure::error::ErrorSeverity::Warning,
+        )
+        .into())
+    })
+}
+
 /// Fetch + store SponsorBlock segments for one episode. Returns the number of
 /// segments stored. Caller is responsible for non-fatal error handling.
 pub async fn fetch_and_store(episode: &PodcastEpisode) -> Result<usize, CustomError> {

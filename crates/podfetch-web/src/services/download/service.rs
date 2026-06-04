@@ -322,47 +322,18 @@ impl DownloadService {
             tracing::error!("Error handling metadata insertion: {err:?}");
         }
 
-        // NON-FATAL: fetch SponsorBlock segments for this episode.
-        // Runs on a dedicated OS thread that owns its own tokio runtime so we
-        // never hit "Cannot start a runtime from within a runtime".
-        {
-            let episode_for_sb = podcast_episode.clone();
-            let join = std::thread::spawn(move || {
-                let rt = match tokio::runtime::Runtime::new() {
-                    Ok(rt) => rt,
-                    Err(e) => {
-                        return Err(common_infrastructure::error::CustomErrorInner::Conflict(
-                            format!("Could not start runtime for SponsorBlock fetch: {e}"),
-                            common_infrastructure::error::ErrorSeverity::Warning,
-                        )
-                        .into());
-                    }
-                };
-                rt.block_on(crate::services::sponsorblock::service::fetch_and_store(
-                    &episode_for_sb,
-                ))
-            });
-            match join.join() {
-                Ok(Ok(n)) if n > 0 => {
-                    tracing::info!(
-                        "Stored {n} SponsorBlock segments for episode {}",
-                        podcast_episode.id
-                    );
-                }
-                Ok(Ok(_)) => {}
-                Ok(Err(err)) => {
-                    tracing::warn!(
-                        "SponsorBlock fetch failed for episode {}: {err}",
-                        podcast_episode.id
-                    );
-                }
-                Err(_) => {
-                    tracing::warn!(
-                        "SponsorBlock fetch thread panicked for episode {}",
-                        podcast_episode.id
-                    );
-                }
-            }
+        // SponsorBlock: fetch + store segments for YouTube-sourced episodes.
+        // Non-fatal — must never fail the download.
+        match crate::services::sponsorblock::service::fetch_and_store_blocking(&podcast_episode) {
+            Ok(n) if n > 0 => tracing::info!(
+                "Stored {n} SponsorBlock segments for episode {}",
+                podcast_episode.id
+            ),
+            Ok(_) => {}
+            Err(err) => tracing::warn!(
+                "SponsorBlock fetch failed for episode {}: {err}",
+                podcast_episode.id
+            ),
         }
 
         let final_episode_path = if settings_in_db.auto_transcode_opus {
