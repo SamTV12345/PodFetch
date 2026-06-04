@@ -104,7 +104,7 @@ export const fetchUserProfile = async (
     serverUrl: string,
     username: string,
     password: string
-): Promise<components["schemas"]["UserWithAPiKey"] | null> => {
+): Promise<components["schemas"]["UserWithApiKey"] | null> => {
     try {
         const normalizedUrl = serverUrl.replace(/\/$/, '');
         const client = createAuthenticatedClient(normalizedUrl, username, password);
@@ -204,7 +204,7 @@ export const updateUserProfile = async (
     username: string,
     password: string,
     updateData: components["schemas"]["UserCoreUpdateModel"]
-): Promise<components["schemas"]["UserWithAPiKey"] | null> => {
+): Promise<components["schemas"]["UserWithApiKey"] | null> => {
     try {
         const normalizedUrl = serverUrl.replace(/\/$/, '');
         const client = createAuthenticatedClient(normalizedUrl, username, password);

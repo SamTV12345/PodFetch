@@ -1,5 +1,5 @@
 interface Tags {
-    id: number,
+    id: string,
     name: string,
     color: string,
     username: string

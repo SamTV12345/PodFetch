@@ -47,7 +47,7 @@ export const CastButton: FC = () => {
         refetchOnWindowFocus: false,
     })
     const startSession = $api.useMutation('post', '/api/v1/cast/sessions')
-    const controlSession = $api.useMutation('post', '/api/v1/cast/sessions/{id}/control')
+    const controlSession = $api.useMutation('post', '/api/v1/cast/sessions/{session_id}/control')
 
     const devices: CastDevice[] = devicesQuery.data ?? []
 
@@ -99,7 +99,7 @@ export const CastButton: FC = () => {
         if (!activeSession) return
         try {
             await controlSession.mutateAsync({
-                params: { path: { id: activeSession.sessionId } },
+                params: { path: { session_id: activeSession.sessionId } },
                 body: { cmd: 'stop' },
             })
         } catch {

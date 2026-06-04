@@ -1,7 +1,7 @@
 export interface PodcastWatchedModel {
-    id: number,
-    podcastId: number,
-    episodeId: number,
+    id: string,
+    podcastId: string,
+    episodeId: string,
     watchedTime: number,
     date: String
     total: number

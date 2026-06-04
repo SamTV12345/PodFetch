@@ -156,7 +156,7 @@ export function useDownloadedEpisodes() {
 /**
  * Hook für Downloads eines bestimmten Podcasts
  */
-export function usePodcastDownloads(podcastId: number) {
+export function usePodcastDownloads(podcastId: string) {
     const [episodes, setEpisodes] = useState<DownloadedEpisode[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(true);
 

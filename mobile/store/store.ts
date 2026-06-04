@@ -46,8 +46,8 @@ type ZustandStore = {
     // User profile
     userApiKey: string | null,
     setUserApiKey: (apiKey: string | null) => void,
-    userProfile: components["schemas"]["UserWithAPiKey"] | null,
-    setUserProfile: (profile: components["schemas"]["UserWithAPiKey"] | null) => void,
+    userProfile: components["schemas"]["UserWithApiKey"] | null,
+    setUserProfile: (profile: components["schemas"]["UserWithApiKey"] | null) => void,
     // Offline mode
     offlineMode: boolean,
     setOfflineMode: (enabled: boolean) => void,

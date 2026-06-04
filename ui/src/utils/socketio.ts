@@ -115,7 +115,7 @@ export function connectSocket(apiKey: string) {
     socket.on('cast:status', (data: {
         status: {
             session_id: string,
-            state: components['schemas']['CastSessionState'],
+            state: components['schemas']['CastStateDto'],
             position_secs: number,
             volume: number,
             at: string,

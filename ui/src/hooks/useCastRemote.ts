@@ -4,12 +4,12 @@ import { $api } from '../utils/http'
 import useCast from '../store/CastSlice'
 import { components } from '../../schema'
 
-type CastControlCommand = components['schemas']['CastControlCommand']
+type CastControlCommand = components['schemas']['CastControlRequest']
 
 export type CastRemote = {
     isCasting: boolean
     sessionId?: string
-    state?: components['schemas']['CastSessionState']
+    state?: components['schemas']['CastStateDto']
     positionSecs: number
     durationSecs: number
     deviceName: string
@@ -26,14 +26,14 @@ export const useCastRemote = (): CastRemote => {
     const activeSession = useCast((s) => s.activeSession)
     const setActiveSession = useCast((s) => s.setActiveSession)
     const updateStatus = useCast((s) => s.updateStatus)
-    const controlMutation = $api.useMutation('post', '/api/v1/cast/sessions/{id}/control')
+    const controlMutation = $api.useMutation('post', '/api/v1/cast/sessions/{session_id}/control')
 
     const send = async (cmd: CastControlCommand, optimistic?: () => void) => {
         if (!activeSession) return
         if (optimistic) optimistic()
         try {
             await controlMutation.mutateAsync({
-                params: { path: { id: activeSession.sessionId } },
+                params: { path: { session_id: activeSession.sessionId } },
                 body: cmd,
             })
         } catch {

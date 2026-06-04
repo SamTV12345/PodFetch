@@ -1,5 +1,5 @@
 export type Setting = {
-    id: number,
+    id: string,
     autoDownload: boolean,
     autoUpdate: boolean,
     autoCleanup: boolean,

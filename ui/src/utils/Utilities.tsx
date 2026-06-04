@@ -85,7 +85,7 @@ export const getFiltersDefault = () => {
         filter: "PUBLISHEDDATE",
         only_favored: false,
         title: '',
-        user_id: 0
+        user_id: ''
     } satisfies Filter
 }
 

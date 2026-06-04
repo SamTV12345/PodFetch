@@ -13,7 +13,7 @@ import { components } from '@/schema';
 export interface LocalWatchProgress {
     id?: number;
     episodeId: string;
-    podcastId: number;
+    podcastId: string;
     watchedTime: number;
     totalTime: number;
     updatedAt: string;
@@ -24,7 +24,7 @@ export interface LocalWatchProgress {
 export interface DownloadedEpisode {
     id?: number;
     episodeId: string;
-    podcastId: number;
+    podcastId: string;
     name: string;
     localPath: string;
     originalUrl: string;
@@ -62,7 +62,7 @@ class OfflineDatabase {
             CREATE TABLE IF NOT EXISTS watch_progress (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 episode_id TEXT UNIQUE NOT NULL,
-                podcast_id INTEGER NOT NULL,
+                podcast_id TEXT NOT NULL,
                 watched_time INTEGER NOT NULL DEFAULT 0,
                 total_time INTEGER NOT NULL DEFAULT 0,
                 updated_at TEXT NOT NULL,
@@ -76,7 +76,7 @@ class OfflineDatabase {
             CREATE TABLE IF NOT EXISTS downloaded_episodes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 episode_id TEXT UNIQUE NOT NULL,
-                podcast_id INTEGER NOT NULL,
+                podcast_id TEXT NOT NULL,
                 name TEXT NOT NULL,
                 local_path TEXT NOT NULL,
                 original_url TEXT NOT NULL,
@@ -153,7 +153,7 @@ class OfflineDatabase {
         const result = this.db.getFirstSync<{
             id: number;
             episode_id: string;
-            podcast_id: number;
+            podcast_id: string;
             watched_time: number;
             total_time: number;
             updated_at: string;
@@ -181,7 +181,7 @@ class OfflineDatabase {
         const results = this.db.getAllSync<{
             id: number;
             episode_id: string;
-            podcast_id: number;
+            podcast_id: string;
             watched_time: number;
             total_time: number;
             updated_at: string;
@@ -250,7 +250,7 @@ class OfflineDatabase {
         const result = this.db.getFirstSync<{
             id: number;
             episode_id: string;
-            podcast_id: number;
+            podcast_id: string;
             name: string;
             local_path: string;
             original_url: string;
@@ -286,7 +286,7 @@ class OfflineDatabase {
         const results = this.db.getAllSync<{
             id: number;
             episode_id: string;
-            podcast_id: number;
+            podcast_id: string;
             name: string;
             local_path: string;
             original_url: string;
@@ -314,13 +314,13 @@ class OfflineDatabase {
         }));
     }
 
-    async getDownloadedEpisodesByPodcast(podcastId: number): Promise<DownloadedEpisode[]> {
+    async getDownloadedEpisodesByPodcast(podcastId: string): Promise<DownloadedEpisode[]> {
         await this.initialize();
 
         const results = this.db.getAllSync<{
             id: number;
             episode_id: string;
-            podcast_id: number;
+            podcast_id: string;
             name: string;
             local_path: string;
             original_url: string;

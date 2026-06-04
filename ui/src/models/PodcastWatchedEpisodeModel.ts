@@ -1,8 +1,8 @@
 import {Podcast, PodcastEpisode} from "../store/CommonSlice";
 
 export interface PodcastWatchedEpisodeModel {
-    id: number,
-    podcastId: number,
+    id: string,
+    podcastId: string,
     episodeId: string,
     url: string,
     name:string,

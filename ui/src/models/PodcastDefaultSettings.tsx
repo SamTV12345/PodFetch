@@ -1,6 +1,6 @@
 import {components} from "../../schema";
 
-export const generatePodcastDefaultSettings = (podcastId: number) => {
+export const generatePodcastDefaultSettings = (podcastId: string) => {
     return {
         activated: false,
         autoCleanup: false,

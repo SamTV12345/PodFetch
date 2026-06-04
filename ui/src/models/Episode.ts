@@ -4,7 +4,7 @@ export interface Episode {
     device: string,
     episode: string,
     guid: string,
-    id: number,
+    id: string,
     podcast: string,
     position: number,
     started: number,
