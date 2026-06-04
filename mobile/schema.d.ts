@@ -476,7 +476,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_sponsorblock_episode_segments"];
+        get: operations["get_episode_sponsorblock"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1732,9 +1732,9 @@ export interface components {
             uuid: string;
             category: string;
             actionType: string;
-            /** Format: int32 */
+            /** Format: int64 */
             startMs: number;
-            /** Format: int32 */
+            /** Format: int64 */
             endMs: number;
             /** Format: int32 */
             votes: number;
@@ -3340,7 +3340,7 @@ export interface operations {
             };
         };
     };
-    get_sponsorblock_episode_segments: {
+    get_episode_sponsorblock: {
         parameters: {
             query?: never;
             header?: never;
