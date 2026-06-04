@@ -63,8 +63,9 @@ pub trait DeviceRepository: Send + Sync {
     fn get_devices_of_user(&self, user_id: Uuid) -> Result<Vec<Device>, Self::Error>;
     fn delete_by_user_id(&self, user_id: Uuid) -> Result<(), Self::Error>;
 
-    /// Chromecast devices the given user is allowed to see — their own
-    /// personal devices plus any shared/household devices on the instance.
+    /// Castable devices (Chromecast or Mopidy) the given user is allowed to
+    /// see — their own personal devices plus any shared/household device on
+    /// the instance.
     fn list_castable_for_user(&self, user_id: Uuid) -> Result<Vec<Device>, Self::Error>;
 
     fn find_by_chromecast_uuid(&self, chromecast_uuid: &str)

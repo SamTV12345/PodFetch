@@ -311,4 +311,32 @@ mod mopidy_persistence_tests {
         assert_eq!(repo.delete_by_id(created.id.unwrap()).expect("delete"), 1);
         assert!(repo.find_by_id(created.id.unwrap()).expect("find again").is_none());
     }
+
+    #[test]
+    fn list_castable_hides_personal_mopidy_from_other_user() {
+        run_migrations();
+        let repo = DieselDeviceRepository::new(database());
+        let owner = seed_user();
+        let other = seed_user();
+
+        let created = repo
+            .create(mopidy_device(owner, device_kind::MOPIDY_PERSONAL, "http://personal.local:6680"))
+            .expect("create personal mopidy device");
+
+        // Owner A sees their own personal device.
+        let castable_owner = repo.list_castable_for_user(owner).expect("list castable owner");
+        assert!(
+            castable_owner.iter().any(|d| d.id == created.id),
+            "owner should see their own personal device"
+        );
+
+        // A different user B must NOT see A's personal device.
+        let castable_other = repo.list_castable_for_user(other).expect("list castable other");
+        assert!(
+            !castable_other.iter().any(|d| d.id == created.id),
+            "personal device must not be visible to a different user"
+        );
+
+        repo.delete_by_id(created.id.unwrap()).expect("delete");
+    }
 }

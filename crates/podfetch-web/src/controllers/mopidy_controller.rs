@@ -226,4 +226,18 @@ mod tests {
         assert!(normalize_url("ftp://x").is_err());
         assert_eq!(normalize_url("http://m.local:6680/").unwrap(), "http://m.local:6680");
     }
+
+    #[test]
+    fn normalize_trims_surrounding_whitespace() {
+        assert_eq!(
+            normalize_url("  http://m.local:6680/  ").unwrap(),
+            "http://m.local:6680"
+        );
+    }
+
+    #[test]
+    fn normalize_rejects_empty_or_whitespace_only() {
+        assert!(normalize_url("").is_err());
+        assert!(normalize_url("   ").is_err());
+    }
 }

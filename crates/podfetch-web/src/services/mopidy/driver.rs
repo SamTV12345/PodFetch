@@ -12,7 +12,7 @@ use chrono::Utc;
 use podfetch_cast::{CastMedia, CastSessionId, CastState, CastStatus, ControlCmd};
 use serde_json::{Value, json};
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tracing::warn;
@@ -50,7 +50,7 @@ struct ActiveMopidySession {
 
 pub struct MopidyDriver {
     event_tx: mpsc::Sender<MopidyEvent>,
-    sessions: Mutex<HashMap<CastSessionId, ActiveMopidySession>>,
+    sessions: Arc<Mutex<HashMap<CastSessionId, ActiveMopidySession>>>,
 }
 
 /// Decide whether a freshly polled state means the session ended.
@@ -68,7 +68,7 @@ impl MopidyDriver {
     pub fn new(event_tx: mpsc::Sender<MopidyEvent>) -> Self {
         Self {
             event_tx,
-            sessions: Mutex::new(HashMap::new()),
+            sessions: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -112,8 +112,9 @@ impl MopidyDriver {
         let event_tx = self.event_tx.clone();
         let base_url = target.base_url.clone();
         let pump_session = session_id.clone();
+        let sessions = self.sessions.clone();
         tokio::spawn(async move {
-            run_pump(base_url, pump_session, event_tx, cancel_rx).await;
+            run_pump(base_url, pump_session, event_tx, cancel_rx, sessions).await;
         });
 
         Ok(session_id)
@@ -136,24 +137,23 @@ impl MopidyDriver {
         client.call(method, params).await?;
 
         if matches!(cmd, ControlCmd::Stop) {
-            self.finish_session(session_id, CastEndedReason::Stopped);
+            let removed = self
+                .sessions
+                .lock()
+                .expect("mopidy session lock poisoned")
+                .remove(session_id);
+            if let Some(entry) = removed {
+                let _ = entry.cancel.send(true);
+                let _ = self
+                    .event_tx
+                    .send(MopidyEvent::SessionEnded {
+                        session_id: session_id.clone(),
+                        reason: CastEndedReason::Stopped,
+                    })
+                    .await;
+            }
         }
         Ok(())
-    }
-
-    fn finish_session(&self, session_id: &CastSessionId, reason: CastEndedReason) {
-        if let Some(session) = self
-            .sessions
-            .lock()
-            .expect("mopidy session lock poisoned")
-            .remove(session_id)
-        {
-            let _ = session.cancel.send(true);
-            let _ = self.event_tx.try_send(MopidyEvent::SessionEnded {
-                session_id: session_id.clone(),
-                reason,
-            });
-        }
     }
 
     #[cfg(test)]
@@ -170,10 +170,12 @@ async fn run_pump(
     session_id: CastSessionId,
     event_tx: mpsc::Sender<MopidyEvent>,
     mut cancel_rx: tokio::sync::watch::Receiver<bool>,
+    sessions: Arc<Mutex<HashMap<CastSessionId, ActiveMopidySession>>>,
 ) {
     let client = MopidyRpcClient::new(&base_url);
     let mut has_played = false;
     loop {
+        // Cancelled (control(Stop) owns the end event) — leave silently.
         if *cancel_rx.borrow() {
             return;
         }
@@ -193,14 +195,24 @@ async fn run_pump(
                 return;
             }
             if let Some(reason) = end_reason_for_poll(has_played, state) {
-                let _ = event_tx
-                    .send(MopidyEvent::SessionEnded { session_id, reason })
-                    .await;
+                // Single-owner removal: only the side that actually removed the
+                // entry emits exactly one SessionEnded.
+                let still_owned = sessions
+                    .lock()
+                    .expect("mopidy session lock poisoned")
+                    .remove(&session_id)
+                    .is_some();
+                if still_owned {
+                    let _ = event_tx
+                        .send(MopidyEvent::SessionEnded { session_id, reason })
+                        .await;
+                }
                 return;
             }
         }
         tokio::select! {
             _ = tokio::time::sleep(POLL_INTERVAL) => {}
+            // Cancelled mid-wait (control(Stop) owns the end event) — leave silently.
             _ = cancel_rx.changed() => return,
         }
     }
@@ -255,5 +267,100 @@ mod tests {
             .control(&CastSessionId("ghost".into()), &ControlCmd::Pause)
             .await;
         assert!(matches!(err, Err(MopidyDriveError::SessionGone(_))));
+    }
+
+    /// Spins a minimal mock Mopidy JSON-RPC server that reports `playing` on
+    /// the first `get_state` poll and `stopped` afterwards, then drives a real
+    /// `MopidyDriver` through `play()` and asserts that once `SessionEnded`
+    /// fires the session entry has been removed from the map (the no-leak fix).
+    #[tokio::test]
+    async fn play_natural_finish_emits_single_end_and_removes_session() {
+        use axum::Json;
+        use axum::routing::post;
+        use serde_json::Value;
+        use std::sync::Arc as StdArc;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use tokio::time::{Duration as TokioDuration, timeout};
+
+        #[derive(Default)]
+        struct MockState {
+            state_calls: AtomicUsize,
+        }
+
+        async fn rpc(
+            axum::extract::State(state): axum::extract::State<StdArc<MockState>>,
+            Json(body): Json<Value>,
+        ) -> Json<Value> {
+            let method = body.get("method").and_then(Value::as_str).unwrap_or("");
+            let result = match method {
+                "core.playback.get_state" => {
+                    // playing on the first call, stopped on every call after.
+                    if state.state_calls.fetch_add(1, Ordering::SeqCst) == 0 {
+                        Value::String("playing".to_string())
+                    } else {
+                        Value::String("stopped".to_string())
+                    }
+                }
+                "core.playback.get_time_position" => Value::from(0),
+                "core.mixer.get_volume" => Value::from(100),
+                "core.playback.play"
+                | "core.tracklist.clear"
+                | "core.tracklist.add" => Value::Null,
+                _ => Value::Null,
+            };
+            Json(json!({ "jsonrpc": "2.0", "id": 1, "result": result }))
+        }
+
+        let mock_state = StdArc::new(MockState::default());
+        let app = axum::Router::new()
+            .route("/mopidy/rpc", post(rpc))
+            .with_state(mock_state);
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("bind mock mopidy server");
+        let addr = listener.local_addr().expect("local addr");
+        tokio::spawn(async move {
+            let _ = axum::serve(listener, app).await;
+        });
+
+        let base_url = format!("http://{addr}");
+        let (tx, mut rx) = mpsc::channel(32);
+        let driver = MopidyDriver::new(tx);
+
+        let media = CastMedia {
+            url: "http://example.test/audio.mp3".to_string(),
+            mime: "audio/mpeg".to_string(),
+            title: "Test".to_string(),
+            artwork_url: None,
+            duration_secs: None,
+            episode_id: None,
+        };
+        let session_id = driver
+            .play(&MopidyTarget { base_url }, &media, None)
+            .await
+            .expect("play starts a session");
+
+        // Drain events until we observe SessionEnded (or time out).
+        let mut end_count = 0usize;
+        let drained = timeout(TokioDuration::from_secs(10), async {
+            while let Some(evt) = rx.recv().await {
+                if let MopidyEvent::SessionEnded { session_id: ended, reason } = evt {
+                    assert_eq!(ended, session_id);
+                    assert_eq!(reason, CastEndedReason::Finished);
+                    end_count += 1;
+                    break;
+                }
+            }
+        })
+        .await;
+        assert!(drained.is_ok(), "timed out waiting for SessionEnded");
+        assert_eq!(end_count, 1, "expected exactly one SessionEnded");
+
+        // The leak fix: the session must be gone from the map after finishing.
+        assert!(
+            !driver.knows_session(&session_id),
+            "session entry should be removed after natural finish"
+        );
     }
 }
