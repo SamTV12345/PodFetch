@@ -114,18 +114,12 @@ impl SponsorblockRepository {
 #[cfg(all(test, feature = "sqlite"))]
 mod sponsorblock_tests {
     use super::*;
-    use crate::db::{database, run_migrations};
-    use std::sync::{Mutex, MutexGuard};
+    use crate::db::{database, test_db::setup};
 
-    static TEST_DB_LOCK: Mutex<()> = Mutex::new(());
-
-    fn setup() -> MutexGuard<'static, ()> {
-        let guard = TEST_DB_LOCK
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        run_migrations();
-        guard
-    }
+    // Shares the crate-wide DB test lock (which also runs migrations) so these
+    // tests serialize against every other DB-touching test module. The lock
+    // lives in `crate::db::test_db` — never reintroduce a module-local one, or
+    // parallel `run_migrations()` calls race on `__diesel_schema_migrations`.
 
     // ── Inline seed schemas ──────────────────────────────────────────────────
 

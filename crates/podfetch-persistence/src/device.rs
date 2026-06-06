@@ -252,24 +252,12 @@ impl DeviceRepository for DieselDeviceRepository {
 #[cfg(all(test, feature = "sqlite"))]
 mod mopidy_persistence_tests {
     use super::*;
-    use crate::db::{database, run_migrations};
+    use crate::db::{database, test_db::setup};
     use podfetch_domain::device::kind as device_kind;
-    use std::sync::{Mutex, MutexGuard};
 
-    // Serialize the DB-touching tests in this module: they share the sqlite
-    // test DB (./podcast.db), so calling `run_migrations()` from parallel test
-    // threads on a fresh DB races on `__diesel_schema_migrations` (UNIQUE
-    // violation). Mirrors the GLOBAL_MUTEX pattern in podfetch-web's
-    // test_support. Each test holds the guard for its whole body.
-    static TEST_DB_LOCK: Mutex<()> = Mutex::new(());
-
-    fn setup() -> MutexGuard<'static, ()> {
-        let guard = TEST_DB_LOCK
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        run_migrations();
-        guard
-    }
+    // These DB tests share the sqlite test DB and must serialize across modules,
+    // so they acquire the crate-wide lock via `crate::db::test_db::setup()`
+    // (which also runs migrations). Each test holds the guard for its whole body.
 
     mod seed_schema {
         diesel::table! {

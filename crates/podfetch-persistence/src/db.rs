@@ -36,3 +36,27 @@ pub fn run_migrations() {
         }
     }
 }
+
+/// Test-only helpers shared by every DB-touching test module in this crate.
+#[cfg(all(test, feature = "sqlite"))]
+pub(crate) mod test_db {
+    use std::sync::{Mutex, MutexGuard};
+
+    /// Process-wide lock serializing ALL DB-touching tests in this crate. They
+    /// share one sqlite test DB, so `run_migrations()` from parallel threads in
+    /// different test modules races on `__diesel_schema_migrations` (UNIQUE
+    /// violation), and concurrent writes corrupt each other's assertions. Every
+    /// DB test module MUST serialize via this single lock (not a module-local
+    /// one) so they exclude each other ACROSS modules.
+    static TEST_DB_LOCK: Mutex<()> = Mutex::new(());
+
+    /// Acquire the shared DB lock and ensure migrations have run. Hold the
+    /// returned guard for the whole test body.
+    pub(crate) fn setup() -> MutexGuard<'static, ()> {
+        let guard = TEST_DB_LOCK
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        super::run_migrations();
+        guard
+    }
+}
