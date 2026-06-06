@@ -620,7 +620,7 @@ mod tests {
                 max_parallel_downloads: 3,
                 sponsorblock_enabled: true,
                 nfo_format: "off".to_string(),
-                cover_filename: "cover".to_string(),
+                cover_filename: "image".to_string(),
             }),
         )
         .await;
