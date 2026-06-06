@@ -67,6 +67,7 @@ pub fn nfo_path_for(audio_path: &str) -> String {
 }
 
 fn write_nfo_file(path: &str, xml: &str) {
+    // write_file requires &mut [u8]; the Vec allocation is forced by the storage API.
     let mut bytes = xml.as_bytes().to_vec();
     if let Err(err) = FileHandleWrapper::write_file(
         path,
@@ -179,7 +180,7 @@ pub fn ensure_cover_filename(podcast_entity: &PodcastEntity) {
                     ext
                 );
                 if let Err(err) =
-                    PodcastEpisodeService::update_podcast_image(&podcast_entity.id, &new_url)
+                    PodcastEpisodeService::update_podcast_image(&podcast_entity.directory_id, &new_url)
                 {
                     tracing::warn!("Cover renamed but DB image_url update failed: {err}");
                 }
@@ -205,6 +206,11 @@ mod tests {
         assert_eq!(
             nfo_path_for("podcasts/My.Show/episode"),
             "podcasts/My.Show/episode.nfo"
+        );
+        // dot in both a directory component and the filename
+        assert_eq!(
+            nfo_path_for("podcasts/My.Show/2024-01-01 - Ep.mp3"),
+            "podcasts/My.Show/2024-01-01 - Ep.nfo"
         );
         // windows separators
         assert_eq!(nfo_path_for("podcasts\\x\\audio.opus"), "podcasts\\x\\audio.nfo");
