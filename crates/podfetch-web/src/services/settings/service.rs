@@ -86,7 +86,7 @@ impl SettingsService {
 
         let transient_setting = build_name_only_setting(&update_settings);
         perform_podcast_variable_replacement(transient_setting.clone(), sample_podcast, None)?;
-        perform_episode_variable_replacement(transient_setting, sample_episode, None)?;
+        perform_episode_variable_replacement(transient_setting, sample_episode, None, 1)?;
         Ok(update_settings)
     }
 }
