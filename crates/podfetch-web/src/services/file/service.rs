@@ -522,6 +522,7 @@ mod tests {
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
+            sponsorblock_enabled: true,
         };
 
         let result = perform_replacement(title, settings, None);
@@ -550,6 +551,7 @@ mod tests {
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
+            sponsorblock_enabled: true,
         };
 
         let result = perform_replacement(title, settings, None);
@@ -578,6 +580,7 @@ mod tests {
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
+            sponsorblock_enabled: true,
         };
 
         let result = perform_replacement(title, settings, None);
@@ -604,6 +607,7 @@ mod tests {
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
+            sponsorblock_enabled: true,
         };
 
         let podcast_episode = PodcastEpisode {
@@ -624,6 +628,7 @@ mod tests {
             deleted: false,
             episode_numbering_processed: false,
             download_location: None,
+            youtube_video_id: None,
         };
 
         let result = perform_episode_variable_replacement(settings, podcast_episode, None);
@@ -649,6 +654,7 @@ mod tests {
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
+            sponsorblock_enabled: true,
         };
 
         let podcast_episode = PodcastEpisode {
@@ -669,6 +675,7 @@ mod tests {
             deleted: false,
             episode_numbering_processed: false,
             download_location: None,
+            youtube_video_id: None,
         };
 
         let result = perform_episode_variable_replacement(settings, podcast_episode, None);
@@ -694,6 +701,7 @@ mod tests {
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
+            sponsorblock_enabled: true,
         };
 
         let podcast_episode = PodcastEpisode {
@@ -714,6 +722,7 @@ mod tests {
             deleted: false,
             episode_numbering_processed: false,
             download_location: None,
+            youtube_video_id: None,
         };
 
         let result = perform_episode_variable_replacement(settings, podcast_episode, None);
@@ -739,6 +748,7 @@ mod tests {
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
+            sponsorblock_enabled: true,
         };
 
         let podcast_episode = PodcastParsed {
@@ -772,6 +782,7 @@ mod tests {
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
+            sponsorblock_enabled: true,
         };
 
         let podcast_episode = PodcastParsed {

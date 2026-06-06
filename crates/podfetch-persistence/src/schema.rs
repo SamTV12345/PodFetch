@@ -161,6 +161,7 @@ diesel::table! {
         file_image_path -> Nullable<Text>,
         episode_numbering_processed -> Bool,
         download_location -> Nullable<Text>,
+        youtube_video_id -> Nullable<Text>,
     }
 }
 
@@ -233,6 +234,7 @@ diesel::table! {
         auto_transcode_opus -> Bool,
         use_one_cover_for_all_episodes -> Bool,
         max_parallel_downloads -> Integer,
+        sponsorblock_enabled -> Bool,
     }
 }
 
@@ -279,6 +281,38 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    episode_sponsor_segments (id) {
+        id -> Text,
+        episode_id -> Text,
+        uuid -> Text,
+        category -> Text,
+        action_type -> Text,
+        start_ms -> BigInt,
+        end_ms -> BigInt,
+        votes -> Integer,
+        locked -> Bool,
+        duration_mismatch -> Bool,
+        fetched_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    sponsorblock_user_settings (user_id) {
+        user_id -> Text,
+        enabled -> Bool,
+        skip_sponsor -> Bool,
+        skip_selfpromo -> Bool,
+        skip_interaction -> Bool,
+        skip_intro -> Bool,
+        skip_outro -> Bool,
+        skip_preview -> Bool,
+        skip_filler -> Bool,
+        skip_music_offtopic -> Bool,
+    }
+}
+
+diesel::joinable!(episode_sponsor_segments -> podcast_episodes (episode_id));
 diesel::joinable!(favorite_podcast_episodes -> podcast_episodes (episode_id));
 diesel::joinable!(listening_events -> podcast_episodes (podcast_episode_db_id));
 diesel::joinable!(listening_events -> podcasts (podcast_id));
@@ -293,6 +327,7 @@ diesel::joinable!(tags_podcasts -> tags (tag_id));
 diesel::allow_tables_to_appear_in_same_query!(
     device_sync_groups,
     devices,
+    episode_sponsor_segments,
     episodes,
     favorite_podcast_episodes,
     favorites,
@@ -309,6 +344,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     podcasts,
     sessions,
     settings,
+    sponsorblock_user_settings,
     subscriptions,
     tags,
     tags_podcasts,

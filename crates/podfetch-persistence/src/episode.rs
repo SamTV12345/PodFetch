@@ -104,6 +104,7 @@ struct PodcastEpisodeEntity {
     file_image_path: Option<String>,
     episode_numbering_processed: bool,
     download_location: Option<String>,
+    youtube_video_id: Option<String>,
 }
 
 #[derive(Queryable, Selectable, Debug, Clone)]
@@ -149,6 +150,7 @@ impl From<PodcastEpisodeEntity> for PodcastEpisode {
             file_image_path: entity.file_image_path,
             episode_numbering_processed: entity.episode_numbering_processed,
             download_location: entity.download_location,
+            youtube_video_id: entity.youtube_video_id,
         }
     }
 }

@@ -24,6 +24,7 @@ pub struct PodcastEpisode {
     pub file_image_path: Option<String>,
     pub episode_numbering_processed: bool,
     pub download_location: Option<String>,
+    pub youtube_video_id: Option<String>,
 }
 
 impl PodcastEpisode {
@@ -44,6 +45,7 @@ pub struct NewPodcastEpisode {
     pub total_time: i32,
     pub description: String,
     pub guid: String,
+    pub youtube_video_id: Option<String>,
 }
 
 /// Result type for paginated episode queries with history and favorites.

@@ -215,6 +215,12 @@ impl PodcastEpisodeUseCase {
             ..Default::default()
         };
 
+        let youtube_video_id = crate::services::sponsorblock::video_id::extract_youtube_video_id(
+            item.link.as_deref(),
+            item.guid.as_ref().map(|g| g.value.as_str()),
+            item.enclosure.as_ref().map(|e| e.url.as_str()),
+        );
+
         Self::repo()
             .create(NewPodcastEpisode {
                 podcast_id: Self::parse_id(&podcast.id)?,
@@ -229,6 +235,7 @@ impl PodcastEpisodeUseCase {
                 total_time: duration,
                 description: opt_or_empty_string(item.clone().description),
                 guid: item.guid.clone().unwrap_or(guid_to_insert).value,
+                youtube_video_id,
             })
             .map(Into::into)
             .map_err(Into::into)

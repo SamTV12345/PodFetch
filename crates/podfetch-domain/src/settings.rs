@@ -22,6 +22,8 @@ pub struct Setting {
     /// transcoding runs inline per download, this also bounds the number of
     /// simultaneous transcodes. Clamped to at least 1 at the read site.
     pub max_parallel_downloads: i32,
+    /// Enable SponsorBlock for this instance.
+    pub sponsorblock_enabled: bool,
 }
 
 #[derive(Clone)]

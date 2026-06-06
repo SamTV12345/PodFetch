@@ -663,6 +663,7 @@ fn insert_test_episode_with_path(
         total_time: 300,
         description: format!("description of {title}"),
         guid: format!("guid-{}", uuid::Uuid::new_v4().simple()),
+        youtube_video_id: None,
     };
     let mut domain_ep: podfetch_domain::podcast_episode::PodcastEpisode =
         repo.create(new).expect("create episode");

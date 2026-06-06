@@ -322,6 +322,20 @@ impl DownloadService {
             tracing::error!("Error handling metadata insertion: {err:?}");
         }
 
+        // SponsorBlock: fetch + store segments for YouTube-sourced episodes.
+        // Non-fatal — must never fail the download.
+        match crate::services::sponsorblock::service::fetch_and_store_blocking(&podcast_episode) {
+            Ok(n) if n > 0 => tracing::info!(
+                "Stored {n} SponsorBlock segments for episode {}",
+                podcast_episode.id
+            ),
+            Ok(_) => {}
+            Err(err) => tracing::warn!(
+                "SponsorBlock fetch failed for episode {}: {err}",
+                podcast_episode.id
+            ),
+        }
+
         let final_episode_path = if settings_in_db.auto_transcode_opus {
             match Self::transcode_to_opus(&paths.filename) {
                 Ok(opus_path) => opus_path,

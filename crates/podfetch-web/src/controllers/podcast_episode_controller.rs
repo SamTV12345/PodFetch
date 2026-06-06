@@ -535,6 +535,7 @@ pub async fn retrieve_episode_sample_format(
         file_image_path: None,
         episode_numbering_processed: false,
         download_location: None,
+        youtube_video_id: None,
     };
     let settings = Setting {
         id: uuid::Uuid::nil().to_string(),
@@ -552,6 +553,7 @@ pub async fn retrieve_episode_sample_format(
         auto_transcode_opus: false,
         use_one_cover_for_all_episodes: false,
         max_parallel_downloads: 3,
+        sponsorblock_enabled: true,
     };
     let result = perform_episode_variable_replacement(settings.into(), episode, None)?;
 

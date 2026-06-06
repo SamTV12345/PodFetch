@@ -618,6 +618,7 @@ mod tests {
                 auto_transcode_opus: false,
                 use_one_cover_for_all_episodes: false,
                 max_parallel_downloads: 3,
+                sponsorblock_enabled: true,
             }),
         )
         .await;
@@ -688,5 +689,67 @@ mod tests {
             .get("/api/v1/settings/opml/local/extra")
             .await;
         assert_eq!(extra_segment.status_code(), 404);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_sponsorblock_enabled_defaults_persists_and_tolerates_omission() {
+        let server = handle_test_startup().await;
+
+        // Seeded default is true.
+        let default_get = server.test_server.get("/api/v1/settings").await;
+        assert_eq!(default_get.status_code(), 200);
+        assert!(default_get.json::<Setting>().sponsorblock_enabled);
+
+        // Updating to false round-trips.
+        let updated = server
+            .test_server
+            .put("/api/v1/settings")
+            .json(&json!({
+                "id": uuid::Uuid::nil().to_string(),
+                "autoDownload": true,
+                "autoUpdate": true,
+                "autoCleanup": true,
+                "autoCleanupDays": 30,
+                "podcastPrefill": 5,
+                "replaceInvalidCharacters": false,
+                "useExistingFilename": false,
+                "replacementStrategy": "replace-with-dash",
+                "episodeFormat": "{episodeTitle}",
+                "podcastFormat": "{podcastTitle}",
+                "directPaths": false,
+                "autoTranscodeOpus": false,
+                "useOneCoverForAllEpisodes": false,
+                "maxParallelDownloads": 3,
+                "sponsorblockEnabled": false
+            }))
+            .await;
+        assert_eq!(updated.status_code(), 200);
+        assert!(!updated.json::<Setting>().sponsorblock_enabled);
+
+        // Backward compatibility: omitting the field defaults to true.
+        let legacy = server
+            .test_server
+            .put("/api/v1/settings")
+            .json(&json!({
+                "id": uuid::Uuid::nil().to_string(),
+                "autoDownload": true,
+                "autoUpdate": true,
+                "autoCleanup": true,
+                "autoCleanupDays": 30,
+                "podcastPrefill": 5,
+                "replaceInvalidCharacters": false,
+                "useExistingFilename": false,
+                "replacementStrategy": "replace-with-dash",
+                "episodeFormat": "{episodeTitle}",
+                "podcastFormat": "{podcastTitle}",
+                "directPaths": false,
+                "autoTranscodeOpus": false,
+                "useOneCoverForAllEpisodes": false,
+                "maxParallelDownloads": 3
+            }))
+            .await;
+        assert_eq!(legacy.status_code(), 200);
+        assert!(legacy.json::<Setting>().sponsorblock_enabled);
     }
 }

@@ -30,11 +30,19 @@ pub struct RescanOptions {
     /// Rewrite embedded ID3 / MP4 tags (title, artist, album, track, cover,
     /// episode-number prefix).
     pub apply_metadata: bool,
+    /// Re-query SponsorBlock and replace stored segments for the episode.
+    /// For episodes ingested before SponsorBlock support, the YouTube video id
+    /// is backfilled in-memory from the guid/url for this fetch.
+    pub refetch_sponsorblock: bool,
 }
 
 impl RescanOptions {
     pub fn any_enabled(&self) -> bool {
-        self.apply_filenames || self.apply_transcode || self.apply_covers || self.apply_metadata
+        self.apply_filenames
+            || self.apply_transcode
+            || self.apply_covers
+            || self.apply_metadata
+            || self.refetch_sponsorblock
     }
 }
 
@@ -333,6 +341,34 @@ impl EpisodeRescanService {
                 }
             }
         }
+
+        // SponsorBlock re-fetch. Backfill the video id in-memory for episodes
+        // ingested before the feature existed (not persisted here — best-effort).
+        if opts.refetch_sponsorblock {
+            let mut episode_for_fetch = episode.clone();
+            if episode_for_fetch.youtube_video_id.is_none() {
+                episode_for_fetch.youtube_video_id =
+                    crate::services::sponsorblock::video_id::extract_youtube_video_id(
+                        None,
+                        Some(&episode.guid),
+                        Some(&episode.url),
+                    );
+            }
+            match crate::services::sponsorblock::service::fetch_and_store_blocking(
+                &episode_for_fetch,
+            ) {
+                Ok(n) if n > 0 => tracing::info!(
+                    "Refetched {n} SponsorBlock segments for episode {}",
+                    episode.id
+                ),
+                Ok(_) => {}
+                Err(err) => {
+                    tracing::warn!("SponsorBlock refetch failed for {}: {err}", episode.id);
+                    stats.errors += 1;
+                }
+            }
+        }
+
         Ok(())
     }
 

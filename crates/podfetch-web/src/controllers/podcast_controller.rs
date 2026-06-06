@@ -879,6 +879,7 @@ pub async fn retrieve_podcast_sample_format(
         auto_transcode_opus: false,
         use_one_cover_for_all_episodes: false,
         max_parallel_downloads: 3,
+        sponsorblock_enabled: true,
     };
     let result = perform_podcast_variable_replacement(settings.into(), podcast, None);
 

@@ -12,6 +12,7 @@ pub mod playlist_controller;
 pub mod podcast_controller;
 pub mod podcast_episode_controller;
 pub mod settings_controller;
+pub mod sponsorblock_controller;
 pub mod stats_controller;
 pub mod sys_info_controller;
 pub mod tags_controller;

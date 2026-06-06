@@ -26,10 +26,18 @@ pub struct Setting {
     /// Defaulted on deserialize so older clients that omit it keep working.
     #[serde(default = "default_max_parallel_downloads")]
     pub max_parallel_downloads: i32,
+    /// Enable SponsorBlock for this instance. Defaulted on deserialize so older
+    /// clients that omit it keep working.
+    #[serde(default = "default_sponsorblock_enabled")]
+    pub sponsorblock_enabled: bool,
 }
 
 fn default_max_parallel_downloads() -> i32 {
     3
+}
+
+fn default_sponsorblock_enabled() -> bool {
+    true
 }
 
 impl From<podfetch_domain::settings::Setting> for Setting {
@@ -50,6 +58,7 @@ impl From<podfetch_domain::settings::Setting> for Setting {
             auto_transcode_opus: value.auto_transcode_opus,
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
             max_parallel_downloads: value.max_parallel_downloads,
+            sponsorblock_enabled: value.sponsorblock_enabled,
         }
     }
 }
@@ -72,6 +81,7 @@ impl From<Setting> for podfetch_domain::settings::Setting {
             auto_transcode_opus: value.auto_transcode_opus,
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
             max_parallel_downloads: value.max_parallel_downloads,
+            sponsorblock_enabled: value.sponsorblock_enabled,
         }
     }
 }
