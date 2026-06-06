@@ -132,9 +132,13 @@ impl FileService {
             .await?
         };
 
+        let cover_filename = uuid::Uuid::parse_str(podcast_id)
+            .map(crate::services::nfo::service::resolve_cover_filename)
+            .unwrap_or_else(|_| "image".to_string());
         let file_path = build_podcast_image_paths(
             podcast_path,
             &image_suffix.0,
+            &cover_filename,
             PodcastEpisodeService::map_to_local_url,
         );
         FileHandleWrapper::write_file_async(

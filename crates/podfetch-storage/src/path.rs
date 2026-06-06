@@ -1,10 +1,11 @@
 pub fn build_podcast_image_paths(
     directory: &str,
     suffix: &str,
+    cover_filename: &str,
     map_to_local_url: impl FnOnce(&str) -> String,
 ) -> (String, String) {
-    let file_path = format!("{directory}/image.{suffix}");
-    let url_path = format!("{}/image.{}", map_to_local_url(directory), suffix);
+    let file_path = format!("{directory}/{cover_filename}.{suffix}");
+    let url_path = format!("{}/{}.{}", map_to_local_url(directory), cover_filename, suffix);
     (file_path, url_path)
 }
 
@@ -36,15 +37,15 @@ mod tests {
 
     #[test]
     fn builds_prefixed_podcast_image_paths() {
-        let result = build_podcast_image_paths("podcasts/test", "png", |directory| {
+        let result = build_podcast_image_paths("podcasts/test", "png", "cover", |directory| {
             format!("/api/files/{directory}")
         });
 
         assert_eq!(
             result,
             (
-                "podcasts/test/image.png".to_string(),
-                "/api/files/podcasts/test/image.png".to_string()
+                "podcasts/test/cover.png".to_string(),
+                "/api/files/podcasts/test/cover.png".to_string()
             )
         );
     }
