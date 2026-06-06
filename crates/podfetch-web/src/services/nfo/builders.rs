@@ -92,7 +92,9 @@ pub fn build_episodedetails_nfo(
     write_text_el(&mut w, "episode", Some(&position.to_string()));
     write_text_el(&mut w, "plot", Some(&episode.description));
     write_text_el(&mut w, "aired", aired_date(&episode.date_of_recording).as_deref());
-    write_text_el(&mut w, "runtime", Some(&runtime_minutes(episode.total_time).to_string()));
+    if episode.total_time > 0 {
+        write_text_el(&mut w, "runtime", Some(&runtime_minutes(episode.total_time).to_string()));
+    }
     if let Some(author) = podcast.author.as_deref().filter(|a| !a.is_empty()) {
         w.write_event(Event::Start(BytesStart::new("actor")))
             .expect("start actor");
@@ -205,6 +207,30 @@ mod tests {
         };
         let xml = build_episodedetails_nfo(&p, &episode(), 1);
         assert!(!xml.contains("<actor>"));
+    }
+
+    #[test]
+    fn episodedetails_omits_runtime_when_duration_unknown() {
+        let mut e = episode();
+        e.total_time = 0;
+        let xml = build_episodedetails_nfo(&podcast(), &e, 1);
+        assert!(!xml.contains("<runtime>"));
+    }
+
+    #[test]
+    fn album_omits_absent_optional_fields() {
+        let p = Podcast {
+            name: "Bare Album".to_string(),
+            ..Default::default()
+        };
+        let tracks = vec![(episode(), 1)];
+        let xml = build_album_nfo(&p, &tracks);
+        assert!(xml.contains("<title>Bare Album</title>"));
+        assert!(!xml.contains("<artist>"));
+        assert!(!xml.contains("<genre>"));
+        assert!(!xml.contains("<review>"));
+        // tracks still present
+        assert!(xml.contains("<position>1</position>"));
     }
 
     #[test]
