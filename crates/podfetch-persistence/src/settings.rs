@@ -23,6 +23,8 @@ diesel::table! {
         use_one_cover_for_all_episodes -> Bool,
         max_parallel_downloads -> Integer,
         sponsorblock_enabled -> Bool,
+        nfo_format -> Text,
+        cover_filename -> Text,
     }
 }
 
@@ -45,6 +47,8 @@ struct SettingEntity {
     use_one_cover_for_all_episodes: bool,
     max_parallel_downloads: i32,
     sponsorblock_enabled: bool,
+    nfo_format: String,
+    cover_filename: String,
 }
 
 impl From<SettingEntity> for Setting {
@@ -66,6 +70,8 @@ impl From<SettingEntity> for Setting {
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
             max_parallel_downloads: value.max_parallel_downloads,
             sponsorblock_enabled: value.sponsorblock_enabled,
+            nfo_format: value.nfo_format,
+            cover_filename: value.cover_filename,
         }
     }
 }
@@ -89,6 +95,8 @@ impl From<Setting> for SettingEntity {
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
             max_parallel_downloads: value.max_parallel_downloads,
             sponsorblock_enabled: value.sponsorblock_enabled,
+            nfo_format: value.nfo_format,
+            cover_filename: value.cover_filename,
         }
     }
 }
@@ -151,9 +159,37 @@ impl SettingRepository for DieselSettingsRepository {
                 use_one_cover_for_all_episodes.eq(false),
                 max_parallel_downloads.eq(3),
                 sponsorblock_enabled.eq(true),
+                nfo_format.eq("off"),
+                cover_filename.eq("image"),
             ))
             .execute(&mut conn)
             .map(|_| ())
             .map_err(Into::into)
+    }
+}
+
+#[cfg(all(test, feature = "sqlite"))]
+mod tests {
+    use super::*;
+    use crate::db::{database, test_db::setup};
+
+    #[test]
+    fn nfo_format_and_cover_filename_round_trip() {
+        let _guard = setup();
+        let repo = DieselSettingsRepository::new(database());
+        if repo.get_settings().expect("get").is_none() {
+            repo.insert_default_settings().expect("insert default");
+        }
+
+        let mut s = repo.get_settings().expect("get").expect("present");
+        s.nfo_format = "album".to_string();
+        s.cover_filename = "cover".to_string();
+        let updated = repo.update_settings(s).expect("update");
+        assert_eq!(updated.nfo_format, "album");
+        assert_eq!(updated.cover_filename, "cover");
+
+        let reread = repo.get_settings().expect("get").expect("present");
+        assert_eq!(reread.nfo_format, "album");
+        assert_eq!(reread.cover_filename, "cover");
     }
 }

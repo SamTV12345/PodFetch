@@ -22,6 +22,8 @@ diesel::table! {
         activated -> Bool,
         podcast_prefill -> Integer,
         use_one_cover_for_all_episodes -> Bool,
+        nfo_format -> Text,
+        cover_filename -> Text,
     }
 }
 
@@ -43,6 +45,8 @@ struct PodcastSettingEntity {
     activated: bool,
     podcast_prefill: i32,
     use_one_cover_for_all_episodes: bool,
+    nfo_format: String,
+    cover_filename: String,
 }
 
 impl From<PodcastSettingEntity> for PodcastSetting {
@@ -63,6 +67,8 @@ impl From<PodcastSettingEntity> for PodcastSetting {
             activated: value.activated,
             podcast_prefill: value.podcast_prefill,
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
+            nfo_format: value.nfo_format,
+            cover_filename: value.cover_filename,
         }
     }
 }
@@ -85,6 +91,8 @@ impl From<PodcastSetting> for PodcastSettingEntity {
             activated: value.activated,
             podcast_prefill: value.podcast_prefill,
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
+            nfo_format: value.nfo_format,
+            cover_filename: value.cover_filename,
         }
     }
 }
