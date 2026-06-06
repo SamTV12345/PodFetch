@@ -94,10 +94,10 @@ axum-test = "20.1.0"
 base64 = "0.22.1"
 bollard = { version = "*", features = ["rustls", "rustls-native-certs"], default-features = false }
 built = { version = "0.8.1", features = ["chrono", "semver", "cargo-lock"] }
-chrono = { version = "0.4.44", default-features = false, features = ["clock"] }
+chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 clokwerk = "0.4.0"
 derive_builder = "0.20.2"
-diesel = { version = "2.3.9", features = ["chrono", "r2d2"] }
+diesel = { version = "2.3.10", features = ["chrono", "r2d2"] }
 diesel_migrations = "2.3.2"
 fake = { version = "5.0.0", features = ["chrono", "url"] }
 file-format = "0.29.0"
@@ -120,10 +120,10 @@ r2d2_postgres = { version = "0.18.2" }
 rand = "0.10.1"
 regex = "1.12.3"
 reqwest = { version = "0.13.4", features = ["stream", "json", "blocking", "rustls", "query"] }
-rpassword = "7.5.3"
+rpassword = "7.5.4"
 rss = "2.0.13"
 rust-s3 = { version = "0.37.2", features = ["blocking", "fail-on-err", "futures-util", "tokio", "tokio-rustls-tls"], default-features = false }
-serial_test = "3.4.0"
+serial_test = "3.5.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
 sha1 = "0.11.0"
