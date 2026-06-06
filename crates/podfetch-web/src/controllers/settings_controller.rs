@@ -619,6 +619,8 @@ mod tests {
                 use_one_cover_for_all_episodes: false,
                 max_parallel_downloads: 3,
                 sponsorblock_enabled: true,
+                nfo_format: "off".to_string(),
+                cover_filename: "cover".to_string(),
             }),
         )
         .await;

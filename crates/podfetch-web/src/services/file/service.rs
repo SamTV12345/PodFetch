@@ -523,6 +523,8 @@ mod tests {
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
             sponsorblock_enabled: true,
+            nfo_format: "off".to_string(),
+            cover_filename: "cover".to_string(),
         };
 
         let result = perform_replacement(title, settings, None);
@@ -552,6 +554,8 @@ mod tests {
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
             sponsorblock_enabled: true,
+            nfo_format: "off".to_string(),
+            cover_filename: "cover".to_string(),
         };
 
         let result = perform_replacement(title, settings, None);
@@ -581,6 +585,8 @@ mod tests {
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
             sponsorblock_enabled: true,
+            nfo_format: "off".to_string(),
+            cover_filename: "cover".to_string(),
         };
 
         let result = perform_replacement(title, settings, None);
@@ -608,6 +614,8 @@ mod tests {
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
             sponsorblock_enabled: true,
+            nfo_format: "off".to_string(),
+            cover_filename: "cover".to_string(),
         };
 
         let podcast_episode = PodcastEpisode {
@@ -655,6 +663,8 @@ mod tests {
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
             sponsorblock_enabled: true,
+            nfo_format: "off".to_string(),
+            cover_filename: "cover".to_string(),
         };
 
         let podcast_episode = PodcastEpisode {
@@ -702,6 +712,8 @@ mod tests {
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
             sponsorblock_enabled: true,
+            nfo_format: "off".to_string(),
+            cover_filename: "cover".to_string(),
         };
 
         let podcast_episode = PodcastEpisode {
@@ -749,6 +761,8 @@ mod tests {
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
             sponsorblock_enabled: true,
+            nfo_format: "off".to_string(),
+            cover_filename: "cover".to_string(),
         };
 
         let podcast_episode = PodcastParsed {
@@ -783,6 +797,8 @@ mod tests {
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
             sponsorblock_enabled: true,
+            nfo_format: "off".to_string(),
+            cover_filename: "cover".to_string(),
         };
 
         let podcast_episode = PodcastParsed {

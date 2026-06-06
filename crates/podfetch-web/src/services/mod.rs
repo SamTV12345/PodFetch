@@ -16,6 +16,7 @@ pub mod invite;
 pub mod listening_event;
 pub mod login;
 pub mod mopidy;
+pub mod nfo;
 pub mod notification;
 pub mod playlist;
 pub mod podcast;
