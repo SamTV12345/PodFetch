@@ -1650,6 +1650,8 @@ export interface components {
             replacementStrategy: string;
             useExistingFilename: boolean;
             useOneCoverForAllEpisodes: boolean;
+            nfoFormat: string;
+            coverFilename: string;
         };
         PodcastUpdateNameRequest: {
             name: string;
@@ -1733,6 +1735,8 @@ export interface components {
             replacementStrategy: string;
             useExistingFilename: boolean;
             useOneCoverForAllEpisodes: boolean;
+            nfoFormat: string;
+            coverFilename: string;
         };
         SimplifiedDisk: {
             /** Format: int64 */

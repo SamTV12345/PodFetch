@@ -251,6 +251,28 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                             />
 
                             <label className="col-span-2 ui-text">
+                                {t('nfo-format')}
+                            </label>
+                            <CustomSelect
+                                value={draft.nfoFormat}
+                                options={[
+                                    { label: 'No NFO files', value: 'off' },
+                                    { label: 'Jellyfin TV-show', value: 'tvshow' },
+                                    { label: 'Music album', value: 'album' },
+                                ]}
+                                onChange={(v) => update('nfoFormat', v)}
+                            />
+
+                            <label className="col-span-2 ui-text">
+                                {t('cover-filename')}
+                            </label>
+                            <CustomInput
+                                placeholder="image"
+                                value={draft.coverFilename}
+                                onChange={(e) => update('coverFilename', e.target.value)}
+                            />
+
+                            <label className="col-span-2 ui-text">
                                 {t('number-of-podcasts-to-download')}
                                 <SettingsInfoIcon
                                     headerKey="number-of-podcasts-to-download"
