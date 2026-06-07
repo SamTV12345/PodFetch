@@ -34,6 +34,9 @@ pub struct RescanOptions {
     /// For episodes ingested before SponsorBlock support, the YouTube video id
     /// is backfilled in-memory from the guid/url for this fetch.
     pub refetch_sponsorblock: bool,
+    /// (Re)write NFO files for the episode (and rename the cover) using the
+    /// current settings, without re-downloading audio.
+    pub regenerate_nfo: bool,
 }
 
 impl RescanOptions {
@@ -43,6 +46,7 @@ impl RescanOptions {
             || self.apply_covers
             || self.apply_metadata
             || self.refetch_sponsorblock
+            || self.regenerate_nfo
     }
 }
 
@@ -369,6 +373,11 @@ impl EpisodeRescanService {
             }
         }
 
+        if opts.regenerate_nfo {
+            crate::services::nfo::service::regenerate_for_episode(&podcast, episode, &final_audio_path);
+            crate::services::nfo::service::ensure_cover_filename(&podcast);
+        }
+
         Ok(())
     }
 
@@ -502,6 +511,13 @@ mod tests {
         assert!(
             RescanOptions {
                 apply_metadata: true,
+                ..RescanOptions::default()
+            }
+            .any_enabled()
+        );
+        assert!(
+            RescanOptions {
+                regenerate_nfo: true,
                 ..RescanOptions::default()
             }
             .any_enabled()
