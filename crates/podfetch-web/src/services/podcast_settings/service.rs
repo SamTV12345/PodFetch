@@ -92,8 +92,16 @@ impl PodcastSettingsService {
                     );
                 }
             }
+            if let Some(audio_path) = episode
+                .file_episode_path
+                .as_deref()
+                .filter(|p| !p.is_empty())
+            {
+                crate::services::nfo::service::regenerate_for_episode(&podcast, &episode, audio_path);
+            }
         }
 
+        crate::services::nfo::service::ensure_cover_filename(&podcast);
         Ok(updated_setting.into())
     }
 }
