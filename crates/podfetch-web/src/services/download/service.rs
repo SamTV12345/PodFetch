@@ -348,6 +348,15 @@ impl DownloadService {
             paths.filename.clone()
         };
 
+        // Jellyfin/Kodi NFO sidecar files (non-fatal). Uses the FINAL media path
+        // so the per-episode .nfo basename matches the audio file even after
+        // Opus transcoding.
+        crate::services::nfo::service::regenerate_for_episode(
+            podcast,
+            &podcast_episode,
+            &final_episode_path,
+        );
+
         PodcastEpisodeService::update_local_paths(
             &podcast_episode.episode_id,
             &paths.image_filename,
