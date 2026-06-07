@@ -348,6 +348,15 @@ impl DownloadService {
             paths.filename.clone()
         };
 
+        // Jellyfin/Kodi NFO sidecar files (non-fatal). Uses the FINAL media path
+        // so the per-episode .nfo basename matches the audio file even after
+        // Opus transcoding.
+        crate::services::nfo::service::regenerate_for_episode(
+            podcast,
+            &podcast_episode,
+            &final_episode_path,
+        );
+
         PodcastEpisodeService::update_local_paths(
             &podcast_episode.episode_id,
             &paths.image_filename,
@@ -481,29 +490,21 @@ impl DownloadService {
 
         let settings_for_podcast =
             PodcastSettingsService::get_settings_for_podcast(parse_id(&podcast.id)?)?;
-
-        if let Some(settings_for_podcast) = settings_for_podcast {
-            if settings_for_podcast.episode_numbering {
-                if !podcast_episode.episode_numbering_processed {
-                    tag.set_title(format!("{} - {}", index, &podcast_episode.name));
-                    PodcastEpisodeService::update_episode_numbering_processed(
-                        true,
-                        &podcast_episode.episode_id,
-                    )?;
-                }
-            } else {
-                tag.set_title(&podcast_episode.name);
-                PodcastEpisodeService::update_episode_numbering_processed(
-                    false,
-                    &podcast_episode.episode_id,
-                )?
-            }
-        } else {
-            tag.set_title(&podcast_episode.name);
+        let numbering_enabled = settings_for_podcast
+            .as_ref()
+            .map(|s| s.episode_numbering)
+            .unwrap_or(false);
+        if let Some((title, processed)) = Self::resolve_episode_title(
+            &podcast_episode.name,
+            podcast_episode.episode_numbering_processed,
+            numbering_enabled,
+            index,
+        ) {
+            tag.set_title(title);
             PodcastEpisodeService::update_episode_numbering_processed(
-                false,
+                processed,
                 &podcast_episode.episode_id,
-            )?
+            )?;
         }
 
         if let Some(author) = &podcast.author {
@@ -563,7 +564,28 @@ impl DownloadService {
         let tag = mp4ameta::Tag::read_from_path(&paths.filename);
         match tag {
             Ok(mut tag) => {
-                tag.set_title(&podcast_episode.name);
+                let index = PodcastEpisodeService::get_position_of_episode(
+                    &podcast_episode.date_of_recording,
+                    parse_id(&podcast_episode.podcast_id)?,
+                )?;
+                let settings_for_podcast =
+                    PodcastSettingsService::get_settings_for_podcast(parse_id(&podcast.id)?)?;
+                let numbering_enabled = settings_for_podcast
+                    .as_ref()
+                    .map(|s| s.episode_numbering)
+                    .unwrap_or(false);
+                if let Some((title, processed)) = Self::resolve_episode_title(
+                    &podcast_episode.name,
+                    podcast_episode.episode_numbering_processed,
+                    numbering_enabled,
+                    index,
+                ) {
+                    tag.set_title(&title);
+                    PodcastEpisodeService::update_episode_numbering_processed(
+                        processed,
+                        &podcast_episode.episode_id,
+                    )?;
+                }
                 tag.set_artist(podcast.clone().author.unwrap_or("Unknown".to_string()));
                 tag.set_album(&podcast.name);
                 tag.set_genre(podcast.clone().keywords.unwrap_or("Unknown".to_string()));
@@ -601,6 +623,26 @@ impl DownloadService {
                 );
                 Ok(())
             }
+        }
+    }
+
+    /// Decide the title to embed and whether to (re)write the
+    /// `episode_numbering_processed` flag. Returns `None` when numbering is on
+    /// and the episode was already processed (leave the existing title alone).
+    pub(crate) fn resolve_episode_title(
+        name: &str,
+        episode_numbering_processed: bool,
+        numbering_enabled: bool,
+        index: usize,
+    ) -> Option<(String, bool)> {
+        if numbering_enabled {
+            if episode_numbering_processed {
+                None
+            } else {
+                Some((format!("{index} - {name}"), true))
+            }
+        } else {
+            Some((name.to_string(), false))
         }
     }
 
@@ -716,6 +758,29 @@ impl DownloadService {
 #[cfg(test)]
 mod tests {
     use super::{DownloadService, FilenameBuilderReturn, Podcast, PodcastEpisode};
+
+    #[test]
+    fn resolve_episode_title_handles_all_numbering_states() {
+        // numbering on, not yet processed -> prefix + mark processed
+        assert_eq!(
+            super::DownloadService::resolve_episode_title("Ep", false, true, 5),
+            Some(("5 - Ep".to_string(), true))
+        );
+        // numbering on, already processed -> leave as-is
+        assert_eq!(
+            super::DownloadService::resolve_episode_title("Ep", true, true, 5),
+            None
+        );
+        // numbering off -> plain title, mark not-processed
+        assert_eq!(
+            super::DownloadService::resolve_episode_title("Ep", false, false, 5),
+            Some(("Ep".to_string(), false))
+        );
+        assert_eq!(
+            super::DownloadService::resolve_episode_title("Ep", true, false, 5),
+            Some(("Ep".to_string(), false))
+        );
+    }
 
     #[test]
     fn empty_stored_value_is_treated_as_default_image() {

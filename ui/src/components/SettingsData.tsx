@@ -4,6 +4,7 @@ import { Setting } from '../models/Setting'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
 import { CustomButtonSecondary } from './CustomButtonSecondary'
 import { CustomInput } from './CustomInput'
+import { CustomSelect } from './CustomSelect'
 import { Switcher } from './Switcher'
 import { SettingsInfoIcon } from './SettingsInfoIcon'
 import {$api} from '../utils/http'
@@ -101,6 +102,33 @@ export const Settings = () => {
                             useOneCoverForAllEpisodes: !oldData?.useOneCoverForAllEpisodes
                         }))
                     }} />
+                </div>
+                <div className="flex flex-col gap-2 xs:contents mb-4">
+                    <label htmlFor="nfo-format" className="flex gap-1">{t('nfo-format')}</label>
+                    <CustomSelect
+                        id="nfo-format"
+                        value={settingsModel.data?.nfoFormat ?? 'off'}
+                        options={[
+                            { label: 'No NFO files', value: 'off' },
+                            { label: 'Jellyfin TV-show', value: 'tvshow' },
+                            { label: 'Music album', value: 'album' },
+                        ]}
+                        onChange={(v) => {
+                            queryClient.setQueryData(['get', '/api/v1/settings'], (oldData: Setting) => ({
+                                ...oldData,
+                                nfoFormat: v
+                            }))
+                        }}
+                    />
+                </div>
+                <div className="flex flex-col gap-2 xs:contents mb-4">
+                    <label htmlFor="cover-filename" className="flex gap-1">{t('cover-filename')}</label>
+                    <CustomInput loading={settingsModel.isLoading} id="cover-filename" placeholder="image" onChange={(e) => {
+                        queryClient.setQueryData(['get', '/api/v1/settings'], (oldData: Setting) => ({
+                            ...oldData,
+                            coverFilename: e.target.value
+                        }))
+                    }} value={settingsModel.data?.coverFilename ?? 'image'} />
                 </div>
             </div>
 

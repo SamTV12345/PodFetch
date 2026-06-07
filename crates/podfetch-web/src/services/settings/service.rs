@@ -86,7 +86,7 @@ impl SettingsService {
 
         let transient_setting = build_name_only_setting(&update_settings);
         perform_podcast_variable_replacement(transient_setting.clone(), sample_podcast, None)?;
-        perform_episode_variable_replacement(transient_setting, sample_episode, None)?;
+        perform_episode_variable_replacement(transient_setting, sample_episode, None, 1)?;
         Ok(update_settings)
     }
 }
@@ -109,6 +109,8 @@ fn build_name_only_setting(update: &UpdateNameSettings) -> podfetch_domain::sett
         use_one_cover_for_all_episodes: false,
         max_parallel_downloads: 3,
         sponsorblock_enabled: true,
+        nfo_format: "off".to_string(),
+        cover_filename: "image".to_string(),
     }
 }
 

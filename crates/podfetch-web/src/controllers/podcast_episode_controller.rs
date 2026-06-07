@@ -554,8 +554,10 @@ pub async fn retrieve_episode_sample_format(
         use_one_cover_for_all_episodes: false,
         max_parallel_downloads: 3,
         sponsorblock_enabled: true,
+        nfo_format: "off".to_string(),
+        cover_filename: "image".to_string(),
     };
-    let result = perform_episode_variable_replacement(settings.into(), episode, None)?;
+    let result = perform_episode_variable_replacement(settings.into(), episode, None, 1)?;
 
     Ok(result)
 }

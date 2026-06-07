@@ -13,5 +13,7 @@ export type Setting = {
     directPaths: boolean,
     autoTranscodeOpus: boolean,
     useOneCoverForAllEpisodes: boolean,
+    nfoFormat: string,
+    coverFilename: string,
     maxParallelDownloads: number,
 }

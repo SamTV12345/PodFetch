@@ -132,9 +132,13 @@ impl FileService {
             .await?
         };
 
+        let cover_filename = uuid::Uuid::parse_str(podcast_id)
+            .map(crate::services::nfo::service::resolve_cover_filename)
+            .unwrap_or_else(|_| "image".to_string());
         let file_path = build_podcast_image_paths(
             podcast_path,
             &image_suffix.0,
+            &cover_filename,
             PodcastEpisodeService::map_to_local_url,
         );
         FileHandleWrapper::write_file_async(
@@ -326,14 +330,18 @@ pub fn prepare_podcast_episode_title_to_directory(
             return Ok(res_unwrapped);
         }
     }
-    let podcast_settings = PodcastSettingsService::get_settings_for_podcast(
-        uuid::Uuid::parse_str(&podcast_episode.podcast_id)
-            .map_err(|_| CustomError::from(CustomErrorInner::NotFound(ErrorSeverity::Warning)))?,
-    )?;
+    let podcast_uuid = uuid::Uuid::parse_str(&podcast_episode.podcast_id)
+        .map_err(|_| CustomError::from(CustomErrorInner::NotFound(ErrorSeverity::Warning)))?;
+    let podcast_settings = PodcastSettingsService::get_settings_for_podcast(podcast_uuid)?;
+    let episode_number = crate::usecases::podcast_episode::PodcastEpisodeUseCase::get_position_of_episode(
+        &podcast_episode.date_of_recording,
+        podcast_uuid,
+    )? as i64;
     perform_episode_variable_replacement(
         retrieved_settings.into(),
         podcast_episode,
         podcast_settings,
+        episode_number,
     )
 }
 
@@ -341,6 +349,7 @@ pub fn perform_episode_variable_replacement(
     retrieved_settings: Setting,
     podcast_episode: PodcastEpisode,
     podcast_settings: Option<PodcastSetting>,
+    episode_number: i64,
 ) -> Result<String, CustomError> {
     let escaped_episode_title = perform_replacement(
         &podcast_episode.name,
@@ -368,6 +377,7 @@ pub fn perform_episode_variable_replacement(
     let mut vars: HashMap<String, &str> = HashMap::new();
 
     let total_time = podcast_episode.total_time.to_string();
+    let episode_number_str = episode_number.to_string();
     let episode_date = replace_date_of_str(&podcast_episode.date_of_recording);
     // Insert variables
     vars.insert("episodeTitle".to_string(), &escaped_episode_title);
@@ -379,6 +389,7 @@ pub fn perform_episode_variable_replacement(
         &podcast_episode.description,
     );
     vars.insert("episodeDuration".to_string(), &total_time);
+    vars.insert("episodeNumber".to_string(), &episode_number_str);
 
     let fixed_string = episode_format
         .replace("{title}", "{episodeTitle}")
@@ -523,6 +534,8 @@ mod tests {
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
             sponsorblock_enabled: true,
+            nfo_format: "off".to_string(),
+            cover_filename: "image".to_string(),
         };
 
         let result = perform_replacement(title, settings, None);
@@ -552,6 +565,8 @@ mod tests {
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
             sponsorblock_enabled: true,
+            nfo_format: "off".to_string(),
+            cover_filename: "image".to_string(),
         };
 
         let result = perform_replacement(title, settings, None);
@@ -581,6 +596,8 @@ mod tests {
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
             sponsorblock_enabled: true,
+            nfo_format: "off".to_string(),
+            cover_filename: "image".to_string(),
         };
 
         let result = perform_replacement(title, settings, None);
@@ -608,6 +625,8 @@ mod tests {
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
             sponsorblock_enabled: true,
+            nfo_format: "off".to_string(),
+            cover_filename: "image".to_string(),
         };
 
         let podcast_episode = PodcastEpisode {
@@ -631,7 +650,7 @@ mod tests {
             youtube_video_id: None,
         };
 
-        let result = perform_episode_variable_replacement(settings, podcast_episode, None);
+        let result = perform_episode_variable_replacement(settings, podcast_episode, None, 1);
         assert_eq!(result.unwrap(), "test123test");
     }
 
@@ -655,6 +674,8 @@ mod tests {
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
             sponsorblock_enabled: true,
+            nfo_format: "off".to_string(),
+            cover_filename: "image".to_string(),
         };
 
         let podcast_episode = PodcastEpisode {
@@ -678,7 +699,7 @@ mod tests {
             youtube_video_id: None,
         };
 
-        let result = perform_episode_variable_replacement(settings, podcast_episode, None);
+        let result = perform_episode_variable_replacement(settings, podcast_episode, None, 1);
         assert_eq!(result.unwrap(), "2022MyPodcasttest");
     }
 
@@ -702,6 +723,8 @@ mod tests {
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
             sponsorblock_enabled: true,
+            nfo_format: "off".to_string(),
+            cover_filename: "image".to_string(),
         };
 
         let podcast_episode = PodcastEpisode {
@@ -725,8 +748,57 @@ mod tests {
             youtube_video_id: None,
         };
 
-        let result = perform_episode_variable_replacement(settings, podcast_episode, None);
+        let result = perform_episode_variable_replacement(settings, podcast_episode, None, 1);
         assert_eq!(result.unwrap(), "MyPodcast");
+    }
+
+    #[test]
+    #[serial]
+    fn episode_format_supports_episode_number_token() {
+        let settings = Setting {
+            id: uuid::Uuid::nil(),
+            auto_download: false,
+            auto_update: false,
+            auto_cleanup: false,
+            auto_cleanup_days: 0,
+            podcast_format: "{date}{title}".to_string(),
+            episode_format: "{episodeNumber:0>3} - {episodeTitle}".to_string(),
+            replacement_strategy: "replace-with-dash".to_string(),
+            replace_invalid_characters: true,
+            use_existing_filename: false,
+            podcast_prefill: 0,
+            direct_paths: false,
+            auto_transcode_opus: false,
+            use_one_cover_for_all_episodes: false,
+            max_parallel_downloads: 3,
+            sponsorblock_enabled: true,
+            nfo_format: "off".to_string(),
+            cover_filename: "image".to_string(),
+        };
+
+        let podcast_episode = PodcastEpisode {
+            id: uuid::Uuid::nil().to_string(),
+            legacy_id: None,
+            name: "Hello".to_string(),
+            description: "test".to_string(),
+            url: "test".to_string(),
+            guid: "test".to_string(),
+            total_time: 0,
+            date_of_recording: "2022".to_string(),
+            podcast_id: uuid::Uuid::nil().to_string(),
+            file_episode_path: None,
+            file_image_path: None,
+            episode_id: "".to_string(),
+            image_url: "".to_string(),
+            download_time: None,
+            deleted: false,
+            episode_numbering_processed: false,
+            download_location: None,
+            youtube_video_id: None,
+        };
+
+        let result = perform_episode_variable_replacement(settings, podcast_episode, None, 7);
+        assert_eq!(result.unwrap(), "007 - Hello");
     }
 
     #[test]
@@ -749,6 +821,8 @@ mod tests {
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
             sponsorblock_enabled: true,
+            nfo_format: "off".to_string(),
+            cover_filename: "image".to_string(),
         };
 
         let podcast_episode = PodcastParsed {
@@ -783,6 +857,8 @@ mod tests {
             use_one_cover_for_all_episodes: false,
             max_parallel_downloads: 3,
             sponsorblock_enabled: true,
+            nfo_format: "off".to_string(),
+            cover_filename: "image".to_string(),
         };
 
         let podcast_episode = PodcastParsed {

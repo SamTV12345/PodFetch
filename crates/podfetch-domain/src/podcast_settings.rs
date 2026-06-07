@@ -17,6 +17,8 @@ pub struct PodcastSetting {
     pub activated: bool,
     pub podcast_prefill: i32,
     pub use_one_cover_for_all_episodes: bool,
+    pub nfo_format: String,
+    pub cover_filename: String,
 }
 
 pub trait PodcastSettingsRepository: Send + Sync {

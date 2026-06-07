@@ -1796,6 +1796,8 @@ export interface components {
             replacementStrategy: string;
             useExistingFilename: boolean;
             useOneCoverForAllEpisodes: boolean;
+            nfoFormat: string;
+            coverFilename: string;
         };
         PodcastUpdateNameRequest: {
             name: string;
@@ -1846,6 +1848,19 @@ export interface components {
              * @default false
              */
             applyTranscode: boolean;
+            /**
+             * @description Re-query SponsorBlock and replace stored segments for the episode.
+             *     For episodes ingested before SponsorBlock support, the YouTube video id
+             *     is backfilled in-memory from the guid/url for this fetch.
+             * @default false
+             */
+            refetchSponsorblock?: boolean;
+            /**
+             * @description (Re)write NFO files for the episode (and rename the cover)
+             *     using the current settings, without re-downloading audio.
+             * @default false
+             */
+            regenerateNfo?: boolean;
         };
         Setting: {
             autoCleanup: boolean;
@@ -1869,6 +1884,8 @@ export interface components {
             replacementStrategy: string;
             useExistingFilename: boolean;
             useOneCoverForAllEpisodes: boolean;
+            nfoFormat: string;
+            coverFilename: string;
         };
         SimplifiedDisk: {
             /** Format: int64 */

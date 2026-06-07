@@ -24,6 +24,10 @@ pub struct Setting {
     pub max_parallel_downloads: i32,
     /// Enable SponsorBlock for this instance.
     pub sponsorblock_enabled: bool,
+    /// Jellyfin/Kodi NFO format: "off" | "tvshow" | "album".
+    pub nfo_format: String,
+    /// Base name of the podcast cover file (default "image").
+    pub cover_filename: String,
 }
 
 #[derive(Clone)]

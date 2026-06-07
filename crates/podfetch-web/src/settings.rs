@@ -30,6 +30,12 @@ pub struct Setting {
     /// clients that omit it keep working.
     #[serde(default = "default_sponsorblock_enabled")]
     pub sponsorblock_enabled: bool,
+    /// Defaulted on deserialize so older clients that omit it keep working.
+    #[serde(default = "default_nfo_format")]
+    pub nfo_format: String,
+    /// Defaulted on deserialize so older clients that omit it keep working.
+    #[serde(default = "default_cover_filename")]
+    pub cover_filename: String,
 }
 
 fn default_max_parallel_downloads() -> i32 {
@@ -38,6 +44,14 @@ fn default_max_parallel_downloads() -> i32 {
 
 fn default_sponsorblock_enabled() -> bool {
     true
+}
+
+pub(crate) fn default_nfo_format() -> String {
+    "off".to_string()
+}
+
+pub(crate) fn default_cover_filename() -> String {
+    "image".to_string()
 }
 
 impl From<podfetch_domain::settings::Setting> for Setting {
@@ -59,6 +73,8 @@ impl From<podfetch_domain::settings::Setting> for Setting {
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
             max_parallel_downloads: value.max_parallel_downloads,
             sponsorblock_enabled: value.sponsorblock_enabled,
+            nfo_format: value.nfo_format,
+            cover_filename: value.cover_filename,
         }
     }
 }
@@ -82,6 +98,8 @@ impl From<Setting> for podfetch_domain::settings::Setting {
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
             max_parallel_downloads: value.max_parallel_downloads,
             sponsorblock_enabled: value.sponsorblock_enabled,
+            nfo_format: value.nfo_format,
+            cover_filename: value.cover_filename,
         }
     }
 }

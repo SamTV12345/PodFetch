@@ -25,6 +25,8 @@ export const SettingsRescan: FC = () => {
         applyTranscode: false,
         applyCovers: false,
         applyMetadata: false,
+        refetchSponsorblock: false,
+        regenerateNfo: false,
     })
 
     const setOption = (key: typeof OPTION_KEYS[number], value: boolean) => {
