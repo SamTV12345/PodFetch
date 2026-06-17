@@ -81,14 +81,14 @@ impl r2d2::CustomizeConnection<DBType, diesel::r2d2::Error> for ConnectionOption
     fn on_acquire(&self, conn: &mut DBType) -> Result<(), diesel::r2d2::Error> {
         use diesel::connection::SimpleConnection;
         (|| {
+            if let Some(d) = self.busy_timeout {
+                conn.batch_execute(&format!("PRAGMA busy_timeout = {};", d.as_millis()))?;
+            }
             if self.enable_wal {
                 conn.batch_execute("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;")?;
             }
             if self.enable_foreign_keys {
                 conn.batch_execute("PRAGMA foreign_keys = ON;")?;
-            }
-            if let Some(d) = self.busy_timeout {
-                conn.batch_execute(&format!("PRAGMA busy_timeout = {};", d.as_millis()))?;
             }
             Ok(())
         })()
