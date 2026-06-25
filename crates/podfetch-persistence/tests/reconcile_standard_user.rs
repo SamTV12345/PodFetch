@@ -51,25 +51,29 @@ fn cleanup(tmp: &std::path::Path) {
     }
 }
 
-/// Apply every migration EXCEPT the newest one (the reconcile migration), so a
-/// test can plant a pre-reconcile database state, then return that last
-/// migration ready to apply.
+/// Apply every migration ordered BEFORE the reconcile migration, so a test can
+/// plant a pre-reconcile database state, then return the reconcile migration
+/// ready to apply. Migrations newer than reconcile are irrelevant to what
+/// reconcile does and are left unapplied, so this stays correct as later
+/// migrations are added.
 fn apply_through_pre_reconcile(
     conn: &mut SqliteConnection,
 ) -> Box<dyn diesel::migration::Migration<diesel::sqlite::Sqlite>> {
     let pending = conn.pending_migrations(SQLITE_MIGRATIONS).expect("pending");
-    let (reconcile, earlier) = pending.split_last().expect("at least one migration");
-    assert!(
-        reconcile.name().to_string().contains("reconcile_standard_user"),
-        "newest migration must be the reconcile migration, got `{}`",
-        reconcile.name()
-    );
-    for m in earlier {
+    let reconcile_idx = pending
+        .iter()
+        .position(|m| m.name().to_string().contains("reconcile_standard_user"))
+        .expect("reconcile_standard_user migration must be present");
+    for m in &pending[..reconcile_idx] {
         conn.run_migration(m).expect("apply earlier migration");
     }
-    // `pending` is consumed below, so hand back the reconcile migration boxed.
+    // Re-query now that the earlier migrations are applied and hand back the
+    // reconcile migration boxed.
     let pending = conn.pending_migrations(SQLITE_MIGRATIONS).expect("pending");
-    pending.into_iter().next_back().expect("reconcile migration")
+    pending
+        .into_iter()
+        .find(|m| m.name().to_string().contains("reconcile_standard_user"))
+        .expect("reconcile migration")
 }
 
 fn fk_violations(conn: &mut SqliteConnection) -> i64 {
