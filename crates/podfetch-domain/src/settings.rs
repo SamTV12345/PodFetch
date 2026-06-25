@@ -5,6 +5,10 @@ use uuid::Uuid;
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Setting {
     pub id: Uuid,
+    /// Instance-wide default for prefixing the embedded episode title with its
+    /// position (`{index} - {name}`). Acts as a fallback that is OR-ed with the
+    /// per-podcast `episode_numbering` flag, mirroring `auto_download`.
+    pub episode_numbering: bool,
     pub auto_download: bool,
     pub auto_update: bool,
     pub auto_cleanup: bool,

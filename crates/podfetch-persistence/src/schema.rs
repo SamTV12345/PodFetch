@@ -220,6 +220,7 @@ diesel::table! {
 diesel::table! {
     settings (id) {
         id -> Text,
+        episode_numbering -> Bool,
         auto_download -> Bool,
         auto_update -> Bool,
         auto_cleanup -> Bool,

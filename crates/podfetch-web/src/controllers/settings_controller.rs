@@ -604,6 +604,7 @@ mod tests {
             Extension(user.clone()),
             Json(Setting {
                 id: uuid::Uuid::new_v4().to_string(),
+                episode_numbering: false,
                 auto_download: true,
                 auto_update: true,
                 auto_cleanup: false,

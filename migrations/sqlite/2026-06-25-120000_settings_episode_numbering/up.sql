@@ -1,0 +1,1 @@
+ALTER TABLE settings ADD COLUMN episode_numbering BOOLEAN NOT NULL DEFAULT FALSE;

@@ -8,6 +8,7 @@ use uuid::Uuid;
 diesel::table! {
     settings (id) {
         id -> Text,
+        episode_numbering -> Bool,
         auto_download -> Bool,
         auto_update -> Bool,
         auto_cleanup -> Bool,
@@ -32,6 +33,7 @@ diesel::table! {
 #[diesel(table_name = settings)]
 struct SettingEntity {
     id: String,
+    episode_numbering: bool,
     auto_download: bool,
     auto_update: bool,
     auto_cleanup: bool,
@@ -55,6 +57,7 @@ impl From<SettingEntity> for Setting {
     fn from(value: SettingEntity) -> Self {
         Self {
             id: Uuid::parse_str(&value.id).expect("valid uuid in db"),
+            episode_numbering: value.episode_numbering,
             auto_download: value.auto_download,
             auto_update: value.auto_update,
             auto_cleanup: value.auto_cleanup,
@@ -80,6 +83,7 @@ impl From<Setting> for SettingEntity {
     fn from(value: Setting) -> Self {
         Self {
             id: value.id.to_string(),
+            episode_numbering: value.episode_numbering,
             auto_download: value.auto_download,
             auto_update: value.auto_update,
             auto_cleanup: value.auto_cleanup,
@@ -144,6 +148,7 @@ impl SettingRepository for DieselSettingsRepository {
         insert_into(settings)
             .values((
                 id.eq(podfetch_domain::ids::new_id().to_string()),
+                episode_numbering.eq(false),
                 auto_update.eq(true),
                 auto_download.eq(true),
                 auto_cleanup.eq(true),
@@ -184,12 +189,15 @@ mod tests {
         let mut s = repo.get_settings().expect("get").expect("present");
         s.nfo_format = "album".to_string();
         s.cover_filename = "cover".to_string();
+        s.episode_numbering = true;
         let updated = repo.update_settings(s).expect("update");
         assert_eq!(updated.nfo_format, "album");
         assert_eq!(updated.cover_filename, "cover");
+        assert!(updated.episode_numbering);
 
         let reread = repo.get_settings().expect("get").expect("present");
         assert_eq!(reread.nfo_format, "album");
         assert_eq!(reread.cover_filename, "cover");
+        assert!(reread.episode_numbering);
     }
 }

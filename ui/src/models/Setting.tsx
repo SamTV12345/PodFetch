@@ -1,5 +1,6 @@
 export type Setting = {
     id: string,
+    episodeNumbering: boolean,
     autoDownload: boolean,
     autoUpdate: boolean,
     autoCleanup: boolean,

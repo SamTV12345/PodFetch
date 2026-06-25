@@ -94,6 +94,7 @@ impl SettingsService {
 fn build_name_only_setting(update: &UpdateNameSettings) -> podfetch_domain::settings::Setting {
     podfetch_domain::settings::Setting {
         id: uuid::Uuid::nil(),
+        episode_numbering: false,
         auto_download: false,
         auto_update: false,
         auto_cleanup: false,

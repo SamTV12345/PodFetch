@@ -270,6 +270,7 @@
   "user-settings-updated": "Benutzereinstellungen aktualisiert",
   "notification.episode-now-available": "Episode {{episode}} ist jetzt verfügbar",
   "episode-numbering": "Episodennummerierung",
+  "episode-numbering-explanation": "Stellt jeder Episode ihre fortlaufende Nummer im Titel voran, damit Player sie in der richtigen Reihenfolge anzeigen. Gilt standardmäßig für alle Podcasts; einzelne Podcasts können es weiterhin in ihren eigenen Einstellungen aktivieren.",
   "activated": "Aktiviert",
   "manage-gpodder-podcasts": "GPodder Podcasts verwalten",
   "device": "Gerät",

@@ -1725,6 +1725,8 @@ export interface components {
             autoUpdate: boolean;
             directPaths: boolean;
             episodeFormat: string;
+            /** @description Defaulted on deserialize so older clients that omit it keep working. */
+            episodeNumbering?: boolean;
             id: string;
             /** Format: int32 */
             maxParallelDownloads?: number;
