@@ -865,6 +865,7 @@ pub async fn retrieve_podcast_sample_format(
     };
     let settings = Setting {
         id: uuid::Uuid::nil().to_string(),
+        episode_numbering: false,
         auto_download: false,
         auto_update: false,
         auto_cleanup: false,

@@ -10,6 +10,10 @@ use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
 #[serde(rename_all = "camelCase")]
 pub struct Setting {
     pub id: String,
+    /// Instance-wide default for episode-number title prefixing. Defaulted on
+    /// deserialize so older clients that omit it keep working.
+    #[serde(default)]
+    pub episode_numbering: bool,
     pub auto_download: bool,
     pub auto_update: bool,
     pub auto_cleanup: bool,
@@ -58,6 +62,7 @@ impl From<podfetch_domain::settings::Setting> for Setting {
     fn from(value: podfetch_domain::settings::Setting) -> Self {
         Self {
             id: value.id.to_string(),
+            episode_numbering: value.episode_numbering,
             auto_download: value.auto_download,
             auto_update: value.auto_update,
             auto_cleanup: value.auto_cleanup,
@@ -83,6 +88,7 @@ impl From<Setting> for podfetch_domain::settings::Setting {
     fn from(value: Setting) -> Self {
         Self {
             id: Uuid::parse_str(&value.id).unwrap_or_else(|_| Uuid::nil()),
+            episode_numbering: value.episode_numbering,
             auto_download: value.auto_download,
             auto_update: value.auto_update,
             auto_cleanup: value.auto_cleanup,

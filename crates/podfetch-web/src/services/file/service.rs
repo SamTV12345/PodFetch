@@ -518,6 +518,7 @@ mod tests {
         let title = "test: test";
         let settings = Setting {
             id: uuid::Uuid::nil(),
+            episode_numbering: false,
             auto_download: false,
             auto_update: false,
             auto_cleanup: false,
@@ -549,6 +550,7 @@ mod tests {
         let title = "test: test";
         let settings = Setting {
             id: uuid::Uuid::nil(),
+            episode_numbering: false,
             auto_download: false,
             auto_update: false,
             auto_cleanup: false,
@@ -580,6 +582,7 @@ mod tests {
         let title = "test: test";
         let settings = Setting {
             id: uuid::Uuid::nil(),
+            episode_numbering: false,
             auto_download: false,
             auto_update: false,
             auto_cleanup: false,
@@ -610,6 +613,7 @@ mod tests {
     fn test_podcast_episode_replacement_guid() {
         let settings = Setting {
             id: uuid::Uuid::nil(),
+            episode_numbering: false,
             auto_download: false,
             auto_update: false,
             auto_cleanup: false,
@@ -659,6 +663,7 @@ mod tests {
     fn test_podcast_episode_replacement_title() {
         let settings = Setting {
             id: uuid::Uuid::nil(),
+            episode_numbering: false,
             auto_download: false,
             auto_update: false,
             auto_cleanup: false,
@@ -708,6 +713,7 @@ mod tests {
     fn test_podcast_episode_replacement_old_format() {
         let settings = Setting {
             id: uuid::Uuid::nil(),
+            episode_numbering: false,
             auto_download: false,
             auto_update: false,
             auto_cleanup: false,
@@ -757,6 +763,7 @@ mod tests {
     fn episode_format_supports_episode_number_token() {
         let settings = Setting {
             id: uuid::Uuid::nil(),
+            episode_numbering: false,
             auto_download: false,
             auto_update: false,
             auto_cleanup: false,
@@ -806,6 +813,7 @@ mod tests {
     pub fn perform_podcast_variable_replacement_date_title() {
         let settings = Setting {
             id: uuid::Uuid::nil(),
+            episode_numbering: false,
             auto_download: false,
             auto_update: false,
             auto_cleanup: false,
@@ -842,6 +850,7 @@ mod tests {
     pub fn perform_podcast_variable_replacement_old_format() {
         let settings = Setting {
             id: uuid::Uuid::nil(),
+            episode_numbering: false,
             auto_download: false,
             auto_update: false,
             auto_cleanup: false,

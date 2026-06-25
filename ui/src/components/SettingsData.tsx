@@ -68,6 +68,16 @@ export const Settings = () => {
                 </div>
 
                 <div className="flex flex-col gap-2 xs:contents mb-4">
+                    <label htmlFor="episode-numbering" className="flex gap-1">{t('episode-numbering')} <SettingsInfoIcon headerKey="episode-numbering" textKey="episode-numbering-explanation" /></label>
+                    <Switcher loading={settingsModel.isLoading} checked={settingsModel.data?.episodeNumbering} className="xs:justify-self-end" id="episode-numbering" onChange={() => {
+                        queryClient.setQueryData(['get', '/api/v1/settings'], (oldData: Setting) => ({
+                            ...oldData,
+                            episodeNumbering: !oldData?.episodeNumbering
+                        }))
+                    }} />
+                </div>
+
+                <div className="flex flex-col gap-2 xs:contents mb-4">
                     <label htmlFor="number-of-podcasts-to-download" className="flex gap-1">{t('number-of-podcasts-to-download')} <SettingsInfoIcon headerKey="number-of-podcasts-to-download" textKey="number-of-podcasts-to-download-explanation" /></label>
                     <CustomInput loading={settingsModel.isLoading} className="w-20" id="number-of-podcasts-to-download" onChange={(e) => {
                         queryClient.setQueryData(['get', '/api/v1/settings'], (oldData: Setting) => ({

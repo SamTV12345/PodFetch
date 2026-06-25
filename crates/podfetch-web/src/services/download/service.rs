@@ -2,6 +2,7 @@ use crate::services::download::chapter::{Chapter, Link};
 use crate::services::file::service::{FileService, prepare_podcast_episode_title_to_directory};
 use crate::services::podcast_episode_chapter::service::PodcastEpisodeChapterService;
 use crate::services::podcast_settings::service::PodcastSettingsService;
+use crate::services::settings::service::SettingsService;
 use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use std::fs::File;
@@ -488,12 +489,7 @@ impl DownloadService {
             parse_id(&podcast_episode.podcast_id)?,
         )?;
 
-        let settings_for_podcast =
-            PodcastSettingsService::get_settings_for_podcast(parse_id(&podcast.id)?)?;
-        let numbering_enabled = settings_for_podcast
-            .as_ref()
-            .map(|s| s.episode_numbering)
-            .unwrap_or(false);
+        let numbering_enabled = Self::episode_numbering_enabled(parse_id(&podcast.id)?)?;
         if let Some((title, processed)) = Self::resolve_episode_title(
             &podcast_episode.name,
             podcast_episode.episode_numbering_processed,
@@ -568,12 +564,7 @@ impl DownloadService {
                     &podcast_episode.date_of_recording,
                     parse_id(&podcast_episode.podcast_id)?,
                 )?;
-                let settings_for_podcast =
-                    PodcastSettingsService::get_settings_for_podcast(parse_id(&podcast.id)?)?;
-                let numbering_enabled = settings_for_podcast
-                    .as_ref()
-                    .map(|s| s.episode_numbering)
-                    .unwrap_or(false);
+                let numbering_enabled = Self::episode_numbering_enabled(parse_id(&podcast.id)?)?;
                 if let Some((title, processed)) = Self::resolve_episode_title(
                     &podcast_episode.name,
                     podcast_episode.episode_numbering_processed,
@@ -624,6 +615,29 @@ impl DownloadService {
                 Ok(())
             }
         }
+    }
+
+    /// Resolve whether episode-number title prefixing applies to a podcast.
+    ///
+    /// The per-podcast `episode_numbering` flag is OR-ed with the instance-wide
+    /// default from the global settings, so enabling numbering in general
+    /// settings turns it on for every podcast unless it is already on per
+    /// podcast. This mirrors how `auto_download` layers the per-podcast value
+    /// over the global default.
+    fn episode_numbering_enabled(podcast_id: uuid::Uuid) -> Result<bool, CustomError> {
+        let per_podcast =
+            PodcastSettingsService::get_settings_for_podcast(podcast_id)?.map(|s| s.episode_numbering);
+        let global = SettingsService::shared()
+            .get_settings()?
+            .map(|s| s.episode_numbering);
+        Ok(Self::numbering_from(per_podcast, global))
+    }
+
+    /// Combine the per-podcast and instance-wide `episode_numbering` flags.
+    /// Numbering applies when either layer turns it on; a missing settings row
+    /// counts as "off" for that layer.
+    fn numbering_from(per_podcast: Option<bool>, global: Option<bool>) -> bool {
+        per_podcast.unwrap_or(false) || global.unwrap_or(false)
     }
 
     /// Decide the title to embed and whether to (re)write the
@@ -780,6 +794,19 @@ mod tests {
             super::DownloadService::resolve_episode_title("Ep", true, false, 5),
             Some(("Ep".to_string(), false))
         );
+    }
+
+    #[test]
+    fn numbering_from_ors_per_podcast_and_global_default() {
+        // global default forces numbering even with no per-podcast row or an explicit off
+        assert!(DownloadService::numbering_from(None, Some(true)));
+        assert!(DownloadService::numbering_from(Some(false), Some(true)));
+        // per-podcast enables it regardless of the (off/absent) global default
+        assert!(DownloadService::numbering_from(Some(true), Some(false)));
+        assert!(DownloadService::numbering_from(Some(true), None));
+        // both layers off / absent -> disabled
+        assert!(!DownloadService::numbering_from(Some(false), Some(false)));
+        assert!(!DownloadService::numbering_from(None, None));
     }
 
     #[test]
