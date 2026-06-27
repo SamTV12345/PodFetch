@@ -1,23 +1,33 @@
 import {components} from "../../schema";
 
-export const generatePodcastDefaultSettings = (podcastId: string) => {
+/**
+ * Build the per-podcast settings shown when a podcast has no explicit override
+ * row yet. The override is never auto-activated (`activated: false`), but the
+ * displayed values inherit from the instance-wide settings so the modal matches
+ * what the backend actually applies as the fallback. When the global settings
+ * are unavailable the built-in defaults are used instead.
+ */
+export const generatePodcastDefaultSettings = (
+    podcastId: string,
+    globalSettings?: components['schemas']['Setting']
+) => {
     return {
         activated: false,
-        autoCleanup: false,
-        autoCleanupDays: 0,
-        autoDownload: true,
-        autoUpdate: true,
-        directPaths: false,
-        episodeFormat: "",
-        episodeNumbering: false,
-        podcastFormat: "",
         podcastId: podcastId,
-        podcastPrefill: 0,
-        replaceInvalidCharacters: false,
-        replacementStrategy: "replace-with-dash-and-underscore",
-        useExistingFilename: false,
-        useOneCoverForAllEpisodes: false,
-        nfoFormat: "off",
-        coverFilename: "image"
+        autoCleanup: globalSettings?.autoCleanup ?? false,
+        autoCleanupDays: globalSettings?.autoCleanupDays ?? 0,
+        autoDownload: globalSettings?.autoDownload ?? true,
+        autoUpdate: globalSettings?.autoUpdate ?? true,
+        directPaths: globalSettings?.directPaths ?? false,
+        episodeFormat: globalSettings?.episodeFormat ?? "",
+        episodeNumbering: globalSettings?.episodeNumbering ?? false,
+        podcastFormat: globalSettings?.podcastFormat ?? "",
+        podcastPrefill: globalSettings?.podcastPrefill ?? 0,
+        replaceInvalidCharacters: globalSettings?.replaceInvalidCharacters ?? false,
+        replacementStrategy: globalSettings?.replacementStrategy ?? "replace-with-dash-and-underscore",
+        useExistingFilename: globalSettings?.useExistingFilename ?? false,
+        useOneCoverForAllEpisodes: globalSettings?.useOneCoverForAllEpisodes ?? false,
+        nfoFormat: globalSettings?.nfoFormat ?? "off",
+        coverFilename: globalSettings?.coverFilename ?? "image"
     } satisfies components['schemas']['PodcastSetting']
 }

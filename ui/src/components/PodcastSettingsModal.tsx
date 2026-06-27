@@ -41,6 +41,11 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
         }
     )
 
+    // The instance-wide settings act as the fallback the backend applies when a
+    // podcast has no activated override, so seed the draft from them rather than
+    // from hardcoded constants (see issue #2141).
+    const globalSettingsQuery = $api.useQuery('get', '/api/v1/settings')
+
     const updateSettings = $api.useMutation(
         'put',
         '/api/v1/podcasts/{id}/settings'
@@ -80,10 +85,10 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
     useEffect(() => {
         if (settingsQuery.data) {
             setDraft(settingsQuery.data)
-        } else if (!settingsQuery.isLoading) {
-            setDraft(generatePodcastDefaultSettings(podcast.id))
+        } else if (!settingsQuery.isLoading && !globalSettingsQuery.isLoading) {
+            setDraft(generatePodcastDefaultSettings(podcast.id, globalSettingsQuery.data))
         }
-    }, [settingsQuery.data, settingsQuery.isLoading, podcast.id])
+    }, [settingsQuery.data, settingsQuery.isLoading, globalSettingsQuery.data, globalSettingsQuery.isLoading, podcast.id])
 
     const update = <K extends keyof PodcastSetting>(
         key: K,

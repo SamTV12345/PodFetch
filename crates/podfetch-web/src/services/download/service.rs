@@ -208,10 +208,12 @@ impl DownloadService {
             .unwrap();
         let podcast_settings_override =
             PodcastSettingsService::get_settings_for_podcast(parse_id(&podcast.id)?)?;
-        let use_one_cover_for_all_episodes = podcast_settings_override
-            .as_ref()
-            .map(|s| s.use_one_cover_for_all_episodes)
-            .unwrap_or(settings_in_db.use_one_cover_for_all_episodes);
+        let use_one_cover_for_all_episodes = Self::use_one_cover_from(
+            podcast_settings_override
+                .as_ref()
+                .map(|s| (s.activated, s.use_one_cover_for_all_episodes)),
+            settings_in_db.use_one_cover_for_all_episodes,
+        );
         let should_download_main_image = !use_one_cover_for_all_episodes
             && !FileService::check_if_podcast_main_image_downloaded(
                 &podcast.clone().directory_id,
@@ -640,6 +642,18 @@ impl DownloadService {
         per_podcast.unwrap_or(false) || global.unwrap_or(false)
     }
 
+    /// Resolve the effective `use_one_cover_for_all_episodes`. The per-podcast
+    /// value is honoured only when its settings row is activated; otherwise the
+    /// instance-wide default applies. This mirrors `resolve_nfo_format` /
+    /// `resolve_cover_filename` so every per-podcast download option shares the
+    /// same `activated`-gated override rule. `per_podcast` is `(activated, value)`.
+    fn use_one_cover_from(per_podcast: Option<(bool, bool)>, global: bool) -> bool {
+        match per_podcast {
+            Some((activated, value)) if activated => value,
+            _ => global,
+        }
+    }
+
     /// Decide the title to embed and whether to (re)write the
     /// `episode_numbering_processed` flag. Returns `None` when numbering is on
     /// and the episode was already processed (leave the existing title alone).
@@ -807,6 +821,21 @@ mod tests {
         // both layers off / absent -> disabled
         assert!(!DownloadService::numbering_from(Some(false), Some(false)));
         assert!(!DownloadService::numbering_from(None, None));
+    }
+
+    #[test]
+    fn use_one_cover_from_respects_activated_gate() {
+        // no per-podcast row -> instance-wide default applies
+        assert!(DownloadService::use_one_cover_from(None, true));
+        assert!(!DownloadService::use_one_cover_from(None, false));
+        // per-podcast row but NOT activated -> still falls back to the global
+        // default (mirrors NFO/cover resolution; the activated flag is the
+        // explicit-override switch).
+        assert!(DownloadService::use_one_cover_from(Some((false, false)), true));
+        assert!(!DownloadService::use_one_cover_from(Some((false, true)), false));
+        // per-podcast row activated -> the per-podcast value wins
+        assert!(DownloadService::use_one_cover_from(Some((true, true)), false));
+        assert!(!DownloadService::use_one_cover_from(Some((true, false)), true));
     }
 
     #[test]
