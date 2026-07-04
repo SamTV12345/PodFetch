@@ -72,8 +72,8 @@ importers:
         specifier: ~8.0.12
         version: 8.0.12(expo@56.0.12)(react-native@0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
       expo-localization:
-        specifier: ~56.0.6
-        version: 56.0.6(expo@56.0.12)(react@19.2.7)
+        specifier: ~57.0.0
+        version: 57.0.0(expo@56.0.12)(react@19.2.7)
       expo-network:
         specifier: ^57.0.0
         version: 57.0.0(expo@56.0.12)(react@19.2.7)
@@ -2451,8 +2451,8 @@ packages:
       react: '*'
       react-native: '*'
 
-  expo-localization@56.0.6:
-    resolution: {integrity: sha512-zzBVoUFHCVNBywcxGsspoZeIXebihOo/AnmQYE4jMv8gHCSKlLNFT+ft+0+mWcZCMs9necvUs8S8TDonAu/xBA==}
+  expo-localization@57.0.0:
+    resolution: {integrity: sha512-6/o4SE4p1K8f0vXrm5oqt7SxyRPLomdhsANsZOwAqduTC/rzkLsqh5FidgppoTR6lPKT58z+jfk5R3grmbjQtA==}
     peerDependencies:
       expo: '*'
       react: '*'
@@ -7377,7 +7377,7 @@ snapshots:
       - expo
       - supports-color
 
-  expo-localization@56.0.6(expo@56.0.12)(react@19.2.7):
+  expo-localization@57.0.0(expo@56.0.12)(react@19.2.7):
     dependencies:
       expo: 56.0.12(@babel/core@7.29.7)(@expo/dom-webview@55.0.5)(@expo/metro-runtime@6.1.2)(expo-router@6.0.23)(react-dom@19.2.7(react@19.2.7))(react-native-web@0.21.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native-webview@13.16.1(react-native@0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(react-native-worklets@0.10.1(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(react-native@0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(react-native@0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)(typescript@5.9.3)
       react: 19.2.7
