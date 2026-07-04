@@ -43,7 +43,7 @@
     "expo-splash-screen": "~57.0.2",
     "expo-sqlite": "~56.0.5",
     "expo-status-bar": "~56.0.4",
-    "expo-symbols": "~56.0.6",
+    "expo-symbols": "~57.0.0",
     "expo-system-ui": "~57.0.0",
     "expo-web-browser": "~57.0.0",
     "i18next": "^26.3.4",
