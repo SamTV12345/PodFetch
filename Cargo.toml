@@ -154,5 +154,5 @@ utoipa-scalar = { version = "0.3.0", features = ["axum"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
 uuid = { version = "1.23.2", features = ["v4", "serde"] }
 xml-builder = "0.6.0"
-quick-xml = "0.40"
+quick-xml = "0.41"
 notify = "8.2"
