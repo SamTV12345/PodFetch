@@ -45,7 +45,7 @@
     "expo-status-bar": "~56.0.4",
     "expo-symbols": "~56.0.6",
     "expo-system-ui": "~57.0.0",
-    "expo-web-browser": "~56.0.5",
+    "expo-web-browser": "~57.0.0",
     "i18next": "^26.3.4",
     "openapi-fetch": "^0.17.0",
     "openapi-react-query": "^0.5.4",
