@@ -3191,7 +3191,7 @@ dependencies = [
  "podfetch-domain",
  "podfetch-persistence",
  "podfetch-storage",
- "quick-xml 0.40.1",
+ "quick-xml 0.41.0",
  "r2d2",
  "rand 0.10.2",
  "regex",
@@ -3438,15 +3438,6 @@ checksum = "b66c2058c55a409d601666cffe35f04333cf1013010882cec174a7467cd4e21c"
 dependencies = [
  "memchr",
  "serde",
-]
-
-[[package]]
-name = "quick-xml"
-version = "0.40.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2474bd2e5029e7ccb6abb2ba48cf2383a333851dedf495901544281590c7da7f"
-dependencies = [
- "memchr",
 ]
 
 [[package]]
