@@ -29,7 +29,7 @@
     "expo-asset": "^56.0.17",
     "expo-audio": "~56.0.12",
     "expo-blur": "~56.0.3",
-    "expo-clipboard": "~56.0.4",
+    "expo-clipboard": "~57.0.0",
     "expo-constants": "~18.0.13",
     "expo-document-picker": "~56.0.4",
     "expo-file-system": "~56.0.8",
