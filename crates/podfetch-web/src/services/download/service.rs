@@ -203,6 +203,13 @@ impl DownloadService {
             determine_file_extension(&podcast_episode.url, &client, FileType::Audio),
             &podcast_episode.url,
         )?;
+        if Self::is_hls_playlist(&podcast_data.1) {
+            tracing::info!(
+                "Episode {} is served as an HLS playlist, downloading via ffmpeg",
+                podcast_episode.episode_id
+            );
+            podcast_data = Self::download_hls_episode(&podcast_episode.url)?;
+        }
         let settings_in_db = crate::services::settings::service::SettingsService::shared()
             .get_settings()?
             .unwrap();
@@ -366,6 +373,102 @@ impl DownloadService {
             &final_episode_path,
         )?;
         Ok(())
+    }
+
+    /// True when the downloaded body is an HLS playlist (`#EXTM3U`) instead of
+    /// audio — some hosts (e.g. podtoo.com, issue #1402) serve HLS behind a
+    /// `.mp3` enclosure URL, so the suffix check never sees it.
+    pub(crate) fn is_hls_playlist(bytes: &[u8]) -> bool {
+        let bytes = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(bytes);
+        let start = bytes
+            .iter()
+            .position(|b| !b.is_ascii_whitespace())
+            .unwrap_or(0);
+        bytes[start..].starts_with(b"#EXTM3U")
+    }
+
+    /// Let ffmpeg fetch the HLS segments and remux them into a single audio
+    /// file. Returns `(suffix, bytes)` like `handle_suffix_response`, so the
+    /// rest of the download flow (tagging, S3 upload, opus transcode) runs
+    /// unchanged.
+    fn download_hls_episode(url: &str) -> Result<(String, Vec<u8>), CustomError> {
+        // Pick a lossless remux container from the segment codec: raw MP3
+        // segments stay .mp3, everything else (usually ADTS AAC) goes into
+        // .m4a — ffmpeg inserts the aac_adtstoasc filter automatically.
+        let codec = std::process::Command::new("ffprobe")
+            .args([
+                "-user_agent",
+                COMMON_USER_AGENT,
+                "-v",
+                "error",
+                "-select_streams",
+                "a:0",
+                "-show_entries",
+                "stream=codec_name",
+                "-of",
+                "csv=p=0",
+                url,
+            ])
+            .output()
+            .ok()
+            .filter(|o| o.status.success())
+            // ffprobe lists HLS streams once per section (programs + streams),
+            // so the codec line can appear twice — take the first.
+            .and_then(|o| {
+                String::from_utf8_lossy(&o.stdout)
+                    .lines()
+                    .next()
+                    .map(|l| l.trim().to_string())
+            });
+        let suffix = match codec.as_deref() {
+            Some("mp3") => "mp3",
+            _ => "m4a",
+        };
+
+        let tmp_path = std::env::temp_dir()
+            .join(format!("podfetch-hls-{}.{suffix}", uuid::Uuid::new_v4()))
+            .to_string_lossy()
+            .to_string();
+
+        let output = std::process::Command::new("ffmpeg")
+            .args([
+                "-user_agent",
+                COMMON_USER_AGENT,
+                "-i",
+                url,
+                "-c",
+                "copy",
+                "-vn",
+                "-y",
+                &tmp_path,
+            ])
+            .output()
+            .map_err(|e| {
+                CustomErrorInner::Conflict(
+                    format!("Episode is served as HLS; ffmpeg is required to download it: {e}"),
+                    ErrorSeverity::Error,
+                )
+            })?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let _ = std::fs::remove_file(&tmp_path);
+            return Err(CustomErrorInner::Conflict(
+                format!("ffmpeg HLS download failed for {url}: {stderr}"),
+                ErrorSeverity::Error,
+            )
+            .into());
+        }
+
+        let bytes = std::fs::read(&tmp_path);
+        let _ = std::fs::remove_file(&tmp_path);
+        let bytes = bytes.map_err(|e| {
+            CustomErrorInner::Conflict(
+                format!("Could not read ffmpeg HLS output: {e}"),
+                ErrorSeverity::Error,
+            )
+        })?;
+        Ok((suffix.to_string(), bytes))
     }
 
     pub(crate) fn transcode_to_opus(input_path: &str) -> Result<String, CustomError> {
@@ -836,6 +939,18 @@ mod tests {
         // per-podcast row activated -> the per-podcast value wins
         assert!(DownloadService::use_one_cover_from(Some((true, true)), false));
         assert!(!DownloadService::use_one_cover_from(Some((true, false)), true));
+    }
+
+    #[test]
+    fn is_hls_playlist_detects_m3u8_bodies_only() {
+        // plain playlist, with UTF-8 BOM, and with leading whitespace
+        assert!(DownloadService::is_hls_playlist(b"#EXTM3U\n#EXT-X-VERSION:3\n"));
+        assert!(DownloadService::is_hls_playlist(b"\xEF\xBB\xBF#EXTM3U\n"));
+        assert!(DownloadService::is_hls_playlist(b"\n  #EXTM3U\n"));
+        // real audio bodies must not match
+        assert!(!DownloadService::is_hls_playlist(b"ID3\x04\x00\x00\x00\x00\x00\x00"));
+        assert!(!DownloadService::is_hls_playlist(b"\xFF\xFB\x90\x00"));
+        assert!(!DownloadService::is_hls_playlist(b""));
     }
 
     #[test]
