@@ -1,4 +1,4 @@
-name: Build Android APK with Expo Prebuild
+name: Build Android APK with EAS
 
 on:
   push:
@@ -29,41 +29,23 @@ jobs:
         with:
           version: 10
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
         with:
-          distribution: temurin
-          java-version: 17
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Install dependencies
         run: pnpm install
 
-      - name: Setup Expo CLI
-        run: pnpm install -g @expo/cli@latest
-
-      - name: Generate native code with expo prebuild
-        run: npx expo prebuild --platform android
-
-      - name: Generate unsigned APK
+      - name: Trigger EAS build and download APK
         run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleRelease
-
-      - name: Sign APK
-        uses: r0adkll/sign-android-release@v1
-        id: sign_app
-        with:
-          releaseDirectory: mobile/android/app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.ANDROID_KEYSTORE }}
-          alias: ${{ secrets.ANDROID_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          eas build --platform android --profile production --non-interactive --wait --json > build.json
+          url=$(jq -r '.[0].artifacts.applicationArchiveUrl // .[0].artifacts.buildUrl' build.json)
+          echo "APK URL: $url"
+          curl -L -o podfetch.apk "$url"
 
       - name: Upload APK to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{steps.sign_app.outputs.signedReleaseFile}}
+          files: mobile/podfetch.apk
