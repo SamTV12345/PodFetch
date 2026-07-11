@@ -769,9 +769,9 @@ dependencies = [
 
 [[package]]
 name = "ctor"
-version = "1.0.7"
+version = "1.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01334b89b69ff726750c5ce5073fc8bd860e99aa9a8fc5ca11b04730e3aee97a"
+checksum = "fb22e947478ccf9dc44d8922042c677a63fbb88f2cb468521d1145816e5087cb"
 dependencies = [
  "link-section",
  "linktime-proc-macro",
@@ -951,9 +951,9 @@ checksum = "339544cc9e2c4dc3fc7149fd630c5f22263a4fdf18a98afd0075784968b5cf00"
 
 [[package]]
 name = "diesel"
-version = "2.3.10"
+version = "2.3.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29fe29a87fb84c631ffb3ba21798c4b1f3a964701ba78f0dce4bf8668562ec88"
+checksum = "e54d1f576cd3a3460f212a4615fd12ce1b6303c095b79a44449ffbe627753dc1"
 dependencies = [
  "bitflags",
  "byteorder",
@@ -1193,11 +1193,10 @@ dependencies = [
 
 [[package]]
 name = "engineioxide"
-version = "0.17.5"
+version = "0.17.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "411a8df7da5a9d80d6b1b75bb42a31bd2119c8e3927265536ed5c22fc6911058"
+checksum = "1c48884059941b2b6255eabe1e9dca48e1aa01242299a7ef60844ded113b1d50"
 dependencies = [
- "base64 0.22.1",
  "bytes",
  "engineioxide-core",
  "futures-core",
@@ -1221,14 +1220,21 @@ dependencies = [
 
 [[package]]
 name = "engineioxide-core"
-version = "0.2.0"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04e5d58eb7374df380cbb53ef65f9c35f544c9c217528adb1458c8df05978475"
+checksum = "06c5f98b2d2338ec0713bc222c753bfd18746bd76cbb115afa18aa07c6096553"
 dependencies = [
  "base64 0.22.1",
  "bytes",
- "rand 0.9.3",
+ "futures-util",
+ "http",
+ "http-body",
+ "http-body-util",
+ "pin-project-lite",
+ "rand 0.10.2",
  "serde",
+ "serde_json",
+ "smallvec",
 ]
 
 [[package]]
@@ -1911,7 +1917,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.5.10",
+ "socket2 0.6.3",
  "system-configuration",
  "tokio",
  "tower-service",
@@ -2377,9 +2383,9 @@ dependencies = [
 
 [[package]]
 name = "link-section"
-version = "0.18.0"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a63f9687974de7e2caf6c96a1b19c6e882db299fdde09075c5b9e11c58421cd"
+checksum = "e333fe507b738576d6da5bb3f1a7d7a1c80307ed9ef31624c057d844c19c93e9"
 
 [[package]]
 name = "linktime-proc-macro"
@@ -2689,7 +2695,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3204,7 +3210,7 @@ dependencies = [
  "sha256",
  "socketioxide",
  "strfmt",
- "sysinfo 0.39.5",
+ "sysinfo 0.39.6",
  "testcontainers",
  "testcontainers-modules",
  "thiserror 2.0.18",
@@ -3628,9 +3634,9 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.12.4"
+version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1292b7759ae1cb9ec195452d1390a074f0cd8541ab7a5a8c31cd6db45d4a6ba"
+checksum = "2a0e75113e14dc5acb068cd0786884f214f1312650a3d36d269f5c4f3cdee8a2"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -4022,7 +4028,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -4442,9 +4448,9 @@ dependencies = [
 
 [[package]]
 name = "socketioxide"
-version = "0.18.4"
+version = "0.18.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c067d6dd2b9745bcd16f3f2d00960f75fcce16e4abdf5db469854f45b37bda2"
+checksum = "2417508caba506aa37fd23b17c7dffdae0a9c5c1accfc0e778fc5c254336b7ac"
 dependencies = [
  "bytes",
  "engineioxide",
@@ -4466,9 +4472,9 @@ dependencies = [
 
 [[package]]
 name = "socketioxide-core"
-version = "0.18.0"
+version = "0.18.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8229e7a5afa08cbfa3c490a9e4e9c5cf4df40ccf3134153fcdbfe95f1c107ef4"
+checksum = "71e520fedd1addc257506026a31268d9a6eeee79b158c7fc8b270c4c7a1cfc4f"
 dependencies = [
  "arbitrary",
  "bytes",
@@ -4645,9 +4651,9 @@ dependencies = [
 
 [[package]]
 name = "sysinfo"
-version = "0.39.5"
+version = "0.39.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c8bd2130a9b60bee2581bf82cfe89ee836424d1f37dcfa4ce21509611684673"
+checksum = "d2071df9448915b71c4fe6d25deaf1c22f12bd234f01540b77312bb8e41361e6"
 dependencies = [
  "libc",
  "memchr",
@@ -5752,7 +5758,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
