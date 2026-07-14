@@ -37,3 +37,8 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    # Expo SDK pins exact versions of native modules; major bumps break the
+    # build. Upgrade via `npx expo install --fix` instead.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]

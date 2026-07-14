@@ -75,7 +75,7 @@ pub async fn get_rss_feed(
         })
         .collect();
 
-    let feed_url = add_api_key_to_url(format!("{}rss", &server_url), &api_key);
+    let feed_url = add_api_key_to_url(format!("{server_url}rss"), &api_key);
     let itunes_owner = get_itunes_owner("Podfetch", "dev@podfetch.com");
     let category = get_category("Technology".to_string());
     let itunes_ext = ITunesChannelExtensionBuilder::default()
@@ -233,7 +233,7 @@ pub async fn get_rss_feed_for_podcast(
         .author(podcast.clone().author)
         .keywords(podcast.clone().keywords)
         .new_feed_url(add_api_key_to_url(
-            format!("{}{}/{}", &server_url, &"rss", &id),
+            format!("{server_url}rss/{id}"),
             &api_key,
         ))
         .summary(podcast.summary.clone())
@@ -245,7 +245,7 @@ pub async fn get_rss_feed_for_podcast(
         .categories(categories)
         .title(podcast.name.clone())
         .link(add_api_key_to_url(
-            format!("{}{}/{}", &server_url, &"rss", &id),
+            format!("{server_url}rss/{id}"),
             &api_key,
         ))
         .description(podcast.clone().summary.unwrap_or_default())

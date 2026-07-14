@@ -7,7 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "podfetch",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.podfetch.mobile"

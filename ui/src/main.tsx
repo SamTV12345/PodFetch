@@ -47,8 +47,10 @@ if (config) {
                 return Array.from(array, b => ('0' + (b % 36).toString(36)).slice(-1)).join('');
             }
 
-            let redirectUri = window.location.href
-            redirectUri = redirectUri.replace(/[?&](code|state|iss|session_state)=[^&]*/g, '')
+            // Always use the configured redirect URI: deriving it from window.location.href
+            // breaks the token exchange when the provider echoes extra params (e.g. scope)
+            // and breaks the auth request after a refresh on an internal route (#2175)
+            const redirectUri = config.oidcConfig.redirectUri
 
             if (window.location.search.includes('code=')) {
                 console.log('Redirecting to', window.location.href, "with client" + config.oidcConfig.clientId)
@@ -76,6 +78,7 @@ if (config) {
                         params.delete('state');
                         params.delete('iss');
                         params.delete('session_state');
+                        params.delete('scope');
                         const newSearch = params.toString();
                         const newUrl = window.location.pathname + (newSearch ? '?' + newSearch : '');
 

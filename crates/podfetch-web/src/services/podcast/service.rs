@@ -174,8 +174,7 @@ impl PodcastService {
     ) -> Result<Podcast, CustomError> {
         let resp = get_http_client(&ENVIRONMENT_SERVICE)
             .get(format!(
-                "https://api.podcastindex.org/api/1.0/podcasts/byfeedid?id={}",
-                &id.to_string()
+                "https://api.podcastindex.org/api/1.0/podcasts/byfeedid?id={id}"
             ))
             .headers(Self::compute_podindex_header())
             .send()
@@ -590,7 +589,7 @@ impl PodcastService {
             "{}{}{}",
             ENVIRONMENT_SERVICE.podindex_api_key.clone(),
             &*ENVIRONMENT_SERVICE.podindex_api_secret.clone(),
-            &seconds.to_string()
+            seconds
         );
         let mut hasher = Sha1::new();
 

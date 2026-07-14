@@ -175,7 +175,7 @@ pub fn map_podcast_with_context_to_dto(
             format!(
                 "{}/{}",
                 ENVIRONMENT_SERVICE.s3_config.endpoint.clone(),
-                &value.image_url
+                value.image_url
             )
         }
     };
