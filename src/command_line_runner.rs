@@ -302,7 +302,7 @@ pub fn read_user_account(state: &AppState) -> Result<User, CustomError> {
     }
 
     let password = retry_read_secret("Enter your password: ");
-    let assigned_role = retry_read_role(&format!("Select your role {}", &role));
+    let assigned_role = retry_read_role(&format!("Select your role {role}"));
     let mut api_key_generated = uuid::Uuid::new_v4().to_string();
     api_key_generated = api_key_generated.replace('-', "");
 
