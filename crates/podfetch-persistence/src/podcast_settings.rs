@@ -24,6 +24,7 @@ diesel::table! {
         use_one_cover_for_all_episodes -> Bool,
         nfo_format -> Text,
         cover_filename -> Text,
+        auto_transcribe -> Bool,
     }
 }
 
@@ -47,6 +48,7 @@ struct PodcastSettingEntity {
     use_one_cover_for_all_episodes: bool,
     nfo_format: String,
     cover_filename: String,
+    auto_transcribe: bool,
 }
 
 impl From<PodcastSettingEntity> for PodcastSetting {
@@ -69,6 +71,7 @@ impl From<PodcastSettingEntity> for PodcastSetting {
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
             nfo_format: value.nfo_format,
             cover_filename: value.cover_filename,
+            auto_transcribe: value.auto_transcribe,
         }
     }
 }
@@ -93,6 +96,7 @@ impl From<PodcastSetting> for PodcastSettingEntity {
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
             nfo_format: value.nfo_format,
             cover_filename: value.cover_filename,
+            auto_transcribe: value.auto_transcribe,
         }
     }
 }

@@ -24,6 +24,8 @@ pub struct PodcastSetting {
     pub nfo_format: String,
     #[serde(default = "crate::settings::default_cover_filename")]
     pub cover_filename: String,
+    #[serde(default)]
+    pub auto_transcribe: bool,
 }
 
 impl From<podfetch_domain::podcast_settings::PodcastSetting> for PodcastSetting {
@@ -46,6 +48,7 @@ impl From<podfetch_domain::podcast_settings::PodcastSetting> for PodcastSetting 
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
             nfo_format: value.nfo_format,
             cover_filename: value.cover_filename,
+            auto_transcribe: value.auto_transcribe,
         }
     }
 }
@@ -70,6 +73,7 @@ impl From<PodcastSetting> for podfetch_domain::podcast_settings::PodcastSetting 
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
             nfo_format: value.nfo_format,
             cover_filename: value.cover_filename,
+            auto_transcribe: value.auto_transcribe,
         }
     }
 }
