@@ -187,15 +187,17 @@ impl TranscriptService {
     /// Applies the preference rules from the spec: only `status = 'parsed'`
     /// transcripts qualify; a feed transcript always beats a generated one;
     /// among feed transcripts, the better-ranked format wins (JSON > VTT >
-    /// SRT > HTML). Recomputed from scratch every time a transcript's status
-    /// changes, so it's always consistent with the current DB state.
+    /// SRT > HTML), and — as the final tie-break among otherwise-equal feed
+    /// transcripts — the one whose `language` matches the podcast's own
+    /// `language` (compared case-insensitively on the primary subtag, e.g.
+    /// `"en"` matches `"en-US"`). Recomputed from scratch every time a
+    /// transcript's status changes, so it's always consistent with the
+    /// current DB state.
     ///
-    /// Note: the spec additionally tie-breaks same-format feed transcripts by
-    /// podcast-language match. `recompute_preferred` only receives the
-    /// episode id (per the task interface) and this service isn't wired to a
-    /// podcast/settings repository, so that last tie-break isn't implemented
-    /// here — ties are resolved by whichever row sorts first. None of this
-    /// task's required scenarios exercise that tie-break.
+    /// The podcast lookup is best-effort: `recompute_preferred` must never
+    /// fail because of it, so a lookup error (or a podcast/transcript with no
+    /// language recorded) simply drops the language tie-break for that
+    /// candidate — format-rank ordering alone still decides.
     pub fn recompute_preferred(&self, episode_id: Uuid) -> Result<(), CustomError> {
         let transcripts = self.transcript_repo.get_by_episode_id(episode_id)?;
 
@@ -204,11 +206,22 @@ impl TranscriptService {
             .filter(|t| t.status == TranscriptStatus::Parsed)
             .collect();
 
+        let podcast_language =
+            crate::services::podcast::service::PodcastService::get_podcast_by_episode_id(episode_id)
+                .ok()
+                .and_then(|podcast| podcast.language);
+
         candidates.sort_by_key(|t| {
             let format_rank = TranscriptFormat::detect(&t.mime_type, t.original_url.as_deref())
                 .map(|f| f.preference_rank())
                 .unwrap_or(u8::MAX);
-            (t.source != TranscriptSource::Feed, format_rank)
+            let language_mismatch = match (&podcast_language, &t.language) {
+                (Some(podcast_lang), Some(transcript_lang)) => {
+                    !primary_language_subtag_matches(podcast_lang, transcript_lang)
+                }
+                _ => false,
+            };
+            (t.source != TranscriptSource::Feed, format_rank, language_mismatch)
         });
 
         let preferred_id = candidates.first().map(|t| t.id);
@@ -363,6 +376,15 @@ impl TranscriptService {
     pub fn enqueue_job(&self, episode_id: Uuid) -> Result<Option<TranscriptionJob>, CustomError> {
         self.job_repo.enqueue(episode_id)
     }
+}
+
+/// Compares two BCP-47-ish language tags on their primary subtag only, case
+/// insensitively — e.g. `"en"` matches `"en-US"`, `"de-DE"` matches `"de"`.
+fn primary_language_subtag_matches(a: &str, b: &str) -> bool {
+    fn primary_subtag(s: &str) -> String {
+        s.split(['-', '_']).next().unwrap_or(s).to_ascii_lowercase()
+    }
+    primary_subtag(a) == primary_subtag(b)
 }
 
 fn parse_episode_id(id: &str) -> Result<Uuid, CustomError> {
@@ -528,6 +550,7 @@ mod tests {
         active: bool,
         original_image_url: String,
         directory_name: String,
+        language: Option<String>,
     }
 
     #[derive(Insertable)]
@@ -549,6 +572,10 @@ mod tests {
     }
 
     fn seed_podcast() -> Uuid {
+        seed_podcast_with_language(None)
+    }
+
+    fn seed_podcast_with_language(language: Option<&str>) -> Uuid {
         let id = Uuid::new_v4();
         diesel::insert_into(podcasts::table)
             .values(SeedPodcast {
@@ -560,6 +587,7 @@ mod tests {
                 active: true,
                 original_image_url: "https://example.com/img.png".to_string(),
                 directory_name: format!("podcast-{id}"),
+                language: language.map(|s| s.to_string()),
             })
             .execute(&mut get_connection())
             .expect("seed podcast");
@@ -739,6 +767,46 @@ mod tests {
 
         let preferred = svc.get_preferred_segments(episode_id).unwrap().unwrap().0;
         assert_eq!(preferred.id, json_id, "JSON must win over VTT among parsed feed transcripts");
+    }
+
+    #[test]
+    fn recompute_preferred_breaks_format_tie_by_podcast_language_match() {
+        let _guard = lock_and_prepare_db();
+        let svc = service();
+        let podcast_id = seed_podcast_with_language(Some("de"));
+        let episode = seed_episode(podcast_id, None);
+        let episode_id = Uuid::parse_str(&episode.id).unwrap();
+
+        let repo = PodcastEpisodeTranscriptRepositoryImpl::new(database());
+        let de_id = repo
+            .upsert(UpsertTranscript {
+                episode_id,
+                source: TranscriptSource::Feed,
+                original_url: Some("https://example.com/feed.de.vtt".to_string()),
+                mime_type: "text/vtt".to_string(),
+                language: Some("de".to_string()),
+            })
+            .unwrap();
+        repo.set_status(de_id, TranscriptStatus::Parsed, None).unwrap();
+
+        let en_id = repo
+            .upsert(UpsertTranscript {
+                episode_id,
+                source: TranscriptSource::Feed,
+                original_url: Some("https://example.com/feed.en.vtt".to_string()),
+                mime_type: "text/vtt".to_string(),
+                language: Some("en".to_string()),
+            })
+            .unwrap();
+        repo.set_status(en_id, TranscriptStatus::Parsed, None).unwrap();
+
+        svc.recompute_preferred(episode_id).unwrap();
+
+        let preferred = svc.get_preferred_segments(episode_id).unwrap().unwrap().0;
+        assert_eq!(
+            preferred.id, de_id,
+            "same format+source: the transcript matching the podcast's language must win"
+        );
     }
 
     // ── process_pending_for_episode (Step 3/4) ───────────────────────────
