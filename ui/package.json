@@ -11,7 +11,8 @@
     "tsc:watch": "tsc --watch --noEmit",
     "tsc:check": "tsc --noEmit",
     "test": "vitest",
-    "generate:types": "npx openapi-typescript  http://localhost:8000/api-docs/openapi.json -o ./schema.d.ts"
+    "generate:types": "npx openapi-typescript  http://localhost:8000/api-docs/openapi.json -o ./schema.d.ts",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -41,6 +42,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4.3.2",
     "@types/node": "^26.1.1",
     "@types/react": "^19.2.17",
