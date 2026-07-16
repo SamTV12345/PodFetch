@@ -280,5 +280,16 @@
   "mopidy-no-servers": "Aucun serveur Mopidy configuré pour l'instant.",
   "mopidy-kind-shared": "Partagé",
   "mopidy-kind-personal": "Personnel",
-  "cast-kind-mopidy": "Mopidy"
+  "cast-kind-mopidy": "Mopidy",
+  "transcript": "Transcript",
+  "transcript-auto-scroll": "Auto-scroll",
+  "no-transcript-available": "No transcript available",
+  "search-in-metadata": "Title/Description",
+  "search-in-transcripts": "Transcripts",
+  "transcribe": "Transcribe",
+  "transcription-pending": "Transcription pending",
+  "transcription-running": "Transcription running",
+  "transcription-failed": "Transcription failed",
+  "auto-transcribe": "Auto-transcribe",
+  "TRANSCRIPTION_JOB_ALREADY_EXISTS": "A transcription job is already running for this episode"
 }

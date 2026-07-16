@@ -28,6 +28,7 @@ export const generatePodcastDefaultSettings = (
         useExistingFilename: globalSettings?.useExistingFilename ?? false,
         useOneCoverForAllEpisodes: globalSettings?.useOneCoverForAllEpisodes ?? false,
         nfoFormat: globalSettings?.nfoFormat ?? "off",
-        coverFilename: globalSettings?.coverFilename ?? "image"
+        coverFilename: globalSettings?.coverFilename ?? "image",
+        autoTranscribe: false
     } satisfies components['schemas']['PodcastSetting']
 }

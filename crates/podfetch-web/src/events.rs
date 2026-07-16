@@ -84,3 +84,14 @@ pub struct CastEndedMessage {
     pub session_id: CastSessionId,
     pub reason: CastEndedReason,
 }
+
+/// Progress update for a background transcription job, for the
+/// `transcriptionStatus` event. `status` mirrors
+/// `TranscriptionJobStatus::as_str()` (`"pending"`, `"running"`, `"done"`,
+/// `"failed"`); `error` is only set once a job's most recent attempt failed.
+#[derive(Serialize)]
+pub struct TranscriptionStatusMessage {
+    pub episode_id: String,
+    pub status: String,
+    pub error: Option<String>,
+}

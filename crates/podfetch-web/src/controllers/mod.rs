@@ -16,6 +16,7 @@ pub mod sponsorblock_controller;
 pub mod stats_controller;
 pub mod sys_info_controller;
 pub mod tags_controller;
+pub mod transcript_controller;
 pub mod user_controller;
 pub mod watch_time_controller;
 pub mod websocket_controller;

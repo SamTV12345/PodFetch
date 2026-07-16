@@ -18,6 +18,9 @@ import { options } from './SettingsNaming'
 import { components } from '../../schema'
 import { $api } from '../utils/http'
 import { generatePodcastDefaultSettings } from '../models/PodcastDefaultSettings'
+import { getConfigFromHtmlFile } from '../utils/config'
+
+const transcriptionEnabled = getConfigFromHtmlFile()?.transcriptionEnabled ?? false
 import {CustomButtonPrimary} from "./CustomButtonPrimary";
 import { ConfirmModal } from './ConfirmModal'
 import { enqueueSnackbar } from '@/utils/toast'
@@ -84,7 +87,15 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
 
     useEffect(() => {
         if (settingsQuery.data) {
-            setDraft(settingsQuery.data)
+            // Fields with server-side serde defaults are optional in the
+            // generated schema; normalize them so the local draft stays fully
+            // populated.
+            setDraft({
+                ...settingsQuery.data,
+                nfoFormat: settingsQuery.data.nfoFormat ?? 'off',
+                coverFilename: settingsQuery.data.coverFilename ?? 'image',
+                autoTranscribe: settingsQuery.data.autoTranscribe ?? false,
+            })
         } else if (!settingsQuery.isLoading && !globalSettingsQuery.isLoading) {
             setDraft(generatePodcastDefaultSettings(podcast.id, globalSettingsQuery.data))
         }
@@ -225,6 +236,18 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                                     update('autoDownload', v)
                                 }
                             />
+
+                            {transcriptionEnabled && <>
+                                <label className="col-span-2 ui-text">
+                                    {t('auto-transcribe')}
+                                </label>
+                                <Switcher
+                                    checked={draft.autoTranscribe}
+                                    onChange={(v) =>
+                                        update('autoTranscribe', v)
+                                    }
+                                />
+                            </>}
 
                             <label className="col-span-2 ui-text">
                                 {t('colon-replacement')}

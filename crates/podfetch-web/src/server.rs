@@ -1,7 +1,7 @@
 use crate::events::{
     CastEndedMessage, CastEndedReason, CastStatusMessage, OpmlAddedMessage, OpmlErrorMessage,
     PodcastAddedMessage, PodcastEpisodeDeleteMessage, PodcastEpisodeOfflineAvailableMessage,
-    PodcastEpisodesAdded, PodcastRefreshedMessage, PodcastType,
+    PodcastEpisodesAdded, PodcastRefreshedMessage, PodcastType, TranscriptionStatusMessage,
 };
 use crate::podcast::PodcastDto;
 use crate::podcast::map_podcast_to_dto;
@@ -195,6 +195,21 @@ impl ChatServerHandle {
                 message: format!("Added podcast episodes: {}", podcast_name),
             },
             "addedEpisodes",
+        );
+    }
+
+    /// Broadcasts a transcription job's status change (`pending` after a
+    /// retryable failure, `running`, `done`, or `failed`) so the UI can show
+    /// live progress for an in-flight generated transcript.
+    pub fn broadcast_transcription_status(episode_id: &str, status: &str, error: Option<&str>) {
+        Self::send_broadcast_sync(
+            MAIN_ROOM.parse().unwrap(),
+            &TranscriptionStatusMessage {
+                episode_id: episode_id.to_string(),
+                status: status.to_string(),
+                error: error.map(|e| e.to_string()),
+            },
+            "transcriptionStatus",
         );
     }
 }

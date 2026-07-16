@@ -3,7 +3,8 @@ import {useParams} from 'react-router-dom'
 import {useTranslation} from 'react-i18next'
 import {useSnackbar} from '@/utils/toast'
 import {formatTime, removeHTML} from '../utils/Utilities'
-import { Check, CirclePlay, CloudDownload, Heart } from 'lucide-react'
+import { Captions, Check, CirclePlay, CloudDownload, Heart } from 'lucide-react'
+import { getConfigFromHtmlFile } from '../utils/config'
 import useCommon from "../store/CommonSlice";
 import {handlePlayofEpisode} from "../utils/PlayHandler";
 import {components, operations} from "../../schema";
@@ -43,6 +44,26 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
     const exhaustedRef = useRef(false)
     const downloadEpisodeMutation = $api.useMutation('put', '/api/v1/podcasts/{id}/episodes/download')
     const favorEpisodeMutation = $api.useMutation('put', '/api/v1/podcasts/{id}/episodes/favor')
+    const transcriptionEnabled = getConfigFromHtmlFile()?.transcriptionEnabled ?? false
+    const transcribeEpisodeMutation = $api.useMutation('post', '/api/v1/podcasts/episodes/{id}/transcribe')
+    const transcriptsQuery = $api.useQuery('get', '/api/v1/podcasts/episodes/{id}/transcripts', {
+        params: { path: { id: episode.podcastEpisode.id } }
+    }, {
+        enabled: transcriptionEnabled && episode.podcastEpisode.status
+    })
+    const generatedTranscript = transcriptsQuery.data?.find(transcript => transcript.source === 'generated')
+    const transcriptionStatus = useMemo(() => {
+        if (!generatedTranscript) {
+            return undefined
+        }
+        if (generatedTranscript.error || generatedTranscript.status === 'failed') {
+            return { key: 'transcription-failed', tooltip: generatedTranscript.error ?? undefined, done: false }
+        }
+        if (generatedTranscript.status === 'parsed') {
+            return { key: 'transcript', tooltip: undefined, done: true }
+        }
+        return { key: 'transcription-pending', tooltip: undefined, done: false }
+    }, [generatedTranscript])
 
     const waitForDownloadCompletion = async (episodeId: string) => {
         if (!params.id) {
@@ -213,6 +234,38 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                             })
                             setSelectedEpisodes(mappedEpisodes)
                         }} />
+                        {transcriptionEnabled && episode.podcastEpisode.status && (
+                            <Captions
+                                size={20}
+                                aria-label={t(transcriptionStatus?.key ?? 'transcribe') as string}
+                                data-testid="transcribe-episode"
+                                className={`${transcriptionStatus?.key === 'transcription-failed'
+                                    ? 'text-red-500'
+                                    : transcriptionStatus?.done
+                                        ? 'ui-text-accent cursor-auto'
+                                        : transcriptionStatus
+                                            ? 'ui-icon animate-pulse cursor-auto'
+                                            : 'cursor-pointer ui-icon hover:ui-icon-hover'}`}
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    // Done or already queued → nothing to enqueue; failed jobs may be retried.
+                                    if (transcriptionStatus && transcriptionStatus.key !== 'transcription-failed') {
+                                        return
+                                    }
+                                    transcribeEpisodeMutation.mutateAsync({
+                                        params: { path: { id: episode.podcastEpisode.id } }
+                                    }).then(() => {
+                                        enqueueSnackbar(t('transcription-pending'), { variant: 'success' })
+                                        transcriptsQuery.refetch()
+                                    }).catch(() => {
+                                        // Non-2xx responses (e.g. 409 while a job is already
+                                        // running) are already toasted by the http middleware.
+                                    })
+                                }}
+                            >
+                                {transcriptionStatus?.tooltip && <title>{transcriptionStatus.tooltip}</title>}
+                            </Captions>
+                        )}
                         <Heart
                             size={20}
                             fill={episode.podcastEpisode.favored ? 'currentColor' : 'transparent'}

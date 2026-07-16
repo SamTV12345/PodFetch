@@ -30,6 +30,7 @@ use crate::services::settings::service::SettingsService;
 use crate::services::stats::service::StatsService;
 use crate::services::subscription::service::SubscriptionService;
 use crate::services::tag::service::TagService;
+use crate::services::transcript::service::TranscriptService;
 use crate::services::user_admin::service::UserAdminService;
 use crate::services::user_auth::service::UserAuthService;
 use crate::services::user_onboarding::service::UserOnboardingService;
@@ -57,12 +58,14 @@ use podfetch_persistence::adapters::NotificationRepositoryImpl;
 use podfetch_persistence::adapters::PlaybackSessionRepositoryImpl;
 use podfetch_persistence::adapters::PlaylistRepositoryImpl;
 use podfetch_persistence::adapters::PodcastEpisodeChapterRepositoryImpl;
+use podfetch_persistence::adapters::PodcastEpisodeTranscriptRepositoryImpl;
 use podfetch_persistence::adapters::PodcastSettingsRepositoryImpl;
 use podfetch_persistence::adapters::SeriesRepositoryImpl;
 use podfetch_persistence::adapters::SessionRepositoryImpl;
 use podfetch_persistence::adapters::SettingsRepositoryImpl;
 use podfetch_persistence::adapters::SubscriptionRepositoryImpl;
 use podfetch_persistence::adapters::TagRepositoryImpl;
+use podfetch_persistence::adapters::TranscriptionJobRepositoryImpl;
 use podfetch_persistence::adapters::UserAdminRepositoryImpl;
 use std::sync::Arc;
 
@@ -98,6 +101,7 @@ pub struct AppState {
     pub stats_service: Arc<StatsService>,
     pub subscription_service: Arc<SubscriptionService>,
     pub tag_service: Arc<TagService>,
+    pub transcript_service: Arc<TranscriptService>,
     pub user_admin_service: Arc<UserAdminService>,
     pub user_auth_service: Arc<UserAuthService>,
     pub user_onboarding_service: Arc<UserOnboardingService>,
@@ -182,6 +186,10 @@ impl AppState {
         let tag_service = Arc::new(TagService::new(Arc::new(TagRepositoryImpl::new(
             database.clone(),
         ))));
+        let transcript_service = Arc::new(TranscriptService::new(
+            Arc::new(PodcastEpisodeTranscriptRepositoryImpl::new(database.clone())),
+            Arc::new(TranscriptionJobRepositoryImpl::new(database.clone())),
+        ));
         let watchtime_service = Arc::new(WatchtimeUseCase::new());
         let user_admin_service = Arc::new(UserAdminService::new(
             Arc::new(UserAdminRepositoryImpl::new(database.clone())),
@@ -273,6 +281,7 @@ impl AppState {
             stats_service,
             subscription_service,
             tag_service,
+            transcript_service,
             user_admin_service,
             user_auth_service,
             user_onboarding_service,

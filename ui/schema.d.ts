@@ -148,55 +148,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/episodes/formatting": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["retrieve_episode_sample_format"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/episodes/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["get_podcast_episode_by_id"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/episodes/{id}/download": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** * id is the episode id (uuid) */
-        delete: operations["delete_podcast_episode_locally"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/episodes/archive": {
         parameters: {
             query?: never;
@@ -207,6 +158,22 @@ export interface paths {
         get: operations["get_archive"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/episodes/formatting": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["retrieve_episode_sample_format"];
         delete?: never;
         options?: never;
         head?: never;
@@ -261,6 +228,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/episodes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_podcast_episode_by_id"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/episodes/{id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** * id is the episode id (uuid) */
+        delete: operations["delete_podcast_episode_locally"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/episodes/{id}/triage": {
         parameters: {
             query?: never;
@@ -269,6 +269,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /** `id` is the episode id (uuid or legacy integer). */
         put: operations["set_episode_triage"];
         post?: never;
         delete?: never;
@@ -605,6 +606,86 @@ export interface paths {
             cookie?: never;
         };
         get: operations["get_episode_sponsorblock"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/podcasts/episodes/{id}/transcribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["enqueue_transcription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/podcasts/episodes/{id}/transcript": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_preferred_transcript"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/podcasts/episodes/{id}/transcripts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_transcripts_of_episode"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/podcasts/episodes/{id}/transcripts/{tid}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_transcript_file"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/podcasts/episodes/{id}/transcripts/{tid}/file/apiKey/{api_key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_transcript_file_with_api_key"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1095,6 +1176,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/settings/transcripts/reparse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reparse_transcripts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/stats/overview": {
         parameters: {
             query?: never;
@@ -1186,6 +1283,22 @@ export interface paths {
         put?: never;
         post: operations["add_podcast_to_tag"];
         delete: operations["delete_podcast_from_tag"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/transcripts/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["search_transcripts"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1479,6 +1592,9 @@ export interface components {
             /** Format: int32 */
             podindexId: number;
         };
+        ClearInboxResponse: {
+            dismissed: number;
+        };
         /** @enum {string} */
         Color: "Red" | "Green" | "Blue";
         ConfigModel: {
@@ -1490,6 +1606,7 @@ export interface components {
             reverseProxy: boolean;
             rssFeed: string;
             serverUrl: string;
+            transcriptionEnabled: boolean;
             wsUrl: string;
         };
         Cpu: {
@@ -1784,10 +1901,13 @@ export interface components {
             /** Format: int32 */
             autoCleanupDays: number;
             autoDownload: boolean;
+            autoTranscribe?: boolean;
             autoUpdate: boolean;
+            coverFilename?: string;
             directPaths: boolean;
             episodeFormat: string;
             episodeNumbering: boolean;
+            nfoFormat?: string;
             podcastFormat: string;
             podcastId: string;
             /** Format: int32 */
@@ -1796,8 +1916,6 @@ export interface components {
             replacementStrategy: string;
             useExistingFilename: boolean;
             useOneCoverForAllEpisodes: boolean;
-            nfoFormat: string;
-            coverFilename: string;
         };
         PodcastUpdateNameRequest: {
             name: string;
@@ -1815,6 +1933,10 @@ export interface components {
         PodindexResponse: {
             feeds: components["schemas"]["Feed"][];
             status: string;
+        };
+        ReparseReportDto: {
+            failed: number;
+            reparsed: number;
         };
         /** @enum {string} */
         ReplacementStrategy: "replace-with-dash-and-underscore" | "remove" | "replace-with-dash";
@@ -1854,13 +1976,13 @@ export interface components {
              *     is backfilled in-memory from the guid/url for this fetch.
              * @default false
              */
-            refetchSponsorblock?: boolean;
+            refetchSponsorblock: boolean;
             /**
-             * @description (Re)write NFO files for the episode (and rename the cover)
-             *     using the current settings, without re-downloading audio.
+             * @description (Re)write NFO files for the episode (and rename the cover) using the
+             *     current settings, without re-downloading audio.
              * @default false
              */
-            regenerateNfo?: boolean;
+            regenerateNfo: boolean;
         };
         Setting: {
             autoCleanup: boolean;
@@ -1869,9 +1991,14 @@ export interface components {
             autoDownload: boolean;
             autoTranscodeOpus: boolean;
             autoUpdate: boolean;
+            /** @description Defaulted on deserialize so older clients that omit it keep working. */
+            coverFilename?: string;
             directPaths: boolean;
             episodeFormat: string;
-            /** @description Defaulted on deserialize so older clients that omit it keep working. */
+            /**
+             * @description Instance-wide default for episode-number title prefixing. Defaulted on
+             *     deserialize so older clients that omit it keep working.
+             */
             episodeNumbering?: boolean;
             id: string;
             /**
@@ -1879,15 +2006,20 @@ export interface components {
              * @description Defaulted on deserialize so older clients that omit it keep working.
              */
             maxParallelDownloads?: number;
+            /** @description Defaulted on deserialize so older clients that omit it keep working. */
+            nfoFormat?: string;
             podcastFormat: string;
             /** Format: int32 */
             podcastPrefill: number;
             replaceInvalidCharacters: boolean;
             replacementStrategy: string;
+            /**
+             * @description Enable SponsorBlock for this instance. Defaulted on deserialize so older
+             *     clients that omit it keep working.
+             */
+            sponsorblockEnabled?: boolean;
             useExistingFilename: boolean;
             useOneCoverForAllEpisodes: boolean;
-            nfoFormat: string;
-            coverFilename: string;
         };
         SimplifiedDisk: {
             /** Format: int64 */
@@ -1897,32 +2029,32 @@ export interface components {
             total_space: number;
         };
         SponsorSegmentDto: {
-            uuid: string;
-            category: string;
             actionType: string;
-            /** Format: int64 */
-            startMs: number;
+            category: string;
+            durationMismatch: boolean;
             /** Format: int64 */
             endMs: number;
+            locked: boolean;
+            /** Format: int64 */
+            startMs: number;
+            uuid: string;
             /** Format: int32 */
             votes: number;
-            locked: boolean;
-            durationMismatch: boolean;
         };
         SponsorblockEpisodeResponse: {
-            segments: components["schemas"]["SponsorSegmentDto"][];
             preferences: components["schemas"]["SponsorblockUserSettingsDto"];
+            segments: components["schemas"]["SponsorSegmentDto"][];
         };
         SponsorblockUserSettingsDto: {
             enabled: boolean;
-            skipSponsor: boolean;
-            skipSelfpromo: boolean;
+            skipFiller: boolean;
             skipInteraction: boolean;
             skipIntro: boolean;
+            skipMusicOfftopic: boolean;
             skipOutro: boolean;
             skipPreview: boolean;
-            skipFiller: boolean;
-            skipMusicOfftopic: boolean;
+            skipSelfpromo: boolean;
+            skipSponsor: boolean;
         };
         StatsOverview: {
             activeWeekdays: components["schemas"]["WeekdayStats"][];
@@ -1998,6 +2130,54 @@ export interface components {
             listenedSeconds: number;
             podcastId: string;
             podcastName: string;
+        };
+        TranscriptDto: {
+            error?: string | null;
+            id: string;
+            language?: string | null;
+            mimeType: string;
+            source: string;
+            status: string;
+        };
+        TranscriptSearchGroupDto: {
+            /**
+             * @description Full episode payload so the UI can render an episode card and start
+             *     playback without an extra per-episode request.
+             */
+            episode: components["schemas"]["PodcastEpisodeDto"];
+            episodeId: string;
+            hits: components["schemas"]["TranscriptSearchHitDto"][];
+        };
+        TranscriptSearchHitDto: {
+            /** Format: float */
+            rank: number;
+            snippet: string;
+            /** Format: int32 */
+            startMs?: number | null;
+            transcriptId: string;
+        };
+        TranscriptSegmentDto: {
+            /** Format: int32 */
+            endMs?: number | null;
+            /** Format: int32 */
+            idx: number;
+            speaker?: string | null;
+            /** Format: int32 */
+            startMs?: number | null;
+            text: string;
+        };
+        TranscriptWithSegmentsDto: {
+            error?: string | null;
+            id: string;
+            language?: string | null;
+            mimeType: string;
+            segments: components["schemas"]["TranscriptSegmentDto"][];
+            source: string;
+            status: string;
+        };
+        TriageStatusPut: {
+            /** @description One of `queued`, `archived` or `dismissed`. */
+            status: string;
         };
         UpdateNameSettings: {
             directPaths: boolean;
@@ -2320,6 +2500,34 @@ export interface operations {
             };
         };
     };
+    get_archive: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Exclusive `date_of_recording` cursor for keyset pagination. Pass the
+                 *     `date_of_recording` of the last item from the previous page.
+                 */
+                lastEpisodeDate?: string | null;
+                /** @description Page size. Defaults to 30, capped at 100. */
+                limit?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every downloaded episode (the archive). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PodcastEpisodeWithHistory"][];
+                };
+            };
+        };
+    };
     retrieve_episode_sample_format: {
         parameters: {
             query?: never;
@@ -2339,6 +2547,74 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    get_inbox: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Exclusive `date_of_recording` cursor for keyset pagination. Pass the
+                 *     `date_of_recording` of the last item from the previous page.
+                 */
+                lastEpisodeDate?: string | null;
+                /** @description Page size. Defaults to 30, capped at 100. */
+                limit?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description New, not-yet-triaged episodes (the inbox). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PodcastEpisodeWithHistory"][];
+                };
+            };
+        };
+    };
+    clear_inbox: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dismisses every episode currently in the inbox. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClearInboxResponse"];
+                };
+            };
+        };
+    };
+    get_waiting_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Episodes the user picked to listen to. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PodcastEpisodeWithHistory"][];
+                };
             };
         };
     };
@@ -2379,6 +2655,30 @@ export interface operations {
         responses: {
             /** @description Removes the download of a given podcast episode. This very episode won't be included in further checks/downloads unless done by user. */
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    set_episode_triage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TriageStatusPut"];
+            };
+        };
+        responses: {
+            /** @description Records the triage decision for an episode. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2973,6 +3273,177 @@ export interface operations {
             };
         };
     };
+    get_episode_sponsorblock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description SponsorBlock segments + caller preferences */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SponsorblockEpisodeResponse"];
+                };
+            };
+        };
+    };
+    enqueue_transcription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A generated-transcript job was enqueued for the episode. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A transcription job already exists for this episode. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No transcription backend is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_preferred_transcript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The episode's preferred transcript with its segments. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranscriptWithSegmentsDto"];
+                };
+            };
+            /** @description The episode has no preferred (parsed) transcript yet. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_transcripts_of_episode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lists every transcript known for the episode. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranscriptDto"][];
+                };
+            };
+        };
+    };
+    get_transcript_file: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                tid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Streams the transcript's archived file with its stored mime type. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Transcript not found, not archived yet, or belongs to a different episode. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_transcript_file_with_api_key: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                tid: string;
+                api_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Streams the transcript's archived file with its stored mime type (apiKey auth). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid apiKey. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Transcript not found, not archived yet, or belongs to a different episode. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     get_favored_podcasts: {
         parameters: {
             query?: never;
@@ -3313,125 +3784,6 @@ export interface operations {
             };
         };
     };
-    get_inbox: {
-        parameters: {
-            query?: {
-                /** @description Exclusive `date_of_recording` cursor for keyset pagination. */
-                lastEpisodeDate?: string | null;
-                /** @description Page size. Defaults to 30, capped at 100. */
-                limit?: number | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description New, not-yet-triaged episodes (the inbox). */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PodcastEpisodeWithHistory"][];
-                };
-            };
-        };
-    };
-    get_waiting_list: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Episodes the user picked to listen to. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PodcastEpisodeWithHistory"][];
-                };
-            };
-        };
-    };
-    get_archive: {
-        parameters: {
-            query?: {
-                /** @description Exclusive `date_of_recording` cursor for keyset pagination. */
-                lastEpisodeDate?: string | null;
-                /** @description Page size. Defaults to 30, capped at 100. */
-                limit?: number | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Every downloaded episode (the archive). */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PodcastEpisodeWithHistory"][];
-                };
-            };
-        };
-    };
-    set_episode_triage: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description One of `queued`, `archived` or `dismissed`. */
-                    status: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Records the triage decision for an episode. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    clear_inbox: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Dismisses every episode currently in the inbox. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        dismissed: number;
-                    };
-                };
-            };
-        };
-    };
     download_podcast_episodes_of_podcast: {
         parameters: {
             query?: never;
@@ -3746,72 +4098,6 @@ export interface operations {
             };
         };
     };
-    get_episode_sponsorblock: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Gets sponsorblock segments for a podcast episode. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SponsorblockEpisodeResponse"];
-                };
-            };
-        };
-    };
-    get_sponsorblock_settings: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Gets the sponsorblock user settings. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SponsorblockUserSettingsDto"];
-                };
-            };
-        };
-    };
-    update_sponsorblock_settings: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SponsorblockUserSettingsDto"];
-            };
-        };
-        responses: {
-            /** @description Updates the sponsorblock user settings. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SponsorblockUserSettingsDto"];
-                };
-            };
-        };
-    };
     update_name: {
         parameters: {
             query?: never;
@@ -3895,6 +4181,70 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    get_sponsorblock_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current user's SponsorBlock preferences */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SponsorblockUserSettingsDto"];
+                };
+            };
+        };
+    };
+    update_sponsorblock_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SponsorblockUserSettingsDto"];
+            };
+        };
+        responses: {
+            /** @description Updated SponsorBlock preferences */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SponsorblockUserSettingsDto"];
+                };
+            };
+        };
+    };
+    reparse_transcripts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Re-parsed every archived transcript. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReparseReportDto"];
+                };
             };
         };
     };
@@ -4091,6 +4441,30 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    search_transcripts: {
+        parameters: {
+            query: {
+                q: string;
+                podcastId?: string | null;
+                page?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Transcript segments matching the query, grouped by episode. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranscriptSearchGroupDto"][];
+                };
             };
         };
     };

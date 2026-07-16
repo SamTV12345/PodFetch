@@ -18,6 +18,7 @@ use crate::controllers::sponsorblock_controller::get_sponsorblock_router;
 use crate::controllers::stats_controller::get_stats_router;
 use crate::controllers::sys_info_controller::{get_public_config, get_sys_info_router, login};
 use crate::controllers::tags_controller::get_tags_router;
+use crate::controllers::transcript_controller::get_transcript_router;
 use crate::controllers::user_controller::{get_invite, get_user_router, onboard_user};
 use crate::controllers::watch_time_controller::get_watchtime_router;
 use crate::controllers::websocket_controller::get_websocket_router;
@@ -330,6 +331,8 @@ pub fn get_api_config(state: AppState) -> OpenApiRouter {
 fn config(state: AppState) -> OpenApiRouter {
     use crate::controllers::sys_info_controller::__path_get_public_config;
     use crate::controllers::sys_info_controller::__path_login;
+    use crate::controllers::transcript_controller::__path_get_transcript_file_with_api_key;
+    use crate::controllers::transcript_controller::get_transcript_file_with_api_key;
     use crate::controllers::user_controller::__path_get_invite;
     use crate::controllers::user_controller::__path_onboard_user;
     OpenApiRouter::new()
@@ -337,6 +340,12 @@ fn config(state: AppState) -> OpenApiRouter {
         .routes(routes!(onboard_user))
         .routes(routes!(get_public_config))
         .routes(routes!(login))
+        // apiKey-only, like `proxy_podcast_with_path_api_key` below: this route
+        // authenticates via the `{api_key}` path segment itself (checked inside
+        // the handler), so it must stay OUTSIDE `get_private_api`'s
+        // session-auth-gated router — feed-reader clients hit this URL (as
+        // embedded in the generated RSS feed) with no login session at all.
+        .routes(routes!(get_transcript_file_with_api_key))
         .with_state(state.clone())
         .merge(get_private_api(state))
 }
@@ -356,6 +365,7 @@ fn get_private_api(state: AppState) -> OpenApiRouter {
         .merge(get_settings_router().with_state(state.clone()))
         .merge(get_sponsorblock_router().with_state(state.clone()))
         .merge(get_tags_router().with_state(state.clone()))
+        .merge(get_transcript_router().with_state(state.clone()))
         .merge(get_user_router().with_state(state.clone()));
 
     if ENVIRONMENT_SERVICE.mopidy_integration_enabled {
@@ -587,6 +597,16 @@ pub fn handle_config_for_server_startup() -> Router {
             thread::sleep(Duration::from_millis(1000));
         }
     });
+
+    // Transcription job worker — like the scheduler above, only started for
+    // the real server (not `build_server_router`, which tests use) to avoid
+    // SQLite lock contention in tests. Also gated on a transcription backend
+    // actually being configured, even though `run_transcription_worker`
+    // itself no-ops without one, so no task is spawned at all when the
+    // feature is off.
+    if ENVIRONMENT_SERVICE.transcription_config.is_some() {
+        tokio::spawn(crate::services::transcript::worker::run_transcription_worker());
+    }
 
     router
 }

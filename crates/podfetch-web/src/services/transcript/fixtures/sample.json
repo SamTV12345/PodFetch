@@ -1,0 +1,6 @@
+{
+  "segments": [
+    {"speaker": "Alice", "startTime": 0.5, "endTime": 4.2, "body": "Hello world"},
+    {"speaker": "Bob", "startTime": 4.2, "endTime": 8.0, "body": "Nice to meet you"}
+  ]
+}

@@ -16,6 +16,7 @@ pub mod playlist;
 pub mod podcast;
 pub mod podcast_episode;
 pub mod podcast_episode_chapter;
+pub mod podcast_episode_transcript;
 pub mod podcast_settings;
 pub mod session;
 pub mod settings;

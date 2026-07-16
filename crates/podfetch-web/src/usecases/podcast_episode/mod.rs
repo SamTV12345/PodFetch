@@ -9,6 +9,7 @@ use crate::services::playlist::service::PlaylistService;
 use crate::services::podcast::metadata::PodcastBuilder;
 use crate::services::podcast_settings::service::PodcastSettingsService;
 use crate::services::settings::service::SettingsService;
+use crate::services::transcript::service::{FeedTranscriptTag, TranscriptService};
 use chrono::{DateTime, FixedOffset, Utc};
 use common_infrastructure::config::FileHandlerType;
 use common_infrastructure::config::TELEGRAM_API_ENABLED;
@@ -239,6 +240,42 @@ impl PodcastEpisodeUseCase {
             })
             .map(Into::into)
             .map_err(Into::into)
+    }
+
+    /// Bridges a feed item's `<podcast:transcript>` tags into transcript
+    /// bookkeeping (Task 6's `TranscriptService::upsert_from_feed`) right
+    /// after the episode row they belong to has been created or updated.
+    /// This is pure DB bookkeeping — no HTTP fetch happens here, that is the
+    /// download hook (Task 8). Feed refresh must never fail because of
+    /// transcripts, so any failure (an unparsable episode id, a DB error) is
+    /// only logged and never propagated.
+    fn sync_transcript_tags_for_episode(item: &Item, episode_id: &str) {
+        let tags = extract_transcript_tags(item);
+        if tags.is_empty() {
+            return;
+        }
+
+        let episode_uuid = match Self::parse_id(episode_id) {
+            Ok(id) => id,
+            Err(err) => {
+                tracing::error!(
+                    "Could not parse episode id '{}' while syncing feed transcript tags: {:?}",
+                    episode_id,
+                    err
+                );
+                return;
+            }
+        };
+
+        if let Err(err) =
+            TranscriptService::default_service().upsert_from_feed(episode_uuid, &tags)
+        {
+            tracing::error!(
+                "Failed to upsert feed transcript tags for episode {}: {:?}",
+                episode_uuid,
+                err
+            );
+        }
     }
 
     pub fn get_podcast_episodes_of_podcast(
@@ -577,6 +614,8 @@ impl PodcastEpisodeUseCase {
                             Self::update_podcast_episode(updated_podcast_episode.clone())?;
                         }
 
+                        Self::sync_transcript_tags_for_episode(item, &podcast_episode.id);
+
                         // Skip already existing episodes with insert
                         continue;
                     };
@@ -609,6 +648,7 @@ impl PodcastEpisodeUseCase {
                         &image_url,
                         duration_of_podcast_episode as i32,
                     )?;
+                    Self::sync_transcript_tags_for_episode(item, &inserted_episode.id);
                     podcast_inserted.push(inserted_episode);
                 }
                 Ok(podcast_inserted)
@@ -1095,4 +1135,157 @@ impl PodcastEpisodeUseCase {
 struct RequestReturnType {
     pub url: String,
     pub content: String,
+}
+
+/// Reads `<podcast:transcript>` tags out of a feed item's extensions.
+///
+/// The `rss` crate keys parsed extensions by their local name, i.e. without
+/// the namespace prefix, so a `<podcast:transcript>` element normally lands
+/// under `extensions()["podcast"]["transcript"]`. Some feeds/tooling can
+/// still surface the qualified name as the map key instead, so both
+/// `"transcript"` and `"podcast:transcript"` are checked defensively. A tag
+/// without a `url` attribute is skipped — there is nothing to store or later
+/// download (Task 8) for it.
+fn extract_transcript_tags(item: &Item) -> Vec<FeedTranscriptTag> {
+    let Some(podcast_ns) = item.extensions().get("podcast") else {
+        return Vec::new();
+    };
+
+    ["transcript", "podcast:transcript"]
+        .into_iter()
+        .filter_map(|key| podcast_ns.get(key))
+        .flatten()
+        .filter_map(|ext| {
+            let url = ext.attrs().get("url")?.clone();
+            let mime_type = ext
+                .attrs()
+                .get("type")
+                .cloned()
+                .unwrap_or_else(|| "text/plain".to_string());
+            let language = ext.attrs().get("language").cloned();
+            Some(FeedTranscriptTag {
+                url,
+                mime_type,
+                language,
+            })
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rss::extension::{Extension, ExtensionBuilder};
+    use std::collections::BTreeMap;
+
+    fn transcript_extension(url: Option<&str>, mime_type: Option<&str>, language: Option<&str>) -> Extension {
+        let mut builder = ExtensionBuilder::default();
+        builder.name("podcast:transcript");
+
+        let mut attrs = BTreeMap::new();
+        if let Some(url) = url {
+            attrs.insert("url".to_string(), url.to_string());
+        }
+        if let Some(mime_type) = mime_type {
+            attrs.insert("type".to_string(), mime_type.to_string());
+        }
+        if let Some(language) = language {
+            attrs.insert("language".to_string(), language.to_string());
+        }
+        builder.attrs(attrs);
+
+        builder.build()
+    }
+
+    fn item_with_transcripts(transcripts: Vec<Extension>) -> Item {
+        let mut podcast_ns = BTreeMap::new();
+        podcast_ns.insert("transcript".to_string(), transcripts);
+
+        let mut extensions = rss::extension::ExtensionMap::new();
+        extensions.insert("podcast".to_string(), podcast_ns);
+
+        Item {
+            extensions,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn extract_transcript_tags_reads_url_type_and_language() {
+        let item = item_with_transcripts(vec![
+            transcript_extension(Some("https://example.com/ep1.vtt"), Some("text/vtt"), Some("en")),
+            transcript_extension(Some("https://example.com/ep1.json"), Some("application/json"), Some("en")),
+        ]);
+
+        let tags = extract_transcript_tags(&item);
+
+        assert_eq!(tags.len(), 2);
+        assert_eq!(tags[0].url, "https://example.com/ep1.vtt");
+        assert_eq!(tags[0].mime_type, "text/vtt");
+        assert_eq!(tags[0].language.as_deref(), Some("en"));
+        assert_eq!(tags[1].url, "https://example.com/ep1.json");
+        assert_eq!(tags[1].mime_type, "application/json");
+        assert_eq!(tags[1].language.as_deref(), Some("en"));
+    }
+
+    #[test]
+    fn extract_transcript_tags_defaults_missing_type_to_text_plain() {
+        let item = item_with_transcripts(vec![transcript_extension(
+            Some("https://example.com/ep1.txt"),
+            None,
+            None,
+        )]);
+
+        let tags = extract_transcript_tags(&item);
+
+        assert_eq!(tags.len(), 1);
+        assert_eq!(tags[0].mime_type, "text/plain");
+        assert_eq!(tags[0].language, None);
+    }
+
+    #[test]
+    fn extract_transcript_tags_skips_tag_without_url() {
+        let item = item_with_transcripts(vec![
+            transcript_extension(None, Some("text/vtt"), Some("en")),
+            transcript_extension(Some("https://example.com/ep1.vtt"), Some("text/vtt"), Some("en")),
+        ]);
+
+        let tags = extract_transcript_tags(&item);
+
+        assert_eq!(tags.len(), 1);
+        assert_eq!(tags[0].url, "https://example.com/ep1.vtt");
+    }
+
+    #[test]
+    fn extract_transcript_tags_checks_qualified_name_key_too() {
+        let mut podcast_ns = BTreeMap::new();
+        podcast_ns.insert(
+            "podcast:transcript".to_string(),
+            vec![transcript_extension(
+                Some("https://example.com/ep1.vtt"),
+                Some("text/vtt"),
+                None,
+            )],
+        );
+        let mut extensions = rss::extension::ExtensionMap::new();
+        extensions.insert("podcast".to_string(), podcast_ns);
+        let item = Item {
+            extensions,
+            ..Default::default()
+        };
+
+        let tags = extract_transcript_tags(&item);
+
+        assert_eq!(tags.len(), 1);
+        assert_eq!(tags[0].url, "https://example.com/ep1.vtt");
+    }
+
+    #[test]
+    fn extract_transcript_tags_returns_empty_when_no_podcast_namespace() {
+        let item = Item::default();
+
+        let tags = extract_transcript_tags(&item);
+
+        assert!(tags.is_empty());
+    }
 }
