@@ -339,6 +339,22 @@ impl DownloadService {
             tracing::error!("Error processing transcripts for episode {}: {err}", podcast_episode.id);
         }
 
+        // Auto-transcribe: enqueue a generation job when this podcast opted in
+        // and the episode doesn't already have a usable (feed) transcript in
+        // flight. Non-fatal — must never fail the download.
+        let auto_transcribe = podcast_settings_override
+            .as_ref()
+            .map(|settings| settings.auto_transcribe)
+            .unwrap_or(false);
+        if ENVIRONMENT_SERVICE.transcription_config.is_some()
+            && auto_transcribe
+            && let Ok(episode_uuid) = parse_id(&podcast_episode.id)
+            && transcript_service.needs_generated_transcript(episode_uuid).unwrap_or(false)
+            && let Err(err) = transcript_service.enqueue_job(episode_uuid)
+        {
+            tracing::error!("Error enqueuing transcription job: {err}");
+        }
+
         // SponsorBlock: fetch + store segments for YouTube-sourced episodes.
         // Non-fatal — must never fail the download.
         match crate::services::sponsorblock::service::fetch_and_store_blocking(&podcast_episode) {

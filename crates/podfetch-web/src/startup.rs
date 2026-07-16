@@ -588,5 +588,15 @@ pub fn handle_config_for_server_startup() -> Router {
         }
     });
 
+    // Transcription job worker — like the scheduler above, only started for
+    // the real server (not `build_server_router`, which tests use) to avoid
+    // SQLite lock contention in tests. Also gated on a transcription backend
+    // actually being configured, even though `run_transcription_worker`
+    // itself no-ops without one, so no task is spawned at all when the
+    // feature is off.
+    if ENVIRONMENT_SERVICE.transcription_config.is_some() {
+        tokio::spawn(crate::services::transcript::worker::run_transcription_worker());
+    }
+
     router
 }

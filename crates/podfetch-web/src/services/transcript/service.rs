@@ -11,6 +11,7 @@
 //! erroring) propagate as `Err`.
 
 use crate::services::transcript::parser::{self, TranscriptFormat};
+use crate::services::transcript::whisper_client;
 use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use podfetch_domain::podcast_episode_transcript::{
@@ -395,6 +396,45 @@ impl TranscriptService {
     /// a job already exists for the episode.
     pub fn enqueue_job(&self, episode_id: Uuid) -> Result<Option<TranscriptionJob>, CustomError> {
         self.job_repo.enqueue(episode_id)
+    }
+
+    /// Persists a freshly Whisper-generated transcript for `episode`: writes
+    /// the segments out as a VTT file archived next to the episode's audio
+    /// (mirroring how feed transcripts are archived), upserts the episode's
+    /// single `source = 'generated'` transcript row, replaces its segments,
+    /// marks it `parsed`, and recomputes the episode's preferred transcript.
+    ///
+    /// Called by the job worker right after a successful
+    /// [`crate::services::transcript::whisper_client::WhisperClient::transcribe`]
+    /// call — any error here (e.g. no local audio path yet) is surfaced to the
+    /// caller so the job can be retried/failed, unlike the feed-download path
+    /// which swallows per-transcript errors itself.
+    pub fn store_generated(
+        &self,
+        episode: &PodcastEpisode,
+        segments: Vec<TranscriptSegment>,
+        language: Option<String>,
+    ) -> Result<(), CustomError> {
+        let episode_id = parse_episode_id(&episode.id)?;
+        let archive_path = archive_path_for(episode, "vtt")?;
+
+        let vtt = whisper_client::segments_to_vtt(&segments);
+        let mut bytes = vtt.into_bytes();
+        FileHandleWrapper::write_file(&archive_path, &mut bytes, &ENVIRONMENT_SERVICE.default_file_handler)?;
+
+        let transcript_id = self.transcript_repo.upsert(UpsertTranscript {
+            episode_id,
+            source: TranscriptSource::Generated,
+            original_url: None,
+            mime_type: "text/vtt".to_string(),
+            language,
+        })?;
+        self.transcript_repo.set_file_path(transcript_id, &archive_path)?;
+        self.transcript_repo.replace_segments(transcript_id, &segments)?;
+        self.transcript_repo
+            .set_status(transcript_id, TranscriptStatus::Parsed, None)?;
+
+        self.recompute_preferred(episode_id)
     }
 }
 
