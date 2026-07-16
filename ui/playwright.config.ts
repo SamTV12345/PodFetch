@@ -21,6 +21,9 @@ export default defineConfig({
     use: {
         baseURL: 'http://127.0.0.1:8000',
         locale: 'en-US',
+        // Tall enough that long modals (podcast settings) keep their footer
+        // buttons inside the viewport.
+        viewport: { width: 1280, height: 1400 },
         trace: 'retain-on-failure',
         screenshot: 'only-on-failure',
     },
