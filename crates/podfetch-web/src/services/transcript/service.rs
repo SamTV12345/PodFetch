@@ -249,6 +249,18 @@ impl TranscriptService {
         self.transcript_repo.set_preferred(episode_id, preferred_id)
     }
 
+    /// All transcript rows for an episode (any status), used by the HTTP
+    /// layer to list an episode's transcripts.
+    pub fn get_by_episode_id(&self, episode_id: Uuid) -> Result<Vec<PodcastEpisodeTranscript>, CustomError> {
+        self.transcript_repo.get_by_episode_id(episode_id)
+    }
+
+    /// A single transcript row by id, if it exists — used by the HTTP layer
+    /// to serve an individual transcript's archived file.
+    pub fn get_by_id(&self, transcript_id: Uuid) -> Result<Option<PodcastEpisodeTranscript>, CustomError> {
+        self.transcript_repo.get_by_id(transcript_id)
+    }
+
     pub fn get_preferred_segments(
         &self,
         episode_id: Uuid,

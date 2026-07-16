@@ -18,6 +18,7 @@ use crate::controllers::sponsorblock_controller::get_sponsorblock_router;
 use crate::controllers::stats_controller::get_stats_router;
 use crate::controllers::sys_info_controller::{get_public_config, get_sys_info_router, login};
 use crate::controllers::tags_controller::get_tags_router;
+use crate::controllers::transcript_controller::get_transcript_router;
 use crate::controllers::user_controller::{get_invite, get_user_router, onboard_user};
 use crate::controllers::watch_time_controller::get_watchtime_router;
 use crate::controllers::websocket_controller::get_websocket_router;
@@ -356,6 +357,7 @@ fn get_private_api(state: AppState) -> OpenApiRouter {
         .merge(get_settings_router().with_state(state.clone()))
         .merge(get_sponsorblock_router().with_state(state.clone()))
         .merge(get_tags_router().with_state(state.clone()))
+        .merge(get_transcript_router().with_state(state.clone()))
         .merge(get_user_router().with_state(state.clone()));
 
     if ENVIRONMENT_SERVICE.mopidy_integration_enabled {
