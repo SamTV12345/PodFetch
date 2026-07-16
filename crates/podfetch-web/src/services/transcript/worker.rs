@@ -397,7 +397,7 @@ mod tests {
         assert_eq!(generated.status, TranscriptStatus::Parsed);
         assert!(generated.is_preferred, "the only parsed transcript must become preferred");
 
-        let expected_vtt_path = dir.join("episode.transcript.vtt");
+        let expected_vtt_path = dir.join("episode.transcript.generated.vtt");
         assert_eq!(generated.file_path.as_deref(), expected_vtt_path.to_str());
         assert!(expected_vtt_path.exists(), "the generated VTT file must be archived on disk");
         let vtt_contents = std::fs::read_to_string(&expected_vtt_path).unwrap();

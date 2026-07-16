@@ -434,7 +434,7 @@ impl TranscriptService {
         language: Option<String>,
     ) -> Result<(), CustomError> {
         let episode_id = parse_episode_id(&episode.id)?;
-        let archive_path = archive_path_for(episode, "vtt")?;
+        let archive_path = generated_archive_path_for(episode)?;
 
         let vtt = whisper_client::segments_to_vtt(&segments);
         let mut bytes = vtt.into_bytes();
@@ -576,6 +576,22 @@ fn archive_path_for(episode: &PodcastEpisode, extension: &str) -> Result<String,
     Ok(format!("{stem}.transcript.{extension}"))
 }
 
+/// Archive path for Whisper-generated transcripts. Deliberately distinct from
+/// [`archive_path_for`]: a feed transcript may be archived as
+/// `<stem>.transcript.vtt` for the same episode, and the generated VTT must
+/// never overwrite that original.
+fn generated_archive_path_for(episode: &PodcastEpisode) -> Result<String, CustomError> {
+    let file_path = episode.file_episode_path.as_deref().ok_or_else(|| {
+        CustomError::from(CustomErrorInner::Conflict(
+            "cannot archive transcript: episode has no downloaded audio file yet".to_string(),
+            ErrorSeverity::Warning,
+        ))
+    })?;
+
+    let stem = strip_extension(file_path);
+    Ok(format!("{stem}.transcript.generated.vtt"))
+}
+
 fn strip_extension(path: &str) -> &str {
     match path.rfind('.') {
         Some(dot_idx) if dot_idx > path.rfind('/').unwrap_or(0) => &path[..dot_idx],
@@ -703,6 +719,23 @@ mod tests {
 
     fn service() -> TranscriptService {
         TranscriptService::default_service()
+    }
+
+    /// Regression: a Whisper-generated transcript must never be archived to
+    /// the same file as the feed transcript, or storing it silently
+    /// overwrites the archived original (which the file endpoint and
+    /// generated RSS feeds keep serving).
+    #[test]
+    fn generated_archive_path_differs_from_feed_archive_path() {
+        let _guard = lock_and_prepare_db();
+        let podcast_id = seed_podcast();
+        let episode = seed_episode(podcast_id, Some("podcasts/pod/ep.mp3"));
+
+        let feed_path = archive_path_for(&episode, "vtt").expect("feed path");
+        let generated_path = generated_archive_path_for(&episode).expect("generated path");
+
+        assert_eq!(feed_path, "podcasts/pod/ep.transcript.vtt");
+        assert_eq!(generated_path, "podcasts/pod/ep.transcript.generated.vtt");
     }
 
     // ── recompute_preferred (Step 1/2) ───────────────────────────────────
