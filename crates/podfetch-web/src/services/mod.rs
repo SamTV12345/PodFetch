@@ -28,6 +28,7 @@ pub mod sponsorblock;
 pub mod stats;
 pub mod subscription;
 pub mod tag;
+pub mod transcript;
 pub mod user_admin;
 pub mod user_auth;
 pub mod user_onboarding;
