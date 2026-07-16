@@ -122,6 +122,7 @@ impl TranscriptSource {
         }
     }
 
+    #[allow(clippy::should_implement_trait)] // fallible parse returning Option, not FromStr
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "feed" => Some(TranscriptSource::Feed),
@@ -141,6 +142,7 @@ impl TranscriptStatus {
         }
     }
 
+    #[allow(clippy::should_implement_trait)] // fallible parse returning Option, not FromStr
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "pending" => Some(TranscriptStatus::Pending),
@@ -162,6 +164,7 @@ impl TranscriptionJobStatus {
         }
     }
 
+    #[allow(clippy::should_implement_trait)] // fallible parse returning Option, not FromStr
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "pending" => Some(TranscriptionJobStatus::Pending),

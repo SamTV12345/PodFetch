@@ -547,8 +547,25 @@ impl TranscriptionJobRepository for DieselTranscriptionJobRepository {
             .filter(tj_dsl::episode_id.eq(episode_id_str.clone()))
             .first::<TranscriptionJobEntity>(&mut conn)
             .optional()?;
-        if existing.is_some() {
-            return Ok(None);
+        if let Some(existing) = existing {
+            // A failed job may be retried: reset it in place. Anything still
+            // pending/running (or already done) refuses a duplicate.
+            if existing.status != TranscriptionJobStatus::Failed.as_str() {
+                return Ok(None);
+            }
+            let now = chrono::Utc::now().naive_utc();
+            diesel::update(tj_table.filter(tj_dsl::id.eq(existing.id.clone())))
+                .set((
+                    tj_dsl::status.eq(TranscriptionJobStatus::Pending.as_str()),
+                    tj_dsl::attempts.eq(0),
+                    tj_dsl::error.eq(None::<String>),
+                    tj_dsl::updated_at.eq(now),
+                ))
+                .execute(&mut conn)?;
+            let reset = tj_table
+                .filter(tj_dsl::id.eq(existing.id))
+                .first::<TranscriptionJobEntity>(&mut conn)?;
+            return Ok(Some(reset.into()));
         }
 
         let now = chrono::Utc::now().naive_utc();
@@ -793,6 +810,20 @@ mod tests {
         diesel::delete(tj_table).execute(&mut conn).expect("clear transcription_jobs");
     }
 
+    /// Same run-order hazard as `clear_transcription_jobs`, but for the
+    /// full-text search tests: segments accumulate in the shared on-disk DB
+    /// across test runs, and once more rows match a query term than the
+    /// search limit, a freshly seeded segment can fall off the first page.
+    /// Clear both transcript tables (segment deletes keep the FTS index in
+    /// sync via triggers) so search assertions only ever see their own data.
+    fn clear_transcript_tables() {
+        use self::podcast_episode_transcript_segments::table as seg_table;
+        use self::podcast_episode_transcripts::table as t_table;
+        let mut conn = database().connection().expect("db connection");
+        diesel::delete(seg_table).execute(&mut conn).expect("clear segments");
+        diesel::delete(t_table).execute(&mut conn).expect("clear transcripts");
+    }
+
     fn make_segment(idx: i32, text: &str) -> TranscriptSegment {
         TranscriptSegment {
             idx,
@@ -1031,6 +1062,7 @@ mod tests {
     #[test]
     fn search_finds_hit_with_highlighted_snippet_and_start_ms() {
         let _guard = setup();
+        clear_transcript_tables();
         let repo = DieselPodcastEpisodeTranscriptRepository::new(database());
 
         let podcast_id = seed_podcast();
@@ -1116,6 +1148,7 @@ mod tests {
     #[test]
     fn search_with_empty_or_whitespace_query_returns_empty_without_error() {
         let _guard = setup();
+        clear_transcript_tables();
         let repo = DieselPodcastEpisodeTranscriptRepository::new(database());
 
         // Seed a segment that a non-empty query WOULD match, so an empty
@@ -1150,6 +1183,7 @@ mod tests {
     #[test]
     fn search_with_podcast_id_filter_excludes_other_podcasts() {
         let _guard = setup();
+        clear_transcript_tables();
         let repo = DieselPodcastEpisodeTranscriptRepository::new(database());
 
         let podcast_id = seed_podcast();
@@ -1244,6 +1278,32 @@ mod tests {
             .expect("job should be pending again");
         assert_eq!(pending_again.id, job.id);
         assert_eq!(pending_again.status, TranscriptionJobStatus::Pending);
+    }
+
+    #[test]
+    fn enqueue_resets_a_failed_job_so_it_can_be_retried() {
+        let _guard = setup();
+        clear_transcription_jobs();
+        let repo = DieselTranscriptionJobRepository::new(database());
+        let podcast_id = seed_podcast();
+        let episode_id = seed_episode(&podcast_id);
+
+        let job = repo.enqueue(episode_id).expect("enqueue").expect("created");
+        repo.increment_attempts(job.id).expect("attempts");
+        repo.set_status(job.id, TranscriptionJobStatus::Failed, Some("whisper down"))
+            .expect("set failed");
+
+        let retried = repo
+            .enqueue(episode_id)
+            .expect("re-enqueue")
+            .expect("a failed job must be re-enqueued, not rejected");
+        assert_eq!(retried.id, job.id, "the existing row is reset, not duplicated");
+        assert_eq!(retried.status, TranscriptionJobStatus::Pending);
+        assert_eq!(retried.attempts, 0);
+        assert_eq!(retried.error, None);
+
+        // But a pending/running job still refuses a duplicate.
+        assert!(repo.enqueue(episode_id).expect("third enqueue").is_none());
     }
 
     #[test]

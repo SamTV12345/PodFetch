@@ -98,6 +98,23 @@ pub async fn run_transcription_worker() {
         tracing::info!("Transcription worker not starting: no transcription backend configured");
         return;
     };
+    run_worker_with_config(config, Arc::new(std::sync::atomic::AtomicBool::new(false))).await
+}
+
+/// The actual worker: one dedicated blocking thread runs the whole
+/// claim-transcribe-record loop until `stop` is set (only tests ever set it).
+///
+/// [`WhisperClient`] wraps `reqwest::blocking::Client`, which spins up (and on
+/// drop tears down) its own internal tokio runtime — touching it from an async
+/// worker thread panics with "Cannot drop a runtime in a context where
+/// blocking is not allowed" and silently kills the worker task. The client is
+/// therefore constructed, used and dropped exclusively inside this single
+/// `spawn_blocking` closure and never crosses into async context.
+async fn run_worker_with_config(
+    config: common_infrastructure::config::TranscriptionConfig,
+    stop: Arc<std::sync::atomic::AtomicBool>,
+) {
+    use std::sync::atomic::Ordering;
 
     let job_repo: Arc<TranscriptionJobRepositoryImpl> = Arc::new(TranscriptionJobRepositoryImpl::new(database()));
     match job_repo.reset_running_to_pending() {
@@ -109,29 +126,41 @@ pub async fn run_transcription_worker() {
     }
 
     let service = Arc::new(TranscriptService::default_service());
-    let client = Arc::new(WhisperClient::new(config));
 
-    loop {
-        let job_repo = job_repo.clone();
-        let service = service.clone();
-        let client = client.clone();
-
-        let outcome =
-            tokio::task::spawn_blocking(move || process_one_job(job_repo.as_ref(), service.as_ref(), client.as_ref()))
-                .await;
-
-        match outcome {
-            Ok(Ok(true)) => continue,
-            Ok(Ok(false)) => tokio::time::sleep(POLL_INTERVAL).await,
-            Ok(Err(err)) => {
-                tracing::error!("Transcription worker: job processing failed: {err}");
-                tokio::time::sleep(POLL_INTERVAL).await;
+    let outcome = tokio::task::spawn_blocking(move || {
+        // Sleeps in small slices so a stop request never waits a full poll interval.
+        let sleep_unless_stopped = |stop: &std::sync::atomic::AtomicBool| {
+            let slice = Duration::from_millis(200);
+            let mut slept = Duration::ZERO;
+            while slept < POLL_INTERVAL && !stop.load(Ordering::Relaxed) {
+                std::thread::sleep(slice);
+                slept += slice;
             }
-            Err(join_err) => {
-                tracing::error!("Transcription worker: worker task panicked: {join_err}");
-                tokio::time::sleep(POLL_INTERVAL).await;
+        };
+
+        let client = WhisperClient::new(config);
+        while !stop.load(Ordering::Relaxed) {
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                process_one_job(job_repo.as_ref(), service.as_ref(), &client)
+            }));
+            match result {
+                Ok(Ok(true)) => {}
+                Ok(Ok(false)) => sleep_unless_stopped(&stop),
+                Ok(Err(err)) => {
+                    tracing::error!("Transcription worker: job processing failed: {err}");
+                    sleep_unless_stopped(&stop);
+                }
+                Err(_) => {
+                    tracing::error!("Transcription worker: job processing panicked");
+                    sleep_unless_stopped(&stop);
+                }
             }
         }
+    })
+    .await;
+
+    if let Err(join_err) = outcome {
+        tracing::error!("Transcription worker stopped unexpectedly: {join_err}");
     }
 }
 
@@ -151,6 +180,30 @@ mod tests {
     use podfetch_persistence::podcast_episode_transcript::DieselPodcastEpisodeTranscriptRepository;
     use std::sync::MutexGuard;
     use uuid::Uuid;
+
+    /// Regression test for the startup panic that silently killed the worker:
+    /// `reqwest::blocking::Client` must never touch the async runtime (see
+    /// `run_worker_with_config`). The worker task must still be alive and
+    /// polling after startup instead of having died on a construction panic.
+    #[tokio::test]
+    async fn worker_survives_startup_inside_the_async_runtime() {
+        let _guard = lock_and_prepare_db();
+        let config = TranscriptionConfig {
+            base_url: "http://127.0.0.1:1".to_string(),
+            api_key: None,
+            model: "whisper-1".to_string(),
+        };
+
+        let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let handle = tokio::spawn(run_worker_with_config(config, stop.clone()));
+        tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+        assert!(
+            !handle.is_finished(),
+            "worker task ended right after startup — it should be alive and polling"
+        );
+        stop.store(true, std::sync::atomic::Ordering::Relaxed);
+        handle.await.unwrap();
+    }
 
     fn lock_and_prepare_db() -> MutexGuard<'static, ()> {
         ensure_test_env_vars();
