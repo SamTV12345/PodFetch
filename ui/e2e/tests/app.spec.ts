@@ -64,7 +64,7 @@ test('playing an episode drives the bottom player bar', async ({ page }) => {
     await playEpisode(page, 'Smoke Episode 1')
 
     // Bottom bar shows the running episode and time advances.
-    await expect(page.locator('span', { hasText: 'Smoke Episode 1' }).last()).toBeVisible()
+    await expect(page.getByTestId('audio-player-bar').getByText('Smoke Episode 1')).toBeVisible()
     const t1 = await audioCurrentTime(page)
     await expect.poll(() => audioCurrentTime(page)).toBeGreaterThan(t1)
 

@@ -25,7 +25,7 @@ export const DrawerAudioPlayer: FC<DrawerAudioPlayerProps> = ({ audioAmplifier }
     })
 
     return (
-        <div className="
+        <div data-testid="audio-player-bar" className="
             fixed bottom-0 left-0 right-0 z-50
             col-span-2 grid
             sm:grid-cols-[10rem_1fr_8rem] md:grid-cols-[16rem_1fr_10rem] lg:grid-cols-[20rem_1fr_12rem]
