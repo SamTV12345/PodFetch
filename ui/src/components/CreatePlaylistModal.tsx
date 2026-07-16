@@ -245,7 +245,13 @@ export const CreatePlaylistModal: FC<CreatePlaylistModalProps> = ({ open, onOpen
                             </CustomButtonSecondary>
                         )}
                         {stage < 2 ? (
+                            // Distinct keys keep React from reusing the same DOM
+                            // node for Next and the submit button: with a shared
+                            // node, clicking Next re-renders it to type="submit"
+                            // before the browser runs the click's default action,
+                            // submitting the form and skipping the review step.
                             <CustomButtonPrimary
+                                key="wizard-next"
                                 type="button"
                                 onClick={goNext}
                                 disabled={stage === 0 && !canMoveToStageTwo}
@@ -256,7 +262,7 @@ export const CreatePlaylistModal: FC<CreatePlaylistModalProps> = ({ open, onOpen
                                 </span>
                             </CustomButtonPrimary>
                         ) : (
-                            <CustomButtonPrimary type="submit" loading={isSubmitting} disabled={!canSubmit}>
+                            <CustomButtonPrimary key="wizard-submit" type="submit" loading={isSubmitting} disabled={!canSubmit}>
                                 {watchedId === "-1" ? t('create-playlist') : t('update-playlist')}
                             </CustomButtonPrimary>
                         )}
