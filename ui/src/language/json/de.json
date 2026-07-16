@@ -364,5 +364,7 @@
   "cast-kind-mopidy": "Mopidy",
   "transcript": "Transkript",
   "transcript-auto-scroll": "Automatisch scrollen",
-  "no-transcript-available": "Kein Transkript verfügbar"
+  "no-transcript-available": "Kein Transkript verfügbar",
+  "search-in-metadata": "Titel/Beschreibung",
+  "search-in-transcripts": "Transkripte"
 }

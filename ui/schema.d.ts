@@ -2140,6 +2140,11 @@ export interface components {
             status: string;
         };
         TranscriptSearchGroupDto: {
+            /**
+             * @description Full episode payload so the UI can render an episode card and start
+             *     playback without an extra per-episode request.
+             */
+            episode: components["schemas"]["PodcastEpisodeDto"];
             episodeId: string;
             hits: components["schemas"]["TranscriptSearchHitDto"][];
         };

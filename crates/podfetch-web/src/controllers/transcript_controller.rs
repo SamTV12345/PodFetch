@@ -110,13 +110,20 @@ pub struct TranscriptSearchHitDto {
 #[serde(rename_all = "camelCase")]
 pub struct TranscriptSearchGroupDto {
     pub episode_id: String,
+    /// Full episode payload so the UI can render an episode card and start
+    /// playback without an extra per-episode request.
+    pub episode: crate::podcast_episode_dto::PodcastEpisodeDto,
     pub hits: Vec<TranscriptSearchHitDto>,
 }
 
-impl From<crate::services::transcript::service::TranscriptSearchGroup> for TranscriptSearchGroupDto {
-    fn from(group: crate::services::transcript::service::TranscriptSearchGroup) -> Self {
+impl TranscriptSearchGroupDto {
+    fn new(
+        group: crate::services::transcript::service::TranscriptSearchGroup,
+        episode: crate::podcast_episode_dto::PodcastEpisodeDto,
+    ) -> Self {
         Self {
             episode_id: group.episode_id.to_string(),
+            episode,
             hits: group
                 .hits
                 .into_iter()
@@ -336,9 +343,11 @@ pub async fn enqueue_transcription(
 )]
 pub async fn search_transcripts(
     State(state): State<AppState>,
+    headers: http::HeaderMap,
     Query(params): Query<TranscriptSearchQuery>,
-    Extension(_requester): Extension<User>,
+    Extension(requester): Extension<User>,
 ) -> Result<Json<Vec<TranscriptSearchGroupDto>>, CustomError> {
+    let server_url = crate::url_rewriting::resolve_server_url_from_headers(&headers);
     // `page` is 0-based; the repository itself does not validate it, so a
     // negative value is clamped here rather than passed through untouched.
     let page = params.page.unwrap_or(0).max(0);
@@ -355,7 +364,26 @@ pub async fn search_transcripts(
         .transcript_service
         .search(params.q.trim(), podcast_id, page)?
         .into_iter()
-        .map(TranscriptSearchGroupDto::from)
+        .filter_map(|group| {
+            // A hit whose episode row vanished in the meantime is dropped
+            // rather than failing the whole search.
+            let episode =
+                crate::usecases::podcast_episode::PodcastEpisodeUseCase::get_podcast_episode_by_internal_id(
+                    group.episode_id,
+                );
+            match episode {
+                Ok(Some(episode)) => Some(TranscriptSearchGroupDto::new(
+                    group,
+                    crate::podcast_episode_dto::PodcastEpisodeDto::from_episode_with_user(
+                        episode,
+                        Some(requester.clone()),
+                        None,
+                        &server_url,
+                    ),
+                )),
+                _ => None,
+            }
+        })
         .collect();
 
     Ok(Json(groups))
@@ -665,6 +693,13 @@ mod tests {
         let groups = groups.as_array().unwrap();
         assert_eq!(groups.len(), 1);
         assert_eq!(groups[0]["episodeId"], json!(episode_id.to_string()));
+        // The UI renders an episode card per group and starts playback via
+        // PlayHandler, so the group carries the full episode DTO.
+        assert_eq!(groups[0]["episode"]["id"], json!(episode_id.to_string()));
+        assert_eq!(
+            groups[0]["episode"]["name"],
+            json!("Transcript Controller Test Episode")
+        );
         let hits = groups[0]["hits"].as_array().unwrap();
         assert_eq!(hits.len(), 1);
         assert!(hits[0]["snippet"].as_str().unwrap().contains("zzyzx"));
