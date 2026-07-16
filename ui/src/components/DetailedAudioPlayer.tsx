@@ -9,6 +9,7 @@ import { PlayerVolumeSlider } from './PlayerVolumeSlider'
 import { Minimize2 } from 'lucide-react'
 import useAudioPlayer from "../store/AudioPlayerSlice";
 import {PodcastEpisodeChapterTable} from "./PodcastEpisodeChapterTable";
+import {PodcastEpisodeTranscript} from "./PodcastEpisodeTranscript";
 import {useTranslation} from "react-i18next";
 import {isVideoUrl} from "../utils/audioPlayer";
 
@@ -118,6 +119,9 @@ export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ audioAmplifi
                         <li onClick={()=>setDetailedAudioPlayerTab('chapters')} className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'chapters' && 'border-b-2 ui-border-accent ui-text-accent'}`}>
                             {t('chapters')}
                         </li>
+                        <li onClick={()=>setDetailedAudioPlayerTab('transcript')} className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'transcript' && 'border-b-2 ui-border-accent ui-text-accent'}`}>
+                            {t('transcript')}
+                        </li>
                     </ul>
 
                     <div className="overflow-y-auto overflow-x-hidden max-h-11/12 pr-2">
@@ -137,7 +141,8 @@ export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ audioAmplifi
                         {selectedTab === 'description' ? (
                             <div className="text-sm md:text-base leading-7 ui-text max-w-full break-words [overflow-wrap:anywhere] [word-break:break-word] [&_a]:ui-text-accent [&_a:hover]:ui-text [&_p]:mb-4 [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_li]:mb-1"
                                  dangerouslySetInnerHTML={currentPodcastEpisode?.podcastEpisode.description ? removeHTML(currentPodcastEpisode.podcastEpisode.description) : { __html: '' }} />
-                        ): selectedTab === 'chapters' ? (<PodcastEpisodeChapterTable podcastEpisode={currentPodcastEpisode.podcastEpisode}/>) : null}
+                        ): selectedTab === 'chapters' ? (<PodcastEpisodeChapterTable podcastEpisode={currentPodcastEpisode.podcastEpisode}/>)
+                        : selectedTab === 'transcript' ? (<PodcastEpisodeTranscript podcastEpisode={currentPodcastEpisode.podcastEpisode}/>) : null}
                         </>
                     )}
                     </div>

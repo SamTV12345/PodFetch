@@ -16,4 +16,5 @@ export type PodcastSetting = {
     useOneCoverForAllEpisodes: boolean,
     nfoFormat: string,
     coverFilename: string,
+    autoTranscribe: boolean,
 }

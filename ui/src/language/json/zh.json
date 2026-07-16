@@ -337,5 +337,8 @@
   "mopidy-no-servers": "尚未配置任何 Mopidy 服务器。",
   "mopidy-kind-shared": "Shared",
   "mopidy-kind-personal": "Personal",
-  "cast-kind-mopidy": "Mopidy"
+  "cast-kind-mopidy": "Mopidy",
+  "transcript": "Transcript",
+  "transcript-auto-scroll": "Auto-scroll",
+  "no-transcript-available": "No transcript available"
 }

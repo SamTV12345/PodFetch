@@ -84,7 +84,15 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
 
     useEffect(() => {
         if (settingsQuery.data) {
-            setDraft(settingsQuery.data)
+            // Fields with server-side serde defaults are optional in the
+            // generated schema; normalize them so the local draft stays fully
+            // populated.
+            setDraft({
+                ...settingsQuery.data,
+                nfoFormat: settingsQuery.data.nfoFormat ?? 'off',
+                coverFilename: settingsQuery.data.coverFilename ?? 'image',
+                autoTranscribe: settingsQuery.data.autoTranscribe ?? false,
+            })
         } else if (!settingsQuery.isLoading && !globalSettingsQuery.isLoading) {
             setDraft(generatePodcastDefaultSettings(podcast.id, globalSettingsQuery.data))
         }

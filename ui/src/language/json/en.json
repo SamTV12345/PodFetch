@@ -359,5 +359,8 @@
   "mopidy-no-servers": "No Mopidy servers configured yet.",
   "mopidy-kind-shared": "Shared",
   "mopidy-kind-personal": "Personal",
-  "cast-kind-mopidy": "Mopidy"
+  "cast-kind-mopidy": "Mopidy",
+  "transcript": "Transcript",
+  "transcript-auto-scroll": "Auto-scroll",
+  "no-transcript-available": "No transcript available"
 }

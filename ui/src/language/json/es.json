@@ -280,5 +280,8 @@
   "mopidy-no-servers": "No hay servidores Mopidy configurados aún.",
   "mopidy-kind-shared": "Compartido",
   "mopidy-kind-personal": "Personal",
-  "cast-kind-mopidy": "Mopidy"
+  "cast-kind-mopidy": "Mopidy",
+  "transcript": "Transcript",
+  "transcript-auto-scroll": "Auto-scroll",
+  "no-transcript-available": "No transcript available"
 }
