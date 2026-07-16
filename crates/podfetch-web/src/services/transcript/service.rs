@@ -1258,4 +1258,69 @@ mod tests {
         assert_eq!(rows[0].source, TranscriptSource::Feed);
         assert_eq!(rows[0].original_url.as_deref(), Some("https://example.com/feed.vtt"));
     }
+
+    /// This is the DB-level counterpart to Task 7's feed-parse hook
+    /// (`extract_transcript_tags` + the item-loop call into
+    /// `upsert_from_feed` in `usecases::podcast_episode`): a feed refresh
+    /// calls `upsert_from_feed` again on every poll with the same tags read
+    /// straight from the RSS item, so repeated calls for the same
+    /// (episode_id, url) pair must stay idempotent — no duplicate rows, and
+    /// a transcript that has already been parsed must not be bounced back to
+    /// `pending` just because the feed was re-fetched.
+    #[test]
+    fn upsert_from_feed_is_idempotent_and_preserves_parsed_status() {
+        let _guard = lock_and_prepare_db();
+        let svc = service();
+        let podcast_id = seed_podcast();
+        let episode = seed_episode(podcast_id, None);
+        let episode_id = Uuid::parse_str(&episode.id).unwrap();
+
+        let tags = [
+            FeedTranscriptTag {
+                url: "https://example.com/feed.vtt".to_string(),
+                mime_type: "text/vtt".to_string(),
+                language: Some("en".to_string()),
+            },
+            FeedTranscriptTag {
+                url: "https://example.com/feed.json".to_string(),
+                mime_type: "application/json".to_string(),
+                language: Some("en".to_string()),
+            },
+        ];
+
+        svc.upsert_from_feed(episode_id, &tags).unwrap();
+
+        let repo = PodcastEpisodeTranscriptRepositoryImpl::new(database());
+        let rows = repo.get_by_episode_id(episode_id).unwrap();
+        assert_eq!(rows.len(), 2);
+
+        // Simulate Flow 2 having already downloaded and parsed one of them.
+        let vtt_row = rows
+            .iter()
+            .find(|row| row.original_url.as_deref() == Some("https://example.com/feed.vtt"))
+            .unwrap();
+        repo.set_status(vtt_row.id, TranscriptStatus::Parsed, None).unwrap();
+
+        // A second feed refresh sees the exact same tags again.
+        svc.upsert_from_feed(episode_id, &tags).unwrap();
+
+        let rows_after = repo.get_by_episode_id(episode_id).unwrap();
+        assert_eq!(rows_after.len(), 2, "repeated upserts must not create duplicate rows");
+
+        let vtt_row_after = rows_after
+            .iter()
+            .find(|row| row.original_url.as_deref() == Some("https://example.com/feed.vtt"))
+            .unwrap();
+        assert_eq!(
+            vtt_row_after.status,
+            TranscriptStatus::Parsed,
+            "re-syncing feed tags must not reset an already-parsed transcript back to pending"
+        );
+
+        let json_row_after = rows_after
+            .iter()
+            .find(|row| row.original_url.as_deref() == Some("https://example.com/feed.json"))
+            .unwrap();
+        assert_eq!(json_row_after.status, TranscriptStatus::Pending);
+    }
 }
