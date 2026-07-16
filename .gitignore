@@ -17,3 +17,5 @@ local-configs
 terraform.tfstate
 terraform.tfstate.backup
 settings.local.json
+# superpowers scratch
+.superpowers/
