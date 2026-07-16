@@ -385,12 +385,16 @@ fn parse_transcript_uuid(id: &str) -> Result<Uuid, CustomError> {
     Uuid::parse_str(id).map_err(|_| CustomErrorInner::BadRequest("invalid transcript id".to_string(), Warning).into())
 }
 
+/// Every transcript route except [`get_transcript_file_with_api_key`], which
+/// deliberately stays out of this router — it must NOT sit behind the
+/// session-auth middleware. See `startup::config` for where it's actually
+/// mounted (alongside the other apiKey-only routes such as
+/// `proxy_podcast_with_path_api_key`).
 pub fn get_transcript_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(get_transcripts_of_episode))
         .routes(routes!(get_preferred_transcript))
         .routes(routes!(get_transcript_file))
-        .routes(routes!(get_transcript_file_with_api_key))
         .routes(routes!(enqueue_transcription))
         .routes(routes!(search_transcripts))
         .routes(routes!(reparse_transcripts))
@@ -597,16 +601,22 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn get_transcript_file_with_valid_api_key_streams_bytes() {
+    async fn get_transcript_file_with_valid_api_key_streams_bytes_without_any_auth_session() {
         let server = handle_test_startup().await;
         let episode_id = seed_episode();
         let (transcript_id, archive_path) = seed_parsed_transcript_with_file(episode_id, "api key streaming test");
 
+        // `clear_headers()` strips the Basic-Auth header the test server adds
+        // to every request by default, proving this route needs no login
+        // session at all — only the `{api_key}` path segment — exactly the
+        // property Task 13's generated RSS feed depends on for feed-reader
+        // clients that never authenticate.
         let response = server
             .test_server
             .get(&format!(
                 "/api/v1/podcasts/episodes/{episode_id}/transcripts/{transcript_id}/file/apiKey/test-api-key"
             ))
+            .clear_headers()
             .await;
         assert_eq!(response.status_code(), 200);
         assert_eq!(
@@ -619,7 +629,7 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn get_transcript_file_with_invalid_api_key_is_forbidden() {
+    async fn get_transcript_file_with_invalid_api_key_is_forbidden_without_any_auth_session() {
         let server = handle_test_startup().await;
         let episode_id = seed_episode();
         let (transcript_id, archive_path) = seed_parsed_transcript_with_file(episode_id, "invalid api key test");
@@ -629,6 +639,7 @@ mod tests {
             .get(&format!(
                 "/api/v1/podcasts/episodes/{episode_id}/transcripts/{transcript_id}/file/apiKey/not-a-real-key"
             ))
+            .clear_headers()
             .await;
         assert_eq!(response.status_code(), 403);
 

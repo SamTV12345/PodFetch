@@ -331,6 +331,8 @@ pub fn get_api_config(state: AppState) -> OpenApiRouter {
 fn config(state: AppState) -> OpenApiRouter {
     use crate::controllers::sys_info_controller::__path_get_public_config;
     use crate::controllers::sys_info_controller::__path_login;
+    use crate::controllers::transcript_controller::__path_get_transcript_file_with_api_key;
+    use crate::controllers::transcript_controller::get_transcript_file_with_api_key;
     use crate::controllers::user_controller::__path_get_invite;
     use crate::controllers::user_controller::__path_onboard_user;
     OpenApiRouter::new()
@@ -338,6 +340,12 @@ fn config(state: AppState) -> OpenApiRouter {
         .routes(routes!(onboard_user))
         .routes(routes!(get_public_config))
         .routes(routes!(login))
+        // apiKey-only, like `proxy_podcast_with_path_api_key` below: this route
+        // authenticates via the `{api_key}` path segment itself (checked inside
+        // the handler), so it must stay OUTSIDE `get_private_api`'s
+        // session-auth-gated router — feed-reader clients hit this URL (as
+        // embedded in the generated RSS feed) with no login session at all.
+        .routes(routes!(get_transcript_file_with_api_key))
         .with_state(state.clone())
         .merge(get_private_api(state))
 }
