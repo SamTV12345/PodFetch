@@ -1,12 +1,16 @@
-use crate::db::{Database, PersistenceError};
+use crate::db::{Database, DBType, PersistenceError};
 use chrono::NaiveDateTime;
 use diesel::prelude::{Insertable, Queryable, Selectable};
-use diesel::{Connection, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
+use diesel::sql_types::{BigInt, Double, Integer, Nullable, Text};
+use diesel::{
+    Connection, ExpressionMethods, OptionalExtension, QueryDsl, QueryableByName, RunQueryDsl,
+};
 use podfetch_domain::podcast_episode_transcript::{
     PodcastEpisodeTranscript, PodcastEpisodeTranscriptRepository, TranscriptSegment,
     TranscriptSearchHit, TranscriptSource, TranscriptStatus, TranscriptionJob,
     TranscriptionJobRepository, TranscriptionJobStatus, UpsertTranscript,
 };
+use std::ops::DerefMut;
 use uuid::Uuid;
 
 // Note: `text_search` (postgres tsvector / sqlite FTS mirror) is intentionally
@@ -154,6 +158,59 @@ impl From<TranscriptionJobEntity> for TranscriptionJob {
             error: value.error,
         }
     }
+}
+
+// ── Full-text search ─────────────────────────────────────────────────────
+
+/// Row shape shared by both the SQLite and Postgres full-text search
+/// queries. `rank` is read as `Double` (f64) for both backends — the
+/// Postgres query casts `ts_rank(...)` to `double precision` so a single
+/// row struct works for either connection type — and narrowed to `f32` when
+/// mapped into `TranscriptSearchHit`.
+#[derive(QueryableByName)]
+struct SearchHitRow {
+    #[diesel(sql_type = Text)]
+    episode_id: String,
+    #[diesel(sql_type = Text)]
+    transcript_id: String,
+    #[diesel(sql_type = Nullable<Integer>)]
+    start_ms: Option<i32>,
+    #[diesel(sql_type = Text)]
+    snippet: String,
+    #[diesel(sql_type = Double)]
+    rank: f64,
+}
+
+impl From<SearchHitRow> for TranscriptSearchHit {
+    fn from(value: SearchHitRow) -> Self {
+        Self {
+            episode_id: Uuid::parse_str(&value.episode_id).expect("valid uuid in db"),
+            transcript_id: Uuid::parse_str(&value.transcript_id).expect("valid uuid in db"),
+            start_ms: value.start_ms,
+            snippet: value.snippet,
+            rank: value.rank as f32,
+        }
+    }
+}
+
+/// Sanitizes free-form user input for SQLite FTS5 `MATCH` queries.
+///
+/// User input must never be passed to `MATCH` verbatim: FTS5 query syntax
+/// includes operators (`AND`, `OR`, `NOT`, `NEAR`, column filters, `"..."`
+/// phrase quoting, etc.) and unbalanced quotes raise a syntax error. This
+/// strips `"` characters and turns each remaining word into a quoted prefix
+/// term, e.g. `quick fox` -> `"quick"* "fox"*`, so every word is matched
+/// literally as a prefix rather than being interpreted as FTS5 syntax.
+/// Postgres doesn't need this — `websearch_to_tsquery` already hardens
+/// arbitrary input.
+#[cfg(feature = "sqlite")]
+fn sanitize_sqlite_match_query(query: &str) -> String {
+    query
+        .replace('"', "")
+        .split_whitespace()
+        .map(|word| format!("\"{word}\"*"))
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 // ── PodcastEpisodeTranscript repository ─────────────────────────────────
@@ -366,13 +423,72 @@ impl PodcastEpisodeTranscriptRepository for DieselPodcastEpisodeTranscriptReposi
 
     fn search(
         &self,
-        _query: &str,
-        _podcast_id: Option<Uuid>,
-        _page: i64,
-        _page_size: i64,
+        query: &str,
+        podcast_id: Option<Uuid>,
+        page: i64,
+        page_size: i64,
     ) -> Result<Vec<TranscriptSearchHit>, Self::Error> {
-        // implemented in the full-text search change
-        Ok(Vec::new())
+        let mut conn = self.database.connection()?;
+        let podcast_id_str = podcast_id.map(|id| id.to_string());
+        // `page` is a zero-based page index; `page_size` rows per page.
+        let offset = page.saturating_mul(page_size);
+
+        let rows: Vec<SearchHitRow> = match conn.deref_mut() {
+            #[cfg(feature = "sqlite")]
+            DBType::Sqlite(conn) => {
+                let match_query = sanitize_sqlite_match_query(query);
+                // Positional `?` placeholders only (no `?N` back-references):
+                // diesel binds values in call order, so the podcast_id filter
+                // is bound twice rather than reusing a single numbered param.
+                diesel::sql_query(
+                    "SELECT t.episode_id AS episode_id, s.transcript_id AS transcript_id, \
+                     s.start_ms AS start_ms, \
+                     highlight(transcript_segments_fts, 0, '<b>', '</b>') AS snippet, \
+                     bm25(transcript_segments_fts) AS rank \
+                     FROM transcript_segments_fts \
+                     JOIN podcast_episode_transcript_segments s \
+                       ON s.rowid = transcript_segments_fts.rowid \
+                     JOIN podcast_episode_transcripts t ON t.id = s.transcript_id \
+                     JOIN podcast_episodes e ON e.id = t.episode_id \
+                     WHERE transcript_segments_fts MATCH ? \
+                       AND (? IS NULL OR e.podcast_id = ?) \
+                     ORDER BY rank LIMIT ? OFFSET ?",
+                )
+                .bind::<Text, _>(match_query)
+                .bind::<Nullable<Text>, _>(podcast_id_str.clone())
+                .bind::<Nullable<Text>, _>(podcast_id_str)
+                .bind::<BigInt, _>(page_size)
+                .bind::<BigInt, _>(offset)
+                .load::<SearchHitRow>(conn)?
+            }
+            #[cfg(feature = "postgresql")]
+            DBType::Postgresql(conn) => {
+                // `$1` is referenced three times in the query text but bound
+                // only once — Postgres resolves repeated `$N` markers to the
+                // same bound value.
+                diesel::sql_query(
+                    "SELECT t.episode_id AS episode_id, s.transcript_id AS transcript_id, \
+                     s.start_ms AS start_ms, \
+                     ts_headline('simple', s.text, websearch_to_tsquery('simple', $1), \
+                                 'StartSel=<b>,StopSel=</b>') AS snippet, \
+                     ts_rank(s.text_search, websearch_to_tsquery('simple', $1))::double precision \
+                       AS rank \
+                     FROM podcast_episode_transcript_segments s \
+                     JOIN podcast_episode_transcripts t ON t.id = s.transcript_id \
+                     JOIN podcast_episodes e ON e.id = t.episode_id \
+                     WHERE s.text_search @@ websearch_to_tsquery('simple', $1) \
+                       AND ($2::text IS NULL OR e.podcast_id = $2) \
+                     ORDER BY rank DESC LIMIT $3 OFFSET $4",
+                )
+                .bind::<Text, _>(query)
+                .bind::<Nullable<Text>, _>(podcast_id_str)
+                .bind::<BigInt, _>(page_size)
+                .bind::<BigInt, _>(offset)
+                .load::<SearchHitRow>(conn)?
+            }
+        };
+
+        Ok(rows.into_iter().map(Into::into).collect())
     }
 }
 
@@ -860,11 +976,110 @@ mod tests {
     }
 
     #[test]
-    fn search_is_unimplemented_stub_returning_empty() {
+    fn search_finds_hit_with_highlighted_snippet_and_start_ms() {
         let _guard = setup();
         let repo = DieselPodcastEpisodeTranscriptRepository::new(database());
-        let result = repo.search("anything", None, 0, 10).expect("search stub");
-        assert!(result.is_empty());
+
+        let podcast_id = seed_podcast();
+        let episode_id = seed_episode(&podcast_id);
+        let transcript_id = repo
+            .upsert(upsert_transcript(episode_id, Some("https://example.com/search-a.vtt")))
+            .expect("upsert transcript a");
+        repo.replace_segments(
+            transcript_id,
+            &[
+                make_segment(0, "the quick brown fox jumps over the lazy dog"),
+                make_segment(1, "completely unrelated segment text"),
+            ],
+        )
+        .expect("replace segments a");
+
+        // A second episode whose segments must never show up in a search
+        // scoped to the first episode's podcast.
+        let other_podcast_id = seed_podcast();
+        let other_episode_id = seed_episode(&other_podcast_id);
+        let other_transcript_id = repo
+            .upsert(upsert_transcript(other_episode_id, Some("https://example.com/search-b.vtt")))
+            .expect("upsert transcript b");
+        repo.replace_segments(
+            other_transcript_id,
+            &[make_segment(0, "no matching keyword lives in this segment")],
+        )
+        .expect("replace segments b");
+
+        let hits = repo.search("fox", None, 0, 20).expect("search");
+        assert!(!hits.is_empty(), "expected at least one hit for 'fox'");
+        let hit = hits
+            .iter()
+            .find(|h| h.episode_id == episode_id)
+            .expect("hit for seeded episode");
+        assert_eq!(hit.transcript_id, transcript_id);
+        assert_eq!(hit.start_ms, Some(0));
+        assert!(
+            hit.snippet.contains("<b>fox</b>"),
+            "snippet should highlight the match: {}",
+            hit.snippet
+        );
+        assert!(
+            hits.iter().all(|h| h.episode_id != other_episode_id),
+            "the other episode has no 'fox' segment and must not match"
+        );
+    }
+
+    #[test]
+    fn search_with_podcast_id_filter_excludes_other_podcasts() {
+        let _guard = setup();
+        let repo = DieselPodcastEpisodeTranscriptRepository::new(database());
+
+        let podcast_id = seed_podcast();
+        let episode_id = seed_episode(&podcast_id);
+        let transcript_id = repo
+            .upsert(upsert_transcript(episode_id, Some("https://example.com/search-c.vtt")))
+            .expect("upsert transcript c");
+        repo.replace_segments(
+            transcript_id,
+            &[make_segment(0, "a unique zebra herd crossed the plain")],
+        )
+        .expect("replace segments c");
+
+        let other_podcast_id = seed_podcast();
+
+        // Filtering by the *other* podcast must find nothing, even though the
+        // word exists in the DB (just under a different podcast_id).
+        let filtered_out = repo
+            .search("zebra", Uuid::parse_str(&other_podcast_id).ok(), 0, 20)
+            .expect("search filtered by other podcast");
+        assert!(
+            filtered_out.iter().all(|h| h.episode_id != episode_id),
+            "hit from a different podcast must be excluded"
+        );
+
+        // Filtering by the correct podcast must still find it.
+        let filtered_in = repo
+            .search("zebra", Uuid::parse_str(&podcast_id).ok(), 0, 20)
+            .expect("search filtered by matching podcast");
+        assert!(
+            filtered_in.iter().any(|h| h.episode_id == episode_id),
+            "hit from the matching podcast must be included"
+        );
+    }
+
+    #[test]
+    fn sanitize_sqlite_match_query_handles_empty_input() {
+        assert_eq!(sanitize_sqlite_match_query(""), "");
+        assert_eq!(sanitize_sqlite_match_query("   "), "");
+    }
+
+    #[test]
+    fn sanitize_sqlite_match_query_strips_quotes() {
+        assert_eq!(sanitize_sqlite_match_query(r#"say "hi""#), "\"say\"* \"hi\"*");
+        assert_eq!(sanitize_sqlite_match_query("\"\"\"quoted\"\"\""), "\"quoted\"*");
+    }
+
+    #[test]
+    fn sanitize_sqlite_match_query_joins_multiple_words_as_prefix_terms() {
+        assert_eq!(sanitize_sqlite_match_query("quick fox"), "\"quick\"* \"fox\"*");
+        assert_eq!(sanitize_sqlite_match_query("one"), "\"one\"*");
     }
 
     // ── TranscriptionJob tests ───────────────────────────────────────────
