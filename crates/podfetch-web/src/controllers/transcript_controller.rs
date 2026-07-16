@@ -222,12 +222,35 @@ pub async fn get_transcripts_of_episode(
     Extension(_requester): Extension<User>,
 ) -> Result<Json<Vec<TranscriptDto>>, CustomError> {
     let episode_id = resolve_episode_uuid(&id)?;
-    let transcripts = state
+    let mut transcripts: Vec<TranscriptDto> = state
         .transcript_service
         .get_by_episode_id(episode_id)?
         .into_iter()
         .map(TranscriptDto::from)
         .collect();
+
+    // A queued/running/failed Whisper job has no transcript row yet — surface
+    // it as a virtual `generated` entry (or fold its fresher state into an
+    // existing one) so clients can show a status badge across reloads.
+    if let Some(job) = state.transcript_service.get_job_by_episode_id(episode_id)?
+        && job.status != podfetch_domain::podcast_episode_transcript::TranscriptionJobStatus::Done
+    {
+        match transcripts.iter_mut().find(|t| t.source == "generated") {
+            Some(generated) => {
+                generated.status = job.status.as_str().to_string();
+                generated.error = job.error;
+            }
+            None => transcripts.push(TranscriptDto {
+                id: job.id.to_string(),
+                source: "generated".to_string(),
+                language: None,
+                mime_type: "text/vtt".to_string(),
+                status: job.status.as_str().to_string(),
+                error: job.error,
+            }),
+        }
+    }
+
     Ok(Json(transcripts))
 }
 
@@ -312,23 +335,25 @@ pub async fn enqueue_transcription(
     State(state): State<AppState>,
     Path(id): Path<String>,
     Extension(requester): Extension<User>,
-) -> Result<Response, CustomError> {
+) -> Result<Response, common_infrastructure::error::ErrorType> {
     if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden(Warning).into());
+        return Err(CustomError::from(CustomErrorInner::Forbidden(Warning)).into());
     }
 
     if ENVIRONMENT_SERVICE.transcription_config.is_none() {
         return Ok((StatusCode::SERVICE_UNAVAILABLE, "no transcription backend is configured").into_response());
     }
 
-    let episode_id = resolve_episode_uuid(&id)?;
-    match state.transcript_service.enqueue_job(episode_id)? {
+    let episode_id = resolve_episode_uuid(&id).map_err(common_infrastructure::error::ErrorType::from)?;
+    match state
+        .transcript_service
+        .enqueue_job(episode_id)
+        .map_err(common_infrastructure::error::ErrorType::from)?
+    {
         Some(_job) => Ok(StatusCode::OK.into_response()),
-        None => Err(CustomErrorInner::Conflict(
-            "a transcription job already exists for this episode".to_string(),
-            Warning,
-        )
-        .into()),
+        // JSON ApiError body so the UI middleware can toast a translated
+        // "already running" message from the errorCode.
+        None => Err(common_infrastructure::error::ApiError::transcription_job_already_exists().into()),
     }
 }
 
@@ -548,6 +573,28 @@ mod tests {
         assert_eq!(preferred_response.status_code(), 404);
     }
 
+    #[tokio::test]
+    #[serial]
+    async fn transcript_list_reflects_active_transcription_job_as_generated_entry() {
+        let server = handle_test_startup().await;
+        let episode_id = seed_episode();
+
+        // Enqueue a job without any generated transcript row yet: the list
+        // must surface it so the UI can show a pending badge after reload.
+        app_state().transcript_service.enqueue_job(episode_id).unwrap().unwrap();
+
+        let response = server
+            .test_server
+            .get(&format!("/api/v1/podcasts/episodes/{episode_id}/transcripts"))
+            .await;
+        assert_eq!(response.status_code(), 200);
+        let list = response.json::<Value>();
+        let list = list.as_array().unwrap();
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0]["source"], json!("generated"));
+        assert_eq!(list[0]["status"], json!("pending"));
+    }
+
     // ── GET /transcripts + GET /transcript (seeded) ─────────────────────
 
     #[tokio::test]
@@ -748,7 +795,10 @@ mod tests {
         .await;
 
         match result {
-            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Err(common_infrastructure::error::ErrorType::CustomErrorType(err)) => {
+                assert!(matches!(err.inner, CustomErrorInner::Forbidden(_)))
+            }
+            Err(_) => panic!("expected a CustomError-backed forbidden error"),
             Ok(_) => panic!("expected forbidden for a non-privileged user"),
         }
     }

@@ -366,5 +366,11 @@
   "transcript-auto-scroll": "Automatisch scrollen",
   "no-transcript-available": "Kein Transkript verfügbar",
   "search-in-metadata": "Titel/Beschreibung",
-  "search-in-transcripts": "Transkripte"
+  "search-in-transcripts": "Transkripte",
+  "transcribe": "Transkribieren",
+  "transcription-pending": "Transkription ausstehend",
+  "transcription-running": "Transkription läuft",
+  "transcription-failed": "Transkription fehlgeschlagen",
+  "auto-transcribe": "Automatisch transkribieren",
+  "TRANSCRIPTION_JOB_ALREADY_EXISTS": "Für diese Episode läuft bereits eine Transkription"
 }

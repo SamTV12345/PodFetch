@@ -410,6 +410,12 @@ impl TranscriptService {
         self.job_repo.enqueue(episode_id)
     }
 
+    /// The episode's transcription job, if any — used by the HTTP layer to
+    /// surface pending/failed jobs in the transcript list.
+    pub fn get_job_by_episode_id(&self, episode_id: Uuid) -> Result<Option<TranscriptionJob>, CustomError> {
+        self.job_repo.get_by_episode_id(episode_id)
+    }
+
     /// Persists a freshly Whisper-generated transcript for `episode`: writes
     /// the segments out as a VTT file archived next to the episode's audio
     /// (mirroring how feed transcripts are archived), upserts the episode's

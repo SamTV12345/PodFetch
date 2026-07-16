@@ -53,6 +53,16 @@ impl ApiError {
             status: StatusCode::UNAUTHORIZED,
         }
     }
+
+    pub fn transcription_job_already_exists() -> Self {
+        ApiError {
+            value: ApiErrorValue {
+                error_code: "TRANSCRIPTION_JOB_ALREADY_EXISTS".into(),
+                arguments: HashMap::new(),
+            },
+            status: StatusCode::CONFLICT,
+        }
+    }
 }
 
 pub enum ErrorType {
@@ -444,7 +454,10 @@ struct ErrorResponse {
 
 #[cfg(test)]
 mod tests {
-    use crate::error::{CustomError, CustomErrorInner, ErrorSeverity, map_db_error, map_io_error};
+    use crate::error::{
+        ApiError, CustomError, CustomErrorInner, ErrorSeverity, map_db_error, map_io_error,
+    };
+    use axum::http::StatusCode;
     use axum::response::IntoResponse;
     use diesel::result::Error;
     use serial_test::serial;
@@ -481,6 +494,17 @@ mod tests {
         assert_eq!(
             custom_error(ErrorSeverity::Error).to_string(),
             "Requested file was not found"
+        );
+    }
+
+    #[test]
+    #[serial]
+    fn test_transcription_job_already_exists_api_error() {
+        let api_error = ApiError::transcription_job_already_exists();
+        assert_eq!(api_error.status, StatusCode::CONFLICT);
+        assert_eq!(
+            api_error.value.error_code,
+            "TRANSCRIPTION_JOB_ALREADY_EXISTS"
         );
     }
 

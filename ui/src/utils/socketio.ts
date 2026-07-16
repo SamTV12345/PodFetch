@@ -79,6 +79,29 @@ export function connectSocket(apiKey: string) {
         enqueueSnackbar(t('new-podcast-episode-added', {name: decodeHTMLEntities(data.podcast.name)}), {variant: 'success'})
     })
 
+    socket.on('transcriptionStatus', (data: { episode_id: string, status: string, error?: string | null }) => {
+        if (!data?.episode_id) {
+            return
+        }
+        // Refresh the affected episode's transcript queries so status badges
+        // and the player's transcript tab pick up the new state.
+        queryClient.invalidateQueries({
+            predicate: (query) => {
+                const [method, path, init] = query.queryKey
+                if (method !== 'get') {
+                    return false
+                }
+                if (path !== '/api/v1/podcasts/episodes/{id}/transcripts' && path !== '/api/v1/podcasts/episodes/{id}/transcript') {
+                    return false
+                }
+                return (init as any)?.params?.path?.id === data.episode_id
+            }
+        })
+        if (data.status === 'failed' && data.error) {
+            enqueueSnackbar(t('transcription-failed'), {variant: 'error'})
+        }
+    })
+
     socket.on('addedPodcast', (data) => {
         const podcast = data.podcast
 
