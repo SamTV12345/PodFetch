@@ -56,6 +56,7 @@ pub struct TranscriptSearchHit {
     pub start_ms: Option<i32>,
     /// Snippet with <b>…</b> highlighting produced by the database.
     pub snippet: String,
+    /// Relevance score; higher is more relevant, comparable only within a single search call.
     pub rank: f32,
 }
 

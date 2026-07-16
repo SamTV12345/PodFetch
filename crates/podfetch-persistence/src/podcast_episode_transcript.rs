@@ -167,6 +167,12 @@ impl From<TranscriptionJobEntity> for TranscriptionJob {
 /// Postgres query casts `ts_rank(...)` to `double precision` so a single
 /// row struct works for either connection type — and narrowed to `f32` when
 /// mapped into `TranscriptSearchHit`.
+///
+/// Both backends' SQL normalizes `rank` to the same "higher is better"
+/// convention: SQLite's `bm25()` is natively lower/negative-is-better, so the
+/// query negates it (`-bm25(...)`); Postgres's `ts_rank()` is already
+/// higher-is-better and is used unmodified. Both queries then `ORDER BY rank
+/// DESC`, so the most relevant hit is always first regardless of backend.
 #[derive(QueryableByName)]
 struct SearchHitRow {
     #[diesel(sql_type = Text)]
@@ -437,6 +443,13 @@ impl PodcastEpisodeTranscriptRepository for DieselPodcastEpisodeTranscriptReposi
             #[cfg(feature = "sqlite")]
             DBType::Sqlite(conn) => {
                 let match_query = sanitize_sqlite_match_query(query);
+                // An empty (or whitespace-only) query sanitizes to "", and
+                // `MATCH ''` raises an FTS5 syntax error rather than matching
+                // nothing. Short-circuit before running any SQL so an
+                // empty/blank query simply yields no results.
+                if match_query.is_empty() {
+                    return Ok(Vec::new());
+                }
                 // Positional `?` placeholders only (no `?N` back-references):
                 // diesel binds values in call order, so the podcast_id filter
                 // is bound twice rather than reusing a single numbered param.
@@ -444,7 +457,7 @@ impl PodcastEpisodeTranscriptRepository for DieselPodcastEpisodeTranscriptReposi
                     "SELECT t.episode_id AS episode_id, s.transcript_id AS transcript_id, \
                      s.start_ms AS start_ms, \
                      highlight(transcript_segments_fts, 0, '<b>', '</b>') AS snippet, \
-                     bm25(transcript_segments_fts) AS rank \
+                     -bm25(transcript_segments_fts) AS rank \
                      FROM transcript_segments_fts \
                      JOIN podcast_episode_transcript_segments s \
                        ON s.rowid = transcript_segments_fts.rowid \
@@ -452,7 +465,7 @@ impl PodcastEpisodeTranscriptRepository for DieselPodcastEpisodeTranscriptReposi
                      JOIN podcast_episodes e ON e.id = t.episode_id \
                      WHERE transcript_segments_fts MATCH ? \
                        AND (? IS NULL OR e.podcast_id = ?) \
-                     ORDER BY rank LIMIT ? OFFSET ?",
+                     ORDER BY rank DESC LIMIT ? OFFSET ?",
                 )
                 .bind::<Text, _>(match_query)
                 .bind::<Nullable<Text>, _>(podcast_id_str.clone())
@@ -463,6 +476,13 @@ impl PodcastEpisodeTranscriptRepository for DieselPodcastEpisodeTranscriptReposi
             }
             #[cfg(feature = "postgresql")]
             DBType::Postgresql(conn) => {
+                // Mirrors the SQLite short-circuit above: an empty/blank
+                // query has no meaningful `websearch_to_tsquery` match, so
+                // skip the query entirely rather than rely on the DB to
+                // handle it uniformly.
+                if query.trim().is_empty() {
+                    return Ok(Vec::new());
+                }
                 // `$1` is referenced three times in the query text but bound
                 // only once — Postgres resolves repeated `$N` markers to the
                 // same bound value.
@@ -988,8 +1008,21 @@ mod tests {
         repo.replace_segments(
             transcript_id,
             &[
-                make_segment(0, "the quick brown fox jumps over the lazy dog"),
+                make_segment(0, "fox fox fox fox fox"),
                 make_segment(1, "completely unrelated segment text"),
+                // A long segment where "fox" appears only once, diluted by a
+                // lot of unrelated filler text. bm25 penalizes document
+                // length and rewards term frequency, so this segment should
+                // rank strictly lower (less relevant) than segment 0, which
+                // is short and dense with the query term.
+                make_segment(
+                    2,
+                    "in a very long segment full of unrelated filler padding \
+                     words that go on for quite a while just to dilute the \
+                     term frequency and length normalization the fox appears \
+                     only once here amidst all of this extra surrounding \
+                     text added purely to reduce the relevance score",
+                ),
             ],
         )
         .expect("replace segments a");
@@ -1024,6 +1057,61 @@ mod tests {
             hits.iter().all(|h| h.episode_id != other_episode_id),
             "the other episode has no 'fox' segment and must not match"
         );
+
+        // Rank convention: higher is more relevant on both backends. Segment
+        // 0 ("fox fox fox fox fox", start_ms 0) is short and dense with the
+        // query term; segment 2 (start_ms 2000) is a long segment where
+        // "fox" appears only once amid filler. The denser/shorter segment
+        // must score as MORE relevant, i.e. have the numerically GREATER
+        // rank.
+        let dense_hit = hits
+            .iter()
+            .find(|h| h.episode_id == episode_id && h.start_ms == Some(0))
+            .expect("hit for the dense 'fox' segment");
+        let diluted_hit = hits
+            .iter()
+            .find(|h| h.episode_id == episode_id && h.start_ms == Some(2000))
+            .expect("hit for the diluted 'fox' segment");
+        assert!(
+            dense_hit.rank > diluted_hit.rank,
+            "the more relevant hit must have the greater rank (dense={}, diluted={})",
+            dense_hit.rank,
+            diluted_hit.rank
+        );
+    }
+
+    #[test]
+    fn search_with_empty_or_whitespace_query_returns_empty_without_error() {
+        let _guard = setup();
+        let repo = DieselPodcastEpisodeTranscriptRepository::new(database());
+
+        // Seed a segment that a non-empty query WOULD match, so an empty
+        // result below proves the empty-query short-circuit fired rather
+        // than merely reflecting an empty table.
+        let podcast_id = seed_podcast();
+        let episode_id = seed_episode(&podcast_id);
+        let transcript_id = repo
+            .upsert(upsert_transcript(episode_id, Some("https://example.com/search-empty.vtt")))
+            .expect("upsert transcript");
+        repo.replace_segments(
+            transcript_id,
+            &[make_segment(0, "this segment would match a real query")],
+        )
+        .expect("replace segments");
+
+        let sanity = repo.search("segment", None, 0, 20).expect("sanity search");
+        assert!(
+            sanity.iter().any(|h| h.episode_id == episode_id),
+            "sanity check: a real query must match the seeded segment"
+        );
+
+        let empty = repo.search("", None, 0, 20).expect("empty query search must not error");
+        assert!(empty.is_empty(), "empty query must return no hits");
+
+        let whitespace = repo
+            .search("   ", None, 0, 20)
+            .expect("whitespace-only query search must not error");
+        assert!(whitespace.is_empty(), "whitespace-only query must return no hits");
     }
 
     #[test]
