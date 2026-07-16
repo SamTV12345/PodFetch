@@ -319,6 +319,15 @@ impl PodcastEpisodeTranscriptRepository for DieselPodcastEpisodeTranscriptReposi
             .map_err(Into::into)
     }
 
+    fn get_all(&self) -> Result<Vec<PodcastEpisodeTranscript>, Self::Error> {
+        use self::podcast_episode_transcripts::table as pet_table;
+
+        pet_table
+            .load::<TranscriptEntity>(&mut self.database.connection()?)
+            .map(|rows| rows.into_iter().map(Into::into).collect())
+            .map_err(Into::into)
+    }
+
     fn get_by_id(&self, id: Uuid) -> Result<Option<PodcastEpisodeTranscript>, Self::Error> {
         use self::podcast_episode_transcripts::table as pet_table;
 
@@ -921,6 +930,30 @@ mod tests {
         let failed = repo.get_by_id(id).expect("get_by_id").expect("row exists");
         assert_eq!(failed.status, TranscriptStatus::Failed);
         assert_eq!(failed.error, Some("boom".to_string()));
+    }
+
+    #[test]
+    fn get_all_returns_rows_across_episodes() {
+        let _guard = setup();
+        let repo = DieselPodcastEpisodeTranscriptRepository::new(database());
+        let podcast_id = seed_podcast();
+        let episode_a = seed_episode(&podcast_id);
+        let episode_b = seed_episode(&podcast_id);
+
+        let id_a = repo
+            .upsert(upsert_transcript(episode_a, Some("https://example.com/get-all-a.vtt")))
+            .expect("upsert a");
+        let id_b = repo
+            .upsert(upsert_transcript(episode_b, Some("https://example.com/get-all-b.vtt")))
+            .expect("upsert b");
+
+        // The shared test DB isn't truncated between tests in this module, so
+        // assert the two freshly-inserted rows are present rather than
+        // asserting an exact total count.
+        let all = repo.get_all().expect("get_all");
+        let ids: Vec<Uuid> = all.iter().map(|t| t.id).collect();
+        assert!(ids.contains(&id_a), "get_all must include row a");
+        assert!(ids.contains(&id_b), "get_all must include row b");
     }
 
     #[test]

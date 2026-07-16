@@ -65,6 +65,9 @@ pub trait PodcastEpisodeTranscriptRepository: Send + Sync {
     /// Upsert keyed on (episode_id, original_url); returns the row's id.
     fn upsert(&self, transcript: UpsertTranscript) -> Result<Uuid, Self::Error>;
     fn get_by_episode_id(&self, episode_id: Uuid) -> Result<Vec<PodcastEpisodeTranscript>, Self::Error>;
+    /// Every transcript row across all episodes. Used by `reparse_all`, which
+    /// needs to walk the whole table rather than a single episode's rows.
+    fn get_all(&self) -> Result<Vec<PodcastEpisodeTranscript>, Self::Error>;
     fn get_by_id(&self, id: Uuid) -> Result<Option<PodcastEpisodeTranscript>, Self::Error>;
     fn set_file_path(&self, id: Uuid, file_path: &str) -> Result<(), Self::Error>;
     fn set_status(&self, id: Uuid, status: TranscriptStatus, error: Option<&str>) -> Result<(), Self::Error>;

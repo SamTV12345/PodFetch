@@ -1233,6 +1233,10 @@ impl PodcastEpisodeTranscriptRepository for PodcastEpisodeTranscriptRepositoryIm
         self.inner.get_by_episode_id(episode_id).map_err(Into::into)
     }
 
+    fn get_all(&self) -> Result<Vec<PodcastEpisodeTranscript>, Self::Error> {
+        self.inner.get_all().map_err(Into::into)
+    }
+
     fn get_by_id(&self, id: Uuid) -> Result<Option<PodcastEpisodeTranscript>, Self::Error> {
         self.inner.get_by_id(id).map_err(Into::into)
     }
