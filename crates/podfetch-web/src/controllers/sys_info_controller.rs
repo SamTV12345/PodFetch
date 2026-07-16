@@ -181,6 +181,7 @@ mod tests {
     use chrono::Utc;
     use common_infrastructure::config::ConfigModel;
     use common_infrastructure::error::{CustomErrorInner, ErrorType};
+    use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
     use podfetch_domain::user::User;
     use serde_json::Value;
     use serial_test::serial;
@@ -289,6 +290,10 @@ mod tests {
         assert_eq!(config.server_url, "https://podfetch.example.com/ui/");
         assert_eq!(config.rss_feed, "https://podfetch.example.com/ui/rss");
         assert_eq!(config.ws_url, "wss://podfetch.example.com/ui/socket.io");
+        assert_eq!(
+            config.transcription_enabled,
+            ENVIRONMENT_SERVICE.transcription_config.is_some()
+        );
     }
 
     #[tokio::test]

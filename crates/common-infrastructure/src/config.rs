@@ -60,6 +60,10 @@ pub const S3_SESSION_TOKEN: &str = "S3_SESSION_TOKEN";
 pub const POLLING_INTERVAL_DEFAULT: u32 = 300;
 pub const USER_PODCAST_LIMIT: &str = "USER_PODCAST_LIMIT";
 pub const DEFAULT_USER_PODCAST_LIMIT: u32 = 0;
+pub const TRANSCRIPTION_API_BASE_URL: &str = "TRANSCRIPTION_API_BASE_URL";
+pub const TRANSCRIPTION_API_KEY: &str = "TRANSCRIPTION_API_KEY";
+pub const TRANSCRIPTION_MODEL: &str = "TRANSCRIPTION_MODEL";
+pub const DEFAULT_TRANSCRIPTION_MODEL: &str = "whisper-1";
 
 pub fn is_env_var_present_and_true(env_var: &str) -> bool {
     match env::var(env_var) {
@@ -116,6 +120,7 @@ pub struct ConfigModel {
     pub oidc_config: Option<OidcConfig>,
     pub reverse_proxy: bool,
     pub mopidy_integration_enabled: bool,
+    pub transcription_enabled: bool,
 }
 
 #[derive(Clone)]
@@ -150,6 +155,7 @@ pub struct EnvironmentService {
     pub default_podfetch_folder: String,
     pub s3_config: S3Config,
     pub user_podcast_limit: u32,
+    pub transcription_config: Option<TranscriptionConfig>,
 }
 
 #[derive(Clone)]
@@ -207,6 +213,13 @@ pub struct ReverseProxyConfig {
 pub struct TelegramConfig {
     pub telegram_bot_token: String,
     pub telegram_chat_id: String,
+}
+
+#[derive(Clone)]
+pub struct TranscriptionConfig {
+    pub base_url: String,
+    pub api_key: Option<String>,
+    pub model: String,
 }
 
 impl Default for EnvironmentService {
@@ -343,6 +356,7 @@ impl EnvironmentService {
                 .ok()
                 .and_then(|v| v.parse::<u32>().ok())
                 .unwrap_or(DEFAULT_USER_PODCAST_LIMIT),
+            transcription_config: Self::handle_transcription_config(),
         }
     }
 
@@ -390,6 +404,18 @@ impl EnvironmentService {
         } else {
             None
         }
+    }
+
+    fn handle_transcription_config() -> Option<TranscriptionConfig> {
+        let base_url = var(TRANSCRIPTION_API_BASE_URL)
+            .ok()
+            .filter(|value| !value.is_empty())?;
+
+        Some(TranscriptionConfig {
+            base_url: base_url.trim_end_matches('/').to_string(),
+            api_key: var(TRANSCRIPTION_API_KEY).ok(),
+            model: var(TRANSCRIPTION_MODEL).unwrap_or(DEFAULT_TRANSCRIPTION_MODEL.to_string()),
+        })
     }
 
     pub fn get_polling_interval(&self) -> u32 {
@@ -443,6 +469,7 @@ impl EnvironmentService {
             oidc_config: self.oidc_config.clone(),
             ws_url: String::new(),
             mopidy_integration_enabled: self.mopidy_integration_enabled,
+            transcription_enabled: self.transcription_config.is_some(),
         }
     }
 
@@ -470,5 +497,98 @@ mod mopidy_config_tests {
         env.mopidy_integration_enabled = true;
         let model = env.get_config("http://localhost:8000/");
         assert!(model.mopidy_integration_enabled);
+    }
+}
+
+#[cfg(test)]
+mod transcription_config_tests {
+    use super::*;
+    use serial_test::serial;
+    use std::env;
+
+    fn clear_transcription_env() {
+        unsafe {
+            env::remove_var(TRANSCRIPTION_API_BASE_URL);
+            env::remove_var(TRANSCRIPTION_API_KEY);
+            env::remove_var(TRANSCRIPTION_MODEL);
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn transcription_config_is_none_when_base_url_not_set() {
+        clear_transcription_env();
+
+        let config = EnvironmentService::handle_transcription_config();
+
+        assert!(config.is_none());
+    }
+
+    #[test]
+    #[serial]
+    fn transcription_config_is_some_with_fields_and_default_model_when_base_url_set() {
+        clear_transcription_env();
+        unsafe {
+            env::set_var(TRANSCRIPTION_API_BASE_URL, "http://localhost:9500");
+            env::set_var(TRANSCRIPTION_API_KEY, "secret-key");
+        }
+
+        let config = EnvironmentService::handle_transcription_config()
+            .expect("expected transcription config to be present");
+
+        assert_eq!(config.base_url, "http://localhost:9500");
+        assert_eq!(config.api_key, Some("secret-key".to_string()));
+        assert_eq!(config.model, "whisper-1");
+
+        clear_transcription_env();
+    }
+
+    #[test]
+    #[serial]
+    fn transcription_config_strips_trailing_slash_from_base_url() {
+        clear_transcription_env();
+        unsafe {
+            env::set_var(TRANSCRIPTION_API_BASE_URL, "http://localhost:9500/");
+        }
+
+        let config = EnvironmentService::handle_transcription_config()
+            .expect("expected transcription config to be present");
+
+        assert_eq!(config.base_url, "http://localhost:9500");
+
+        clear_transcription_env();
+    }
+
+    #[test]
+    #[serial]
+    fn transcription_config_uses_custom_model_and_no_api_key_when_unset() {
+        clear_transcription_env();
+        unsafe {
+            env::set_var(TRANSCRIPTION_API_BASE_URL, "http://localhost:9500");
+            env::set_var(TRANSCRIPTION_MODEL, "custom-model");
+        }
+
+        let config = EnvironmentService::handle_transcription_config()
+            .expect("expected transcription config to be present");
+
+        assert_eq!(config.model, "custom-model");
+        assert_eq!(config.api_key, None);
+
+        clear_transcription_env();
+    }
+
+    #[test]
+    #[serial]
+    fn environment_service_new_populates_transcription_config_from_env() {
+        clear_transcription_env();
+        unsafe {
+            env::set_var(TRANSCRIPTION_API_BASE_URL, "http://localhost:9500");
+        }
+
+        let env_service = EnvironmentService::new();
+
+        assert!(env_service.transcription_config.is_some());
+
+        clear_transcription_env();
     }
 }
