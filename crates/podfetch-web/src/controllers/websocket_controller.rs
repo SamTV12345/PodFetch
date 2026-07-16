@@ -15,14 +15,25 @@ use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
+use podfetch_domain::podcast_episode_transcript::TranscriptStatus;
 use rss::extension::itunes::{
     ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtension, ITunesChannelExtensionBuilder,
     ITunesItemExtensionBuilder, ITunesOwner, ITunesOwnerBuilder,
 };
+use rss::extension::{Extension, ExtensionBuilder};
 use rss::{
     Category, CategoryBuilder, Channel, ChannelBuilder, EnclosureBuilder, GuidBuilder, Item,
     ItemBuilder,
 };
+use std::collections::BTreeMap;
+
+/// Namespace declared on generated channels so `<podcast:transcript>` items
+/// are valid Podcasting 2.0 markup.
+const PODCAST_NAMESPACE_URL: &str = "https://podcastindex.org/namespace/1.0";
+
+fn podcast_namespace() -> BTreeMap<String, String> {
+    BTreeMap::from([("podcast".to_string(), PODCAST_NAMESPACE_URL.to_string())])
+}
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -88,9 +99,10 @@ pub async fn get_rss_feed(
         .summary(Some("Your local rss feed for your podcasts".to_string()))
         .build();
 
-    let items = get_podcast_items_rss(&downloaded_episodes);
+    let items = get_podcast_items_rss(&state, &downloaded_episodes, &api_key, &server_url);
 
     let channel_builder = ChannelBuilder::default()
+        .namespaces(podcast_namespace())
         .language("en".to_string())
         .title("Podfetch")
         .link(feed_url)
@@ -239,8 +251,9 @@ pub async fn get_rss_feed_for_podcast(
         .summary(podcast.summary.clone())
         .build();
 
-    let items = get_podcast_items_rss(&downloaded_episodes);
+    let items = get_podcast_items_rss(&state, &downloaded_episodes, &api_key, &server_url);
     let channel_builder = ChannelBuilder::default()
+        .namespaces(podcast_namespace())
         .language(podcast.clone().language)
         .categories(categories)
         .title(podcast.name.clone())
@@ -266,7 +279,12 @@ pub async fn get_rss_feed_for_podcast(
     Ok(response)
 }
 
-fn get_podcast_items_rss(downloaded_episodes: &[PodcastEpisodeDto]) -> Vec<Item> {
+fn get_podcast_items_rss(
+    state: &AppState,
+    downloaded_episodes: &[PodcastEpisodeDto],
+    api_key: &Option<String>,
+    server_url: &str,
+) -> Vec<Item> {
     downloaded_episodes
         .iter()
         .map(|episode| {
@@ -287,16 +305,90 @@ fn get_podcast_items_rss(downloaded_episodes: &[PodcastEpisodeDto]) -> Vec<Item>
                 .value(&episode.episode_id)
                 .build();
 
-            ItemBuilder::default()
+            let mut item = ItemBuilder::default()
                 .guid(Some(guid))
                 .pub_date(Some(episode.date_of_recording.to_string()))
                 .title(Some(episode.name.to_string()))
                 .description(Some(episode.description.to_string()))
                 .enclosure(Some(enclosure))
                 .itunes_ext(itunes_extension)
-                .build()
+                .build();
+
+            attach_transcript_extensions(state, episode, api_key, server_url, &mut item);
+            item
         })
         .collect::<Vec<Item>>()
+}
+
+/// Adds one `<podcast:transcript>` extension per archived transcript of the
+/// episode. Transcript lookup failures are non-fatal for feed generation —
+/// the item is simply exported without transcript tags.
+fn attach_transcript_extensions(
+    state: &AppState,
+    episode: &PodcastEpisodeDto,
+    api_key: &Option<String>,
+    server_url: &str,
+    item: &mut Item,
+) {
+    let Ok(episode_uuid) = uuid::Uuid::parse_str(&episode.id) else {
+        return;
+    };
+
+    let transcripts = match state.transcript_service.get_by_episode_id(episode_uuid) {
+        Ok(transcripts) => transcripts,
+        Err(err) => {
+            tracing::error!(
+                "Error loading transcripts for rss item {}: {err}",
+                episode.id
+            );
+            return;
+        }
+    };
+
+    let extensions: Vec<Extension> = transcripts
+        .iter()
+        .filter(|t| {
+            matches!(
+                t.status,
+                TranscriptStatus::Parsed | TranscriptStatus::Downloaded
+            ) && t.file_path.is_some()
+        })
+        .map(|t| {
+            // Feed readers fetch this URL without a login session, so it has
+            // to be the apiKey-in-path file route whenever a key is present.
+            let file_url = match api_key {
+                Some(key) => format!(
+                    "{server_url}api/v1/podcasts/episodes/{}/transcripts/{}/file/apiKey/{key}",
+                    episode.id, t.id
+                ),
+                None => format!(
+                    "{server_url}api/v1/podcasts/episodes/{}/transcripts/{}/file",
+                    episode.id, t.id
+                ),
+            };
+
+            let mut attrs = BTreeMap::new();
+            attrs.insert("url".to_string(), file_url);
+            attrs.insert("type".to_string(), t.mime_type.clone());
+            if let Some(language) = &t.language {
+                attrs.insert("language".to_string(), language.clone());
+            }
+
+            ExtensionBuilder::default()
+                .name("podcast:transcript")
+                .attrs(attrs)
+                .build()
+        })
+        .collect();
+
+    if !extensions.is_empty() {
+        let mut extension_map = item.extensions().clone();
+        extension_map
+            .entry("podcast".to_string())
+            .or_default()
+            .insert("transcript".to_string(), extensions);
+        item.set_extensions(extension_map);
+    }
 }
 
 fn get_mime_type_for_episode(url: &str) -> String {
@@ -561,6 +653,116 @@ mod tests {
             assert!(body.contains("<rss"));
             assert!(body.contains("<channel>"));
         }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_rss_feed_for_podcast_includes_podcast_transcript_tag_for_archived_transcript() {
+        use podfetch_domain::podcast_episode_transcript::{
+            PodcastEpisodeTranscriptRepository, TranscriptSource, TranscriptStatus,
+            UpsertTranscript,
+        };
+        use podfetch_persistence::adapters::PodcastEpisodeTranscriptRepositoryImpl;
+        use podfetch_persistence::db::database;
+
+        let server = handle_test_startup().await;
+        let podcast = create_podcast_for_rss();
+        let api_key = create_api_key_user();
+        let unique = Uuid::new_v4();
+        let episode = insert_downloaded_episode(
+            &podcast.id.to_string(),
+            &format!("rss-transcript-ep-{unique}"),
+            &format!("rss-transcript-guid-{unique}"),
+            &format!("podcasts/rss-transcript-{unique}/episode.mp3"),
+            &format!("podcasts/rss-transcript-{unique}/image.jpg"),
+        );
+
+        let episode_uuid = Uuid::parse_str(&episode.id).unwrap();
+        let repo = PodcastEpisodeTranscriptRepositoryImpl::new(database());
+        let transcript_id = repo
+            .upsert(UpsertTranscript {
+                episode_id: episode_uuid,
+                source: TranscriptSource::Feed,
+                original_url: Some(format!("https://example.com/{unique}.vtt")),
+                mime_type: "text/vtt".to_string(),
+                language: Some("en".to_string()),
+            })
+            .unwrap();
+        repo.set_status(transcript_id, TranscriptStatus::Parsed, None)
+            .unwrap();
+        repo.set_file_path(transcript_id, "/tmp/rss-transcript-test.vtt")
+            .unwrap();
+
+        let request_path = with_api_key(&format!("/rss/{}", podcast.id), &api_key);
+        let response = server.test_server.get(&request_path).await;
+        let status = response.status_code();
+        if status != 200 {
+            // Skip when auth is enforced in this environment
+            assert_eq!(status, 403);
+            return;
+        }
+
+        let body = response.text();
+        assert!(
+            body.contains(r#"xmlns:podcast="https://podcastindex.org/namespace/1.0""#),
+            "channel must declare the podcast namespace, got: {body}"
+        );
+        assert!(
+            body.contains("<podcast:transcript"),
+            "feed must contain a podcast:transcript tag, got: {body}"
+        );
+        let expected_url_fragment = format!(
+            "/api/v1/podcasts/episodes/{}/transcripts/{}/file/apiKey/{}",
+            episode.id, transcript_id, api_key
+        );
+        assert!(
+            body.contains(&expected_url_fragment),
+            "transcript url must point at the apiKey file route, got: {body}"
+        );
+        assert!(body.contains(r#"type="text/vtt""#));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_rss_feed_omits_transcript_tag_for_unarchived_transcript() {
+        use podfetch_domain::podcast_episode_transcript::{
+            PodcastEpisodeTranscriptRepository, TranscriptSource, UpsertTranscript,
+        };
+        use podfetch_persistence::adapters::PodcastEpisodeTranscriptRepositoryImpl;
+        use podfetch_persistence::db::database;
+
+        let server = handle_test_startup().await;
+        let podcast = create_podcast_for_rss();
+        let api_key = create_api_key_user();
+        let unique = Uuid::new_v4();
+        let episode = insert_downloaded_episode(
+            &podcast.id.to_string(),
+            &format!("rss-transcript-pending-ep-{unique}"),
+            &format!("rss-transcript-pending-guid-{unique}"),
+            &format!("podcasts/rss-transcript-pending-{unique}/episode.mp3"),
+            &format!("podcasts/rss-transcript-pending-{unique}/image.jpg"),
+        );
+
+        // Pending transcript without an archived file must not be exported.
+        let repo = PodcastEpisodeTranscriptRepositoryImpl::new(database());
+        repo.upsert(UpsertTranscript {
+            episode_id: Uuid::parse_str(&episode.id).unwrap(),
+            source: TranscriptSource::Feed,
+            original_url: Some(format!("https://example.com/{unique}.vtt")),
+            mime_type: "text/vtt".to_string(),
+            language: Some("en".to_string()),
+        })
+        .unwrap();
+
+        let request_path = with_api_key(&format!("/rss/{}", podcast.id), &api_key);
+        let response = server.test_server.get(&request_path).await;
+        let status = response.status_code();
+        if status != 200 {
+            assert_eq!(status, 403);
+            return;
+        }
+
+        assert!(!response.text().contains("<podcast:transcript"));
     }
 
     #[tokio::test]
