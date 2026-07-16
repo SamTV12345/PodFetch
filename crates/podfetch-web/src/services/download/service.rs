@@ -332,6 +332,13 @@ impl DownloadService {
             tracing::error!("Error handling metadata insertion: {err:?}");
         }
 
+        // Transcripts: download + parse feed transcripts.
+        // Non-fatal — must never fail the download.
+        let transcript_service = crate::services::transcript::service::TranscriptService::default_service();
+        if let Err(err) = transcript_service.process_pending_for_episode(&podcast_episode) {
+            tracing::error!("Error processing transcripts for episode {}: {err}", podcast_episode.id);
+        }
+
         // SponsorBlock: fetch + store segments for YouTube-sourced episodes.
         // Non-fatal — must never fail the download.
         match crate::services::sponsorblock::service::fetch_and_store_blocking(&podcast_episode) {
