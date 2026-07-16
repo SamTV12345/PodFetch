@@ -15,6 +15,8 @@ CREATE TABLE podcast_episode_transcripts (
 );
 CREATE UNIQUE INDEX uq_transcripts_episode_url
     ON podcast_episode_transcripts (episode_id, original_url);
+CREATE UNIQUE INDEX uq_transcripts_episode_generated
+    ON podcast_episode_transcripts (episode_id) WHERE source = 'generated';
 CREATE INDEX idx_transcripts_episode ON podcast_episode_transcripts (episode_id);
 
 CREATE TABLE podcast_episode_transcript_segments (

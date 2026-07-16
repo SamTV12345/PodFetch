@@ -184,51 +184,65 @@ impl PodcastEpisodeTranscriptRepository for DieselPodcastEpisodeTranscriptReposi
         // original_url (i.e. the single generated transcript per episode) the
         // source additionally scopes the match, so a generated transcript
         // never collides with a future feed transcript that also lacks a URL.
-        let mut query = pet_table
-            .filter(pet_dsl::episode_id.eq(episode_id.clone()))
-            .into_boxed();
-        query = match &transcript.original_url {
-            Some(url) => query.filter(pet_dsl::original_url.eq(url.clone())),
-            None => query
-                .filter(pet_dsl::original_url.is_null())
-                .filter(pet_dsl::source.eq(source_str.clone())),
-        };
-        let existing = query.first::<TranscriptEntity>(&mut conn).optional()?;
+        //
+        // The SELECT-then-INSERT below is not atomic on its own: two
+        // concurrent upserts for the same NULL-url identity could both miss
+        // the SELECT and both attempt an INSERT (NULL is never equal to NULL,
+        // so the `uq_transcripts_episode_url` unique index can't catch this
+        // case). Wrapping in a transaction doesn't remove that race by
+        // itself, but the partial unique index
+        // `uq_transcripts_episode_generated` (episode_id WHERE source =
+        // 'generated') is the real backstop: it guarantees the DB rejects a
+        // second generated-source row for the same episode even under
+        // concurrent access, and doing the work inside a transaction keeps
+        // the read/write pair consistent and ensures a unique-violation
+        // rolls back cleanly rather than leaving a partial update.
+        conn.transaction::<_, diesel::result::Error, _>(|conn| {
+            let mut query = pet_table
+                .filter(pet_dsl::episode_id.eq(episode_id.clone()))
+                .into_boxed();
+            query = match &transcript.original_url {
+                Some(url) => query.filter(pet_dsl::original_url.eq(url.clone())),
+                None => query
+                    .filter(pet_dsl::original_url.is_null())
+                    .filter(pet_dsl::source.eq(source_str.clone())),
+            };
+            let existing = query.first::<TranscriptEntity>(conn).optional()?;
 
-        match existing {
-            Some(existing) => {
-                let id = existing.id.clone();
-                diesel::update(pet_table.find(id.clone()))
-                    .set((
-                        pet_dsl::mime_type.eq(transcript.mime_type),
-                        pet_dsl::language.eq(transcript.language),
-                        pet_dsl::updated_at.eq(now),
-                    ))
-                    .execute(&mut conn)?;
-                Ok(Uuid::parse_str(&id).expect("valid uuid in db"))
+            match existing {
+                Some(existing) => {
+                    let id = existing.id.clone();
+                    diesel::update(pet_table.find(id.clone()))
+                        .set((
+                            pet_dsl::mime_type.eq(transcript.mime_type),
+                            pet_dsl::language.eq(transcript.language),
+                            pet_dsl::updated_at.eq(now),
+                        ))
+                        .execute(conn)?;
+                    Ok(Uuid::parse_str(&id).expect("valid uuid in db"))
+                }
+                None => {
+                    let id = Uuid::new_v4();
+                    let entity = TranscriptInsertEntity {
+                        id: id.to_string(),
+                        episode_id,
+                        source: source_str,
+                        original_url: transcript.original_url,
+                        file_path: None,
+                        mime_type: transcript.mime_type,
+                        language: transcript.language,
+                        is_preferred: false,
+                        status: TranscriptStatus::Pending.as_str().to_string(),
+                        error: None,
+                        created_at: now,
+                        updated_at: now,
+                    };
+                    diesel::insert_into(pet_table).values(entity).execute(conn)?;
+                    Ok(id)
+                }
             }
-            None => {
-                let id = Uuid::new_v4();
-                let entity = TranscriptInsertEntity {
-                    id: id.to_string(),
-                    episode_id,
-                    source: source_str,
-                    original_url: transcript.original_url,
-                    file_path: None,
-                    mime_type: transcript.mime_type,
-                    language: transcript.language,
-                    is_preferred: false,
-                    status: TranscriptStatus::Pending.as_str().to_string(),
-                    error: None,
-                    created_at: now,
-                    updated_at: now,
-                };
-                diesel::insert_into(pet_table)
-                    .values(entity)
-                    .execute(&mut conn)?;
-                Ok(id)
-            }
-        }
+        })
+        .map_err(Into::into)
     }
 
     fn get_by_episode_id(&self, episode_id: Uuid) -> Result<Vec<PodcastEpisodeTranscript>, Self::Error> {
@@ -687,6 +701,62 @@ mod tests {
         assert_eq!(rows.len(), 1, "expected a single generated transcript row");
         assert_eq!(rows[0].source, TranscriptSource::Generated);
         assert_eq!(rows[0].original_url, None);
+    }
+
+    #[test]
+    fn db_rejects_second_generated_transcript_row_inserted_directly() {
+        let _guard = setup();
+        let repo = DieselPodcastEpisodeTranscriptRepository::new(database());
+        let podcast_id = seed_podcast();
+        let episode_id = seed_episode(&podcast_id);
+
+        // Repo-level upsert: a single generated row is created and repeated
+        // upserts stay idempotent against it (existing behavior).
+        let id1 = repo
+            .upsert(upsert_transcript(episode_id, None))
+            .expect("first upsert");
+        let id2 = repo
+            .upsert(upsert_transcript(episode_id, None))
+            .expect("second upsert");
+        assert_eq!(id1, id2, "upsert must stay idempotent for generated transcripts");
+
+        let rows = repo.get_by_episode_id(episode_id).expect("get rows");
+        assert_eq!(rows.len(), 1, "expected exactly one generated transcript row");
+
+        // Bypass the repo's SELECT-then-INSERT logic entirely and try to
+        // insert a second generated-source row directly. This is the
+        // scenario the app-level check can't prevent under a race; the
+        // partial unique index `uq_transcripts_episode_generated` must be
+        // the one to reject it.
+        use self::podcast_episode_transcripts::table as pet_table;
+        let mut conn = database().connection().expect("db connection");
+        let now = chrono::Utc::now().naive_utc();
+        let duplicate = TranscriptInsertEntity {
+            id: Uuid::new_v4().to_string(),
+            episode_id: episode_id.to_string(),
+            source: TranscriptSource::Generated.as_str().to_string(),
+            original_url: None,
+            file_path: None,
+            mime_type: "text/vtt".to_string(),
+            language: Some("en".to_string()),
+            is_preferred: false,
+            status: TranscriptStatus::Pending.as_str().to_string(),
+            error: None,
+            created_at: now,
+            updated_at: now,
+        };
+        let result = diesel::insert_into(pet_table)
+            .values(duplicate)
+            .execute(&mut conn);
+
+        assert!(
+            result.is_err(),
+            "DB must reject a second generated-source row for the same episode"
+        );
+
+        // Still exactly one row after the rejected insert attempt.
+        let rows = repo.get_by_episode_id(episode_id).expect("get rows");
+        assert_eq!(rows.len(), 1, "duplicate generated row must not have been inserted");
     }
 
     #[test]
