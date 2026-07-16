@@ -161,7 +161,16 @@ fn parse_timestamp(s: &str) -> Option<i32> {
     let minutes: i64 = caps[2].parse().ok()?;
     let seconds: i64 = caps[3].parse().ok()?;
     let millis: i64 = caps[4].parse().ok()?;
-    let total_ms = ((hours * 60 + minutes) * 60 + seconds) * 1000 + millis;
+
+    // Use checked arithmetic to prevent overflow panic on adversarial input.
+    let total_ms = hours
+        .checked_mul(60)?
+        .checked_add(minutes)?
+        .checked_mul(60)?
+        .checked_add(seconds)?
+        .checked_mul(1000)?
+        .checked_add(millis)?;
+
     i32::try_from(total_ms).ok()
 }
 
@@ -328,7 +337,15 @@ fn parse_html_time(s: &str) -> Option<i32> {
         [m, s] => (0, m.parse().ok()?, s.parse().ok()?),
         _ => return None,
     };
-    let total_ms = ((hours * 60 + minutes) * 60 + seconds) * 1000;
+
+    // Use checked arithmetic to prevent overflow panic on adversarial input.
+    let total_ms = hours
+        .checked_mul(60)?
+        .checked_add(minutes)?
+        .checked_mul(60)?
+        .checked_add(seconds)?
+        .checked_mul(1000)?;
+
     i32::try_from(total_ms).ok()
 }
 
@@ -568,6 +585,39 @@ mod tests {
         assert_eq!(segments[2].start_ms, None);
         assert_eq!(segments[2].speaker, None);
         assert_eq!(segments[2].text, "No time here, just narration.");
+    }
+
+    // -- Overflow safety (checked arithmetic for adversarial timestamps) --------
+
+    #[test]
+    fn vtt_with_overflow_hour_value_skips_cue_and_returns_empty_error() {
+        // 18-digit hour value would overflow i64 arithmetic without checked ops.
+        // The malformed cue should be skipped; if no valid cues remain, parse returns Empty.
+        let raw = b"WEBVTT\n\n200000000000000000:00:00.000 --> 00:00:04.200\nShould skip\n";
+        let result = parse(TranscriptFormat::Vtt, raw);
+        // Cue is skipped due to malformed timestamp; no other valid cues, so Empty error.
+        assert!(matches!(result, Err(TranscriptParseError::Empty)));
+    }
+
+    #[test]
+    fn html_with_overflow_hour_value_sets_start_ms_none_no_panic() {
+        // <time>99999999999:00:00</time> would overflow i64 arithmetic.
+        // With checked ops, parse_html_time returns None, and segment gets start_ms: None.
+        let raw = b"<p><time>99999999999:00:00</time> Some text</p>";
+        let segments = parse(TranscriptFormat::Html, raw).expect("should parse without panic");
+        assert_eq!(segments.len(), 1);
+        assert_eq!(segments[0].start_ms, None, "overflow should yield None, not panic");
+        assert_eq!(segments[0].text, "Some text");
+    }
+
+    #[test]
+    fn srt_timestamp_just_above_i32_max_ms_skips_cue_as_malformed() {
+        // 600 hours = 2160000 seconds = 2,160,000,000 milliseconds (> i32::MAX = 2,147,483,647).
+        // After checked arithmetic succeeds but i32::try_from fails, cue is skipped.
+        let raw = b"1\n600:00:00,000 --> 00:00:05,000\nText\n";
+        let result = parse(TranscriptFormat::Srt, raw);
+        // Cue is skipped (timestamp out of i32 range); no valid cues remain, so Empty.
+        assert!(matches!(result, Err(TranscriptParseError::Empty)));
     }
 
     // -- error propagation across formats ---------------------------------------
