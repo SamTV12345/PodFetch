@@ -107,6 +107,26 @@ impl TranscriptService {
     /// feed URL can never abort processing of the episode's other
     /// transcripts.
     pub fn process_pending_for_episode(&self, episode: &PodcastEpisode) -> Result<(), CustomError> {
+        self.process_pending_for_episode_inner(episode)
+    }
+
+    /// Like [`Self::process_pending_for_episode`], but for the moment right
+    /// after the episode's audio file was written locally, before the DB row
+    /// carries the path: uses `local_audio_path` to derive the archive
+    /// location instead of relying on `episode.file_episode_path` (which, for
+    /// a first-time download, is only persisted to the DB afterwards and is
+    /// never mutated on the in-memory entity the caller holds).
+    pub fn process_pending_after_download(
+        &self,
+        episode: &PodcastEpisode,
+        local_audio_path: &str,
+    ) -> Result<(), CustomError> {
+        let mut episode_with_path = episode.clone();
+        episode_with_path.file_episode_path = Some(local_audio_path.to_string());
+        self.process_pending_for_episode_inner(&episode_with_path)
+    }
+
+    fn process_pending_for_episode_inner(&self, episode: &PodcastEpisode) -> Result<(), CustomError> {
         let episode_id = parse_episode_id(&episode.id)?;
         let pending: Vec<PodcastEpisodeTranscript> = self
             .transcript_repo
@@ -998,6 +1018,100 @@ mod tests {
         assert_eq!(updated.status, TranscriptStatus::Downloaded);
         assert!(updated.file_path.is_some(), "unknown format must still be archived");
         assert!(!updated.is_preferred, "an archived-only transcript is never preferred");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn process_pending_for_episode_fails_when_episode_has_no_local_audio_path_yet() {
+        // Documents the pre-fix behavior that `process_pending_after_download`
+        // exists to work around: on a first-time download the in-memory
+        // episode entity has no `file_episode_path` yet (it's only persisted
+        // to the DB afterwards), so calling the plain
+        // `process_pending_for_episode` at that point can never archive
+        // anything and every pending transcript is permanently marked failed.
+        let _guard = lock_and_prepare_db();
+        let svc = service();
+        let podcast_id = seed_podcast();
+        let episode = seed_episode(podcast_id, None);
+        let episode_id = Uuid::parse_str(&episode.id).unwrap();
+
+        let app = Router::new().route(
+            "/sample.vtt",
+            get(|| async { ([("content-type", "text/vtt")], SAMPLE_VTT) }),
+        );
+        let base_url = spawn_mock_server(app);
+
+        let repo = PodcastEpisodeTranscriptRepositoryImpl::new(database());
+        let transcript_id = repo
+            .upsert(UpsertTranscript {
+                episode_id,
+                source: TranscriptSource::Feed,
+                original_url: Some(format!("{base_url}/sample.vtt")),
+                mime_type: "text/vtt".to_string(),
+                language: Some("en".to_string()),
+            })
+            .unwrap();
+
+        svc.process_pending_for_episode(&episode).expect("must still return Ok(()) per-transcript");
+
+        let updated = repo.get_by_id(transcript_id).unwrap().expect("row exists");
+        assert_eq!(
+            updated.status,
+            TranscriptStatus::Failed,
+            "without a local audio path, the transcript can never be archived and is left failed"
+        );
+    }
+
+    #[test]
+    fn process_pending_after_download_uses_the_freshly_written_audio_path() {
+        let _guard = lock_and_prepare_db();
+        let svc = service();
+        let podcast_id = seed_podcast();
+
+        // Simulates the exact moment the download hook calls this: the audio
+        // file has just been written to disk, but the DB row (and the
+        // in-memory entity the caller holds) still has no file_episode_path.
+        let dir = temp_episode_dir();
+        let episode_audio_path = dir.join("episode.mp3");
+        std::fs::write(&episode_audio_path, b"fake-audio").unwrap();
+        let episode = seed_episode(podcast_id, None);
+        let episode_id = Uuid::parse_str(&episode.id).unwrap();
+        assert!(
+            episode.file_episode_path.is_none(),
+            "precondition: in-memory entity must not carry the path yet"
+        );
+
+        let app = Router::new().route(
+            "/sample.vtt",
+            get(|| async { ([("content-type", "text/vtt")], SAMPLE_VTT) }),
+        );
+        let base_url = spawn_mock_server(app);
+
+        let repo = PodcastEpisodeTranscriptRepositoryImpl::new(database());
+        let transcript_id = repo
+            .upsert(UpsertTranscript {
+                episode_id,
+                source: TranscriptSource::Feed,
+                original_url: Some(format!("{base_url}/sample.vtt")),
+                mime_type: "text/vtt".to_string(),
+                language: Some("en".to_string()),
+            })
+            .unwrap();
+
+        svc.process_pending_after_download(&episode, episode_audio_path.to_str().unwrap())
+            .expect("process_pending_after_download");
+
+        let updated = repo.get_by_id(transcript_id).unwrap().expect("row exists");
+        assert_eq!(updated.status, TranscriptStatus::Parsed);
+        assert!(updated.is_preferred);
+        let expected_path = dir.join("episode.transcript.vtt");
+        assert_eq!(updated.file_path.as_deref(), expected_path.to_str());
+        assert!(expected_path.exists(), "archived transcript file must exist on disk");
+
+        let segments = repo.get_segments(transcript_id).unwrap();
+        assert_eq!(segments.len(), 1);
+        assert_eq!(segments[0].text, "Hello world");
 
         let _ = std::fs::remove_dir_all(&dir);
     }

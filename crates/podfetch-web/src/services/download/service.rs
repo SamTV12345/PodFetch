@@ -335,7 +335,7 @@ impl DownloadService {
         // Transcripts: download + parse feed transcripts.
         // Non-fatal — must never fail the download.
         let transcript_service = crate::services::transcript::service::TranscriptService::default_service();
-        if let Err(err) = transcript_service.process_pending_for_episode(&podcast_episode) {
+        if let Err(err) = transcript_service.process_pending_after_download(&podcast_episode, &paths.filename) {
             tracing::error!("Error processing transcripts for episode {}: {err}", podcast_episode.id);
         }
 
