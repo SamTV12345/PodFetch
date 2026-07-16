@@ -54,20 +54,21 @@ pub struct TranscriptSearchHit {
     pub episode_id: Uuid,
     pub transcript_id: Uuid,
     pub start_ms: Option<i32>,
+    /// Snippet with <b>…</b> highlighting produced by the database.
     pub snippet: String,
     pub rank: f32,
 }
 
 pub trait PodcastEpisodeTranscriptRepository: Send + Sync {
     type Error;
-    /// Upsert über (episode_id, original_url); Rückgabe: id der Zeile.
+    /// Upsert keyed on (episode_id, original_url); returns the row's id.
     fn upsert(&self, transcript: UpsertTranscript) -> Result<Uuid, Self::Error>;
     fn get_by_episode_id(&self, episode_id: Uuid) -> Result<Vec<PodcastEpisodeTranscript>, Self::Error>;
     fn get_by_id(&self, id: Uuid) -> Result<Option<PodcastEpisodeTranscript>, Self::Error>;
     fn set_file_path(&self, id: Uuid, file_path: &str) -> Result<(), Self::Error>;
     fn set_status(&self, id: Uuid, status: TranscriptStatus, error: Option<&str>) -> Result<(), Self::Error>;
     fn set_preferred(&self, episode_id: Uuid, preferred_id: Option<Uuid>) -> Result<(), Self::Error>;
-    /// Löscht alte Segmente des Transkripts und fügt neue in einer Transaktion ein.
+    /// Deletes the transcript's old segments and inserts the new ones in one transaction.
     fn replace_segments(&self, transcript_id: Uuid, segments: &[TranscriptSegment]) -> Result<(), Self::Error>;
     fn get_segments(&self, transcript_id: Uuid) -> Result<Vec<TranscriptSegment>, Self::Error>;
     fn search(
@@ -98,7 +99,7 @@ pub struct TranscriptionJob {
 
 pub trait TranscriptionJobRepository: Send + Sync {
     type Error;
-    /// Legt Job an; Err/None-Semantik: gibt Ok(None) zurück, wenn schon einer existiert (UNIQUE).
+    /// Enqueues a job; returns Ok(None) if one already exists for the episode (UNIQUE).
     fn enqueue(&self, episode_id: Uuid) -> Result<Option<TranscriptionJob>, Self::Error>;
     fn next_pending(&self) -> Result<Option<TranscriptionJob>, Self::Error>;
     fn set_status(&self, id: Uuid, status: TranscriptionJobStatus, error: Option<&str>) -> Result<(), Self::Error>;
