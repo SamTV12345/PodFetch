@@ -26,9 +26,12 @@ end to end:
 ## Whisper transcription setup
 
 Generated transcripts use an OpenAI-compatible `audio/transcriptions`
-endpoint. Any server that speaks this protocol works — for a fully
-self-hosted setup, [speaches](https://speaches.ai/) (the successor of
-`faster-whisper-server`) is a good choice:
+endpoint. Any server that speaks this protocol works. For a fully
+self-hosted setup with [whisper.cpp](https://github.com/ggml-org/whisper.cpp)
+— including ready-to-run CPU and NVIDIA GPU compose files — see the
+[Local transcription with whisper.cpp](./tutorials/WhisperCpp.md) tutorial.
+Another good choice is [speaches](https://speaches.ai/) (the successor of
+`faster-whisper-server`):
 
 ```yaml
 services:
