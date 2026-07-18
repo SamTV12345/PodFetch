@@ -1,5 +1,5 @@
-const SHELL_CACHE = 'podfetch-shell-v1';
-const RUNTIME_CACHE = 'podfetch-runtime-v1';
+const SHELL_CACHE = 'podfetch-shell-v2';
+const RUNTIME_CACHE = 'podfetch-runtime-v2';
 const SHELL_FILES = [
   '/ui/',
   '/ui/index.html',
@@ -57,21 +57,26 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  const fetchAndCache = () =>
+    fetch(request).then((networkResponse) => {
+      if (!networkResponse || networkResponse.status !== 200 || networkResponse.type === 'opaque') {
+        return networkResponse;
+      }
+
+      const responseClone = networkResponse.clone();
+      caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, responseClone));
+      return networkResponse;
+    });
+
+  if (destination === 'document') {
+    // Network-first for HTML: index.html carries server-injected config and
+    // references the current hashed bundles — serving it cache-first pins
+    // users to a stale app version after upgrades (#2175).
+    event.respondWith(fetchAndCache().catch(() => caches.match(request).then((c) => c || Response.error())));
+    return;
+  }
+
   event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      const networkFetch = fetch(request)
-        .then((networkResponse) => {
-          if (!networkResponse || networkResponse.status !== 200 || networkResponse.type === 'opaque') {
-            return networkResponse;
-          }
-
-          const responseClone = networkResponse.clone();
-          caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, responseClone));
-          return networkResponse;
-        })
-        .catch(() => cachedResponse);
-
-      return cachedResponse || networkFetch;
-    })
+    caches.match(request).then((cachedResponse) => cachedResponse || fetchAndCache())
   );
 });
