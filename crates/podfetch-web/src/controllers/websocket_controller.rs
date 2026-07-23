@@ -23,9 +23,9 @@ use rss::extension::itunes::{
 use rss::extension::{Extension, ExtensionBuilder};
 use rss::{
     Category, CategoryBuilder, Channel, ChannelBuilder, EnclosureBuilder, GuidBuilder, Item,
-    ItemBuilder,
+    ItemBuilder, SourceBuilder,
 };
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 /// Namespace declared on generated channels so `<podcast:transcript>` items
 /// are valid Podcasting 2.0 markup.
@@ -99,7 +99,20 @@ pub async fn get_rss_feed(
         .summary(Some("Your local rss feed for your podcasts".to_string()))
         .build();
 
-    let items = get_podcast_items_rss(&state, &downloaded_episodes, &api_key, &server_url);
+    // Map every episode's podcast id to its show so each item can name its
+    // originating podcast in the aggregated feed (#2055).
+    let podcast_by_id: HashMap<String, Podcast> = PodcastService::get_all_podcasts_raw()?
+        .into_iter()
+        .map(|p| (p.id.clone(), p))
+        .collect();
+
+    let items = get_podcast_items_rss(
+        &state,
+        &downloaded_episodes,
+        &api_key,
+        &server_url,
+        Some(&podcast_by_id),
+    );
 
     let channel_builder = ChannelBuilder::default()
         .namespaces(podcast_namespace())
@@ -251,7 +264,9 @@ pub async fn get_rss_feed_for_podcast(
         .summary(podcast.summary.clone())
         .build();
 
-    let items = get_podcast_items_rss(&state, &downloaded_episodes, &api_key, &server_url);
+    // Per-podcast feed: the channel title already is the show name, so no
+    // per-item source is needed.
+    let items = get_podcast_items_rss(&state, &downloaded_episodes, &api_key, &server_url, None);
     let channel_builder = ChannelBuilder::default()
         .namespaces(podcast_namespace())
         .language(podcast.clone().language)
@@ -284,6 +299,7 @@ fn get_podcast_items_rss(
     downloaded_episodes: &[PodcastEpisodeDto],
     api_key: &Option<String>,
     server_url: &str,
+    podcast_by_id: Option<&HashMap<String, Podcast>>,
 ) -> Vec<Item> {
     downloaded_episodes
         .iter()
@@ -295,15 +311,32 @@ fn get_podcast_items_rss(
                 .mime_type(mime_type)
                 .build();
 
+            // In the aggregated feed every item shares the "Podfetch" channel,
+            // so readers can't tell which show an episode belongs to. Tag each
+            // item with its originating podcast via the standard RSS <source>
+            // element and the itunes author, without touching the title (#2055).
+            let podcast = podcast_by_id.and_then(|m| m.get(&episode.podcast_id));
+
             let itunes_extension = ITunesItemExtensionBuilder::default()
                 .duration(Some(episode.total_time.to_string()))
                 .image(Some(episode.local_image_url.to_string()))
+                .author(podcast.map(|p| p.name.clone()))
                 .build();
 
             let guid = GuidBuilder::default()
                 .permalink(false)
                 .value(&episode.episode_id)
                 .build();
+
+            let source = podcast.map(|p| {
+                SourceBuilder::default()
+                    .url(add_api_key_to_url(
+                        format!("{server_url}rss/{}", p.id),
+                        api_key,
+                    ))
+                    .title(Some(p.name.clone()))
+                    .build()
+            });
 
             let mut item = ItemBuilder::default()
                 .guid(Some(guid))
@@ -312,6 +345,7 @@ fn get_podcast_items_rss(
                 .description(Some(episode.description.to_string()))
                 .enclosure(Some(enclosure))
                 .itunes_ext(itunes_extension)
+                .source(source)
                 .build();
 
             attach_transcript_extensions(state, episode, api_key, server_url, &mut item);

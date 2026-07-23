@@ -111,3 +111,14 @@ test('podcast settings modal exposes the per-podcast configuration', async ({ pa
     await expect(page.getByText('Automatically update podcasts')).toBeVisible()
     await expect(page.getByText('Auto-transcribe', { exact: true })).toBeVisible()
 })
+
+test('the aggregated rss feed names each item source podcast', async ({ page }) => {
+    // The shared channel is "Podfetch"; each item carries its originating show
+    // via <source> and itunes:author so readers can tell them apart (#2055).
+    const rss = await (await page.request.get('/rss')).text()
+
+    expect(rss).toContain('<source')
+    expect(rss).toContain('Transcript E2E Podcast')
+    expect(rss).toContain('<itunes:author>Transcript E2E Podcast</itunes:author>')
+    expect(rss).toContain(`rss/${seed.podcastId}`)
+})
