@@ -5,7 +5,7 @@ use crate::services::settings::service::SettingsService;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use common_infrastructure::config::FileHandlerType;
 use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
-use common_infrastructure::runtime::{PODCAST_FILENAME, PODCAST_IMAGENAME};
+use common_infrastructure::runtime::PODCAST_FILENAME;
 use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use podfetch_storage::{FileHandleWrapper, FileRequest, FilenameBuilder, FilenameBuilderReturn};
@@ -392,6 +392,10 @@ impl EpisodeRescanService {
         let image_suffix = extension_lower(current_image_path).unwrap_or_else(|| "jpg".to_string());
 
         let episode_stem = prepare_podcast_episode_title_to_directory(episode.clone())?;
+        let cover_filename = crate::services::nfo::service::resolve_cover_filename(
+            uuid::Uuid::parse_str(&episode.podcast_id)
+                .map_err(|_| CustomError::from(CustomErrorInner::NotFound(ErrorSeverity::Warning)))?,
+        );
 
         // When `direct_paths` is off, FilenameBuilder calls into our
         // resolver to find a free `<stem>-<n>` directory. If the episode
@@ -414,7 +418,7 @@ impl EpisodeRescanService {
             .with_episode_stem(&episode_stem)
             .with_suffix(&suffix)
             .with_image_suffix(&image_suffix)
-            .with_image_filename(PODCAST_IMAGENAME)
+            .with_image_filename(&cover_filename)
             .with_filename(PODCAST_FILENAME)
             .with_direct_paths(direct_paths)
             .build(|directory| -> Result<String, CustomError> {
