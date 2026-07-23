@@ -121,4 +121,7 @@ test('the aggregated rss feed names each item source podcast', async ({ page }) 
     expect(rss).toContain('Transcript E2E Podcast')
     expect(rss).toContain('<itunes:author>Transcript E2E Podcast</itunes:author>')
     expect(rss).toContain(`rss/${seed.podcastId}`)
+    // Each item links to its episode page in the UI instead of a bare guid.
+    expect(rss).toContain(`<link>`)
+    expect(rss).toContain(`ui/podcasts/${seed.podcastId}/episodes`)
 })
