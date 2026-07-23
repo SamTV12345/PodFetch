@@ -16,7 +16,7 @@ use common_infrastructure::error::{
 use common_infrastructure::http::COMMON_USER_AGENT;
 use common_infrastructure::http::{get_async_sync_client, get_sync_client};
 use common_infrastructure::runtime::{
-    DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, PODCAST_FILENAME, PODCAST_IMAGENAME,
+    DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, PODCAST_FILENAME,
 };
 use file_format::FileFormat;
 use id3::{ErrorKind, Tag, TagLike};
@@ -252,6 +252,8 @@ impl DownloadService {
         };
 
         let episode_stem = prepare_podcast_episode_title_to_directory(podcast_episode.clone())?;
+        let cover_filename =
+            crate::services::nfo::service::resolve_cover_filename(parse_id(&podcast.id)?);
         let paths = FilenameBuilder::default()
             .with_podcast_directory(&podcast.directory_name)
             .with_episode_stem(&episode_stem)
@@ -262,7 +264,7 @@ impl DownloadService {
                     .map(|data| data.0.clone())
                     .unwrap_or_else(|| "jpg".to_string()),
             )
-            .with_image_filename(PODCAST_IMAGENAME)
+            .with_image_filename(&cover_filename)
             .with_filename(PODCAST_FILENAME)
             .with_direct_paths(settings_in_db.direct_paths)
             .build(|directory| {
