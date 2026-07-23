@@ -935,6 +935,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/podcasts/{id}/episodes/download-range": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["download_episode_range"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/podcasts/{id}/episodes/downloads": {
         parameters: {
             query?: never;
@@ -1508,6 +1524,12 @@ export interface components {
         };
         BatchActionResponse: {
             affected: number;
+        };
+        DownloadRange: {
+            /** Format: int32 */
+            from: number;
+            /** Format: int32 */
+            to: number;
         };
         /** @description Request body for `POST /cast/sessions/:id/control`. */
         CastControlRequest: {
@@ -3816,6 +3838,30 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Queues every missing episode of the podcast for download. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    download_episode_range: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DownloadRange"];
+            };
+        };
+        responses: {
+            /** @description Queues the missing episodes in the given position range for download. */
             202: {
                 headers: {
                     [name: string]: unknown;

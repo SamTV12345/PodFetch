@@ -968,8 +968,36 @@ impl PodcastEpisodeUseCase {
     /// Runs downloads in parallel chunks of 3, matching `schedule_episode_download`.
     /// Returns the number of episodes that were queued.
     pub fn download_missing_episodes_for_podcast(podcast: &Podcast) -> Result<usize, CustomError> {
-        const MAX_PARALLEL_DOWNLOADS: usize = 3;
         let episodes = Self::get_episodes_by_podcast_id(Self::parse_id(&podcast.id)?)?;
+        Ok(Self::download_missing_in(podcast, episodes))
+    }
+
+    /// Download the episodes whose chronological position (oldest = 1) falls
+    /// within the inclusive `[from, to]` range. Positions match
+    /// `get_position_of_episode` (ascending by publication date). Only missing
+    /// episodes are fetched. Returns how many episodes were queued.
+    pub fn download_episode_range_for_podcast(
+        podcast: &Podcast,
+        from: usize,
+        to: usize,
+    ) -> Result<usize, CustomError> {
+        let mut episodes = Self::get_episodes_by_podcast_id(Self::parse_id(&podcast.id)?)?;
+        episodes.sort_by(|a, b| a.date_of_recording.cmp(&b.date_of_recording));
+        let start = from.saturating_sub(1).min(episodes.len());
+        let end = to.min(episodes.len());
+        let slice = if start >= end {
+            Vec::new()
+        } else {
+            episodes[start..end].to_vec()
+        };
+        Ok(Self::download_missing_in(podcast, slice))
+    }
+
+    /// Download every not-yet-downloaded, non-deleted episode in `episodes`
+    /// (in parallel, capped at `MAX_PARALLEL_DOWNLOADS`). Returns how many
+    /// episodes were queued.
+    fn download_missing_in(podcast: &Podcast, episodes: Vec<PodcastEpisode>) -> usize {
+        const MAX_PARALLEL_DOWNLOADS: usize = 3;
         let missing: Vec<PodcastEpisode> = episodes
             .into_iter()
             .filter(|e| !e.deleted && !e.is_downloaded())
@@ -999,7 +1027,7 @@ impl PodcastEpisodeUseCase {
                 }
             }
         }
-        Ok(count)
+        count
     }
 
     /// Re-downloads episodes whose DB row says they are downloaded but whose
