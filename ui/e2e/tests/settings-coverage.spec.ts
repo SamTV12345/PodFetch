@@ -208,15 +208,30 @@ test('podcast settings modal shows every batch action', async ({ page }) => {
 
     for (const label of [
         'Download missing episodes',
+        'Download an episode range',
         'Re-download missing files',
         'Refresh local download state',
         'Delete all downloaded files',
     ]) {
         await expect(dialog.getByText(label, { exact: true })).toBeVisible()
     }
-    // Three "Run" buttons and one "Delete" button drive the actions.
-    await expect(dialog.getByRole('button', { name: 'Run' })).toHaveCount(3)
+    // Four "Run" buttons and one "Delete" button drive the actions.
+    await expect(dialog.getByRole('button', { name: 'Run' })).toHaveCount(4)
     await expect(dialog.getByRole('button', { name: 'Delete', exact: true })).toBeVisible()
+})
+
+test('per-podcast download-range action queues episodes', async ({ page }) => {
+    const dialog = await openPodcastSettings(page)
+    await dialog.getByRole('tab', { name: 'Batch actions' }).click()
+
+    await dialog.getByLabel('From episode number').fill('1')
+    await dialog.getByLabel('To episode number').fill('2')
+
+    // The range row's own Run button sits next to the two number inputs.
+    const rangeRow = dialog.getByLabel('From episode number').locator('xpath=ancestor::div[1]')
+    await rangeRow.getByRole('button', { name: 'Run' }).click()
+
+    await expect(page.getByText('Download an episode range')).toBeVisible()
 })
 
 test('per-podcast episode-numbering toggle persists', async ({ page }) => {

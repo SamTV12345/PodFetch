@@ -71,6 +71,10 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
         'delete',
         '/api/v1/podcasts/{id}/episodes/downloads'
     )
+    const downloadRangeMutation = $api.useMutation(
+        'post',
+        '/api/v1/podcasts/{id}/episodes/download-range'
+    )
 
     type ConfirmState = {
         headerText: string
@@ -82,6 +86,8 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
     const [confirmOpen, setConfirmOpen] = useState(false)
     const [confirmData, setConfirmData] = useState<ConfirmState | null>(null)
     const [activeTab, setActiveTab] = useState<'settings' | 'actions'>('settings')
+    const [rangeFrom, setRangeFrom] = useState(1)
+    const [rangeTo, setRangeTo] = useState(50)
 
     const [draft, setDraft] = useState<PodcastSetting | null>(null)
 
@@ -352,6 +358,53 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                             >
                                 {t('run')}
                             </CustomButtonSecondary>
+
+                            <div className="ui-text">
+                                <div>{t('download-range')}</div>
+                                <div className="text-xs ui-text-muted">
+                                    {t('download-range-explanation')}
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <CustomInput
+                                    type="number"
+                                    min={1}
+                                    className="w-16"
+                                    aria-label={t('download-range-from')}
+                                    value={rangeFrom}
+                                    onChange={(e) =>
+                                        setRangeFrom(Math.max(1, Number(e.target.value) || 1))
+                                    }
+                                />
+                                <span className="ui-text-muted">–</span>
+                                <CustomInput
+                                    type="number"
+                                    min={1}
+                                    className="w-16"
+                                    aria-label={t('download-range-to')}
+                                    value={rangeTo}
+                                    onChange={(e) =>
+                                        setRangeTo(Math.max(1, Number(e.target.value) || 1))
+                                    }
+                                />
+                                <CustomButtonSecondary
+                                    onClick={() => {
+                                        downloadRangeMutation.mutate(
+                                            {
+                                                params: { path: { id: podcast.id } },
+                                                body: { from: rangeFrom, to: rangeTo },
+                                            },
+                                            {
+                                                onSuccess: () => {
+                                                    enqueueSnackbar(t('download-range'), { variant: 'success' })
+                                                },
+                                            }
+                                        )
+                                    }}
+                                >
+                                    {t('run')}
+                                </CustomButtonSecondary>
+                            </div>
 
                             <div className="ui-text">
                                 <div>{t('redownload-missing-files')}</div>

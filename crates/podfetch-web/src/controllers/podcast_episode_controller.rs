@@ -433,6 +433,44 @@ pub async fn download_all_missing_episodes(
     Ok(StatusCode::ACCEPTED)
 }
 
+/// Inclusive chronological episode-position range (oldest episode = 1).
+#[derive(serde::Deserialize, utoipa::ToSchema)]
+pub struct DownloadRange {
+    pub from: u32,
+    pub to: u32,
+}
+
+#[utoipa::path(
+post,
+path="/podcasts/{id}/episodes/download-range",
+request_body=DownloadRange,
+responses(
+(status = 202, description = "Queues the missing episodes in the given position range for download.")),
+tag = "podcast_episodes"
+)]
+pub async fn download_episode_range(
+    Extension(requester): Extension<User>,
+    Path(id): Path<String>,
+    Json(range): Json<DownloadRange>,
+) -> Result<StatusCode, CustomError> {
+    web_require_privileged::<CustomError>(requester.is_admin())
+        .map_err(map_podcast_episode_controller_error)?;
+    let podcast_id = resolve_podcast_uuid(&id)?;
+
+    tokio::task::spawn_blocking(move || {
+        let podcast = PodcastService::get_podcast_by_id(podcast_id);
+        if let Err(err) = PodcastEpisodeService::download_episode_range_for_podcast(
+            &podcast,
+            range.from as usize,
+            range.to as usize,
+        ) {
+            tracing::error!("download-range failed for podcast {podcast_id}: {err}");
+        }
+    });
+
+    Ok(StatusCode::ACCEPTED)
+}
+
 #[utoipa::path(
 post,
 path="/podcasts/{id}/episodes/resync-files",
@@ -573,6 +611,7 @@ pub fn get_podcast_episode_router() -> OpenApiRouter<AppState> {
         .routes(routes!(download_podcast_episodes_of_podcast))
         .routes(routes!(delete_podcast_episode_locally))
         .routes(routes!(download_all_missing_episodes))
+        .routes(routes!(download_episode_range))
         .routes(routes!(resync_files_for_podcast))
         .routes(routes!(resync_db_for_podcast))
         .routes(routes!(delete_all_downloaded_files))
@@ -1129,6 +1168,33 @@ mod tests {
 
     #[tokio::test]
     #[serial]
+    async fn test_download_range_returns_accepted() {
+        let server = handle_test_startup().await;
+        let unique = Uuid::new_v4().to_string();
+        let slug = format!("download-range-podcast-{unique}");
+
+        let podcast = crate::services::podcast::service::PodcastService::add_podcast_to_database(
+            &unique_name("Download Range Podcast"),
+            &slug,
+            &format!("https://example.com/{slug}.xml"),
+            "http://localhost:8080/ui/default.jpg",
+            &slug,
+        )
+        .unwrap();
+
+        let response = server
+            .test_server
+            .post(&format!(
+                "/api/v1/podcasts/{}/episodes/download-range",
+                podcast.id
+            ))
+            .json(&json!({ "from": 1, "to": 2 }))
+            .await;
+        assert_eq!(response.status_code(), 202);
+    }
+
+    #[tokio::test]
+    #[serial]
     async fn test_resync_files_returns_accepted() {
         let server = handle_test_startup().await;
         let unique = Uuid::new_v4().to_string();
@@ -1189,6 +1255,17 @@ mod tests {
             match resync_db {
                 Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
                 Ok(_) => panic!("expected forbidden for resync_db_for_podcast"),
+            }
+
+            let download_range = super::download_episode_range(
+                Extension(caller.clone()),
+                Path("1".to_string()),
+                axum::Json(super::DownloadRange { from: 1, to: 5 }),
+            )
+            .await;
+            match download_range {
+                Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+                Ok(_) => panic!("expected forbidden for download_episode_range"),
             }
 
             let delete_all =
