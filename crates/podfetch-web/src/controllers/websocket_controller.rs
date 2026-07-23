@@ -343,6 +343,12 @@ fn get_podcast_items_rss(
                 .pub_date(Some(episode.date_of_recording.to_string()))
                 .title(Some(episode.name.to_string()))
                 .description(Some(episode.description.to_string()))
+                // Without a <link> readers fall back to showing the opaque guid;
+                // point it at the episode's page in the podfetch UI (#2055).
+                .link(Some(format!(
+                    "{server_url}ui/podcasts/{}/episodes",
+                    episode.podcast_id
+                )))
                 .enclosure(Some(enclosure))
                 .itunes_ext(itunes_extension)
                 .source(source)
