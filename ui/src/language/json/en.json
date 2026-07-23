@@ -59,6 +59,8 @@
   "max-parallel-downloads-explanation": "How many episodes are downloaded at the same time (minimum 1, default 3). Because Opus transcoding runs as part of each download, this also limits how many episodes are transcoded simultaneously — lower it on a slow CPU.",
   "use-one-cover-for-all-episodes": "Use one cover for all episodes",
   "use-one-cover-for-all-episodes-explanation": "When enabled, do not download a separate cover image for each episode. The shared podcast directory cover (image.jpg) will be used instead, saving disk space.",
+  "nfo-format": "NFO format",
+  "cover-filename": "Cover filename",
   "rescan-audio-files": "Rescan audio files",
   "rescan-audio-files-description": "PodFetch rescans all audio files to update chapter metadata. Optionally, re-apply the current settings to already-downloaded episodes by ticking the boxes below.",
   "rescan-option-applyFilenames": "Re-apply filename and directory format",
