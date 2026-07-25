@@ -331,6 +331,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
+name = "base64"
+version = "0.23.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b25655df2c3cdd83c5e5b293b88acd880332b2ddadd7c30ac43144fdc0033da9"
+
+[[package]]
 name = "base64ct"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -616,7 +622,7 @@ name = "common-infrastructure"
 version = "0.1.0"
 dependencies = [
  "axum",
- "base64 0.22.1",
+ "base64 0.23.0",
  "chrono",
  "diesel",
  "frankenstein",
@@ -3222,7 +3228,7 @@ dependencies = [
  "axum",
  "axum-extra",
  "axum-test",
- "base64 0.22.1",
+ "base64 0.23.0",
  "bollard",
  "chrono",
  "clokwerk",
