@@ -10,7 +10,7 @@ use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::http::get_async_sync_client;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
-use jsonwebtoken::jwk::{JwkSet, KeyAlgorithm};
+use jsonwebtoken::jwk::JwkSet;
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
 use podfetch_domain::user::User;
 use serde_json::Value;
@@ -108,27 +108,6 @@ async fn handle_auth_internal(
     }
 }
 
-fn from_key_alg_into_alg(value: KeyAlgorithm) -> Algorithm {
-    match value {
-        KeyAlgorithm::RS256 => Algorithm::RS256,
-        KeyAlgorithm::RS384 => Algorithm::RS384,
-        KeyAlgorithm::RS512 => Algorithm::RS512,
-        KeyAlgorithm::ES256 => Algorithm::ES256,
-        KeyAlgorithm::ES384 => Algorithm::ES384,
-        KeyAlgorithm::PS256 => Algorithm::PS256,
-        KeyAlgorithm::PS384 => Algorithm::PS384,
-        KeyAlgorithm::PS512 => Algorithm::PS512,
-        KeyAlgorithm::HS256 => Algorithm::HS256,
-        KeyAlgorithm::HS384 => Algorithm::HS384,
-        KeyAlgorithm::HS512 => Algorithm::HS512,
-        KeyAlgorithm::EdDSA => Algorithm::EdDSA,
-        KeyAlgorithm::RSA1_5 => Algorithm::ES256,
-        KeyAlgorithm::RSA_OAEP => Algorithm::RS256,
-        KeyAlgorithm::RSA_OAEP_256 => Algorithm::RS256,
-        KeyAlgorithm::UNKNOWN_ALGORITHM => Algorithm::ES256,
-    }
-}
-
 impl AuthFilter {
     fn map_auth_error(error: AuthControllerError<CustomError>) -> CustomError {
         match error {
@@ -217,8 +196,18 @@ impl AuthFilter {
         }?;
 
         let key = DecodingKey::from_jwk(first_jwk).unwrap();
-        let alg = first_jwk.common.key_algorithm.unwrap();
-        let mut validation = Validation::new(from_key_alg_into_alg(alg));
+        let alg = match first_jwk
+            .common
+            .key_algorithm
+            .and_then(|alg| Algorithm::try_from(alg).ok())
+        {
+            Some(alg) => Ok(alg),
+            None => {
+                tracing::error!("JWK has no supported signing algorithm");
+                Err(CustomError::from(CustomErrorInner::Forbidden(Warning)))
+            }
+        }?;
+        let mut validation = Validation::new(alg);
         let mut aud_hashset = HashSet::new();
         aud_hashset.insert(
             environment
