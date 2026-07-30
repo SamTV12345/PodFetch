@@ -215,7 +215,8 @@ export const TagsPage = ()=>{
                     onChange={(event) => setNewTagName(event.target.value)}
                     placeholder={t('tag-add-placeholder') as string}
                     onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
+                        // Enter also confirms an IME composition — don't treat that as submit
+                        if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
                             createTag()
                         }
                     }}
@@ -260,7 +261,7 @@ export const TagsPage = ()=>{
                                     value={draft.name}
                                     onChange={(event) => updateTagDraft(tag.id, {name: event.target.value})}
                                     onKeyDown={(event) => {
-                                        if (event.key === 'Enter' && !saveDisabled) {
+                                        if (event.key === 'Enter' && !event.nativeEvent.isComposing && !saveDisabled) {
                                             saveTag(tag)
                                         }
                                     }}

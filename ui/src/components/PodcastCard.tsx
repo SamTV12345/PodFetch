@@ -228,7 +228,8 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                                     setNewTag(event.target.value)
                                 }}
                                 onKeyDown={(event) => {
-                                    if (event.key === 'Enter') {
+                                    // Enter also confirms an IME composition — don't treat that as submit
+                                    if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
                                         createAndAssignTag()
                                     }
                                 }}
