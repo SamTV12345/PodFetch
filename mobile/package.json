@@ -51,7 +51,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-i18next": "^17.0.11",
-    "react-native": "0.86.0",
+    "react-native": "0.86.2",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-progress": "^5.0.1",
     "react-native-progress-circle": "^2.1.0",
