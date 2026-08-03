@@ -218,8 +218,8 @@ impl TagRepository for DieselTagRepository {
         diesel::delete(
             tags_podcasts::table.filter(tags_podcasts_dsl::podcast_id.eq(podcast_id.to_string())),
         )
-            .execute(&mut self.database.connection()?)
-            .map(|_| ())
-            .map_err(Into::into)
+        .execute(&mut self.database.connection()?)
+        .map(|_| ())
+        .map_err(Into::into)
     }
 }

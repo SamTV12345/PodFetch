@@ -134,7 +134,6 @@ pub struct PodcastDto {
     pub tags: Vec<Tag>,
 }
 
-
 pub fn map_podcast_to_dto(value: Podcast, server_url: &str) -> PodcastDto {
     let image_url = resolve_image_url(&value.image_url, server_url);
     let keywords = dedupe_keywords(value.keywords.clone());
@@ -232,8 +231,8 @@ fn build_podfetch_feed(podcast_id: Uuid, api_key: Option<&str>, server_url: &str
         return path;
     }
     let base = crate::url_rewriting::normalize_server_url(server_url);
-    let mut url = url::Url::parse(&format!("{base}rss"))
-        .expect("server_url must be a valid base URL");
+    let mut url =
+        url::Url::parse(&format!("{base}rss")).expect("server_url must be a valid base URL");
     url.path_segments_mut()
         .expect("rss feed base URL must be a hierarchical scheme")
         .push(&podcast_id.to_string());

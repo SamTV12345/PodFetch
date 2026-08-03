@@ -64,16 +64,32 @@ pub trait PodcastEpisodeTranscriptRepository: Send + Sync {
     type Error;
     /// Upsert keyed on (episode_id, original_url); returns the row's id.
     fn upsert(&self, transcript: UpsertTranscript) -> Result<Uuid, Self::Error>;
-    fn get_by_episode_id(&self, episode_id: Uuid) -> Result<Vec<PodcastEpisodeTranscript>, Self::Error>;
+    fn get_by_episode_id(
+        &self,
+        episode_id: Uuid,
+    ) -> Result<Vec<PodcastEpisodeTranscript>, Self::Error>;
     /// Every transcript row across all episodes. Used by `reparse_all`, which
     /// needs to walk the whole table rather than a single episode's rows.
     fn get_all(&self) -> Result<Vec<PodcastEpisodeTranscript>, Self::Error>;
     fn get_by_id(&self, id: Uuid) -> Result<Option<PodcastEpisodeTranscript>, Self::Error>;
     fn set_file_path(&self, id: Uuid, file_path: &str) -> Result<(), Self::Error>;
-    fn set_status(&self, id: Uuid, status: TranscriptStatus, error: Option<&str>) -> Result<(), Self::Error>;
-    fn set_preferred(&self, episode_id: Uuid, preferred_id: Option<Uuid>) -> Result<(), Self::Error>;
+    fn set_status(
+        &self,
+        id: Uuid,
+        status: TranscriptStatus,
+        error: Option<&str>,
+    ) -> Result<(), Self::Error>;
+    fn set_preferred(
+        &self,
+        episode_id: Uuid,
+        preferred_id: Option<Uuid>,
+    ) -> Result<(), Self::Error>;
     /// Deletes the transcript's old segments and inserts the new ones in one transaction.
-    fn replace_segments(&self, transcript_id: Uuid, segments: &[TranscriptSegment]) -> Result<(), Self::Error>;
+    fn replace_segments(
+        &self,
+        transcript_id: Uuid,
+        segments: &[TranscriptSegment],
+    ) -> Result<(), Self::Error>;
     fn get_segments(&self, transcript_id: Uuid) -> Result<Vec<TranscriptSegment>, Self::Error>;
     fn search(
         &self,
@@ -106,7 +122,12 @@ pub trait TranscriptionJobRepository: Send + Sync {
     /// Enqueues a job; returns Ok(None) if one already exists for the episode (UNIQUE).
     fn enqueue(&self, episode_id: Uuid) -> Result<Option<TranscriptionJob>, Self::Error>;
     fn next_pending(&self) -> Result<Option<TranscriptionJob>, Self::Error>;
-    fn set_status(&self, id: Uuid, status: TranscriptionJobStatus, error: Option<&str>) -> Result<(), Self::Error>;
+    fn set_status(
+        &self,
+        id: Uuid,
+        status: TranscriptionJobStatus,
+        error: Option<&str>,
+    ) -> Result<(), Self::Error>;
     fn increment_attempts(&self, id: Uuid) -> Result<i32, Self::Error>;
     fn reset_running_to_pending(&self) -> Result<usize, Self::Error>;
     fn get_by_episode_id(&self, episode_id: Uuid) -> Result<Option<TranscriptionJob>, Self::Error>;
@@ -188,8 +209,14 @@ mod tests {
 
     #[test]
     fn transcript_source_from_str() {
-        assert_eq!(TranscriptSource::from_str("feed"), Some(TranscriptSource::Feed));
-        assert_eq!(TranscriptSource::from_str("generated"), Some(TranscriptSource::Generated));
+        assert_eq!(
+            TranscriptSource::from_str("feed"),
+            Some(TranscriptSource::Feed)
+        );
+        assert_eq!(
+            TranscriptSource::from_str("generated"),
+            Some(TranscriptSource::Generated)
+        );
         assert_eq!(TranscriptSource::from_str("unknown"), None);
     }
 
@@ -211,10 +238,22 @@ mod tests {
 
     #[test]
     fn transcript_status_from_str() {
-        assert_eq!(TranscriptStatus::from_str("pending"), Some(TranscriptStatus::Pending));
-        assert_eq!(TranscriptStatus::from_str("downloaded"), Some(TranscriptStatus::Downloaded));
-        assert_eq!(TranscriptStatus::from_str("parsed"), Some(TranscriptStatus::Parsed));
-        assert_eq!(TranscriptStatus::from_str("failed"), Some(TranscriptStatus::Failed));
+        assert_eq!(
+            TranscriptStatus::from_str("pending"),
+            Some(TranscriptStatus::Pending)
+        );
+        assert_eq!(
+            TranscriptStatus::from_str("downloaded"),
+            Some(TranscriptStatus::Downloaded)
+        );
+        assert_eq!(
+            TranscriptStatus::from_str("parsed"),
+            Some(TranscriptStatus::Parsed)
+        );
+        assert_eq!(
+            TranscriptStatus::from_str("failed"),
+            Some(TranscriptStatus::Failed)
+        );
         assert_eq!(TranscriptStatus::from_str("unknown"), None);
     }
 
@@ -241,10 +280,22 @@ mod tests {
 
     #[test]
     fn transcription_job_status_from_str() {
-        assert_eq!(TranscriptionJobStatus::from_str("pending"), Some(TranscriptionJobStatus::Pending));
-        assert_eq!(TranscriptionJobStatus::from_str("running"), Some(TranscriptionJobStatus::Running));
-        assert_eq!(TranscriptionJobStatus::from_str("done"), Some(TranscriptionJobStatus::Done));
-        assert_eq!(TranscriptionJobStatus::from_str("failed"), Some(TranscriptionJobStatus::Failed));
+        assert_eq!(
+            TranscriptionJobStatus::from_str("pending"),
+            Some(TranscriptionJobStatus::Pending)
+        );
+        assert_eq!(
+            TranscriptionJobStatus::from_str("running"),
+            Some(TranscriptionJobStatus::Running)
+        );
+        assert_eq!(
+            TranscriptionJobStatus::from_str("done"),
+            Some(TranscriptionJobStatus::Done)
+        );
+        assert_eq!(
+            TranscriptionJobStatus::from_str("failed"),
+            Some(TranscriptionJobStatus::Failed)
+        );
         assert_eq!(TranscriptionJobStatus::from_str("unknown"), None);
     }
 
@@ -257,7 +308,10 @@ mod tests {
             TranscriptionJobStatus::Failed,
         ];
         for variant in variants {
-            assert_eq!(TranscriptionJobStatus::from_str(variant.as_str()), Some(variant));
+            assert_eq!(
+                TranscriptionJobStatus::from_str(variant.as_str()),
+                Some(variant)
+            );
         }
     }
 }

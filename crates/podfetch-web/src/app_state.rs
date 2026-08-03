@@ -1,9 +1,6 @@
 use crate::cast::ServerCastOrchestrator;
 use crate::services::agent::dispatcher::AgentDispatcher;
 use crate::services::agent::registry::AgentRegistry;
-use crate::services::mopidy::driver::{MopidyDriver, MopidyEvent};
-use tokio::sync::Mutex as AsyncMutex;
-use tokio::sync::mpsc;
 use crate::services::audiobookshelf::audiobook_scanner::AudiobookScanner;
 use crate::services::audiobookshelf::book_service::AudiobookshelfBookService;
 use crate::services::audiobookshelf::hls_transcoder::HlsTranscoder;
@@ -21,6 +18,7 @@ use crate::services::filter::service::FilterService;
 use crate::services::gpodder_setting::service::GpodderSettingService;
 use crate::services::invite::service::InviteService;
 use crate::services::login::service::LoginService;
+use crate::services::mopidy::driver::{MopidyDriver, MopidyEvent};
 use crate::services::notification::service::NotificationService;
 use crate::services::playlist::service::PlaylistService;
 use crate::services::podcast_episode_chapter::service::PodcastEpisodeChapterService;
@@ -68,6 +66,8 @@ use podfetch_persistence::adapters::TagRepositoryImpl;
 use podfetch_persistence::adapters::TranscriptionJobRepositoryImpl;
 use podfetch_persistence::adapters::UserAdminRepositoryImpl;
 use std::sync::Arc;
+use tokio::sync::Mutex as AsyncMutex;
+use tokio::sync::mpsc;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -187,7 +187,9 @@ impl AppState {
             database.clone(),
         ))));
         let transcript_service = Arc::new(TranscriptService::new(
-            Arc::new(PodcastEpisodeTranscriptRepositoryImpl::new(database.clone())),
+            Arc::new(PodcastEpisodeTranscriptRepositoryImpl::new(
+                database.clone(),
+            )),
             Arc::new(TranscriptionJobRepositoryImpl::new(database.clone())),
         ));
         let watchtime_service = Arc::new(WatchtimeUseCase::new());

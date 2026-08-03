@@ -95,7 +95,13 @@ pub async fn start_cast_session(
     };
     let session = state
         .cast_orchestrator
-        .start(&user, &req.chromecast_uuid, media, Some(episode_uuid), episode_string_id)
+        .start(
+            &user,
+            &req.chromecast_uuid,
+            media,
+            Some(episode_uuid),
+            episode_string_id,
+        )
         .await
         .map_err(CustomError::from)?;
     Ok(Json(CastSessionResponse::from_active(&session)))

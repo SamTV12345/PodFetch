@@ -10,7 +10,9 @@
 //! come back as `Err(CustomError)`.
 
 use common_infrastructure::config::TranscriptionConfig;
-use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
+use common_infrastructure::error::{
+    CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error,
+};
 use podfetch_domain::podcast_episode_transcript::TranscriptSegment;
 use serde::Deserialize;
 use std::path::Path;
@@ -40,7 +42,10 @@ impl WhisperClient {
     /// POSTs the audio file at `audio_path` to the configured Whisper-compatible
     /// endpoint and returns the parsed segments alongside the detected
     /// language (when the server reports one).
-    pub fn transcribe(&self, audio_path: &Path) -> Result<(Vec<TranscriptSegment>, Option<String>), CustomError> {
+    pub fn transcribe(
+        &self,
+        audio_path: &Path,
+    ) -> Result<(Vec<TranscriptSegment>, Option<String>), CustomError> {
         let form = reqwest::blocking::multipart::Form::new()
             .file("file", audio_path)
             .map_err(|err| {
@@ -205,7 +210,8 @@ mod tests {
         let segments = two_segments();
         let vtt = segments_to_vtt(&segments);
 
-        let parsed = parser::parse(TranscriptFormat::Vtt, vtt.as_bytes()).expect("generated vtt must parse");
+        let parsed =
+            parser::parse(TranscriptFormat::Vtt, vtt.as_bytes()).expect("generated vtt must parse");
 
         assert_eq!(parsed.len(), segments.len());
         for (original, reparsed) in segments.iter().zip(parsed.iter()) {
@@ -302,7 +308,9 @@ mod tests {
         }
 
         {
-            let mut captured = state.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+            let mut captured = state
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
             captured.authorization = authorization;
             captured.model = model;
             captured.saw_file_field = saw_file_field;
@@ -316,9 +324,13 @@ mod tests {
     }
 
     fn temp_audio_file() -> std::path::PathBuf {
-        let path = std::env::temp_dir().join(format!("podfetch-whisper-test-{}.mp3", uuid::Uuid::new_v4()));
+        let path = std::env::temp_dir().join(format!(
+            "podfetch-whisper-test-{}.mp3",
+            uuid::Uuid::new_v4()
+        ));
         let mut file = std::fs::File::create(&path).expect("create temp audio file");
-        file.write_all(b"fake-audio-bytes").expect("write temp audio file");
+        file.write_all(b"fake-audio-bytes")
+            .expect("write temp audio file");
         path
     }
 
@@ -338,7 +350,9 @@ mod tests {
         let client = WhisperClient::new(config);
         let audio_path = temp_audio_file();
 
-        let (segments, language) = client.transcribe(&audio_path).expect("transcribe must succeed");
+        let (segments, language) = client
+            .transcribe(&audio_path)
+            .expect("transcribe must succeed");
 
         assert_eq!(language.as_deref(), Some("english"));
         assert_eq!(segments.len(), 2);
@@ -359,7 +373,10 @@ mod tests {
             "Authorization header must be sent when api_key is configured"
         );
         assert_eq!(captured.model.as_deref(), Some("whisper-1"));
-        assert!(captured.saw_file_field, "the audio file must be uploaded as a multipart field");
+        assert!(
+            captured.saw_file_field,
+            "the audio file must be uploaded as a multipart field"
+        );
 
         let _ = std::fs::remove_file(&audio_path);
     }
@@ -380,7 +397,9 @@ mod tests {
         let client = WhisperClient::new(config);
         let audio_path = temp_audio_file();
 
-        let (segments, _language) = client.transcribe(&audio_path).expect("transcribe must succeed");
+        let (segments, _language) = client
+            .transcribe(&audio_path)
+            .expect("transcribe must succeed");
         assert_eq!(segments.len(), 2);
 
         let captured = captured.lock().unwrap();
@@ -409,7 +428,10 @@ mod tests {
         let audio_path = temp_audio_file();
 
         let result = client.transcribe(&audio_path);
-        assert!(result.is_err(), "a 500 response must yield an Err, never a panic");
+        assert!(
+            result.is_err(),
+            "a 500 response must yield an Err, never a panic"
+        );
 
         let _ = std::fs::remove_file(&audio_path);
     }
@@ -437,7 +459,10 @@ mod tests {
         let audio_path = temp_audio_file();
 
         let result = client.transcribe(&audio_path);
-        assert!(result.is_err(), "malformed json must yield an Err, never a panic");
+        assert!(
+            result.is_err(),
+            "malformed json must yield an Err, never a panic"
+        );
 
         let _ = std::fs::remove_file(&audio_path);
     }

@@ -123,7 +123,9 @@ mod tests {
         let ok = parse_response(json!({"jsonrpc":"2.0","id":1,"result":"playing"})).unwrap();
         assert_eq!(ok, json!("playing"));
 
-        let err = parse_response(json!({"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"nope"}}));
+        let err = parse_response(
+            json!({"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"nope"}}),
+        );
         match err {
             Err(MopidyRpcError::Rpc { code, message }) => {
                 assert_eq!(code, -32601);

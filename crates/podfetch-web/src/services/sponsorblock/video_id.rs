@@ -61,7 +61,11 @@ fn parse_video_id(input: &str) -> Option<String> {
 /// A YouTube video ID is exactly 11 chars of [A-Za-z0-9_-].
 fn valid_id(candidate: &str) -> Option<String> {
     let id = candidate.trim();
-    if id.len() == 11 && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-') {
+    if id.len() == 11
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+    {
         Some(id.to_string())
     } else {
         None
@@ -75,7 +79,11 @@ mod tests {
     #[test]
     fn watch_url_in_link() {
         assert_eq!(
-            extract_youtube_video_id(Some("https://www.youtube.com/watch?v=dQw4w9WgXcQ"), None, None),
+            extract_youtube_video_id(
+                Some("https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
+                None,
+                None
+            ),
             Some("dQw4w9WgXcQ".to_string())
         );
     }
@@ -91,7 +99,11 @@ mod tests {
     #[test]
     fn embed_url() {
         assert_eq!(
-            extract_youtube_video_id(Some("https://www.youtube.com/embed/dQw4w9WgXcQ"), None, None),
+            extract_youtube_video_id(
+                Some("https://www.youtube.com/embed/dQw4w9WgXcQ"),
+                None,
+                None
+            ),
             Some("dQw4w9WgXcQ".to_string())
         );
     }
@@ -99,7 +111,11 @@ mod tests {
     #[test]
     fn music_youtube_url() {
         assert_eq!(
-            extract_youtube_video_id(Some("https://music.youtube.com/watch?v=dQw4w9WgXcQ"), None, None),
+            extract_youtube_video_id(
+                Some("https://music.youtube.com/watch?v=dQw4w9WgXcQ"),
+                None,
+                None
+            ),
             Some("dQw4w9WgXcQ".to_string())
         );
     }
@@ -139,8 +155,14 @@ mod tests {
     #[test]
     fn malformed_id_returns_none() {
         // Too short.
-        assert_eq!(extract_youtube_video_id(Some("https://youtu.be/abc"), None, None), None);
+        assert_eq!(
+            extract_youtube_video_id(Some("https://youtu.be/abc"), None, None),
+            None
+        );
         // Wrong characters.
-        assert_eq!(extract_youtube_video_id(None, Some("yt:video:dQw4w9WgX!Q"), None), None);
+        assert_eq!(
+            extract_youtube_video_id(None, Some("yt:video:dQw4w9WgX!Q"), None),
+            None
+        );
     }
 }

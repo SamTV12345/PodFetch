@@ -24,6 +24,9 @@ pub trait ListeningSessionRepository: Send + Sync {
     type Error;
 
     fn create(&self, session: ListeningSession) -> Result<ListeningSession, Self::Error>;
-    fn list_for_user(&self, user_id: Uuid, limit: i64)
-    -> Result<Vec<ListeningSession>, Self::Error>;
+    fn list_for_user(
+        &self,
+        user_id: Uuid,
+        limit: i64,
+    ) -> Result<Vec<ListeningSession>, Self::Error>;
 }

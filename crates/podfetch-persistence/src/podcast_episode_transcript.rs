@@ -1,4 +1,4 @@
-use crate::db::{Database, DBType, PersistenceError};
+use crate::db::{DBType, Database, PersistenceError};
 use chrono::NaiveDateTime;
 use diesel::prelude::{Insertable, Queryable, Selectable};
 use diesel::sql_types::{BigInt, Double, Integer, Nullable, Text};
@@ -6,8 +6,8 @@ use diesel::{
     Connection, ExpressionMethods, OptionalExtension, QueryDsl, QueryableByName, RunQueryDsl,
 };
 use podfetch_domain::podcast_episode_transcript::{
-    PodcastEpisodeTranscript, PodcastEpisodeTranscriptRepository, TranscriptSegment,
-    TranscriptSearchHit, TranscriptSource, TranscriptStatus, TranscriptionJob,
+    PodcastEpisodeTranscript, PodcastEpisodeTranscriptRepository, TranscriptSearchHit,
+    TranscriptSegment, TranscriptSource, TranscriptStatus, TranscriptionJob,
     TranscriptionJobRepository, TranscriptionJobStatus, UpsertTranscript,
 };
 use std::ops::DerefMut;
@@ -300,7 +300,9 @@ impl PodcastEpisodeTranscriptRepository for DieselPodcastEpisodeTranscriptReposi
                         created_at: now,
                         updated_at: now,
                     };
-                    diesel::insert_into(pet_table).values(entity).execute(conn)?;
+                    diesel::insert_into(pet_table)
+                        .values(entity)
+                        .execute(conn)?;
                     Ok(id)
                 }
             }
@@ -308,7 +310,10 @@ impl PodcastEpisodeTranscriptRepository for DieselPodcastEpisodeTranscriptReposi
         .map_err(Into::into)
     }
 
-    fn get_by_episode_id(&self, episode_id: Uuid) -> Result<Vec<PodcastEpisodeTranscript>, Self::Error> {
+    fn get_by_episode_id(
+        &self,
+        episode_id: Uuid,
+    ) -> Result<Vec<PodcastEpisodeTranscript>, Self::Error> {
         use self::podcast_episode_transcripts::dsl as pet_dsl;
         use self::podcast_episode_transcripts::table as pet_table;
 
@@ -354,7 +359,12 @@ impl PodcastEpisodeTranscriptRepository for DieselPodcastEpisodeTranscriptReposi
             .map_err(Into::into)
     }
 
-    fn set_status(&self, id: Uuid, status: TranscriptStatus, error: Option<&str>) -> Result<(), Self::Error> {
+    fn set_status(
+        &self,
+        id: Uuid,
+        status: TranscriptStatus,
+        error: Option<&str>,
+    ) -> Result<(), Self::Error> {
         use self::podcast_episode_transcripts::dsl as pet_dsl;
         use self::podcast_episode_transcripts::table as pet_table;
 
@@ -370,7 +380,11 @@ impl PodcastEpisodeTranscriptRepository for DieselPodcastEpisodeTranscriptReposi
             .map_err(Into::into)
     }
 
-    fn set_preferred(&self, episode_id: Uuid, preferred_id: Option<Uuid>) -> Result<(), Self::Error> {
+    fn set_preferred(
+        &self,
+        episode_id: Uuid,
+        preferred_id: Option<Uuid>,
+    ) -> Result<(), Self::Error> {
         use self::podcast_episode_transcripts::dsl as pet_dsl;
         use self::podcast_episode_transcripts::table as pet_table;
 
@@ -394,7 +408,11 @@ impl PodcastEpisodeTranscriptRepository for DieselPodcastEpisodeTranscriptReposi
         .map_err(Into::into)
     }
 
-    fn replace_segments(&self, transcript_id: Uuid, segments: &[TranscriptSegment]) -> Result<(), Self::Error> {
+    fn replace_segments(
+        &self,
+        transcript_id: Uuid,
+        segments: &[TranscriptSegment],
+    ) -> Result<(), Self::Error> {
         use self::podcast_episode_transcript_segments::dsl as seg_dsl;
         use self::podcast_episode_transcript_segments::table as seg_table;
 
@@ -417,7 +435,9 @@ impl PodcastEpisodeTranscriptRepository for DieselPodcastEpisodeTranscriptReposi
             diesel::delete(seg_table.filter(seg_dsl::transcript_id.eq(transcript_id_str.clone())))
                 .execute(conn)?;
             for entity in &entities {
-                diesel::insert_into(seg_table).values(entity).execute(conn)?;
+                diesel::insert_into(seg_table)
+                    .values(entity)
+                    .execute(conn)?;
             }
             Ok(())
         })
@@ -599,7 +619,12 @@ impl TranscriptionJobRepository for DieselTranscriptionJobRepository {
             .map_err(Into::into)
     }
 
-    fn set_status(&self, id: Uuid, status: TranscriptionJobStatus, error: Option<&str>) -> Result<(), Self::Error> {
+    fn set_status(
+        &self,
+        id: Uuid,
+        status: TranscriptionJobStatus,
+        error: Option<&str>,
+    ) -> Result<(), Self::Error> {
         use self::transcription_jobs::dsl as tj_dsl;
         use self::transcription_jobs::table as tj_table;
 
@@ -642,15 +667,13 @@ impl TranscriptionJobRepository for DieselTranscriptionJobRepository {
         use self::transcription_jobs::table as tj_table;
 
         let now = chrono::Utc::now().naive_utc();
-        diesel::update(
-            tj_table.filter(tj_dsl::status.eq(TranscriptionJobStatus::Running.as_str())),
-        )
-        .set((
-            tj_dsl::status.eq(TranscriptionJobStatus::Pending.as_str()),
-            tj_dsl::updated_at.eq(now),
-        ))
-        .execute(&mut self.database.connection()?)
-        .map_err(Into::into)
+        diesel::update(tj_table.filter(tj_dsl::status.eq(TranscriptionJobStatus::Running.as_str())))
+            .set((
+                tj_dsl::status.eq(TranscriptionJobStatus::Pending.as_str()),
+                tj_dsl::updated_at.eq(now),
+            ))
+            .execute(&mut self.database.connection()?)
+            .map_err(Into::into)
     }
 
     fn get_by_episode_id(&self, episode_id: Uuid) -> Result<Option<TranscriptionJob>, Self::Error> {
@@ -807,7 +830,9 @@ mod tests {
     fn clear_transcription_jobs() {
         use self::transcription_jobs::table as tj_table;
         let mut conn = database().connection().expect("db connection");
-        diesel::delete(tj_table).execute(&mut conn).expect("clear transcription_jobs");
+        diesel::delete(tj_table)
+            .execute(&mut conn)
+            .expect("clear transcription_jobs");
     }
 
     /// Same run-order hazard as `clear_transcription_jobs`, but for the
@@ -820,8 +845,12 @@ mod tests {
         use self::podcast_episode_transcript_segments::table as seg_table;
         use self::podcast_episode_transcripts::table as t_table;
         let mut conn = database().connection().expect("db connection");
-        diesel::delete(seg_table).execute(&mut conn).expect("clear segments");
-        diesel::delete(t_table).execute(&mut conn).expect("clear transcripts");
+        diesel::delete(seg_table)
+            .execute(&mut conn)
+            .expect("clear segments");
+        diesel::delete(t_table)
+            .execute(&mut conn)
+            .expect("clear transcripts");
     }
 
     fn make_segment(idx: i32, text: &str) -> TranscriptSegment {
@@ -844,13 +873,22 @@ mod tests {
         let episode_id = seed_episode(&podcast_id);
 
         let id1 = repo
-            .upsert(upsert_transcript(episode_id, Some("https://example.com/t.vtt")))
+            .upsert(upsert_transcript(
+                episode_id,
+                Some("https://example.com/t.vtt"),
+            ))
             .expect("first upsert");
         let id2 = repo
-            .upsert(upsert_transcript(episode_id, Some("https://example.com/t.vtt")))
+            .upsert(upsert_transcript(
+                episode_id,
+                Some("https://example.com/t.vtt"),
+            ))
             .expect("second upsert");
 
-        assert_eq!(id1, id2, "upsert should return the same id for the same key");
+        assert_eq!(
+            id1, id2,
+            "upsert should return the same id for the same key"
+        );
 
         let rows = repo.get_by_episode_id(episode_id).expect("get rows");
         assert_eq!(rows.len(), 1, "expected exactly one transcript row");
@@ -894,10 +932,17 @@ mod tests {
         let id2 = repo
             .upsert(upsert_transcript(episode_id, None))
             .expect("second upsert");
-        assert_eq!(id1, id2, "upsert must stay idempotent for generated transcripts");
+        assert_eq!(
+            id1, id2,
+            "upsert must stay idempotent for generated transcripts"
+        );
 
         let rows = repo.get_by_episode_id(episode_id).expect("get rows");
-        assert_eq!(rows.len(), 1, "expected exactly one generated transcript row");
+        assert_eq!(
+            rows.len(),
+            1,
+            "expected exactly one generated transcript row"
+        );
 
         // Bypass the repo's SELECT-then-INSERT logic entirely and try to
         // insert a second generated-source row directly. This is the
@@ -932,7 +977,11 @@ mod tests {
 
         // Still exactly one row after the rejected insert attempt.
         let rows = repo.get_by_episode_id(episode_id).expect("get rows");
-        assert_eq!(rows.len(), 1, "duplicate generated row must not have been inserted");
+        assert_eq!(
+            rows.len(),
+            1,
+            "duplicate generated row must not have been inserted"
+        );
     }
 
     #[test]
@@ -943,21 +992,30 @@ mod tests {
         let episode_id = seed_episode(&podcast_id);
 
         let id = repo
-            .upsert(upsert_transcript(episode_id, Some("https://example.com/a.vtt")))
+            .upsert(upsert_transcript(
+                episode_id,
+                Some("https://example.com/a.vtt"),
+            ))
             .expect("upsert");
 
         let fetched = repo.get_by_id(id).expect("get_by_id").expect("row exists");
         assert_eq!(fetched.status, TranscriptStatus::Pending);
         assert_eq!(fetched.file_path, None);
 
-        repo.set_file_path(id, "/data/transcripts/a.vtt").expect("set_file_path");
-        repo.set_status(id, TranscriptStatus::Downloaded, None).expect("set_status");
+        repo.set_file_path(id, "/data/transcripts/a.vtt")
+            .expect("set_file_path");
+        repo.set_status(id, TranscriptStatus::Downloaded, None)
+            .expect("set_status");
 
         let updated = repo.get_by_id(id).expect("get_by_id").expect("row exists");
-        assert_eq!(updated.file_path, Some("/data/transcripts/a.vtt".to_string()));
+        assert_eq!(
+            updated.file_path,
+            Some("/data/transcripts/a.vtt".to_string())
+        );
         assert_eq!(updated.status, TranscriptStatus::Downloaded);
 
-        repo.set_status(id, TranscriptStatus::Failed, Some("boom")).expect("set_status failed");
+        repo.set_status(id, TranscriptStatus::Failed, Some("boom"))
+            .expect("set_status failed");
         let failed = repo.get_by_id(id).expect("get_by_id").expect("row exists");
         assert_eq!(failed.status, TranscriptStatus::Failed);
         assert_eq!(failed.error, Some("boom".to_string()));
@@ -972,10 +1030,16 @@ mod tests {
         let episode_b = seed_episode(&podcast_id);
 
         let id_a = repo
-            .upsert(upsert_transcript(episode_a, Some("https://example.com/get-all-a.vtt")))
+            .upsert(upsert_transcript(
+                episode_a,
+                Some("https://example.com/get-all-a.vtt"),
+            ))
             .expect("upsert a");
         let id_b = repo
-            .upsert(upsert_transcript(episode_b, Some("https://example.com/get-all-b.vtt")))
+            .upsert(upsert_transcript(
+                episode_b,
+                Some("https://example.com/get-all-b.vtt"),
+            ))
             .expect("upsert b");
 
         // The shared test DB isn't truncated between tests in this module, so
@@ -1002,27 +1066,36 @@ mod tests {
         let episode_id = seed_episode(&podcast_id);
 
         let id1 = repo
-            .upsert(upsert_transcript(episode_id, Some("https://example.com/1.vtt")))
+            .upsert(upsert_transcript(
+                episode_id,
+                Some("https://example.com/1.vtt"),
+            ))
             .expect("upsert 1");
         let id2 = repo
-            .upsert(upsert_transcript(episode_id, Some("https://example.com/2.vtt")))
+            .upsert(upsert_transcript(
+                episode_id,
+                Some("https://example.com/2.vtt"),
+            ))
             .expect("upsert 2");
 
-        repo.set_preferred(episode_id, Some(id1)).expect("set preferred 1");
+        repo.set_preferred(episode_id, Some(id1))
+            .expect("set preferred 1");
         let rows = repo.get_by_episode_id(episode_id).expect("get rows");
         let row1 = rows.iter().find(|r| r.id == id1).unwrap();
         let row2 = rows.iter().find(|r| r.id == id2).unwrap();
         assert!(row1.is_preferred);
         assert!(!row2.is_preferred);
 
-        repo.set_preferred(episode_id, Some(id2)).expect("set preferred 2");
+        repo.set_preferred(episode_id, Some(id2))
+            .expect("set preferred 2");
         let rows = repo.get_by_episode_id(episode_id).expect("get rows");
         let row1 = rows.iter().find(|r| r.id == id1).unwrap();
         let row2 = rows.iter().find(|r| r.id == id2).unwrap();
         assert!(!row1.is_preferred, "previous preferred should be cleared");
         assert!(row2.is_preferred);
 
-        repo.set_preferred(episode_id, None).expect("clear preferred");
+        repo.set_preferred(episode_id, None)
+            .expect("clear preferred");
         let rows = repo.get_by_episode_id(episode_id).expect("get rows");
         assert!(rows.iter().all(|r| !r.is_preferred));
     }
@@ -1034,7 +1107,10 @@ mod tests {
         let podcast_id = seed_podcast();
         let episode_id = seed_episode(&podcast_id);
         let transcript_id = repo
-            .upsert(upsert_transcript(episode_id, Some("https://example.com/seg.vtt")))
+            .upsert(upsert_transcript(
+                episode_id,
+                Some("https://example.com/seg.vtt"),
+            ))
             .expect("upsert");
 
         let three = vec![
@@ -1042,7 +1118,8 @@ mod tests {
             make_segment(0, "first"),
             make_segment(1, "second"),
         ];
-        repo.replace_segments(transcript_id, &three).expect("replace 3");
+        repo.replace_segments(transcript_id, &three)
+            .expect("replace 3");
 
         let segments = repo.get_segments(transcript_id).expect("get segments");
         assert_eq!(segments.len(), 3);
@@ -1050,10 +1127,16 @@ mod tests {
         assert_eq!(segments[1].idx, 1);
         assert_eq!(segments[2].idx, 2);
 
-        let two = vec![make_segment(0, "only-first"), make_segment(1, "only-second")];
-        repo.replace_segments(transcript_id, &two).expect("replace 2");
+        let two = vec![
+            make_segment(0, "only-first"),
+            make_segment(1, "only-second"),
+        ];
+        repo.replace_segments(transcript_id, &two)
+            .expect("replace 2");
 
-        let segments = repo.get_segments(transcript_id).expect("get segments after replace");
+        let segments = repo
+            .get_segments(transcript_id)
+            .expect("get segments after replace");
         assert_eq!(segments.len(), 2, "old segments must be gone");
         assert_eq!(segments[0].text, "only-first");
         assert_eq!(segments[1].text, "only-second");
@@ -1068,7 +1151,10 @@ mod tests {
         let podcast_id = seed_podcast();
         let episode_id = seed_episode(&podcast_id);
         let transcript_id = repo
-            .upsert(upsert_transcript(episode_id, Some("https://example.com/search-a.vtt")))
+            .upsert(upsert_transcript(
+                episode_id,
+                Some("https://example.com/search-a.vtt"),
+            ))
             .expect("upsert transcript a");
         repo.replace_segments(
             transcript_id,
@@ -1097,7 +1183,10 @@ mod tests {
         let other_podcast_id = seed_podcast();
         let other_episode_id = seed_episode(&other_podcast_id);
         let other_transcript_id = repo
-            .upsert(upsert_transcript(other_episode_id, Some("https://example.com/search-b.vtt")))
+            .upsert(upsert_transcript(
+                other_episode_id,
+                Some("https://example.com/search-b.vtt"),
+            ))
             .expect("upsert transcript b");
         repo.replace_segments(
             other_transcript_id,
@@ -1157,7 +1246,10 @@ mod tests {
         let podcast_id = seed_podcast();
         let episode_id = seed_episode(&podcast_id);
         let transcript_id = repo
-            .upsert(upsert_transcript(episode_id, Some("https://example.com/search-empty.vtt")))
+            .upsert(upsert_transcript(
+                episode_id,
+                Some("https://example.com/search-empty.vtt"),
+            ))
             .expect("upsert transcript");
         repo.replace_segments(
             transcript_id,
@@ -1171,13 +1263,18 @@ mod tests {
             "sanity check: a real query must match the seeded segment"
         );
 
-        let empty = repo.search("", None, 0, 20).expect("empty query search must not error");
+        let empty = repo
+            .search("", None, 0, 20)
+            .expect("empty query search must not error");
         assert!(empty.is_empty(), "empty query must return no hits");
 
         let whitespace = repo
             .search("   ", None, 0, 20)
             .expect("whitespace-only query search must not error");
-        assert!(whitespace.is_empty(), "whitespace-only query must return no hits");
+        assert!(
+            whitespace.is_empty(),
+            "whitespace-only query must return no hits"
+        );
     }
 
     #[test]
@@ -1189,7 +1286,10 @@ mod tests {
         let podcast_id = seed_podcast();
         let episode_id = seed_episode(&podcast_id);
         let transcript_id = repo
-            .upsert(upsert_transcript(episode_id, Some("https://example.com/search-c.vtt")))
+            .upsert(upsert_transcript(
+                episode_id,
+                Some("https://example.com/search-c.vtt"),
+            ))
             .expect("upsert transcript c");
         repo.replace_segments(
             transcript_id,
@@ -1227,13 +1327,22 @@ mod tests {
 
     #[test]
     fn sanitize_sqlite_match_query_strips_quotes() {
-        assert_eq!(sanitize_sqlite_match_query(r#"say "hi""#), "\"say\"* \"hi\"*");
-        assert_eq!(sanitize_sqlite_match_query("\"\"\"quoted\"\"\""), "\"quoted\"*");
+        assert_eq!(
+            sanitize_sqlite_match_query(r#"say "hi""#),
+            "\"say\"* \"hi\"*"
+        );
+        assert_eq!(
+            sanitize_sqlite_match_query("\"\"\"quoted\"\"\""),
+            "\"quoted\"*"
+        );
     }
 
     #[test]
     fn sanitize_sqlite_match_query_joins_multiple_words_as_prefix_terms() {
-        assert_eq!(sanitize_sqlite_match_query("quick fox"), "\"quick\"* \"fox\"*");
+        assert_eq!(
+            sanitize_sqlite_match_query("quick fox"),
+            "\"quick\"* \"fox\"*"
+        );
         assert_eq!(sanitize_sqlite_match_query("one"), "\"one\"*");
     }
 
@@ -1254,7 +1363,10 @@ mod tests {
         assert_eq!(job.status, TranscriptionJobStatus::Pending);
         assert_eq!(job.attempts, 0);
 
-        let pending = repo.next_pending().expect("next_pending").expect("job pending");
+        let pending = repo
+            .next_pending()
+            .expect("next_pending")
+            .expect("job pending");
         assert_eq!(pending.id, job.id);
 
         repo.set_status(job.id, TranscriptionJobStatus::Running, None)
@@ -1297,7 +1409,10 @@ mod tests {
             .enqueue(episode_id)
             .expect("re-enqueue")
             .expect("a failed job must be re-enqueued, not rejected");
-        assert_eq!(retried.id, job.id, "the existing row is reset, not duplicated");
+        assert_eq!(
+            retried.id, job.id,
+            "the existing row is reset, not duplicated"
+        );
         assert_eq!(retried.status, TranscriptionJobStatus::Pending);
         assert_eq!(retried.attempts, 0);
         assert_eq!(retried.error, None);

@@ -596,7 +596,7 @@ pub async fn retrieve_episode_sample_format(
         nfo_format: "off".to_string(),
         cover_filename: "image".to_string(),
     };
-    let result = perform_episode_variable_replacement(settings.into(), episode, None, 1)?;
+    let result = perform_episode_variable_replacement(settings.into(), episode, None, 1, None)?;
 
     Ok(result)
 }

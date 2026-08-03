@@ -31,9 +31,9 @@ pub use crate::podcast::{
 };
 use crate::podcast::{
     build_podcast_search_plan, check_podcast_add_permission, ensure_podindex_configured,
-    ensure_proxy_api_access, map_podcast_error, map_proxy_podcast_error,
-    parse_search_type, require_admin, require_privileged, require_proxy_episode,
-    sanitize_proxy_request_headers, spawn_podindex_download,
+    ensure_proxy_api_access, map_podcast_error, map_proxy_podcast_error, parse_search_type,
+    require_admin, require_privileged, require_proxy_episode, sanitize_proxy_request_headers,
+    spawn_podindex_download,
 };
 use crate::services::file::service::{FileService, perform_podcast_variable_replacement};
 use crate::url_rewriting::resolve_server_url_from_headers;
@@ -172,9 +172,12 @@ pub async fn find_podcast_by_id(
     let server_url = resolve_server_url_from_headers(&headers);
 
     let (podcast_uuid, podcast) = resolve_podcast(&id)?;
-    let tags = state.tag_service.get_tags_of_podcast(podcast_uuid, user.id)?;
+    let tags = state
+        .tag_service
+        .get_tags_of_podcast(podcast_uuid, user.id)?;
     let favorite = PodcastService::get_favorite_state(user.id, podcast_uuid)?;
-    let podcast_dto = map_podcast_with_context_to_dto(podcast.into(), favorite, tags, &user, &server_url);
+    let podcast_dto =
+        map_podcast_with_context_to_dto(podcast.into(), favorite, tags, &user, &server_url);
     Ok(Json(podcast_dto))
 }
 
@@ -459,7 +462,12 @@ pub async fn query_for_podcast(
     let res = PodcastEpisodeService::query_for_podcast(&podcast)?
         .into_iter()
         .map(|p| {
-            PodcastEpisodeDto::from_episode_with_user(p, None::<User>, None::<FavoritePodcastEpisode>, &server_url)
+            PodcastEpisodeDto::from_episode_with_user(
+                p,
+                None::<User>,
+                None::<FavoritePodcastEpisode>,
+                &server_url,
+            )
         })
         .collect::<Vec<PodcastEpisodeDto>>();
 
@@ -1014,8 +1022,8 @@ pub mod tests {
             crate::services::podcast::service::PodcastService::get_podcast(
                 uuid::Uuid::parse_str(&saved_podcast.id).unwrap()
             )
-                .unwrap()
-                .name,
+            .unwrap()
+            .name,
             "New Podcast Name"
         );
     }
@@ -1129,11 +1137,10 @@ pub mod tests {
             .await;
         assert_eq!(resp.status_code(), 200);
 
-        let persisted =
-            crate::services::podcast::service::PodcastService::get_podcast(
-                uuid::Uuid::parse_str(&saved_podcast.id).unwrap()
-            )
-                .unwrap();
+        let persisted = crate::services::podcast::service::PodcastService::get_podcast(
+            uuid::Uuid::parse_str(&saved_podcast.id).unwrap(),
+        )
+        .unwrap();
         assert_eq!(persisted.name, original_name);
     }
 
@@ -1423,9 +1430,12 @@ pub mod tests {
             Ok(_) => panic!("expected forbidden for update_podcast_settings"),
         }
 
-        let get_settings_result =
-            super::get_podcast_settings(State(app_state()), Path("1".to_string()), Extension(non_privileged))
-                .await;
+        let get_settings_result = super::get_podcast_settings(
+            State(app_state()),
+            Path("1".to_string()),
+            Extension(non_privileged),
+        )
+        .await;
         match get_settings_result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
             Ok(_) => panic!("expected forbidden for get_podcast_settings"),

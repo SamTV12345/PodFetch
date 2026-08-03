@@ -2,8 +2,8 @@
 //! client. Uses the privacy-preserving hash-prefix endpoint so the exact video
 //! ID never leaves this server.
 
-use common_infrastructure::error::{map_reqwest_error, CustomError};
-use common_infrastructure::http::{get_http_client, COMMON_USER_AGENT};
+use common_infrastructure::error::{CustomError, map_reqwest_error};
+use common_infrastructure::http::{COMMON_USER_AGENT, get_http_client};
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use reqwest::header::USER_AGENT;
 use serde::Deserialize;
@@ -102,8 +102,7 @@ pub fn parse_hash_response(body: &str, video_id: &str) -> Result<Vec<FetchedSegm
 
 /// Base URL, overridable via `SPONSORBLOCK_API_URL` for self-hosted mirrors.
 fn base_url() -> String {
-    std::env::var("SPONSORBLOCK_API_URL")
-        .unwrap_or_else(|_| "https://sponsor.ajay.app".to_string())
+    std::env::var("SPONSORBLOCK_API_URL").unwrap_or_else(|_| "https://sponsor.ajay.app".to_string())
 }
 
 /// Query SponsorBlock for one video. Returns an empty Vec on 404 (no data).
@@ -119,7 +118,10 @@ pub async fn fetch_segments(video_id: &str) -> Result<Vec<FetchedSegment>, Custo
         .get(&url)
         .timeout(std::time::Duration::from_secs(10))
         .header(USER_AGENT, COMMON_USER_AGENT)
-        .query(&[("categories", categories.as_str()), ("actionTypes", "[\"skip\"]")])
+        .query(&[
+            ("categories", categories.as_str()),
+            ("actionTypes", "[\"skip\"]"),
+        ])
         .send()
         .await
         .map_err(map_reqwest_error)?;
@@ -172,7 +174,11 @@ mod tests {
 
     #[test]
     fn unknown_video_yields_empty() {
-        assert!(parse_hash_response(SAMPLE, "no-such-id").unwrap().is_empty());
+        assert!(
+            parse_hash_response(SAMPLE, "no-such-id")
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[test]

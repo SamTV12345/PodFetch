@@ -211,7 +211,11 @@ mod tests {
         assert_eq!(service.read_only_admin_user().id, STANDARD_USER_ID);
         // ...but it does not yet exist in the database.
         assert!(
-            service.repository.find_by_username(STANDARD_USER).unwrap().is_none(),
+            service
+                .repository
+                .find_by_username(STANDARD_USER)
+                .unwrap()
+                .is_none(),
             "standard user must be absent before seeding",
         );
 
@@ -229,7 +233,10 @@ mod tests {
             .find_by_username(STANDARD_USER)
             .unwrap()
             .expect("standard user must exist after seeding");
-        assert_eq!(seeded.id, STANDARD_USER_ID, "seed must preserve the fixed id");
+        assert_eq!(
+            seeded.id, STANDARD_USER_ID,
+            "seed must preserve the fixed id"
+        );
 
         // Idempotent: a second startup must not error or duplicate.
         service.ensure_standard_user_present().unwrap();
@@ -255,7 +262,11 @@ mod tests {
         service.ensure_standard_user_present().unwrap();
 
         assert!(
-            service.repository.find_by_username(STANDARD_USER).unwrap().is_none(),
+            service
+                .repository
+                .find_by_username(STANDARD_USER)
+                .unwrap()
+                .is_none(),
             "standard user must not be seeded when a named admin is configured",
         );
     }

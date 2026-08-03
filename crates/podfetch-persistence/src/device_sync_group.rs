@@ -80,8 +80,7 @@ impl DeviceSyncGroupRepository for DieselDeviceSyncGroupRepository {
         let mut connection = self.database.connection()?;
 
         diesel::delete(
-            dsg_dsl::device_sync_groups
-                .filter(dsg_dsl::user_id.eq(user_id_to_replace.to_string())),
+            dsg_dsl::device_sync_groups.filter(dsg_dsl::user_id.eq(user_id_to_replace.to_string())),
         )
         .execute(&mut connection)
         .map_err(PersistenceError::from)?;

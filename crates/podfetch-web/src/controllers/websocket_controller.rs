@@ -837,8 +837,7 @@ mod tests {
         }
 
         let body = response.text();
-        let expected_episode_url =
-            format!("https://podfetch.example.com/{file_episode_path}");
+        let expected_episode_url = format!("https://podfetch.example.com/{file_episode_path}");
         let expected_image_url = format!("https://podfetch.example.com/{file_image_path}");
         assert!(
             body.contains(&expected_episode_url),

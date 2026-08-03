@@ -700,10 +700,12 @@ fn set_episode_legacy_id(episode_uuid: &str, legacy: i64) {
     use podfetch_persistence::podcast_episode::podcast_episodes;
     let db = database();
     let mut conn = db.connection().expect("db connection");
-    diesel::update(podcast_episodes::table.filter(podcast_episodes::id.eq(episode_uuid.to_string())))
-        .set(podcast_episodes::legacy_id.eq(Some(legacy)))
-        .execute(&mut conn)
-        .expect("set episode legacy_id");
+    diesel::update(
+        podcast_episodes::table.filter(podcast_episodes::id.eq(episode_uuid.to_string())),
+    )
+    .set(podcast_episodes::legacy_id.eq(Some(legacy)))
+    .execute(&mut conn)
+    .expect("set episode legacy_id");
 }
 
 // ── Legacy ABS id backwards-compat (UUID migration) ────────────────────────
@@ -757,7 +759,10 @@ async fn legacy_integer_ids_resolve_to_same_podcast_and_episode() {
     // Outgoing ids stay UUID-based and identical between both fetches.
     assert_eq!(legacy_body["id"], uuid_body["id"]);
     assert_eq!(legacy_body["id"], json!(format!("li_pod_{}", podcast.id)));
-    assert_eq!(legacy_body["media"]["id"], json!(format!("pod_{}", podcast.id)));
+    assert_eq!(
+        legacy_body["media"]["id"],
+        json!(format!("pod_{}", podcast.id))
+    );
     assert_eq!(
         legacy_body["media"]["metadata"]["title"],
         json!(podcast.name)

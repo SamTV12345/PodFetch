@@ -98,7 +98,8 @@ fn reconciles_legacy_standard_user_to_canonical_id() {
     ))
     .expect("plant pre-reconcile state");
 
-    conn.run_migration(&*reconcile).expect("apply reconcile migration");
+    conn.run_migration(&*reconcile)
+        .expect("apply reconcile migration");
 
     // The standard user now carries the canonical id.
     let users: Vec<TextRow> =
@@ -106,13 +107,17 @@ fn reconciles_legacy_standard_user_to_canonical_id() {
             .load(&mut conn)
             .unwrap();
     assert_eq!(users.len(), 1);
-    assert_eq!(users[0].val, CANON, "standard user must move to the canonical id");
+    assert_eq!(
+        users[0].val, CANON,
+        "standard user must move to the canonical id"
+    );
 
     // The random id is gone.
-    let leftover: Vec<CountRow> =
-        diesel::sql_query(format!("SELECT COUNT(*) AS n FROM users WHERE id = '{RANDOM}'"))
-            .load(&mut conn)
-            .unwrap();
+    let leftover: Vec<CountRow> = diesel::sql_query(format!(
+        "SELECT COUNT(*) AS n FROM users WHERE id = '{RANDOM}'"
+    ))
+    .load(&mut conn)
+    .unwrap();
     assert_eq!(leftover[0].n, 0, "the random-id row must be gone");
 
     // The owned filter was repointed.
@@ -120,10 +125,17 @@ fn reconciles_legacy_standard_user_to_canonical_id() {
         .load(&mut conn)
         .unwrap();
     assert_eq!(owner.len(), 1);
-    assert_eq!(owner[0].val, CANON, "owned rows must be repointed to the canonical id");
+    assert_eq!(
+        owner[0].val, CANON,
+        "owned rows must be repointed to the canonical id"
+    );
 
     // Foreign keys are intact.
-    assert_eq!(fk_violations(&mut conn), 0, "no foreign-key violations after reconcile");
+    assert_eq!(
+        fk_violations(&mut conn),
+        0,
+        "no foreign-key violations after reconcile"
+    );
 
     cleanup(&tmp);
 }
@@ -142,14 +154,18 @@ fn reconcile_is_noop_when_already_canonical() {
     ))
     .expect("seed canonical state");
 
-    conn.run_migration(&*reconcile).expect("apply reconcile migration");
+    conn.run_migration(&*reconcile)
+        .expect("apply reconcile migration");
 
     let users: Vec<TextRow> =
         diesel::sql_query("SELECT id AS val FROM users WHERE username = 'user123'")
             .load(&mut conn)
             .unwrap();
     assert_eq!(users.len(), 1);
-    assert_eq!(users[0].val, CANON, "already-canonical user must be left untouched");
+    assert_eq!(
+        users[0].val, CANON,
+        "already-canonical user must be left untouched"
+    );
     assert_eq!(fk_violations(&mut conn), 0, "no foreign-key violations");
 
     cleanup(&tmp);

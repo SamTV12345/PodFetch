@@ -17,8 +17,12 @@ fn finish(writer: XmlWriter) -> String {
 }
 
 fn write_decl(w: &mut XmlWriter) {
-    w.write_event(Event::Decl(BytesDecl::new("1.0", Some("UTF-8"), Some("yes"))))
-        .expect("write decl");
+    w.write_event(Event::Decl(BytesDecl::new(
+        "1.0",
+        Some("UTF-8"),
+        Some("yes"),
+    )))
+    .expect("write decl");
 }
 
 /// Write `<name>text</name>`. No-op when `text` is None or empty. `quick_xml`
@@ -91,9 +95,17 @@ pub fn build_episodedetails_nfo(
     write_text_el(&mut w, "season", Some("1"));
     write_text_el(&mut w, "episode", Some(&position.to_string()));
     write_text_el(&mut w, "plot", Some(&episode.description));
-    write_text_el(&mut w, "aired", aired_date(&episode.date_of_recording).as_deref());
+    write_text_el(
+        &mut w,
+        "aired",
+        aired_date(&episode.date_of_recording).as_deref(),
+    );
     if episode.total_time > 0 {
-        write_text_el(&mut w, "runtime", Some(&runtime_minutes(episode.total_time).to_string()));
+        write_text_el(
+            &mut w,
+            "runtime",
+            Some(&runtime_minutes(episode.total_time).to_string()),
+        );
     }
     if let Some(author) = podcast.author.as_deref().filter(|a| !a.is_empty()) {
         w.write_event(Event::Start(BytesStart::new("actor")))

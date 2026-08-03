@@ -103,6 +103,9 @@ pub trait PodcastEpisodeRepository: Send + Sync {
         podcast_id: Uuid,
     ) -> Result<usize, Self::Error>;
 
+    // Get total episode count for a podcast (for auto-padding episode numbers)
+    fn get_total_episode_count(&self, podcast_id: Uuid) -> Result<usize, Self::Error>;
+
     // Get last N episodes by date
     fn get_last_n_episodes(
         &self,

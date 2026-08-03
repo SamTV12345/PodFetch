@@ -12,13 +12,18 @@
 
 use crate::services::transcript::parser::{self, TranscriptFormat};
 use crate::services::transcript::whisper_client;
-use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
+use common_infrastructure::error::{
+    CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error,
+};
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use podfetch_domain::podcast_episode_transcript::{
-    PodcastEpisodeTranscript, PodcastEpisodeTranscriptRepository, TranscriptSearchHit, TranscriptSegment,
-    TranscriptSource, TranscriptStatus, TranscriptionJob, TranscriptionJobRepository, UpsertTranscript,
+    PodcastEpisodeTranscript, PodcastEpisodeTranscriptRepository, TranscriptSearchHit,
+    TranscriptSegment, TranscriptSource, TranscriptStatus, TranscriptionJob,
+    TranscriptionJobRepository, UpsertTranscript,
 };
-use podfetch_persistence::adapters::{PodcastEpisodeTranscriptRepositoryImpl, TranscriptionJobRepositoryImpl};
+use podfetch_persistence::adapters::{
+    PodcastEpisodeTranscriptRepositoryImpl, TranscriptionJobRepositoryImpl,
+};
 use podfetch_persistence::db::database;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use podfetch_storage::FileHandleWrapper;
@@ -88,7 +93,11 @@ impl TranscriptService {
     /// feed entry. Pure DB bookkeeping — no HTTP, no parsing. The rows land
     /// as `status = 'pending'` and are picked up later by
     /// [`Self::process_pending_for_episode`].
-    pub fn upsert_from_feed(&self, episode_id: Uuid, tags: &[FeedTranscriptTag]) -> Result<(), CustomError> {
+    pub fn upsert_from_feed(
+        &self,
+        episode_id: Uuid,
+        tags: &[FeedTranscriptTag],
+    ) -> Result<(), CustomError> {
         for tag in tags {
             self.transcript_repo.upsert(UpsertTranscript {
                 episode_id,
@@ -127,7 +136,10 @@ impl TranscriptService {
         self.process_pending_for_episode_inner(&episode_with_path)
     }
 
-    fn process_pending_for_episode_inner(&self, episode: &PodcastEpisode) -> Result<(), CustomError> {
+    fn process_pending_for_episode_inner(
+        &self,
+        episode: &PodcastEpisode,
+    ) -> Result<(), CustomError> {
         let episode_id = parse_episode_id(&episode.id)?;
         let pending: Vec<PodcastEpisodeTranscript> = self
             .transcript_repo
@@ -144,9 +156,11 @@ impl TranscriptService {
                     episode_id,
                     err
                 );
-                let _ = self
-                    .transcript_repo
-                    .set_status(transcript.id, TranscriptStatus::Failed, Some(&err.to_string()));
+                let _ = self.transcript_repo.set_status(
+                    transcript.id,
+                    TranscriptStatus::Failed,
+                    Some(&err.to_string()),
+                );
             }
         }
 
@@ -181,23 +195,34 @@ impl TranscriptService {
             &mut bytes_for_write,
             &ENVIRONMENT_SERVICE.default_file_handler,
         )?;
-        self.transcript_repo.set_file_path(transcript.id, &archive_path)?;
+        self.transcript_repo
+            .set_file_path(transcript.id, &archive_path)?;
 
         match format {
             None => {
                 // Archived, but we don't know how to parse this format.
-                self.transcript_repo
-                    .set_status(transcript.id, TranscriptStatus::Downloaded, None)?;
+                self.transcript_repo.set_status(
+                    transcript.id,
+                    TranscriptStatus::Downloaded,
+                    None,
+                )?;
             }
             Some(format) => match parser::parse(format, &bytes) {
                 Ok(segments) => {
-                    self.transcript_repo.replace_segments(transcript.id, &segments)?;
                     self.transcript_repo
-                        .set_status(transcript.id, TranscriptStatus::Parsed, None)?;
+                        .replace_segments(transcript.id, &segments)?;
+                    self.transcript_repo.set_status(
+                        transcript.id,
+                        TranscriptStatus::Parsed,
+                        None,
+                    )?;
                 }
                 Err(err) => {
-                    self.transcript_repo
-                        .set_status(transcript.id, TranscriptStatus::Failed, Some(&err.to_string()))?;
+                    self.transcript_repo.set_status(
+                        transcript.id,
+                        TranscriptStatus::Failed,
+                        Some(&err.to_string()),
+                    )?;
                 }
             },
         }
@@ -228,9 +253,11 @@ impl TranscriptService {
             .collect();
 
         let podcast_language =
-            crate::services::podcast::service::PodcastService::get_podcast_by_episode_id(episode_id)
-                .ok()
-                .and_then(|podcast| podcast.language);
+            crate::services::podcast::service::PodcastService::get_podcast_by_episode_id(
+                episode_id,
+            )
+            .ok()
+            .and_then(|podcast| podcast.language);
 
         candidates.sort_by_key(|t| {
             let format_rank = TranscriptFormat::detect(&t.mime_type, t.original_url.as_deref())
@@ -242,7 +269,11 @@ impl TranscriptService {
                 }
                 _ => false,
             };
-            (t.source != TranscriptSource::Feed, format_rank, language_mismatch)
+            (
+                t.source != TranscriptSource::Feed,
+                format_rank,
+                language_mismatch,
+            )
         });
 
         let preferred_id = candidates.first().map(|t| t.id);
@@ -251,13 +282,19 @@ impl TranscriptService {
 
     /// All transcript rows for an episode (any status), used by the HTTP
     /// layer to list an episode's transcripts.
-    pub fn get_by_episode_id(&self, episode_id: Uuid) -> Result<Vec<PodcastEpisodeTranscript>, CustomError> {
+    pub fn get_by_episode_id(
+        &self,
+        episode_id: Uuid,
+    ) -> Result<Vec<PodcastEpisodeTranscript>, CustomError> {
         self.transcript_repo.get_by_episode_id(episode_id)
     }
 
     /// A single transcript row by id, if it exists — used by the HTTP layer
     /// to serve an individual transcript's archived file.
-    pub fn get_by_id(&self, transcript_id: Uuid) -> Result<Option<PodcastEpisodeTranscript>, CustomError> {
+    pub fn get_by_id(
+        &self,
+        transcript_id: Uuid,
+    ) -> Result<Option<PodcastEpisodeTranscript>, CustomError> {
         self.transcript_repo.get_by_id(transcript_id)
     }
 
@@ -289,9 +326,9 @@ impl TranscriptService {
         podcast_id: Option<Uuid>,
         page: i64,
     ) -> Result<Vec<TranscriptSearchGroup>, CustomError> {
-        let hits = self
-            .transcript_repo
-            .search(query, podcast_id, page, SEARCH_INTERNAL_PAGE_SIZE)?;
+        let hits =
+            self.transcript_repo
+                .search(query, podcast_id, page, SEARCH_INTERNAL_PAGE_SIZE)?;
 
         let mut order: Vec<Uuid> = Vec::new();
         let mut grouped: HashMap<Uuid, Vec<TranscriptSearchHit>> = HashMap::new();
@@ -317,7 +354,9 @@ impl TranscriptService {
         groups.sort_by(|a, b| {
             let rank_a = a.hits.first().map(|h| h.rank).unwrap_or(f32::MIN);
             let rank_b = b.hits.first().map(|h| h.rank).unwrap_or(f32::MIN);
-            rank_b.partial_cmp(&rank_a).unwrap_or(std::cmp::Ordering::Equal)
+            rank_b
+                .partial_cmp(&rank_a)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         Ok(groups)
@@ -330,9 +369,12 @@ impl TranscriptService {
     /// this: it must not count as "in flight or usable".
     pub fn needs_generated_transcript(&self, episode_id: Uuid) -> Result<bool, CustomError> {
         let transcripts = self.transcript_repo.get_by_episode_id(episode_id)?;
-        let has_pending_or_parsed = transcripts
-            .iter()
-            .any(|t| matches!(t.status, TranscriptStatus::Pending | TranscriptStatus::Parsed));
+        let has_pending_or_parsed = transcripts.iter().any(|t| {
+            matches!(
+                t.status,
+                TranscriptStatus::Pending | TranscriptStatus::Parsed
+            )
+        });
         Ok(!has_pending_or_parsed)
     }
 
@@ -360,9 +402,11 @@ impl TranscriptService {
                 Err(err) => {
                     report.failed += 1;
                     tracing::error!("Reparse failed for transcript {}: {}", transcript.id, err);
-                    let _ = self
-                        .transcript_repo
-                        .set_status(transcript.id, TranscriptStatus::Failed, Some(&err.to_string()));
+                    let _ = self.transcript_repo.set_status(
+                        transcript.id,
+                        TranscriptStatus::Failed,
+                        Some(&err.to_string()),
+                    );
                 }
             }
         }
@@ -387,18 +431,24 @@ impl TranscriptService {
             ))
         })?;
 
-        let format = TranscriptFormat::detect(&transcript.mime_type, transcript.original_url.as_deref())
-            .ok_or_else(|| {
-                CustomError::from(CustomErrorInner::Conflict(
-                    "cannot determine transcript format for reparse".to_string(),
-                    ErrorSeverity::Warning,
-                ))
-            })?;
+        let format =
+            TranscriptFormat::detect(&transcript.mime_type, transcript.original_url.as_deref())
+                .ok_or_else(|| {
+                    CustomError::from(CustomErrorInner::Conflict(
+                        "cannot determine transcript format for reparse".to_string(),
+                        ErrorSeverity::Warning,
+                    ))
+                })?;
 
-        let segments = parser::parse(format, &bytes)
-            .map_err(|err| CustomError::from(CustomErrorInner::Conflict(err.to_string(), ErrorSeverity::Warning)))?;
+        let segments = parser::parse(format, &bytes).map_err(|err| {
+            CustomError::from(CustomErrorInner::Conflict(
+                err.to_string(),
+                ErrorSeverity::Warning,
+            ))
+        })?;
 
-        self.transcript_repo.replace_segments(transcript.id, &segments)?;
+        self.transcript_repo
+            .replace_segments(transcript.id, &segments)?;
         self.transcript_repo
             .set_status(transcript.id, TranscriptStatus::Parsed, None)?;
         Ok(())
@@ -412,7 +462,10 @@ impl TranscriptService {
 
     /// The episode's transcription job, if any — used by the HTTP layer to
     /// surface pending/failed jobs in the transcript list.
-    pub fn get_job_by_episode_id(&self, episode_id: Uuid) -> Result<Option<TranscriptionJob>, CustomError> {
+    pub fn get_job_by_episode_id(
+        &self,
+        episode_id: Uuid,
+    ) -> Result<Option<TranscriptionJob>, CustomError> {
         self.job_repo.get_by_episode_id(episode_id)
     }
 
@@ -438,7 +491,11 @@ impl TranscriptService {
 
         let vtt = whisper_client::segments_to_vtt(&segments);
         let mut bytes = vtt.into_bytes();
-        FileHandleWrapper::write_file(&archive_path, &mut bytes, &ENVIRONMENT_SERVICE.default_file_handler)?;
+        FileHandleWrapper::write_file(
+            &archive_path,
+            &mut bytes,
+            &ENVIRONMENT_SERVICE.default_file_handler,
+        )?;
 
         let transcript_id = self.transcript_repo.upsert(UpsertTranscript {
             episode_id,
@@ -447,8 +504,10 @@ impl TranscriptService {
             mime_type: "text/vtt".to_string(),
             language,
         })?;
-        self.transcript_repo.set_file_path(transcript_id, &archive_path)?;
-        self.transcript_repo.replace_segments(transcript_id, &segments)?;
+        self.transcript_repo
+            .set_file_path(transcript_id, &archive_path)?;
+        self.transcript_repo
+            .replace_segments(transcript_id, &segments)?;
         self.transcript_repo
             .set_status(transcript_id, TranscriptStatus::Parsed, None)?;
 
@@ -517,7 +576,11 @@ fn download_bytes(url: &str) -> Result<Vec<u8>, CustomError> {
 /// recognized format when there is one; otherwise best-effort guessed from
 /// the URL's own extension or the mime type's subtype, falling back to
 /// `"bin"` when nothing usable is available.
-fn archive_extension(format: Option<TranscriptFormat>, mime_type: &str, url: Option<&str>) -> String {
+fn archive_extension(
+    format: Option<TranscriptFormat>,
+    mime_type: &str,
+    url: Option<&str>,
+) -> String {
     if let Some(format) = format {
         return format_extension(format).to_string();
     }
@@ -616,7 +679,9 @@ mod tests {
 
     fn lock_and_prepare_db() -> MutexGuard<'static, ()> {
         ensure_test_env_vars();
-        let guard = GLOBAL_MUTEX.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let guard = GLOBAL_MUTEX
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         run_migrations();
 
         let mut conn = get_connection();
@@ -758,11 +823,15 @@ mod tests {
                 language: Some("en".to_string()),
             })
             .unwrap();
-        repo.set_status(generated_id, TranscriptStatus::Parsed, None).unwrap();
+        repo.set_status(generated_id, TranscriptStatus::Parsed, None)
+            .unwrap();
 
         svc.recompute_preferred(episode_id).unwrap();
 
-        let (preferred, _) = svc.get_preferred_segments(episode_id).unwrap().expect("a preferred transcript");
+        let (preferred, _) = svc
+            .get_preferred_segments(episode_id)
+            .unwrap()
+            .expect("a preferred transcript");
         assert_eq!(preferred.id, generated_id);
     }
 
@@ -784,9 +853,17 @@ mod tests {
                 language: Some("en".to_string()),
             })
             .unwrap();
-        repo.set_status(generated_id, TranscriptStatus::Parsed, None).unwrap();
+        repo.set_status(generated_id, TranscriptStatus::Parsed, None)
+            .unwrap();
         svc.recompute_preferred(episode_id).unwrap();
-        assert_eq!(svc.get_preferred_segments(episode_id).unwrap().unwrap().0.id, generated_id);
+        assert_eq!(
+            svc.get_preferred_segments(episode_id)
+                .unwrap()
+                .unwrap()
+                .0
+                .id,
+            generated_id
+        );
 
         // Now a feed transcript arrives and gets parsed too.
         let feed_id = repo
@@ -798,12 +875,16 @@ mod tests {
                 language: Some("en".to_string()),
             })
             .unwrap();
-        repo.set_status(feed_id, TranscriptStatus::Parsed, None).unwrap();
+        repo.set_status(feed_id, TranscriptStatus::Parsed, None)
+            .unwrap();
 
         svc.recompute_preferred(episode_id).unwrap();
 
         let preferred = svc.get_preferred_segments(episode_id).unwrap().unwrap().0;
-        assert_eq!(preferred.id, feed_id, "feed transcript must win over generated once parsed");
+        assert_eq!(
+            preferred.id, feed_id,
+            "feed transcript must win over generated once parsed"
+        );
     }
 
     #[test]
@@ -824,7 +905,8 @@ mod tests {
                 language: Some("en".to_string()),
             })
             .unwrap();
-        repo.set_status(feed_id, TranscriptStatus::Failed, Some("boom")).unwrap();
+        repo.set_status(feed_id, TranscriptStatus::Failed, Some("boom"))
+            .unwrap();
 
         let generated_id = repo
             .upsert(UpsertTranscript {
@@ -835,12 +917,16 @@ mod tests {
                 language: Some("en".to_string()),
             })
             .unwrap();
-        repo.set_status(generated_id, TranscriptStatus::Parsed, None).unwrap();
+        repo.set_status(generated_id, TranscriptStatus::Parsed, None)
+            .unwrap();
 
         svc.recompute_preferred(episode_id).unwrap();
 
         let preferred = svc.get_preferred_segments(episode_id).unwrap().unwrap().0;
-        assert_eq!(preferred.id, generated_id, "failed feed transcript must not block the generated fallback");
+        assert_eq!(
+            preferred.id, generated_id,
+            "failed feed transcript must not block the generated fallback"
+        );
     }
 
     #[test]
@@ -861,7 +947,8 @@ mod tests {
                 language: Some("en".to_string()),
             })
             .unwrap();
-        repo.set_status(vtt_id, TranscriptStatus::Parsed, None).unwrap();
+        repo.set_status(vtt_id, TranscriptStatus::Parsed, None)
+            .unwrap();
 
         let json_id = repo
             .upsert(UpsertTranscript {
@@ -872,12 +959,16 @@ mod tests {
                 language: Some("en".to_string()),
             })
             .unwrap();
-        repo.set_status(json_id, TranscriptStatus::Parsed, None).unwrap();
+        repo.set_status(json_id, TranscriptStatus::Parsed, None)
+            .unwrap();
 
         svc.recompute_preferred(episode_id).unwrap();
 
         let preferred = svc.get_preferred_segments(episode_id).unwrap().unwrap().0;
-        assert_eq!(preferred.id, json_id, "JSON must win over VTT among parsed feed transcripts");
+        assert_eq!(
+            preferred.id, json_id,
+            "JSON must win over VTT among parsed feed transcripts"
+        );
     }
 
     #[test]
@@ -898,7 +989,8 @@ mod tests {
                 language: Some("de".to_string()),
             })
             .unwrap();
-        repo.set_status(de_id, TranscriptStatus::Parsed, None).unwrap();
+        repo.set_status(de_id, TranscriptStatus::Parsed, None)
+            .unwrap();
 
         let en_id = repo
             .upsert(UpsertTranscript {
@@ -909,7 +1001,8 @@ mod tests {
                 language: Some("en".to_string()),
             })
             .unwrap();
-        repo.set_status(en_id, TranscriptStatus::Parsed, None).unwrap();
+        repo.set_status(en_id, TranscriptStatus::Parsed, None)
+            .unwrap();
 
         svc.recompute_preferred(episode_id).unwrap();
 
@@ -975,14 +1068,18 @@ mod tests {
             })
             .unwrap();
 
-        svc.process_pending_for_episode(&episode).expect("process_pending_for_episode");
+        svc.process_pending_for_episode(&episode)
+            .expect("process_pending_for_episode");
 
         let updated = repo.get_by_id(transcript_id).unwrap().expect("row exists");
         assert_eq!(updated.status, TranscriptStatus::Parsed);
         assert!(updated.is_preferred);
         let expected_path = dir.join("episode.transcript.vtt");
         assert_eq!(updated.file_path.as_deref(), expected_path.to_str());
-        assert!(expected_path.exists(), "archived transcript file must exist on disk");
+        assert!(
+            expected_path.exists(),
+            "archived transcript file must exist on disk"
+        );
 
         let segments = repo.get_segments(transcript_id).unwrap();
         assert_eq!(segments.len(), 1);
@@ -1018,7 +1115,10 @@ mod tests {
             .unwrap();
 
         let result = svc.process_pending_for_episode(&episode);
-        assert!(result.is_ok(), "process_pending_for_episode must return Ok(()) even on a 404");
+        assert!(
+            result.is_ok(),
+            "process_pending_for_episode must return Ok(()) even on a 404"
+        );
 
         let updated = repo.get_by_id(transcript_id).unwrap().expect("row exists");
         assert_eq!(updated.status, TranscriptStatus::Failed);
@@ -1065,7 +1165,10 @@ mod tests {
         let updated = repo.get_by_id(transcript_id).unwrap().expect("row exists");
         assert_eq!(updated.status, TranscriptStatus::Failed);
         assert!(updated.error.is_some());
-        assert!(updated.file_path.is_none(), "an oversized download must not be archived");
+        assert!(
+            updated.file_path.is_none(),
+            "an oversized download must not be archived"
+        );
 
         let _ = std::fs::remove_dir_all(&dir);
     }
@@ -1084,7 +1187,12 @@ mod tests {
 
         let app = Router::new().route(
             "/unknown.pdf",
-            get(|| async { ([("content-type", "application/pdf")], "not a real transcript") }),
+            get(|| async {
+                (
+                    [("content-type", "application/pdf")],
+                    "not a real transcript",
+                )
+            }),
         );
         let base_url = spawn_mock_server(app);
 
@@ -1107,8 +1215,14 @@ mod tests {
 
         let updated = repo.get_by_id(transcript_id).unwrap().expect("row exists");
         assert_eq!(updated.status, TranscriptStatus::Downloaded);
-        assert!(updated.file_path.is_some(), "unknown format must still be archived");
-        assert!(!updated.is_preferred, "an archived-only transcript is never preferred");
+        assert!(
+            updated.file_path.is_some(),
+            "unknown format must still be archived"
+        );
+        assert!(
+            !updated.is_preferred,
+            "an archived-only transcript is never preferred"
+        );
 
         let _ = std::fs::remove_dir_all(&dir);
     }
@@ -1144,7 +1258,8 @@ mod tests {
             })
             .unwrap();
 
-        svc.process_pending_for_episode(&episode).expect("must still return Ok(()) per-transcript");
+        svc.process_pending_for_episode(&episode)
+            .expect("must still return Ok(()) per-transcript");
 
         let updated = repo.get_by_id(transcript_id).unwrap().expect("row exists");
         assert_eq!(
@@ -1198,7 +1313,10 @@ mod tests {
         assert!(updated.is_preferred);
         let expected_path = dir.join("episode.transcript.vtt");
         assert_eq!(updated.file_path.as_deref(), expected_path.to_str());
-        assert!(expected_path.exists(), "archived transcript file must exist on disk");
+        assert!(
+            expected_path.exists(),
+            "archived transcript file must exist on disk"
+        );
 
         let segments = repo.get_segments(transcript_id).unwrap();
         assert_eq!(segments.len(), 1);
@@ -1219,7 +1337,10 @@ mod tests {
         fn upsert(&self, _transcript: UpsertTranscript) -> Result<Uuid, Self::Error> {
             unimplemented!("not needed for the search grouping test")
         }
-        fn get_by_episode_id(&self, _episode_id: Uuid) -> Result<Vec<PodcastEpisodeTranscript>, Self::Error> {
+        fn get_by_episode_id(
+            &self,
+            _episode_id: Uuid,
+        ) -> Result<Vec<PodcastEpisodeTranscript>, Self::Error> {
             unimplemented!("not needed for the search grouping test")
         }
         fn get_all(&self) -> Result<Vec<PodcastEpisodeTranscript>, Self::Error> {
@@ -1231,16 +1352,32 @@ mod tests {
         fn set_file_path(&self, _id: Uuid, _file_path: &str) -> Result<(), Self::Error> {
             unimplemented!("not needed for the search grouping test")
         }
-        fn set_status(&self, _id: Uuid, _status: TranscriptStatus, _error: Option<&str>) -> Result<(), Self::Error> {
+        fn set_status(
+            &self,
+            _id: Uuid,
+            _status: TranscriptStatus,
+            _error: Option<&str>,
+        ) -> Result<(), Self::Error> {
             unimplemented!("not needed for the search grouping test")
         }
-        fn set_preferred(&self, _episode_id: Uuid, _preferred_id: Option<Uuid>) -> Result<(), Self::Error> {
+        fn set_preferred(
+            &self,
+            _episode_id: Uuid,
+            _preferred_id: Option<Uuid>,
+        ) -> Result<(), Self::Error> {
             unimplemented!("not needed for the search grouping test")
         }
-        fn replace_segments(&self, _transcript_id: Uuid, _segments: &[TranscriptSegment]) -> Result<(), Self::Error> {
+        fn replace_segments(
+            &self,
+            _transcript_id: Uuid,
+            _segments: &[TranscriptSegment],
+        ) -> Result<(), Self::Error> {
             unimplemented!("not needed for the search grouping test")
         }
-        fn get_segments(&self, _transcript_id: Uuid) -> Result<Vec<TranscriptSegment>, Self::Error> {
+        fn get_segments(
+            &self,
+            _transcript_id: Uuid,
+        ) -> Result<Vec<TranscriptSegment>, Self::Error> {
             unimplemented!("not needed for the search grouping test")
         }
         fn search(
@@ -1277,7 +1414,10 @@ mod tests {
         fn reset_running_to_pending(&self) -> Result<usize, Self::Error> {
             unimplemented!()
         }
-        fn get_by_episode_id(&self, _episode_id: Uuid) -> Result<Option<TranscriptionJob>, Self::Error> {
+        fn get_by_episode_id(
+            &self,
+            _episode_id: Uuid,
+        ) -> Result<Option<TranscriptionJob>, Self::Error> {
             unimplemented!()
         }
     }
@@ -1316,9 +1456,21 @@ mod tests {
         let groups = svc.search("whatever", None, 0).unwrap();
 
         assert_eq!(groups.len(), 2);
-        assert_eq!(groups[0].episode_id, episode_a, "episode A has the best rank and must sort first");
-        assert_eq!(groups[0].hits.len(), 3, "episode A must be capped at 3 hits");
-        assert!(groups[0].hits.iter().all(|h| h.snippet != "a4-should-be-dropped"));
+        assert_eq!(
+            groups[0].episode_id, episode_a,
+            "episode A has the best rank and must sort first"
+        );
+        assert_eq!(
+            groups[0].hits.len(),
+            3,
+            "episode A must be capped at 3 hits"
+        );
+        assert!(
+            groups[0]
+                .hits
+                .iter()
+                .all(|h| h.snippet != "a4-should-be-dropped")
+        );
         assert_eq!(groups[1].episode_id, episode_b);
         assert_eq!(groups[1].hits.len(), 3);
     }
@@ -1343,7 +1495,8 @@ mod tests {
                 language: None,
             })
             .unwrap();
-        repo.set_status(feed_id, TranscriptStatus::Failed, Some("boom")).unwrap();
+        repo.set_status(feed_id, TranscriptStatus::Failed, Some("boom"))
+            .unwrap();
 
         assert!(svc.needs_generated_transcript(episode_id).unwrap());
     }
@@ -1378,7 +1531,8 @@ mod tests {
                 language: None,
             })
             .unwrap();
-        repo.set_status(parsed_id, TranscriptStatus::Parsed, None).unwrap();
+        repo.set_status(parsed_id, TranscriptStatus::Parsed, None)
+            .unwrap();
         assert!(!svc.needs_generated_transcript(episode_parsed_id).unwrap());
     }
 
@@ -1404,9 +1558,11 @@ mod tests {
                 language: None,
             })
             .unwrap();
-        repo.set_file_path(transcript_id, archive_path.to_str().unwrap()).unwrap();
+        repo.set_file_path(transcript_id, archive_path.to_str().unwrap())
+            .unwrap();
         // Simulate a row that was archived but never successfully parsed.
-        repo.set_status(transcript_id, TranscriptStatus::Downloaded, None).unwrap();
+        repo.set_status(transcript_id, TranscriptStatus::Downloaded, None)
+            .unwrap();
 
         let report = svc.reparse_all().unwrap();
         assert_eq!(report.reparsed, 1);
@@ -1414,7 +1570,10 @@ mod tests {
 
         let updated = repo.get_by_id(transcript_id).unwrap().unwrap();
         assert_eq!(updated.status, TranscriptStatus::Parsed);
-        assert!(updated.is_preferred, "reparse_all must recompute preference for affected episodes");
+        assert!(
+            updated.is_preferred,
+            "reparse_all must recompute preference for affected episodes"
+        );
 
         let _ = std::fs::remove_dir_all(&dir);
     }
@@ -1433,7 +1592,10 @@ mod tests {
         assert!(first.is_some());
 
         let second = svc.enqueue_job(episode_id).unwrap();
-        assert!(second.is_none(), "a second enqueue for the same episode must be a no-op");
+        assert!(
+            second.is_none(),
+            "a second enqueue for the same episode must be a no-op"
+        );
     }
 
     // ── upsert_from_feed (Flow 1) ─────────────────────────────────────────
@@ -1461,7 +1623,10 @@ mod tests {
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0].status, TranscriptStatus::Pending);
         assert_eq!(rows[0].source, TranscriptSource::Feed);
-        assert_eq!(rows[0].original_url.as_deref(), Some("https://example.com/feed.vtt"));
+        assert_eq!(
+            rows[0].original_url.as_deref(),
+            Some("https://example.com/feed.vtt")
+        );
     }
 
     /// This is the DB-level counterpart to Task 7's feed-parse hook
@@ -1504,13 +1669,18 @@ mod tests {
             .iter()
             .find(|row| row.original_url.as_deref() == Some("https://example.com/feed.vtt"))
             .unwrap();
-        repo.set_status(vtt_row.id, TranscriptStatus::Parsed, None).unwrap();
+        repo.set_status(vtt_row.id, TranscriptStatus::Parsed, None)
+            .unwrap();
 
         // A second feed refresh sees the exact same tags again.
         svc.upsert_from_feed(episode_id, &tags).unwrap();
 
         let rows_after = repo.get_by_episode_id(episode_id).unwrap();
-        assert_eq!(rows_after.len(), 2, "repeated upserts must not create duplicate rows");
+        assert_eq!(
+            rows_after.len(),
+            2,
+            "repeated upserts must not create duplicate rows"
+        );
 
         let vtt_row_after = rows_after
             .iter()

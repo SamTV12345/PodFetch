@@ -58,14 +58,11 @@ pub async fn get_last_watched(
     headers: HeaderMap,
 ) -> Result<Json<Vec<LastWatchedItem>>, CustomError> {
     let server_url = resolve_server_url_from_headers(&headers);
-    let episodes = watchtime::get_last_watched(
-        state.watchtime_service.as_ref(),
-        &requester,
-        &server_url,
-    )
-    .map_err(map_watchtime_error)?
-    .into_iter()
-    .collect();
+    let episodes =
+        watchtime::get_last_watched(state.watchtime_service.as_ref(), &requester, &server_url)
+            .map_err(map_watchtime_error)?
+            .into_iter()
+            .collect();
     Ok(Json(episodes))
 }
 

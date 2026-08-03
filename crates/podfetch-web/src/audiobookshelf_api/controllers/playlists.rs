@@ -337,7 +337,11 @@ pub async fn batch_remove(
     for item in &body.items {
         // Accept legacy `ep_{int}` as well as `ep_{uuid}`; silently skip ids
         // that don't resolve (mirrors the previous `and_then(parse)` skip).
-        if let Some(ep) = item.episode_id.as_deref().and_then(|e| resolve_episode(e).ok()) {
+        if let Some(ep) = item
+            .episode_id
+            .as_deref()
+            .and_then(|e| resolve_episode(e).ok())
+        {
             to_remove.push(ep);
         }
     }

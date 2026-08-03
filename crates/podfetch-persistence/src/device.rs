@@ -220,8 +220,12 @@ impl DeviceRepository for DieselDeviceRepository {
             .filter(
                 kind.eq(device_kind::CHROMECAST_SHARED)
                     .or(kind.eq(device_kind::MOPIDY_SHARED))
-                    .or(kind.eq(device_kind::CHROMECAST_PERSONAL).and(user_id.eq(&viewer)))
-                    .or(kind.eq(device_kind::MOPIDY_PERSONAL).and(user_id.eq(&viewer))),
+                    .or(kind
+                        .eq(device_kind::CHROMECAST_PERSONAL)
+                        .and(user_id.eq(&viewer)))
+                    .or(kind
+                        .eq(device_kind::MOPIDY_PERSONAL)
+                        .and(user_id.eq(&viewer))),
             )
             .load::<DeviceEntity>(&mut conn)
             .map(|items| items.into_iter().map(Into::into).collect())
@@ -231,7 +235,10 @@ impl DeviceRepository for DieselDeviceRepository {
     fn find_by_id(&self, id_to_find: Uuid) -> Result<Option<Device>, Self::Error> {
         use self::devices::dsl::*;
         let mut conn = self.database.connection()?;
-        match devices.filter(id.eq(id_to_find.to_string())).first::<DeviceEntity>(&mut conn) {
+        match devices
+            .filter(id.eq(id_to_find.to_string()))
+            .first::<DeviceEntity>(&mut conn)
+        {
             Ok(entity) => Ok(Some(entity.into())),
             Err(diesel::result::Error::NotFound) => Ok(None),
             Err(e) => Err(e.into()),
@@ -241,7 +248,9 @@ impl DeviceRepository for DieselDeviceRepository {
     fn delete_by_id(&self, id_to_delete: Uuid) -> Result<usize, Self::Error> {
         use self::devices::dsl::*;
         let mut conn = self.database.connection()?;
-        diesel::delete(devices.filter(id.eq(id_to_delete.to_string()))).execute(&mut conn).map_err(Into::into)
+        diesel::delete(devices.filter(id.eq(id_to_delete.to_string())))
+            .execute(&mut conn)
+            .map_err(Into::into)
     }
 }
 
@@ -267,7 +276,11 @@ mod mopidy_persistence_tests {
 
     #[derive(diesel::Insertable)]
     #[diesel(table_name = seed_schema::users)]
-    struct SeedUser { id: String, username: String, role: String }
+    struct SeedUser {
+        id: String,
+        username: String,
+        role: String,
+    }
 
     fn seed_user() -> Uuid {
         use seed_schema::users;
@@ -307,17 +320,28 @@ mod mopidy_persistence_tests {
         let viewer = seed_user();
 
         let created = repo
-            .create(mopidy_device(owner, device_kind::MOPIDY_SHARED, "http://m.local:6680"))
+            .create(mopidy_device(
+                owner,
+                device_kind::MOPIDY_SHARED,
+                "http://m.local:6680",
+            ))
             .expect("create mopidy device");
         assert_eq!(created.base_url.as_deref(), Some("http://m.local:6680"));
 
         let castable = repo.list_castable_for_user(viewer).expect("list castable");
         assert!(castable.iter().any(|d| d.id == created.id));
 
-        let found = repo.find_by_id(created.id.unwrap()).expect("find").expect("present");
+        let found = repo
+            .find_by_id(created.id.unwrap())
+            .expect("find")
+            .expect("present");
         assert_eq!(found.base_url, created.base_url);
         assert_eq!(repo.delete_by_id(created.id.unwrap()).expect("delete"), 1);
-        assert!(repo.find_by_id(created.id.unwrap()).expect("find again").is_none());
+        assert!(
+            repo.find_by_id(created.id.unwrap())
+                .expect("find again")
+                .is_none()
+        );
     }
 
     #[test]
@@ -328,18 +352,26 @@ mod mopidy_persistence_tests {
         let other = seed_user();
 
         let created = repo
-            .create(mopidy_device(owner, device_kind::MOPIDY_PERSONAL, "http://personal.local:6680"))
+            .create(mopidy_device(
+                owner,
+                device_kind::MOPIDY_PERSONAL,
+                "http://personal.local:6680",
+            ))
             .expect("create personal mopidy device");
 
         // Owner A sees their own personal device.
-        let castable_owner = repo.list_castable_for_user(owner).expect("list castable owner");
+        let castable_owner = repo
+            .list_castable_for_user(owner)
+            .expect("list castable owner");
         assert!(
             castable_owner.iter().any(|d| d.id == created.id),
             "owner should see their own personal device"
         );
 
         // A different user B must NOT see A's personal device.
-        let castable_other = repo.list_castable_for_user(other).expect("list castable other");
+        let castable_other = repo
+            .list_castable_for_user(other)
+            .expect("list castable other");
         assert!(
             !castable_other.iter().any(|d| d.id == created.id),
             "personal device must not be visible to a different user"

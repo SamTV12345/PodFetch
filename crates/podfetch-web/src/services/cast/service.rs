@@ -178,7 +178,11 @@ impl<L: CastDriver> CastOrchestrator<L> {
             let target = MopidyTarget { base_url };
             let sid = self
                 .mopidy_driver
-                .play(&target, &media, episode_string_id_position(&episode_string_id))
+                .play(
+                    &target,
+                    &media,
+                    episode_string_id_position(&episode_string_id),
+                )
                 .await?;
             (sid, None)
         } else {
@@ -226,7 +230,9 @@ impl<L: CastDriver> CastOrchestrator<L> {
     ) -> Result<(), OrchestratorError> {
         let session = self.lookup_session(user, session_id)?;
         if device_kind::is_mopidy(&session.device_kind) {
-            self.mopidy_driver.control(&session.session_id, &cmd).await?;
+            self.mopidy_driver
+                .control(&session.session_id, &cmd)
+                .await?;
         } else {
             match &session.agent_id {
                 Some(id) => {
@@ -467,10 +473,15 @@ mod tests {
         // shared registry; tests that don't can use the simple helper.
         let registry = Arc::new(AgentRegistry::new());
         let (mopidy_tx, _mopidy_rx) = tokio::sync::mpsc::channel(8);
-        let mopidy_driver = Arc::new(
-            crate::services::mopidy::driver::MopidyDriver::new(mopidy_tx),
+        let mopidy_driver = Arc::new(crate::services::mopidy::driver::MopidyDriver::new(
+            mopidy_tx,
+        ));
+        let orch = CastOrchestrator::new(
+            device_service,
+            Arc::new(StubCastDriver),
+            dispatcher,
+            mopidy_driver,
         );
-        let orch = CastOrchestrator::new(device_service, Arc::new(StubCastDriver), dispatcher, mopidy_driver);
         (orch, registry)
     }
 
@@ -481,7 +492,12 @@ mod tests {
         let devices = vec![
             make_device(10, alice.id, device_kind::CHROMECAST_PERSONAL, "uuid-alice"),
             make_device(11, bob.id, device_kind::CHROMECAST_PERSONAL, "uuid-bob"),
-            make_device(12, Uuid::from_u128(99), device_kind::CHROMECAST_SHARED, "uuid-shared"),
+            make_device(
+                12,
+                Uuid::from_u128(99),
+                device_kind::CHROMECAST_SHARED,
+                "uuid-shared",
+            ),
         ];
         let orch = orchestrator(devices);
 
@@ -565,9 +581,15 @@ mod tests {
         let repo = Arc::new(FakeDeviceRepo::new(vec![device]));
         let device_service = Arc::new(DeviceService::new(repo));
         let (mopidy_tx2, _mopidy_rx2) = tokio::sync::mpsc::channel(8);
-        let mopidy_driver2 = Arc::new(crate::services::mopidy::driver::MopidyDriver::new(mopidy_tx2));
-        let orch =
-            CastOrchestrator::new(device_service, Arc::new(StubCastDriver), dispatcher.clone(), mopidy_driver2);
+        let mopidy_driver2 = Arc::new(crate::services::mopidy::driver::MopidyDriver::new(
+            mopidy_tx2,
+        ));
+        let orch = CastOrchestrator::new(
+            device_service,
+            Arc::new(StubCastDriver),
+            dispatcher.clone(),
+            mopidy_driver2,
+        );
 
         // Drive `start` and intercept the Play that leaves for the agent.
         let alice_clone = alice.clone();
@@ -657,9 +679,7 @@ mod tests {
         // The mopidy server is unreachable, so start() returns a Cast/transport
         // error — proving the request was routed to the Mopidy branch (the
         // StubCastDriver would have returned NotImplemented instead).
-        let err = orch
-            .start(&alice, "mopidy-uuid", media, None, None)
-            .await;
+        let err = orch.start(&alice, "mopidy-uuid", media, None, None).await;
         assert!(matches!(err, Err(OrchestratorError::Mopidy(_))));
     }
 
