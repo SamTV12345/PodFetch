@@ -602,8 +602,7 @@ impl DownloadService {
             }
         };
 
-        if let 0 = tag.pictures().count() {
-            let mut image_file = File::open(&paths.image_filename).unwrap();
+        if let 0 = tag.pictures().count()  && let Ok(mut image_file) = File::open(&paths.image_filename) {
             let mut image_data = Vec::new();
             let _ = image_file.read_to_end(&mut image_data);
             tag.add_frame(id3::frame::Picture {
