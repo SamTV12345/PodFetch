@@ -1,3 +1,4 @@
+use crate::url_rewriting::resolve_image_url;
 use chrono::NaiveDateTime;
 use common_infrastructure::config::FileHandlerType;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
@@ -9,7 +10,6 @@ use std::borrow::Cow;
 use std::path::PathBuf;
 use std::str::FromStr;
 use utoipa::ToSchema;
-use crate::url_rewriting::resolve_image_url;
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct PodcastEpisodeDto {
@@ -205,8 +205,7 @@ fn map_url(
                 if server_url.is_empty() {
                     return remote_url.to_string();
                 }
-                let mut url = url::Url::from_str(&format!("{server_url}proxy/podcast"))
-                    .unwrap();
+                let mut url = url::Url::from_str(&format!("{server_url}proxy/podcast")).unwrap();
                 if ENVIRONMENT_SERVICE.any_auth_enabled
                     && let Some(user) = user
                     && let Some(key) = &user.api_key

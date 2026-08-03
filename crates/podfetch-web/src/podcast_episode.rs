@@ -115,12 +115,8 @@ pub fn get_podcast_episodes_with_history<E, H, Err, FetchEpisodes>(
 ) -> Result<Vec<PodcastEpisodeWithHistory<E, H>>, PodcastEpisodeControllerError<Err>>
 where
     Err: Display,
-    FetchEpisodes: FnOnce(
-        uuid::Uuid,
-        Option<String>,
-        Option<bool>,
-        &str,
-    ) -> Result<Vec<(E, Option<H>)>, Err>,
+    FetchEpisodes:
+        FnOnce(uuid::Uuid, Option<String>, Option<bool>, &str) -> Result<Vec<(E, Option<H>)>, Err>,
 {
     let episodes = fetch_episodes(podcast_id, last_podcast_episode, only_unlistened, username)
         .map_err(PodcastEpisodeControllerError::Service)?;

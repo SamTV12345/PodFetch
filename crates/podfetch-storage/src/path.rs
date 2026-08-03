@@ -5,7 +5,12 @@ pub fn build_podcast_image_paths(
     map_to_local_url: impl FnOnce(&str) -> String,
 ) -> (String, String) {
     let file_path = format!("{directory}/{cover_filename}.{suffix}");
-    let url_path = format!("{}/{}.{}", map_to_local_url(directory), cover_filename, suffix);
+    let url_path = format!(
+        "{}/{}.{}",
+        map_to_local_url(directory),
+        cover_filename,
+        suffix
+    );
     (file_path, url_path)
 }
 

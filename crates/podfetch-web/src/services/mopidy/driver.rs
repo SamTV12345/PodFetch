@@ -92,7 +92,9 @@ impl MopidyDriver {
             .await?;
         client.call("core.playback.play", json!({})).await?;
         if let Some(secs) = resume_secs.filter(|s| *s > 0.0) {
-            let (method, params) = control_to_call(&ControlCmd::Seek { position_secs: secs });
+            let (method, params) = control_to_call(&ControlCmd::Seek {
+                position_secs: secs,
+            });
             let _ = client.call(method, params).await;
         }
 
@@ -303,9 +305,7 @@ mod tests {
                 }
                 "core.playback.get_time_position" => Value::from(0),
                 "core.mixer.get_volume" => Value::from(100),
-                "core.playback.play"
-                | "core.tracklist.clear"
-                | "core.tracklist.add" => Value::Null,
+                "core.playback.play" | "core.tracklist.clear" | "core.tracklist.add" => Value::Null,
                 _ => Value::Null,
             };
             Json(json!({ "jsonrpc": "2.0", "id": 1, "result": result }))
@@ -345,7 +345,11 @@ mod tests {
         let mut end_count = 0usize;
         let drained = timeout(TokioDuration::from_secs(10), async {
             while let Some(evt) = rx.recv().await {
-                if let MopidyEvent::SessionEnded { session_id: ended, reason } = evt {
+                if let MopidyEvent::SessionEnded {
+                    session_id: ended,
+                    reason,
+                } = evt
+                {
                     assert_eq!(ended, session_id);
                     assert_eq!(reason, CastEndedReason::Finished);
                     end_count += 1;

@@ -36,7 +36,6 @@ use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisod
 use podfetch_storage::{FileHandleWrapper, FileRequest};
 use reqwest::header::{ACCEPT, HeaderMap};
 use reqwest::redirect::Policy;
-use uuid::Uuid;
 use rss::{Channel, Guid, Item};
 use std::collections::HashSet;
 use std::ffi::OsStr;
@@ -46,6 +45,7 @@ use std::sync::LazyLock;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use url::Url;
+use uuid::Uuid;
 
 pub struct PodcastEpisodeUseCase;
 static IN_PROGRESS_DOWNLOADS: LazyLock<Mutex<HashSet<String>>> =
@@ -121,9 +121,18 @@ impl PodcastEpisodeUseCase {
             .map_err(Into::into)
     }
 
-    pub fn get_position_of_episode(timestamp: &str, podcast_id: Uuid) -> Result<usize, CustomError> {
+    pub fn get_position_of_episode(
+        timestamp: &str,
+        podcast_id: Uuid,
+    ) -> Result<usize, CustomError> {
         Self::repo()
             .get_position_of_episode(timestamp, podcast_id)
+            .map_err(Into::into)
+    }
+
+    pub fn get_total_episode_count(podcast_id: Uuid) -> Result<usize, CustomError> {
+        Self::repo()
+            .get_total_episode_count(podcast_id)
             .map_err(Into::into)
     }
 
@@ -267,8 +276,7 @@ impl PodcastEpisodeUseCase {
             }
         };
 
-        if let Err(err) =
-            TranscriptService::default_service().upsert_from_feed(episode_uuid, &tags)
+        if let Err(err) = TranscriptService::default_service().upsert_from_feed(episode_uuid, &tags)
         {
             tracing::error!(
                 "Failed to upsert feed transcript tags for episode {}: {:?}",
@@ -855,18 +863,17 @@ impl PodcastEpisodeUseCase {
             };
 
             let old_podcast_episodes =
-                match Self::get_podcast_episodes_older_than_days(days, p_uuid)
-            {
-                Ok(episodes) => episodes,
-                Err(err) => {
-                    tracing::error!(
-                        "Error loading old podcast episodes for podcast {}: {}",
-                        p.id,
-                        err
-                    );
-                    continue;
-                }
-            };
+                match Self::get_podcast_episodes_older_than_days(days, p_uuid) {
+                    Ok(episodes) => episodes,
+                    Err(err) => {
+                        tracing::error!(
+                            "Error loading old podcast episodes for podcast {}: {}",
+                            p.id,
+                            err
+                        );
+                        continue;
+                    }
+                };
 
             tracing::info!("Cleaning up {} old episodes", old_podcast_episodes.len());
             for old_podcast_episode in old_podcast_episodes {
@@ -893,9 +900,7 @@ impl PodcastEpisodeUseCase {
 
                 match res {
                     Ok(_) => {
-                        if let Err(err) =
-                            Self::remove_download_status_of_episode(episode_id)
-                        {
+                        if let Err(err) = Self::remove_download_status_of_episode(episode_id) {
                             tracing::error!(
                                 "Error clearing download status for episode {}: {}",
                                 old_podcast_episode.id,
@@ -1206,7 +1211,11 @@ mod tests {
     use rss::extension::{Extension, ExtensionBuilder};
     use std::collections::BTreeMap;
 
-    fn transcript_extension(url: Option<&str>, mime_type: Option<&str>, language: Option<&str>) -> Extension {
+    fn transcript_extension(
+        url: Option<&str>,
+        mime_type: Option<&str>,
+        language: Option<&str>,
+    ) -> Extension {
         let mut builder = ExtensionBuilder::default();
         builder.name("podcast:transcript");
 
@@ -1241,8 +1250,16 @@ mod tests {
     #[test]
     fn extract_transcript_tags_reads_url_type_and_language() {
         let item = item_with_transcripts(vec![
-            transcript_extension(Some("https://example.com/ep1.vtt"), Some("text/vtt"), Some("en")),
-            transcript_extension(Some("https://example.com/ep1.json"), Some("application/json"), Some("en")),
+            transcript_extension(
+                Some("https://example.com/ep1.vtt"),
+                Some("text/vtt"),
+                Some("en"),
+            ),
+            transcript_extension(
+                Some("https://example.com/ep1.json"),
+                Some("application/json"),
+                Some("en"),
+            ),
         ]);
 
         let tags = extract_transcript_tags(&item);
@@ -1275,7 +1292,11 @@ mod tests {
     fn extract_transcript_tags_skips_tag_without_url() {
         let item = item_with_transcripts(vec![
             transcript_extension(None, Some("text/vtt"), Some("en")),
-            transcript_extension(Some("https://example.com/ep1.vtt"), Some("text/vtt"), Some("en")),
+            transcript_extension(
+                Some("https://example.com/ep1.vtt"),
+                Some("text/vtt"),
+                Some("en"),
+            ),
         ]);
 
         let tags = extract_transcript_tags(&item);

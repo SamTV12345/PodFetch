@@ -121,11 +121,10 @@ pub async fn get_episode_sponsorblock(
         })
         .collect();
 
-    let preferences =
-        match SponsorblockRepository::get_user_settings(&requester.id.to_string())? {
-            Some(e) => e.into(),
-            None => SponsorblockUserSettingsDto::defaults(),
-        };
+    let preferences = match SponsorblockRepository::get_user_settings(&requester.id.to_string())? {
+        Some(e) => e.into(),
+        None => SponsorblockUserSettingsDto::defaults(),
+    };
 
     Ok(Json(SponsorblockEpisodeResponse {
         segments,

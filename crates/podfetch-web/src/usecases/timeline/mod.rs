@@ -94,10 +94,8 @@ impl TimelineItem {
 
         let user_id_to_search = user.id.to_string();
 
-        let _ = FilterService::default_service().save_timeline_decision(
-            user.id,
-            favored_only.favored_only.unwrap_or(false),
-        );
+        let _ = FilterService::default_service()
+            .save_timeline_decision(user.id, favored_only.favored_only.unwrap_or(false));
 
         let (ph1, ph2) = diesel::alias!(phi_struct as ph1, phi_struct as ph2);
 
@@ -109,8 +107,9 @@ impl TimelineItem {
         let part_query = podcast_episodes
             .inner_join(podcasts.on(e_podcast_id.eq(pid)))
             .left_join(
-                favorite_podcast_episodes
-                    .on(e_p_id.eq(fpe_fav).and(idpe_fav.eq(user_id_to_search.clone()))),
+                favorite_podcast_episodes.on(e_p_id
+                    .eq(fpe_fav)
+                    .and(idpe_fav.eq(user_id_to_search.clone()))),
             )
             .left_join(ph1.on(ph1.field(eguid).eq(pguid.nullable())))
             .filter(
@@ -120,7 +119,9 @@ impl TimelineItem {
                     .or(ph1.field(phistory_date).is_null()),
             )
             .left_join(
-                favorites.on(f_user_id.eq(user_id_to_search.clone()).and(f_podcast_id.eq(pid))),
+                favorites.on(f_user_id
+                    .eq(user_id_to_search.clone())
+                    .and(f_podcast_id.eq(pid))),
             );
 
         let mut query = part_query

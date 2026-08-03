@@ -5,7 +5,6 @@ use std::fmt;
 use url::Url;
 use utoipa::ToSchema;
 
-
 fn deserialize_flexible_timestamp<'de, D>(deserializer: D) -> Result<NaiveDateTime, D::Error>
 where
     D: Deserializer<'de>,

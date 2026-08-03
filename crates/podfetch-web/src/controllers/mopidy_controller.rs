@@ -137,13 +137,15 @@ pub async fn add_mopidy_server(
         base_url: Some(url),
     };
     let created = state.device_service.create(device)?;
-    MopidyServerResponse::from_device(&created).map(Json).ok_or_else(|| {
-        CustomErrorInner::BadRequest(
-            "could not build server response".to_string(),
-            ErrorSeverity::Error,
-        )
-        .into()
-    })
+    MopidyServerResponse::from_device(&created)
+        .map(Json)
+        .ok_or_else(|| {
+            CustomErrorInner::BadRequest(
+                "could not build server response".to_string(),
+                ErrorSeverity::Error,
+            )
+            .into()
+        })
 }
 
 #[utoipa::path(
@@ -224,7 +226,10 @@ mod tests {
     #[test]
     fn normalize_rejects_non_http_and_trims_slash() {
         assert!(normalize_url("ftp://x").is_err());
-        assert_eq!(normalize_url("http://m.local:6680/").unwrap(), "http://m.local:6680");
+        assert_eq!(
+            normalize_url("http://m.local:6680/").unwrap(),
+            "http://m.local:6680"
+        );
     }
 
     #[test]

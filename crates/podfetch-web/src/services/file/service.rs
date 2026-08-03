@@ -175,8 +175,7 @@ impl FileService {
     }
 
     pub fn delete_podcast_files(podcast: &Podcast) {
-        let podcast_uuid =
-            uuid::Uuid::parse_str(&podcast.id).unwrap_or_else(|_| uuid::Uuid::nil());
+        let podcast_uuid = uuid::Uuid::parse_str(&podcast.id).unwrap_or_else(|_| uuid::Uuid::nil());
         let episodes =
             PodcastEpisodeService::get_episodes_by_podcast_id(podcast_uuid).unwrap_or_default();
         let episode_infos: Vec<podfetch_storage::EpisodeFileInfo> = episodes
@@ -221,8 +220,7 @@ pub async fn prepare_podcast_title_to_directory(
     let retrieved_settings = SettingsService::shared().get_settings()?.unwrap();
     // The podcast row does not exist yet at this point (this runs during
     // initial insert), so there can be no per-podcast settings override.
-    let opt_podcast_settings =
-        PodcastSettingsService::get_settings_for_podcast(uuid::Uuid::nil())?;
+    let opt_podcast_settings = PodcastSettingsService::get_settings_for_podcast(uuid::Uuid::nil())?;
 
     let podcast = match channel {
         Some(channel) => RSSFeedParser::parse_rss_feed(channel),
@@ -333,15 +331,21 @@ pub fn prepare_podcast_episode_title_to_directory(
     let podcast_uuid = uuid::Uuid::parse_str(&podcast_episode.podcast_id)
         .map_err(|_| CustomError::from(CustomErrorInner::NotFound(ErrorSeverity::Warning)))?;
     let podcast_settings = PodcastSettingsService::get_settings_for_podcast(podcast_uuid)?;
-    let episode_number = crate::usecases::podcast_episode::PodcastEpisodeUseCase::get_position_of_episode(
-        &podcast_episode.date_of_recording,
-        podcast_uuid,
-    )? as i64;
+    let episode_number =
+        crate::usecases::podcast_episode::PodcastEpisodeUseCase::get_position_of_episode(
+            &podcast_episode.date_of_recording,
+            podcast_uuid,
+        )? as i64;
+    let total_episode_count =
+        crate::usecases::podcast_episode::PodcastEpisodeUseCase::get_total_episode_count(
+            podcast_uuid,
+        )?;
     perform_episode_variable_replacement(
         retrieved_settings.into(),
         podcast_episode,
         podcast_settings,
         episode_number,
+        Some(total_episode_count),
     )
 }
 
@@ -350,6 +354,7 @@ pub fn perform_episode_variable_replacement(
     podcast_episode: PodcastEpisode,
     podcast_settings: Option<PodcastSetting>,
     episode_number: i64,
+    total_episode_count: Option<usize>,
 ) -> Result<String, CustomError> {
     let escaped_episode_title = perform_replacement(
         &podcast_episode.name,
@@ -377,7 +382,13 @@ pub fn perform_episode_variable_replacement(
     let mut vars: HashMap<String, &str> = HashMap::new();
 
     let total_time = podcast_episode.total_time.to_string();
-    let episode_number_str = episode_number.to_string();
+    let episode_number_str = match total_episode_count {
+        Some(total) if total > 0 => {
+            let digits = (total as f64).log10().floor() as usize + 1;
+            format!("{:0>width$}", episode_number, width = digits)
+        }
+        _ => episode_number.to_string(),
+    };
     let episode_date = replace_date_of_str(&podcast_episode.date_of_recording);
     // Insert variables
     vars.insert("episodeTitle".to_string(), &escaped_episode_title);
@@ -654,7 +665,7 @@ mod tests {
             youtube_video_id: None,
         };
 
-        let result = perform_episode_variable_replacement(settings, podcast_episode, None, 1);
+        let result = perform_episode_variable_replacement(settings, podcast_episode, None, 1, None);
         assert_eq!(result.unwrap(), "test123test");
     }
 
@@ -704,7 +715,7 @@ mod tests {
             youtube_video_id: None,
         };
 
-        let result = perform_episode_variable_replacement(settings, podcast_episode, None, 1);
+        let result = perform_episode_variable_replacement(settings, podcast_episode, None, 1, None);
         assert_eq!(result.unwrap(), "2022MyPodcasttest");
     }
 
@@ -754,7 +765,7 @@ mod tests {
             youtube_video_id: None,
         };
 
-        let result = perform_episode_variable_replacement(settings, podcast_episode, None, 1);
+        let result = perform_episode_variable_replacement(settings, podcast_episode, None, 1, None);
         assert_eq!(result.unwrap(), "MyPodcast");
     }
 
@@ -804,7 +815,7 @@ mod tests {
             youtube_video_id: None,
         };
 
-        let result = perform_episode_variable_replacement(settings, podcast_episode, None, 7);
+        let result = perform_episode_variable_replacement(settings, podcast_episode, None, 7, None);
         assert_eq!(result.unwrap(), "007 - Hello");
     }
 

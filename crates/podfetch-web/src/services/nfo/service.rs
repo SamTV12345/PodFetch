@@ -179,9 +179,10 @@ pub fn ensure_cover_filename(podcast_entity: &PodcastEntity) {
                     target,
                     ext
                 );
-                if let Err(err) =
-                    PodcastEpisodeService::update_podcast_image(&podcast_entity.directory_id, &new_url)
-                {
+                if let Err(err) = PodcastEpisodeService::update_podcast_image(
+                    &podcast_entity.directory_id,
+                    &new_url,
+                ) {
                     tracing::warn!("Cover renamed but DB image_url update failed: {err}");
                 }
             }
@@ -213,6 +214,9 @@ mod tests {
             "podcasts/My.Show/2024-01-01 - Ep.nfo"
         );
         // windows separators
-        assert_eq!(nfo_path_for("podcasts\\x\\audio.opus"), "podcasts\\x\\audio.nfo");
+        assert_eq!(
+            nfo_path_for("podcasts\\x\\audio.opus"),
+            "podcasts\\x\\audio.nfo"
+        );
     }
 }

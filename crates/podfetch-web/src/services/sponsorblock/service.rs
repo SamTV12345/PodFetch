@@ -4,7 +4,7 @@
 use crate::services::sponsorblock::client::{self, FetchedSegment};
 use common_infrastructure::error::CustomError;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
-use podfetch_persistence::sponsorblock::{SponsorblockRepository, SponsorSegmentEntity};
+use podfetch_persistence::sponsorblock::{SponsorSegmentEntity, SponsorblockRepository};
 
 /// Tolerance for declaring a duration mismatch: the larger of 2 seconds or 1%.
 fn durations_mismatch(episode_secs: i64, sb_secs: f64) -> bool {
@@ -24,15 +24,13 @@ fn durations_mismatch(episode_secs: i64, sb_secs: f64) -> bool {
 /// regardless of the caller's async context. Returns Ok(n) segments, or Err.
 pub fn fetch_and_store_blocking(episode: &PodcastEpisode) -> Result<usize, CustomError> {
     let episode = episode.clone();
-    std::thread::spawn(move || {
-        match tokio::runtime::Runtime::new() {
-            Ok(rt) => rt.block_on(fetch_and_store(&episode)),
-            Err(e) => Err(common_infrastructure::error::CustomErrorInner::Conflict(
-                format!("Could not start runtime for SponsorBlock fetch: {e}"),
-                common_infrastructure::error::ErrorSeverity::Warning,
-            )
-            .into()),
-        }
+    std::thread::spawn(move || match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt.block_on(fetch_and_store(&episode)),
+        Err(e) => Err(common_infrastructure::error::CustomErrorInner::Conflict(
+            format!("Could not start runtime for SponsorBlock fetch: {e}"),
+            common_infrastructure::error::ErrorSeverity::Warning,
+        )
+        .into()),
     })
     .join()
     .unwrap_or_else(|_| {

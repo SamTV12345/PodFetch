@@ -4,12 +4,12 @@ use crate::auth_middleware::{
 };
 use crate::controllers::agent_ws_controller::get_agent_ws_router;
 use crate::controllers::cast_controller::get_cast_router;
-use crate::controllers::mopidy_controller::get_mopidy_router;
 use crate::controllers::discover_controller::get_discover_router;
+use crate::controllers::episode_triage_controller::get_episode_triage_router;
 use crate::controllers::file_hosting::podcast_serving;
 use crate::controllers::manifest_controller::get_manifest_router;
+use crate::controllers::mopidy_controller::get_mopidy_router;
 use crate::controllers::notification_controller::get_notification_router;
-use crate::controllers::episode_triage_controller::get_episode_triage_router;
 use crate::controllers::playlist_controller::get_playlist_router;
 use crate::controllers::podcast_controller::{get_podcast_router, proxy_podcast};
 use crate::controllers::podcast_episode_controller::get_podcast_episode_router;
@@ -167,11 +167,7 @@ pub fn transform_index_files(headers: &http::HeaderMap) -> String {
 
     let resolved_server_url = crate::url_rewriting::resolve_server_url_from_headers(headers);
     let base_config = ENVIRONMENT_SERVICE.get_config(&resolved_server_url);
-    let public_config = crate::sys::get_public_config(
-        base_config,
-        &resolved_server_url,
-        None,
-    );
+    let public_config = crate::sys::get_public_config(base_config, &resolved_server_url, None);
     let config_string = serde_json::to_string(&public_config).unwrap();
 
     let html: Markup = html! {

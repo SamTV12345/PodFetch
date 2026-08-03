@@ -50,7 +50,11 @@ fn process_one_job(
     let episode_id = job.episode_id.to_string();
 
     job_repo.set_status(job.id, TranscriptionJobStatus::Running, None)?;
-    ChatServerHandle::broadcast_transcription_status(&episode_id, TranscriptionJobStatus::Running.as_str(), None);
+    ChatServerHandle::broadcast_transcription_status(
+        &episode_id,
+        TranscriptionJobStatus::Running.as_str(),
+        None,
+    );
 
     if let Err(err) = transcribe_job(&job, service, client) {
         let error_message = err.to_string();
@@ -58,21 +62,36 @@ fn process_one_job(
         let (status, error_for_broadcast) = if attempts >= MAX_ATTEMPTS {
             (TranscriptionJobStatus::Failed, Some(error_message.as_str()))
         } else {
-            (TranscriptionJobStatus::Pending, Some(error_message.as_str()))
+            (
+                TranscriptionJobStatus::Pending,
+                Some(error_message.as_str()),
+            )
         };
         job_repo.set_status(job.id, status.clone(), error_for_broadcast)?;
-        ChatServerHandle::broadcast_transcription_status(&episode_id, status.as_str(), error_for_broadcast);
+        ChatServerHandle::broadcast_transcription_status(
+            &episode_id,
+            status.as_str(),
+            error_for_broadcast,
+        );
         return Ok(true);
     }
 
     job_repo.set_status(job.id, TranscriptionJobStatus::Done, None)?;
-    ChatServerHandle::broadcast_transcription_status(&episode_id, TranscriptionJobStatus::Done.as_str(), None);
+    ChatServerHandle::broadcast_transcription_status(
+        &episode_id,
+        TranscriptionJobStatus::Done.as_str(),
+        None,
+    );
     Ok(true)
 }
 
 /// Loads the job's episode, sends its local audio file to Whisper, and
 /// stores the resulting segments as the episode's generated transcript.
-fn transcribe_job(job: &TranscriptionJob, service: &TranscriptService, client: &WhisperClient) -> Result<(), CustomError> {
+fn transcribe_job(
+    job: &TranscriptionJob,
+    service: &TranscriptService,
+    client: &WhisperClient,
+) -> Result<(), CustomError> {
     let episode = PodcastEpisodeUseCase::get_podcast_episode_by_internal_id(job.episode_id)?
         .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(ErrorSeverity::Warning)))?;
 
@@ -116,11 +135,14 @@ async fn run_worker_with_config(
 ) {
     use std::sync::atomic::Ordering;
 
-    let job_repo: Arc<TranscriptionJobRepositoryImpl> = Arc::new(TranscriptionJobRepositoryImpl::new(database()));
+    let job_repo: Arc<TranscriptionJobRepositoryImpl> =
+        Arc::new(TranscriptionJobRepositoryImpl::new(database()));
     match job_repo.reset_running_to_pending() {
         Ok(0) => {}
         Ok(reset) => {
-            tracing::info!("Reset {reset} stuck transcription job(s) from running back to pending at startup")
+            tracing::info!(
+                "Reset {reset} stuck transcription job(s) from running back to pending at startup"
+            )
         }
         Err(err) => tracing::error!("Failed to reset stuck transcription jobs at startup: {err}"),
     }
@@ -176,8 +198,8 @@ mod tests {
         PodcastEpisodeTranscriptRepository, TranscriptSource, TranscriptStatus,
     };
     use podfetch_persistence::db::{get_connection, run_migrations};
-    use podfetch_persistence::schema::{podcast_episodes, podcasts};
     use podfetch_persistence::podcast_episode_transcript::DieselPodcastEpisodeTranscriptRepository;
+    use podfetch_persistence::schema::{podcast_episodes, podcasts};
     use std::sync::MutexGuard;
     use uuid::Uuid;
 
@@ -207,7 +229,9 @@ mod tests {
 
     fn lock_and_prepare_db() -> MutexGuard<'static, ()> {
         ensure_test_env_vars();
-        let guard = GLOBAL_MUTEX.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let guard = GLOBAL_MUTEX
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         run_migrations();
 
         let mut conn = get_connection();
@@ -350,7 +374,8 @@ mod tests {
         let service = transcript_service();
         let client = WhisperClient::new(whisper_config("http://127.0.0.1:0".to_string()));
 
-        let found = process_one_job(&repo, &service, &client).expect("must not error on empty queue");
+        let found =
+            process_one_job(&repo, &service, &client).expect("must not error on empty queue");
         assert!(!found, "no pending job must yield Ok(false)");
     }
 
@@ -375,7 +400,10 @@ mod tests {
         let base_url = spawn_mock_server(app);
         let client = WhisperClient::new(whisper_config(base_url));
 
-        let job = repo.enqueue(episode_id).expect("enqueue").expect("job created");
+        let job = repo
+            .enqueue(episode_id)
+            .expect("enqueue")
+            .expect("job created");
 
         let found = process_one_job(&repo, &service, &client).expect("process_one_job");
         assert!(found, "a pending job must be picked up");
@@ -386,20 +414,31 @@ mod tests {
             .expect("job row still exists");
         assert_eq!(updated_job.id, job.id);
         assert_eq!(updated_job.status, TranscriptionJobStatus::Done);
-        assert_eq!(updated_job.attempts, 0, "a successful attempt must not increment attempts");
+        assert_eq!(
+            updated_job.attempts, 0,
+            "a successful attempt must not increment attempts"
+        );
 
         let transcript_repo = DieselPodcastEpisodeTranscriptRepository::new(database());
-        let transcripts = transcript_repo.get_by_episode_id(episode_id).expect("get transcripts");
+        let transcripts = transcript_repo
+            .get_by_episode_id(episode_id)
+            .expect("get transcripts");
         let generated = transcripts
             .iter()
             .find(|t| t.source == TranscriptSource::Generated)
             .expect("a generated transcript row must exist");
         assert_eq!(generated.status, TranscriptStatus::Parsed);
-        assert!(generated.is_preferred, "the only parsed transcript must become preferred");
+        assert!(
+            generated.is_preferred,
+            "the only parsed transcript must become preferred"
+        );
 
         let expected_vtt_path = dir.join("episode.transcript.generated.vtt");
         assert_eq!(generated.file_path.as_deref(), expected_vtt_path.to_str());
-        assert!(expected_vtt_path.exists(), "the generated VTT file must be archived on disk");
+        assert!(
+            expected_vtt_path.exists(),
+            "the generated VTT file must be archived on disk"
+        );
         let vtt_contents = std::fs::read_to_string(&expected_vtt_path).unwrap();
         assert!(vtt_contents.contains("Hello from whisper"));
 
@@ -427,10 +466,13 @@ mod tests {
         let base_url = spawn_mock_server(app);
         let client = WhisperClient::new(whisper_config(base_url));
 
-        repo.enqueue(episode_id).expect("enqueue").expect("job created");
+        repo.enqueue(episode_id)
+            .expect("enqueue")
+            .expect("job created");
 
         // First failed attempt: attempts becomes 1 (< 3) -> back to pending.
-        let found = process_one_job(&repo, &service, &client).expect("process_one_job (1st attempt)");
+        let found =
+            process_one_job(&repo, &service, &client).expect("process_one_job (1st attempt)");
         assert!(found);
         let after_first = repo.get_by_episode_id(episode_id).unwrap().unwrap();
         assert_eq!(after_first.attempts, 1);
@@ -438,7 +480,8 @@ mod tests {
         assert!(after_first.error.is_some());
 
         // Second failed attempt: attempts becomes 2 (< 3) -> still pending.
-        let found = process_one_job(&repo, &service, &client).expect("process_one_job (2nd attempt)");
+        let found =
+            process_one_job(&repo, &service, &client).expect("process_one_job (2nd attempt)");
         assert!(found);
         let after_second = repo.get_by_episode_id(episode_id).unwrap().unwrap();
         assert_eq!(after_second.attempts, 2);
@@ -466,14 +509,17 @@ mod tests {
         let base_url = spawn_mock_server(app);
         let client = WhisperClient::new(whisper_config(base_url));
 
-        repo.enqueue(episode_id).expect("enqueue").expect("job created");
+        repo.enqueue(episode_id)
+            .expect("enqueue")
+            .expect("job created");
 
         for _ in 0..2 {
             process_one_job(&repo, &service, &client).expect("earlier attempt");
         }
 
         // Third failed attempt: attempts becomes 3 -> failed, with the error recorded.
-        let found = process_one_job(&repo, &service, &client).expect("process_one_job (3rd attempt)");
+        let found =
+            process_one_job(&repo, &service, &client).expect("process_one_job (3rd attempt)");
         assert!(found);
         let after_third = repo.get_by_episode_id(episode_id).unwrap().unwrap();
         assert_eq!(after_third.attempts, 3);
@@ -493,7 +539,9 @@ mod tests {
         let episode_id = seed_episode(podcast_id, None);
         let client = WhisperClient::new(whisper_config("http://127.0.0.1:0".to_string()));
 
-        repo.enqueue(episode_id).expect("enqueue").expect("job created");
+        repo.enqueue(episode_id)
+            .expect("enqueue")
+            .expect("job created");
 
         let found = process_one_job(&repo, &service, &client).expect("process_one_job");
         assert!(found);

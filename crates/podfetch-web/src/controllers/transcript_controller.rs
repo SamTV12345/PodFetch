@@ -92,7 +92,10 @@ impl TranscriptWithSegmentsDto {
             mime_type: transcript.mime_type,
             status: transcript.status.as_str().to_string(),
             error: transcript.error,
-            segments: segments.into_iter().map(TranscriptSegmentDto::from).collect(),
+            segments: segments
+                .into_iter()
+                .map(TranscriptSegmentDto::from)
+                .collect(),
         }
     }
 }
@@ -186,7 +189,9 @@ fn find_archived_transcript_for_episode(
     Ok(transcript)
 }
 
-async fn stream_transcript_file(transcript: PodcastEpisodeTranscript) -> Result<Response, CustomError> {
+async fn stream_transcript_file(
+    transcript: PodcastEpisodeTranscript,
+) -> Result<Response, CustomError> {
     let file_path = transcript
         .file_path
         .as_deref()
@@ -200,7 +205,8 @@ async fn stream_transcript_file(transcript: PodcastEpisodeTranscript) -> Result<
     let mut headers = http::HeaderMap::new();
     headers.insert(
         header::CONTENT_TYPE,
-        HeaderValue::from_str(&transcript.mime_type).unwrap_or(HeaderValue::from_static("application/octet-stream")),
+        HeaderValue::from_str(&transcript.mime_type)
+            .unwrap_or(HeaderValue::from_static("application/octet-stream")),
     );
 
     Ok((StatusCode::OK, headers, Body::from(bytes)).into_response())
@@ -269,10 +275,14 @@ pub async fn get_preferred_transcript(
     Extension(_requester): Extension<User>,
 ) -> Result<Json<TranscriptWithSegmentsDto>, CustomError> {
     let episode_id = resolve_episode_uuid(&id)?;
-    let preferred = state.transcript_service.get_preferred_segments(episode_id)?;
+    let preferred = state
+        .transcript_service
+        .get_preferred_segments(episode_id)?;
 
     match preferred {
-        Some((transcript, segments)) => Ok(Json(TranscriptWithSegmentsDto::new(transcript, segments))),
+        Some((transcript, segments)) => {
+            Ok(Json(TranscriptWithSegmentsDto::new(transcript, segments)))
+        }
         None => Err(CustomErrorInner::NotFound(Warning).into()),
     }
 }
@@ -341,10 +351,15 @@ pub async fn enqueue_transcription(
     }
 
     if ENVIRONMENT_SERVICE.transcription_config.is_none() {
-        return Ok((StatusCode::SERVICE_UNAVAILABLE, "no transcription backend is configured").into_response());
+        return Ok((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "no transcription backend is configured",
+        )
+            .into_response());
     }
 
-    let episode_id = resolve_episode_uuid(&id).map_err(common_infrastructure::error::ErrorType::from)?;
+    let episode_id =
+        resolve_episode_uuid(&id).map_err(common_infrastructure::error::ErrorType::from)?;
     match state
         .transcript_service
         .enqueue_job(episode_id)
@@ -353,7 +368,9 @@ pub async fn enqueue_transcription(
         Some(_job) => Ok(StatusCode::OK.into_response()),
         // JSON ApiError body so the UI middleware can toast a translated
         // "already running" message from the errorCode.
-        None => Err(common_infrastructure::error::ApiError::transcription_job_already_exists().into()),
+        None => {
+            Err(common_infrastructure::error::ApiError::transcription_job_already_exists().into())
+        }
     }
 }
 
@@ -380,8 +397,12 @@ pub async fn search_transcripts(
         .podcast_id
         .as_deref()
         .map(|s| {
-            Uuid::parse_str(s)
-                .map_err(|_| CustomError::from(CustomErrorInner::BadRequest("invalid podcastId".to_string(), Warning)))
+            Uuid::parse_str(s).map_err(|_| {
+                CustomError::from(CustomErrorInner::BadRequest(
+                    "invalid podcastId".to_string(),
+                    Warning,
+                ))
+            })
         })
         .transpose()?;
 
@@ -435,7 +456,9 @@ pub async fn reparse_transcripts(
 }
 
 fn parse_transcript_uuid(id: &str) -> Result<Uuid, CustomError> {
-    Uuid::parse_str(id).map_err(|_| CustomErrorInner::BadRequest("invalid transcript id".to_string(), Warning).into())
+    Uuid::parse_str(id).map_err(|_| {
+        CustomErrorInner::BadRequest("invalid transcript id".to_string(), Warning).into()
+    })
 }
 
 /// Every transcript route except [`get_transcript_file_with_api_key`], which
@@ -462,7 +485,8 @@ mod tests {
     use common_infrastructure::error::CustomErrorInner;
     use diesel::prelude::*;
     use podfetch_domain::podcast_episode_transcript::{
-        PodcastEpisodeTranscriptRepository, TranscriptSegment, TranscriptSource, TranscriptStatus, UpsertTranscript,
+        PodcastEpisodeTranscriptRepository, TranscriptSegment, TranscriptSource, TranscriptStatus,
+        UpsertTranscript,
     };
     use podfetch_domain::user::User;
     use podfetch_persistence::adapters::PodcastEpisodeTranscriptRepositoryImpl;
@@ -521,7 +545,10 @@ mod tests {
 
     /// Seeds one `parsed` + preferred transcript with segments and an
     /// archived file on disk, returning (transcript_id, archive_path).
-    fn seed_parsed_transcript_with_file(episode_id: Uuid, text: &str) -> (Uuid, std::path::PathBuf) {
+    fn seed_parsed_transcript_with_file(
+        episode_id: Uuid,
+        text: &str,
+    ) -> (Uuid, std::path::PathBuf) {
         let repo = PodcastEpisodeTranscriptRepositoryImpl::new(database());
         let transcript_id = repo
             .upsert(UpsertTranscript {
@@ -541,12 +568,19 @@ mod tests {
             text: text.to_string(),
         }];
         repo.replace_segments(transcript_id, &segments).unwrap();
-        repo.set_status(transcript_id, TranscriptStatus::Parsed, None).unwrap();
+        repo.set_status(transcript_id, TranscriptStatus::Parsed, None)
+            .unwrap();
         repo.set_preferred(episode_id, Some(transcript_id)).unwrap();
 
-        let archive_path = std::env::temp_dir().join(format!("transcript-ctrl-{transcript_id}.vtt"));
-        std::fs::write(&archive_path, "WEBVTT\n\n00:00:00.500 --> 00:00:04.200\nHello world\n").unwrap();
-        repo.set_file_path(transcript_id, archive_path.to_str().unwrap()).unwrap();
+        let archive_path =
+            std::env::temp_dir().join(format!("transcript-ctrl-{transcript_id}.vtt"));
+        std::fs::write(
+            &archive_path,
+            "WEBVTT\n\n00:00:00.500 --> 00:00:04.200\nHello world\n",
+        )
+        .unwrap();
+        repo.set_file_path(transcript_id, archive_path.to_str().unwrap())
+            .unwrap();
 
         (transcript_id, archive_path)
     }
@@ -561,14 +595,18 @@ mod tests {
 
         let list_response = server
             .test_server
-            .get(&format!("/api/v1/podcasts/episodes/{episode_id}/transcripts"))
+            .get(&format!(
+                "/api/v1/podcasts/episodes/{episode_id}/transcripts"
+            ))
             .await;
         assert_eq!(list_response.status_code(), 200);
         assert!(list_response.json::<Value>().as_array().unwrap().is_empty());
 
         let preferred_response = server
             .test_server
-            .get(&format!("/api/v1/podcasts/episodes/{episode_id}/transcript"))
+            .get(&format!(
+                "/api/v1/podcasts/episodes/{episode_id}/transcript"
+            ))
             .await;
         assert_eq!(preferred_response.status_code(), 404);
     }
@@ -581,11 +619,17 @@ mod tests {
 
         // Enqueue a job without any generated transcript row yet: the list
         // must surface it so the UI can show a pending badge after reload.
-        app_state().transcript_service.enqueue_job(episode_id).unwrap().unwrap();
+        app_state()
+            .transcript_service
+            .enqueue_job(episode_id)
+            .unwrap()
+            .unwrap();
 
         let response = server
             .test_server
-            .get(&format!("/api/v1/podcasts/episodes/{episode_id}/transcripts"))
+            .get(&format!(
+                "/api/v1/podcasts/episodes/{episode_id}/transcripts"
+            ))
             .await;
         assert_eq!(response.status_code(), 200);
         let list = response.json::<Value>();
@@ -602,11 +646,14 @@ mod tests {
     async fn episode_with_seeded_transcript_returns_list_and_preferred_content() {
         let server = handle_test_startup().await;
         let episode_id = seed_episode();
-        let (transcript_id, archive_path) = seed_parsed_transcript_with_file(episode_id, "hello world unique-marker");
+        let (transcript_id, archive_path) =
+            seed_parsed_transcript_with_file(episode_id, "hello world unique-marker");
 
         let list_response = server
             .test_server
-            .get(&format!("/api/v1/podcasts/episodes/{episode_id}/transcripts"))
+            .get(&format!(
+                "/api/v1/podcasts/episodes/{episode_id}/transcripts"
+            ))
             .await;
         assert_eq!(list_response.status_code(), 200);
         let list = list_response.json::<Value>();
@@ -618,7 +665,9 @@ mod tests {
 
         let preferred_response = server
             .test_server
-            .get(&format!("/api/v1/podcasts/episodes/{episode_id}/transcript"))
+            .get(&format!(
+                "/api/v1/podcasts/episodes/{episode_id}/transcript"
+            ))
             .await;
         assert_eq!(preferred_response.status_code(), 200);
         let preferred = preferred_response.json::<Value>();
@@ -637,7 +686,8 @@ mod tests {
     async fn get_transcript_file_streams_bytes_with_stored_mime_type() {
         let server = handle_test_startup().await;
         let episode_id = seed_episode();
-        let (transcript_id, archive_path) = seed_parsed_transcript_with_file(episode_id, "file streaming test");
+        let (transcript_id, archive_path) =
+            seed_parsed_transcript_with_file(episode_id, "file streaming test");
 
         let response = server
             .test_server
@@ -647,7 +697,12 @@ mod tests {
             .await;
         assert_eq!(response.status_code(), 200);
         assert_eq!(
-            response.headers().get("content-type").unwrap().to_str().unwrap(),
+            response
+                .headers()
+                .get("content-type")
+                .unwrap()
+                .to_str()
+                .unwrap(),
             "text/vtt"
         );
         assert!(response.text().contains("Hello world"));
@@ -661,7 +716,8 @@ mod tests {
         let server = handle_test_startup().await;
         let episode_id = seed_episode();
         let other_episode_id = seed_episode();
-        let (transcript_id, archive_path) = seed_parsed_transcript_with_file(episode_id, "belongs to first episode");
+        let (transcript_id, archive_path) =
+            seed_parsed_transcript_with_file(episode_id, "belongs to first episode");
 
         let response = server
             .test_server
@@ -679,7 +735,8 @@ mod tests {
     async fn get_transcript_file_with_valid_api_key_streams_bytes_without_any_auth_session() {
         let server = handle_test_startup().await;
         let episode_id = seed_episode();
-        let (transcript_id, archive_path) = seed_parsed_transcript_with_file(episode_id, "api key streaming test");
+        let (transcript_id, archive_path) =
+            seed_parsed_transcript_with_file(episode_id, "api key streaming test");
 
         // `clear_headers()` strips the Basic-Auth header the test server adds
         // to every request by default, proving this route needs no login
@@ -695,7 +752,12 @@ mod tests {
             .await;
         assert_eq!(response.status_code(), 200);
         assert_eq!(
-            response.headers().get("content-type").unwrap().to_str().unwrap(),
+            response
+                .headers()
+                .get("content-type")
+                .unwrap()
+                .to_str()
+                .unwrap(),
             "text/vtt"
         );
 
@@ -707,7 +769,8 @@ mod tests {
     async fn get_transcript_file_with_invalid_api_key_is_forbidden_without_any_auth_session() {
         let server = handle_test_startup().await;
         let episode_id = seed_episode();
-        let (transcript_id, archive_path) = seed_parsed_transcript_with_file(episode_id, "invalid api key test");
+        let (transcript_id, archive_path) =
+            seed_parsed_transcript_with_file(episode_id, "invalid api key test");
 
         let response = server
             .test_server
@@ -728,8 +791,10 @@ mod tests {
     async fn search_finds_seeded_segment() {
         let server = handle_test_startup().await;
         let episode_id = seed_episode();
-        let (_transcript_id, archive_path) =
-            seed_parsed_transcript_with_file(episode_id, "a very distinctive zzyzx search term appears here");
+        let (_transcript_id, archive_path) = seed_parsed_transcript_with_file(
+            episode_id,
+            "a very distinctive zzyzx search term appears here",
+        );
 
         let response = server
             .test_server
@@ -777,7 +842,9 @@ mod tests {
 
         let response = server
             .test_server
-            .post(&format!("/api/v1/podcasts/episodes/{episode_id}/transcribe"))
+            .post(&format!(
+                "/api/v1/podcasts/episodes/{episode_id}/transcribe"
+            ))
             .await;
         assert_eq!(response.status_code(), 503);
     }
@@ -829,7 +896,10 @@ mod tests {
     async fn reparse_transcripts_succeeds_for_admin_over_http() {
         let server = handle_test_startup().await;
 
-        let response = server.test_server.post("/api/v1/settings/transcripts/reparse").await;
+        let response = server
+            .test_server
+            .post("/api/v1/settings/transcripts/reparse")
+            .await;
         assert_eq!(response.status_code(), 200);
         let body = response.json::<Value>();
         assert_eq!(body["reparsed"], json!(0));

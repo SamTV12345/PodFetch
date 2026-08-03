@@ -31,7 +31,9 @@ pub struct TriageListQuery {
 
 impl TriageListQuery {
     fn limit(&self) -> i64 {
-        self.limit.unwrap_or(DEFAULT_PAGE_SIZE).clamp(1, MAX_PAGE_SIZE)
+        self.limit
+            .unwrap_or(DEFAULT_PAGE_SIZE)
+            .clamp(1, MAX_PAGE_SIZE)
     }
 }
 
@@ -179,9 +181,9 @@ mod tests {
     use crate::app_state::AppState;
     use crate::test_support::tests::handle_test_startup;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use axum::Extension;
     use axum::Json;
     use axum::extract::{Path, State};
-    use axum::Extension;
     use chrono::Utc;
     use diesel::ExpressionMethods;
     use diesel::QueryDsl;
@@ -304,7 +306,10 @@ mod tests {
             .unwrap();
         let in_inbox = |ep: &PodcastEpisode| inbox.iter().any(|i| i.podcast_episode.id == ep.id);
 
-        assert!(in_inbox(&pending), "undownloaded untriaged episode should be in the inbox");
+        assert!(
+            in_inbox(&pending),
+            "undownloaded untriaged episode should be in the inbox"
+        );
         assert!(
             in_inbox(&downloaded),
             "downloaded but untriaged episode should also be in the inbox"
@@ -339,7 +344,10 @@ mod tests {
             !contains_episode(&inbox.json::<Value>(), &episode),
             "dismissed episode should leave the inbox"
         );
-        let waiting = server.test_server.get("/api/v1/episodes/waiting-list").await;
+        let waiting = server
+            .test_server
+            .get("/api/v1/episodes/waiting-list")
+            .await;
         assert!(
             !contains_episode(&waiting.json::<Value>(), &episode),
             "dismissed episode should not be in the waiting list"
@@ -367,7 +375,10 @@ mod tests {
             .await;
         assert_eq!(queue.status_code(), 200);
 
-        let waiting = server.test_server.get("/api/v1/episodes/waiting-list").await;
+        let waiting = server
+            .test_server
+            .get("/api/v1/episodes/waiting-list")
+            .await;
         assert_eq!(waiting.status_code(), 200);
         assert!(
             contains_episode(&waiting.json::<Value>(), &episode),
@@ -472,10 +483,16 @@ mod tests {
             &format!("clear-guid-2-{unique}"),
         );
 
-        let clear = server.test_server.post("/api/v1/episodes/inbox/clear").await;
+        let clear = server
+            .test_server
+            .post("/api/v1/episodes/inbox/clear")
+            .await;
         assert_eq!(clear.status_code(), 200);
         let dismissed = clear.json::<Value>()["dismissed"].as_u64().unwrap();
-        assert!(dismissed >= 2, "clear should dismiss at least the two new episodes");
+        assert!(
+            dismissed >= 2,
+            "clear should dismiss at least the two new episodes"
+        );
 
         let inbox = server.test_server.get("/api/v1/episodes/inbox").await;
         let payload = inbox.json::<Value>();

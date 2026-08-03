@@ -755,7 +755,11 @@ impl TagRepository for TagRepositoryImpl {
         self.inner.get_tags(user_id).map_err(Into::into)
     }
 
-    fn get_tags_of_podcast(&self, podcast_id: Uuid, user_id: Uuid) -> Result<Vec<Tag>, Self::Error> {
+    fn get_tags_of_podcast(
+        &self,
+        podcast_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<Vec<Tag>, Self::Error> {
         self.inner
             .get_tags_of_podcast(podcast_id, user_id)
             .map_err(Into::into)
@@ -1229,7 +1233,10 @@ impl PodcastEpisodeTranscriptRepository for PodcastEpisodeTranscriptRepositoryIm
         self.inner.upsert(transcript).map_err(Into::into)
     }
 
-    fn get_by_episode_id(&self, episode_id: Uuid) -> Result<Vec<PodcastEpisodeTranscript>, Self::Error> {
+    fn get_by_episode_id(
+        &self,
+        episode_id: Uuid,
+    ) -> Result<Vec<PodcastEpisodeTranscript>, Self::Error> {
         self.inner.get_by_episode_id(episode_id).map_err(Into::into)
     }
 
@@ -1245,16 +1252,33 @@ impl PodcastEpisodeTranscriptRepository for PodcastEpisodeTranscriptRepositoryIm
         self.inner.set_file_path(id, file_path).map_err(Into::into)
     }
 
-    fn set_status(&self, id: Uuid, status: TranscriptStatus, error: Option<&str>) -> Result<(), Self::Error> {
+    fn set_status(
+        &self,
+        id: Uuid,
+        status: TranscriptStatus,
+        error: Option<&str>,
+    ) -> Result<(), Self::Error> {
         self.inner.set_status(id, status, error).map_err(Into::into)
     }
 
-    fn set_preferred(&self, episode_id: Uuid, preferred_id: Option<Uuid>) -> Result<(), Self::Error> {
-        self.inner.set_preferred(episode_id, preferred_id).map_err(Into::into)
+    fn set_preferred(
+        &self,
+        episode_id: Uuid,
+        preferred_id: Option<Uuid>,
+    ) -> Result<(), Self::Error> {
+        self.inner
+            .set_preferred(episode_id, preferred_id)
+            .map_err(Into::into)
     }
 
-    fn replace_segments(&self, transcript_id: Uuid, segments: &[TranscriptSegment]) -> Result<(), Self::Error> {
-        self.inner.replace_segments(transcript_id, segments).map_err(Into::into)
+    fn replace_segments(
+        &self,
+        transcript_id: Uuid,
+        segments: &[TranscriptSegment],
+    ) -> Result<(), Self::Error> {
+        self.inner
+            .replace_segments(transcript_id, segments)
+            .map_err(Into::into)
     }
 
     fn get_segments(&self, transcript_id: Uuid) -> Result<Vec<TranscriptSegment>, Self::Error> {
@@ -1304,7 +1328,12 @@ impl TranscriptionJobRepository for TranscriptionJobRepositoryImpl {
         self.inner.next_pending().map_err(Into::into)
     }
 
-    fn set_status(&self, id: Uuid, status: TranscriptionJobStatus, error: Option<&str>) -> Result<(), Self::Error> {
+    fn set_status(
+        &self,
+        id: Uuid,
+        status: TranscriptionJobStatus,
+        error: Option<&str>,
+    ) -> Result<(), Self::Error> {
         self.inner.set_status(id, status, error).map_err(Into::into)
     }
 

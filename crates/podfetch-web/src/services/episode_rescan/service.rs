@@ -105,8 +105,7 @@ impl EpisodeRescanService {
             // pass. If it's truly empty, clean it up so the user doesn't
             // accumulate dead directories.
             if opts.apply_filenames && download_location == FileHandlerType::Local {
-                let podcast_root =
-                    PodcastService::get_podcast_by_id(podcast_uuid).directory_name;
+                let podcast_root = PodcastService::get_podcast_by_id(podcast_uuid).directory_name;
                 if let Some(parent) = Path::new(&current_audio_path).parent()
                     && let Some(parent_str) = parent.to_str()
                 {
@@ -374,7 +373,11 @@ impl EpisodeRescanService {
         }
 
         if opts.regenerate_nfo {
-            crate::services::nfo::service::regenerate_for_episode(&podcast, episode, &final_audio_path);
+            crate::services::nfo::service::regenerate_for_episode(
+                &podcast,
+                episode,
+                &final_audio_path,
+            );
             crate::services::nfo::service::ensure_cover_filename(&podcast);
         }
 
@@ -393,8 +396,9 @@ impl EpisodeRescanService {
 
         let episode_stem = prepare_podcast_episode_title_to_directory(episode.clone())?;
         let cover_filename = crate::services::nfo::service::resolve_cover_filename(
-            uuid::Uuid::parse_str(&episode.podcast_id)
-                .map_err(|_| CustomError::from(CustomErrorInner::NotFound(ErrorSeverity::Warning)))?,
+            uuid::Uuid::parse_str(&episode.podcast_id).map_err(|_| {
+                CustomError::from(CustomErrorInner::NotFound(ErrorSeverity::Warning))
+            })?,
         );
 
         // When `direct_paths` is off, FilenameBuilder calls into our

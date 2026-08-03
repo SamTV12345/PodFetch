@@ -318,14 +318,11 @@ mod sponsorblock_tests {
         .expect("first replace");
 
         // Second replace with same data
-        SponsorblockRepository::replace_segments_for_episode(
-            &episode_id,
-            vec![seg1, seg2],
-        )
-        .expect("second replace");
+        SponsorblockRepository::replace_segments_for_episode(&episode_id, vec![seg1, seg2])
+            .expect("second replace");
 
-        let result = SponsorblockRepository::get_segments_for_episode(&episode_id)
-            .expect("get segments");
+        let result =
+            SponsorblockRepository::get_segments_for_episode(&episode_id).expect("get segments");
 
         assert_eq!(result.len(), 2, "expected exactly 2 segments");
         assert!(
@@ -356,8 +353,8 @@ mod sponsorblock_tests {
         SponsorblockRepository::replace_segments_for_episode(&episode_id, vec![seg_single])
             .expect("replace 1");
 
-        let result = SponsorblockRepository::get_segments_for_episode(&episode_id)
-            .expect("get segments");
+        let result =
+            SponsorblockRepository::get_segments_for_episode(&episode_id).expect("get segments");
 
         assert_eq!(result.len(), 1, "expected exactly 1 segment after replace");
         assert_eq!(result[0].start_ms, 999);

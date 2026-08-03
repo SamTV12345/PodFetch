@@ -29,6 +29,8 @@ pub trait PodcastEpisodeChapterRepository: Send + Sync {
 
     fn upsert(&self, chapter: UpsertPodcastEpisodeChapter) -> Result<(), Self::Error>;
 
-    fn get_by_episode_id(&self, episode_id: Uuid)
-    -> Result<Vec<PodcastEpisodeChapter>, Self::Error>;
+    fn get_by_episode_id(
+        &self,
+        episode_id: Uuid,
+    ) -> Result<Vec<PodcastEpisodeChapter>, Self::Error>;
 }

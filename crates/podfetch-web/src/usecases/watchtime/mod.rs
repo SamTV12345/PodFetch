@@ -178,8 +178,7 @@ impl WatchtimeUseCase {
         };
 
         let podcast_uuid = Self::parse_id(&found_episode.podcast_id)?;
-        let podcast =
-            crate::services::podcast::service::PodcastService::get_podcast(podcast_uuid)?;
+        let podcast = crate::services::podcast::service::PodcastService::get_podcast(podcast_uuid)?;
 
         let now = Utc::now().naive_utc();
         let user_id = Self::get_user_id_by_username(&username)?;

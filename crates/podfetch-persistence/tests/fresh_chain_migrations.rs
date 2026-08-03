@@ -6,9 +6,9 @@
 //! clean install.
 #![cfg(feature = "sqlite")]
 
+use diesel::Connection;
 use diesel::connection::SimpleConnection;
 use diesel::sqlite::SqliteConnection;
-use diesel::Connection;
 use diesel_migrations::MigrationHarness;
 use podfetch_persistence::db::SQLITE_MIGRATIONS;
 

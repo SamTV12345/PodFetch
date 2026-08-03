@@ -392,8 +392,7 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
 
     fn delete_by_podcast_id(&self, podcast_id: Uuid) -> Result<(), Self::Error> {
         diesel::delete(
-            podcast_episodes::table
-                .filter(podcast_episodes::podcast_id.eq(podcast_id.to_string())),
+            podcast_episodes::table.filter(podcast_episodes::podcast_id.eq(podcast_id.to_string())),
         )
         .execute(&mut self.database.connection()?)
         .map(|_| ())
@@ -526,10 +525,19 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
         let result = podcast_episodes::table
             .filter(podcast_episodes::podcast_id.eq(podcast_id.to_string()))
             .filter(podcast_episodes::date_of_recording.le(timestamp))
-            .order(podcast_episodes::date_of_recording.desc())
-            .execute(&mut self.database.connection()?)
+            .count()
+            .get_result::<i64>(&mut self.database.connection()?)
             .map_err(PersistenceError::from)?;
-        Ok(result)
+        Ok(result.saturating_sub(1) as usize)
+    }
+
+    fn get_total_episode_count(&self, podcast_id: Uuid) -> Result<usize, Self::Error> {
+        let count = podcast_episodes::table
+            .filter(podcast_episodes::podcast_id.eq(podcast_id.to_string()))
+            .count()
+            .get_result::<i64>(&mut self.database.connection()?)
+            .map_err(PersistenceError::from)?;
+        Ok(count as usize)
     }
 
     fn get_last_n_episodes(

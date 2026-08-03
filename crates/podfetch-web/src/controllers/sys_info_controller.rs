@@ -113,11 +113,7 @@ pub async fn get_public_config(
     let resolved_server_url = resolve_server_url_from_headers(&headers);
     let config = state.environment.get_config(&resolved_server_url);
 
-    Json(sys::get_public_config(
-        config,
-        &resolved_server_url,
-        None,
-    ))
+    Json(sys::get_public_config(config, &resolved_server_url, None))
 }
 
 #[utoipa::path(

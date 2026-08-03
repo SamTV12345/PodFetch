@@ -547,7 +547,10 @@ impl PodcastService {
             .map(Into::into)
     }
 
-    pub fn get_favored_podcasts(requester: User, server_url: &str) -> Result<Vec<PodcastDto>, CustomError> {
+    pub fn get_favored_podcasts(
+        requester: User,
+        server_url: &str,
+    ) -> Result<Vec<PodcastDto>, CustomError> {
         let result = favorite_repo()
             .get_favored_podcasts(requester.id)
             .map_err(CustomError::from)?;

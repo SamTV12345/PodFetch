@@ -51,15 +51,14 @@ impl PodcastSettingsService {
             .repository
             .upsert_settings(setting_to_insert.clone().into())?;
         let podcast_uuid = updated_setting.podcast_id;
-        let available_episodes =
-            PodcastEpisodeService::get_episodes_by_podcast_id(podcast_uuid)?;
+        let available_episodes = PodcastEpisodeService::get_episodes_by_podcast_id(podcast_uuid)?;
         let podcast = crate::services::podcast::service::PodcastService::get_podcast(podcast_uuid)
-        .map_err(|_| {
-            CustomError::from(CustomErrorInner::Conflict(
-                "Podcast not found".to_string(),
-                Warning,
-            ))
-        })?;
+            .map_err(|_| {
+                CustomError::from(CustomErrorInner::Conflict(
+                    "Podcast not found".to_string(),
+                    Warning,
+                ))
+            })?;
 
         for episode in available_episodes {
             if episode.download_time.is_none() {
@@ -97,7 +96,9 @@ impl PodcastSettingsService {
                 .as_deref()
                 .filter(|p| !p.is_empty())
             {
-                crate::services::nfo::service::regenerate_for_episode(&podcast, &episode, audio_path);
+                crate::services::nfo::service::regenerate_for_episode(
+                    &podcast, &episode, audio_path,
+                );
             }
         }
 

@@ -35,7 +35,11 @@ impl EpisodeTriageService {
 
     /// Build a `PodcastEpisodeWithHistory` DTO for a single episode, attaching
     /// the requesting user's listen history so the UI can render progress.
-    fn to_item(episode: PodcastEpisode, user: &User, server_url: &str) -> PodcastEpisodeWithHistory {
+    fn to_item(
+        episode: PodcastEpisode,
+        user: &User,
+        server_url: &str,
+    ) -> PodcastEpisodeWithHistory {
         let history = WatchtimeService::get_watchtime(&episode.episode_id, &user.username)
             .ok()
             .flatten();

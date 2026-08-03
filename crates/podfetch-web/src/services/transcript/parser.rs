@@ -82,7 +82,10 @@ impl TranscriptFormat {
 /// Parses raw transcript bytes into segments. An error means the input was not
 /// parsable as the given format (never a panic); the caller sets the transcript's
 /// status accordingly.
-pub fn parse(format: TranscriptFormat, raw: &[u8]) -> Result<Vec<TranscriptSegment>, TranscriptParseError> {
+pub fn parse(
+    format: TranscriptFormat,
+    raw: &[u8],
+) -> Result<Vec<TranscriptSegment>, TranscriptParseError> {
     let segments = match format {
         TranscriptFormat::Json => parse_json(raw)?,
         TranscriptFormat::Vtt => parse_vtt(raw),
@@ -186,7 +189,9 @@ fn parse_time_range(line: &str) -> Option<(i32, i32)> {
 }
 
 fn normalize_line_endings(raw: &[u8]) -> String {
-    String::from_utf8_lossy(raw).replace("\r\n", "\n").replace('\r', "\n")
+    String::from_utf8_lossy(raw)
+        .replace("\r\n", "\n")
+        .replace('\r', "\n")
 }
 
 // ---------------------------------------------------------------------------
@@ -215,7 +220,10 @@ fn parse_vtt(raw: &[u8]) -> Vec<TranscriptSegment> {
 
     for block in normalized.split("\n\n") {
         let block = block.trim();
-        if block.is_empty() || block.starts_with("WEBVTT") || block.starts_with("NOTE") || block.starts_with("STYLE")
+        if block.is_empty()
+            || block.starts_with("WEBVTT")
+            || block.starts_with("NOTE")
+            || block.starts_with("STYLE")
         {
             continue;
         }
@@ -406,7 +414,10 @@ mod tests {
 
     #[test]
     fn detect_matches_known_mime_types() {
-        assert_eq!(TranscriptFormat::detect("text/vtt", None), Some(TranscriptFormat::Vtt));
+        assert_eq!(
+            TranscriptFormat::detect("text/vtt", None),
+            Some(TranscriptFormat::Vtt)
+        );
         assert_eq!(
             TranscriptFormat::detect("application/json", None),
             Some(TranscriptFormat::Json)
@@ -415,7 +426,10 @@ mod tests {
             TranscriptFormat::detect("application/srt", None),
             Some(TranscriptFormat::Srt)
         );
-        assert_eq!(TranscriptFormat::detect("text/html", None), Some(TranscriptFormat::Html));
+        assert_eq!(
+            TranscriptFormat::detect("text/html", None),
+            Some(TranscriptFormat::Html)
+        );
     }
 
     #[test]
@@ -503,7 +517,10 @@ mod tests {
         assert_eq!(segments[1].start_ms, Some(4200));
         assert_eq!(segments[1].end_ms, Some(8000));
         assert_eq!(segments[1].speaker, Some("Bob".to_string()));
-        assert_eq!(segments[1].text, "Nice to meet you that continues on a second line");
+        assert_eq!(
+            segments[1].text,
+            "Nice to meet you that continues on a second line"
+        );
     }
 
     #[test]
@@ -606,7 +623,10 @@ mod tests {
         let raw = b"<p><time>99999999999:00:00</time> Some text</p>";
         let segments = parse(TranscriptFormat::Html, raw).expect("should parse without panic");
         assert_eq!(segments.len(), 1);
-        assert_eq!(segments[0].start_ms, None, "overflow should yield None, not panic");
+        assert_eq!(
+            segments[0].start_ms, None,
+            "overflow should yield None, not panic"
+        );
         assert_eq!(segments[0].text, "Some text");
     }
 
@@ -628,7 +648,10 @@ mod tests {
             parse(TranscriptFormat::Vtt, b"WEBVTT\n"),
             Err(TranscriptParseError::Empty)
         ));
-        assert!(matches!(parse(TranscriptFormat::Srt, b""), Err(TranscriptParseError::Empty)));
+        assert!(matches!(
+            parse(TranscriptFormat::Srt, b""),
+            Err(TranscriptParseError::Empty)
+        ));
         assert!(matches!(
             parse(TranscriptFormat::Html, b"<p></p>"),
             Err(TranscriptParseError::Empty)

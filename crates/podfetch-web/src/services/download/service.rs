@@ -15,9 +15,7 @@ use common_infrastructure::error::{
 };
 use common_infrastructure::http::COMMON_USER_AGENT;
 use common_infrastructure::http::{get_async_sync_client, get_sync_client};
-use common_infrastructure::runtime::{
-    DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, PODCAST_FILENAME,
-};
+use common_infrastructure::runtime::{DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, PODCAST_FILENAME};
 use file_format::FileFormat;
 use id3::{ErrorKind, Tag, TagLike};
 use podfetch_persistence::db::get_connection;
@@ -39,8 +37,7 @@ const DEFAULT_FALLBACK_IMAGE_BYTES: &[u8] = include_bytes!("../../../../../ui/pu
 /// Parse a stored podfetch id (entity rows carry the canonical UUID as a
 /// `String`) into a `Uuid`.
 fn parse_id(id: &str) -> Result<uuid::Uuid, CustomError> {
-    uuid::Uuid::parse_str(id)
-        .map_err(|_| CustomErrorInner::NotFound(ErrorSeverity::Warning).into())
+    uuid::Uuid::parse_str(id).map_err(|_| CustomErrorInner::NotFound(ErrorSeverity::Warning).into())
 }
 
 impl DownloadService {
@@ -336,9 +333,15 @@ impl DownloadService {
 
         // Transcripts: download + parse feed transcripts.
         // Non-fatal — must never fail the download.
-        let transcript_service = crate::services::transcript::service::TranscriptService::default_service();
-        if let Err(err) = transcript_service.process_pending_after_download(&podcast_episode, &paths.filename) {
-            tracing::error!("Error processing transcripts for episode {}: {err}", podcast_episode.id);
+        let transcript_service =
+            crate::services::transcript::service::TranscriptService::default_service();
+        if let Err(err) =
+            transcript_service.process_pending_after_download(&podcast_episode, &paths.filename)
+        {
+            tracing::error!(
+                "Error processing transcripts for episode {}: {err}",
+                podcast_episode.id
+            );
         }
 
         // Auto-transcribe: enqueue a generation job when this podcast opted in
@@ -351,7 +354,9 @@ impl DownloadService {
         if ENVIRONMENT_SERVICE.transcription_config.is_some()
             && auto_transcribe
             && let Ok(episode_uuid) = parse_id(&podcast_episode.id)
-            && transcript_service.needs_generated_transcript(episode_uuid).unwrap_or(false)
+            && transcript_service
+                .needs_generated_transcript(episode_uuid)
+                .unwrap_or(false)
             && let Err(err) = transcript_service.enqueue_job(episode_uuid)
         {
             tracing::error!("Error enqueuing transcription job: {err}");
@@ -545,10 +550,7 @@ impl DownloadService {
 
         let detected_file = FileFormat::from_file(&paths.filename).map_err(|e| {
             CustomErrorInner::Conflict(
-                format!(
-                    "Failed to detect file format for {}: {e}",
-                    paths.filename
-                ),
+                format!("Failed to detect file format for {}: {e}", paths.filename),
                 ErrorSeverity::Warning,
             )
         })?;
@@ -602,7 +604,9 @@ impl DownloadService {
             }
         };
 
-        if let 0 = tag.pictures().count()  && let Ok(mut image_file) = File::open(&paths.image_filename) {
+        if let 0 = tag.pictures().count()
+            && let Ok(mut image_file) = File::open(&paths.image_filename)
+        {
             let mut image_data = Vec::new();
             let _ = image_file.read_to_end(&mut image_data);
             tag.add_frame(id3::frame::Picture {
@@ -754,8 +758,8 @@ impl DownloadService {
     /// podcast. This mirrors how `auto_download` layers the per-podcast value
     /// over the global default.
     fn episode_numbering_enabled(podcast_id: uuid::Uuid) -> Result<bool, CustomError> {
-        let per_podcast =
-            PodcastSettingsService::get_settings_for_podcast(podcast_id)?.map(|s| s.episode_numbering);
+        let per_podcast = PodcastSettingsService::get_settings_for_podcast(podcast_id)?
+            .map(|s| s.episode_numbering);
         let global = SettingsService::shared()
             .get_settings()?
             .map(|s| s.episode_numbering);
@@ -958,21 +962,37 @@ mod tests {
         // per-podcast row but NOT activated -> still falls back to the global
         // default (mirrors NFO/cover resolution; the activated flag is the
         // explicit-override switch).
-        assert!(DownloadService::use_one_cover_from(Some((false, false)), true));
-        assert!(!DownloadService::use_one_cover_from(Some((false, true)), false));
+        assert!(DownloadService::use_one_cover_from(
+            Some((false, false)),
+            true
+        ));
+        assert!(!DownloadService::use_one_cover_from(
+            Some((false, true)),
+            false
+        ));
         // per-podcast row activated -> the per-podcast value wins
-        assert!(DownloadService::use_one_cover_from(Some((true, true)), false));
-        assert!(!DownloadService::use_one_cover_from(Some((true, false)), true));
+        assert!(DownloadService::use_one_cover_from(
+            Some((true, true)),
+            false
+        ));
+        assert!(!DownloadService::use_one_cover_from(
+            Some((true, false)),
+            true
+        ));
     }
 
     #[test]
     fn is_hls_playlist_detects_m3u8_bodies_only() {
         // plain playlist, with UTF-8 BOM, and with leading whitespace
-        assert!(DownloadService::is_hls_playlist(b"#EXTM3U\n#EXT-X-VERSION:3\n"));
+        assert!(DownloadService::is_hls_playlist(
+            b"#EXTM3U\n#EXT-X-VERSION:3\n"
+        ));
         assert!(DownloadService::is_hls_playlist(b"\xEF\xBB\xBF#EXTM3U\n"));
         assert!(DownloadService::is_hls_playlist(b"\n  #EXTM3U\n"));
         // real audio bodies must not match
-        assert!(!DownloadService::is_hls_playlist(b"ID3\x04\x00\x00\x00\x00\x00\x00"));
+        assert!(!DownloadService::is_hls_playlist(
+            b"ID3\x04\x00\x00\x00\x00\x00\x00"
+        ));
         assert!(!DownloadService::is_hls_playlist(b"\xFF\xFB\x90\x00"));
         assert!(!DownloadService::is_hls_playlist(b""));
     }
