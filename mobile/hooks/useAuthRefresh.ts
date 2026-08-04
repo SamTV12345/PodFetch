@@ -19,7 +19,7 @@ export const useAuthRefresh = () => {
         clearAuth,
     } = useStore();
 
-    const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const performRefresh = useCallback(async () => {
         if (!oidcRefreshToken || !serverConfig?.oidcConfig) {
