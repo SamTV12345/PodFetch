@@ -671,12 +671,17 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
             .optional()?;
 
         if result.is_some() {
+            let image_col = if file_image_path.is_empty() {
+                None::<&str>
+            } else {
+                Some(file_image_path)
+            };
             diesel::update(
                 podcast_episodes::table.filter(podcast_episodes::episode_id.eq(episode_id)),
             )
             .set((
                 podcast_episodes::file_episode_path.eq(file_episode_path),
-                podcast_episodes::file_image_path.eq(file_image_path),
+                podcast_episodes::file_image_path.eq(image_col),
             ))
             .execute(&mut self.database.connection()?)?;
         }

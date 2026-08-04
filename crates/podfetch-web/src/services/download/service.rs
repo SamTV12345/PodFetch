@@ -218,14 +218,23 @@ impl DownloadService {
                 .map(|s| (s.activated, s.use_one_cover_for_all_episodes)),
             settings_in_db.use_one_cover_for_all_episodes,
         );
-        let should_download_main_image = !use_one_cover_for_all_episodes
-            && !FileService::check_if_podcast_main_image_downloaded(
-                &podcast.clone().directory_id,
-                conn,
-            );
+        let episode_has_own_image =
+            !Self::is_default_fallback_image_url(&podcast_episode.image_url);
+        let podcast_main_image_downloaded = FileService::check_if_podcast_main_image_downloaded(
+            &podcast.clone().directory_id,
+            conn,
+        );
+
+        // Download when: episode has its own image, or the podcast main image
+        // hasn't been downloaded yet (and we're not forced to use one cover).
+        let should_download_main_image = Self::should_download_image(
+            use_one_cover_for_all_episodes,
+            episode_has_own_image,
+            podcast_main_image_downloaded,
+        );
 
         let mut image_data = if should_download_main_image {
-            let image_url = if !Self::is_default_fallback_image_url(&podcast_episode.image_url) {
+            let image_url = if episode_has_own_image {
                 Some(podcast_episode.image_url.as_str())
             } else if !Self::is_default_fallback_image_url(&podcast.original_image_url) {
                 tracing::info!(
@@ -292,13 +301,16 @@ impl DownloadService {
             )?;
         }
 
-        if should_download_main_image && let Some(image_data) = image_data.as_mut() {
-            FileHandleWrapper::write_file(
-                &paths.image_filename,
-                image_data.1.as_mut_slice(),
-                &ENVIRONMENT_SERVICE.default_file_handler,
-            )?;
-        }
+        let image_written =
+            should_download_main_image && image_data.as_ref().is_some_and(|d| !d.1.is_empty());
+        if image_written
+            && let Some(ref mut data) = image_data {
+                FileHandleWrapper::write_file(
+                    &paths.image_filename,
+                    data.1.as_mut_slice(),
+                    &ENVIRONMENT_SERVICE.default_file_handler,
+                )?;
+            }
 
         FileHandleWrapper::write_file(
             &paths.filename,
@@ -399,7 +411,11 @@ impl DownloadService {
 
         PodcastEpisodeService::update_local_paths(
             &podcast_episode.episode_id,
-            &paths.image_filename,
+            if image_written {
+                &paths.image_filename
+            } else {
+                ""
+            },
             &final_episode_path,
         )?;
         Ok(())
@@ -785,6 +801,19 @@ impl DownloadService {
         }
     }
 
+    /// Whether an image should be downloaded for this episode.
+    ///
+    /// Always `false` when `use_one_cover` is forced. Otherwise downloads
+    /// when the episode carries its own `<itunes:image>` or the podcast
+    /// main image hasn't been fetched yet.
+    fn should_download_image(
+        use_one_cover: bool,
+        episode_has_own_image: bool,
+        podcast_main_image_downloaded: bool,
+    ) -> bool {
+        !use_one_cover && (episode_has_own_image || !podcast_main_image_downloaded)
+    }
+
     /// Decide the title to embed and whether to (re)write the
     /// `episode_numbering_processed` flag. Returns `None` when numbering is on
     /// and the episode was already processed (leave the existing title alone).
@@ -1059,5 +1088,175 @@ mod tests {
              not panic — otherwise the download thread dies and the episode is \
              re-downloaded/re-transcoded on every poll",
         );
+    }
+
+    // ── should_download_image decision matrix ────────────────────────────
+
+    #[test]
+    fn decision_matrix_all_combinations() {
+        struct Case {
+            use_one_cover: bool,
+            episode_own: bool,
+            main_downloaded: bool,
+            expected: bool,
+        }
+        let cases = [
+            // use_one_cover = true → never download
+            Case {
+                use_one_cover: true,
+                episode_own: true,
+                main_downloaded: true,
+                expected: false,
+            },
+            Case {
+                use_one_cover: true,
+                episode_own: true,
+                main_downloaded: false,
+                expected: false,
+            },
+            Case {
+                use_one_cover: true,
+                episode_own: false,
+                main_downloaded: true,
+                expected: false,
+            },
+            Case {
+                use_one_cover: true,
+                episode_own: false,
+                main_downloaded: false,
+                expected: false,
+            },
+            // use_one_cover = false → download when episode has own image OR main not yet downloaded
+            Case {
+                use_one_cover: false,
+                episode_own: true,
+                main_downloaded: true,
+                expected: true,
+            },
+            Case {
+                use_one_cover: false,
+                episode_own: true,
+                main_downloaded: false,
+                expected: true,
+            },
+            Case {
+                use_one_cover: false,
+                episode_own: false,
+                main_downloaded: true,
+                expected: false,
+            },
+            Case {
+                use_one_cover: false,
+                episode_own: false,
+                main_downloaded: false,
+                expected: true,
+            },
+        ];
+        for c in &cases {
+            let got = super::DownloadService::should_download_image(
+                c.use_one_cover,
+                c.episode_own,
+                c.main_downloaded,
+            );
+            assert_eq!(
+                got, c.expected,
+                "cover={} own={} main_downloaded={} → expected {} got {}",
+                c.use_one_cover, c.episode_own, c.main_downloaded, c.expected, got,
+            );
+        }
+    }
+
+    // ── check_if_podcast_main_image_downloaded integration tests ─────────
+
+    use crate::services::file::service::FileService;
+    use podfetch_domain::podcast::NewPodcast;
+    use podfetch_domain::podcast::PodcastRepository;
+    use podfetch_persistence::db::{self, database};
+    use podfetch_persistence::podcast::DieselPodcastRepository;
+    use std::io::Write;
+
+    fn seed_podcast(image_url: &str, directory_id: &str) -> String {
+        crate::test_support::tests::ensure_test_env_vars();
+        let repo = DieselPodcastRepository::new(database());
+        let id = uuid::Uuid::new_v4().to_string();
+        let podcast = NewPodcast {
+            name: "test-podcast".into(),
+            directory_id: directory_id.to_string(),
+            rssfeed: "https://example.com/feed.xml".into(),
+            image_url: image_url.to_string(),
+            directory_name: format!("podcasts/{}", directory_id),
+            added_by: None,
+        };
+        repo.create(podcast).expect("seed podcast");
+        id
+    }
+
+    fn cleanup_podcast(directory_id: &str) {
+        use diesel::RunQueryDsl;
+        use podfetch_persistence::db::get_connection;
+        let _ = diesel::sql_query(format!(
+            "DELETE FROM podcasts WHERE directory_id = '{}'",
+            directory_id
+        ))
+        .execute(&mut get_connection());
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn main_image_not_downloaded_when_podcast_not_found() {
+        crate::test_support::tests::ensure_test_env_vars();
+        let mut conn = db::get_connection();
+        assert!(
+            !FileService::check_if_podcast_main_image_downloaded("nonexistent-id", &mut conn),
+            "non-existent podcast → image not downloaded"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn main_image_not_downloaded_when_url_is_http() {
+        let dir_id = format!("test-http-{}", uuid::Uuid::new_v4().simple());
+        seed_podcast("https://example.com/cover.jpg", &dir_id);
+
+        crate::test_support::tests::ensure_test_env_vars();
+        let mut conn = db::get_connection();
+        let result = FileService::check_if_podcast_main_image_downloaded(&dir_id, &mut conn);
+        cleanup_podcast(&dir_id);
+        assert!(!result, "HTTP image_url → not downloaded");
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn main_image_not_downloaded_when_local_file_missing() {
+        let dir_id = format!("test-local-missing-{}", uuid::Uuid::new_v4().simple());
+        seed_podcast("/tmp/does-not-exist-928347.jpg", &dir_id);
+
+        crate::test_support::tests::ensure_test_env_vars();
+        let mut conn = db::get_connection();
+        let result = FileService::check_if_podcast_main_image_downloaded(&dir_id, &mut conn);
+        cleanup_podcast(&dir_id);
+        assert!(!result, "local path but file missing → not downloaded");
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn main_image_downloaded_when_local_file_exists() {
+        let dir_id = format!("test-local-exists-{}", uuid::Uuid::new_v4().simple());
+        let tmp = std::env::temp_dir().join(format!(
+            "podfetch-test-cover-{}.jpg",
+            uuid::Uuid::new_v4().simple()
+        ));
+        {
+            let mut f = std::fs::File::create(&tmp).expect("create temp file");
+            f.write_all(b"fake-image-data").expect("write");
+        }
+        seed_podcast(&tmp.to_string_lossy(), &dir_id);
+
+        crate::test_support::tests::ensure_test_env_vars();
+        let mut conn = db::get_connection();
+        let result = FileService::check_if_podcast_main_image_downloaded(&dir_id, &mut conn);
+        cleanup_podcast(&dir_id);
+        let _ = std::fs::remove_file(&tmp);
+        assert!(result, "local file exists → downloaded");
     }
 }
