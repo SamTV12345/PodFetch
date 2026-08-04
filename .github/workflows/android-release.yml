@@ -27,7 +27,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: 10
+          version: 11
 
       - name: Setup EAS
         uses: expo/expo-github-action@v8

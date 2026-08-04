@@ -37,7 +37,7 @@ jobs:
       - name: Set up pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: 10
+          version: 11
       - name: Install UI dependencies
         working-directory: ui
         run: pnpm install
