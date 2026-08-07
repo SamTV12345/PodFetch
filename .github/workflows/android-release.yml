@@ -1,4 +1,4 @@
-name: Build Android APK with EAS
+name: Build Android APK
 
 on:
   push:
@@ -19,6 +19,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -29,23 +35,26 @@ jobs:
         with:
           version: 11
 
-      - name: Setup EAS
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
       - name: Install dependencies
         run: pnpm install
 
-      - name: Trigger EAS build and download APK
-        run: |
-          eas build --platform android --profile production --non-interactive --wait --json > build.json
-          url=$(jq -r '.[0].artifacts.applicationArchiveUrl // .[0].artifacts.buildUrl' build.json)
-          echo "APK URL: $url"
-          curl -L -o podfetch.apk "$url"
+      - name: Generate native project
+        run: npx expo prebuild --platform android
+
+      - name: Decode keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+
+      - name: Build APK
+        working-directory: mobile/android
+        run: ./gradlew assembleRelease
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
       - name: Upload APK to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: mobile/podfetch.apk
+          files: mobile/android/app/build/outputs/apk/release/app-release.apk
