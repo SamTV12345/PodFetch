@@ -2,9 +2,13 @@ allowBuilds:
   '@parcel/watcher': false
   esbuild: true
   msw: false
+minimumReleaseAgeExclude:
+  - js-yaml@4.3.1
 onlyBuiltDependencies:
   - '@tailwindcss/oxide'
   - core-js
   - esbuild
+overrides:
+  js-yaml@>=4.0.0 <4.3.1: ^4.3.1
 packages:
   - .
