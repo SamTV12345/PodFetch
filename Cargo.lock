@@ -3230,6 +3230,7 @@ dependencies = [
  "axum-test",
  "base64 0.23.1",
  "bollard",
+ "built",
  "chrono",
  "clokwerk",
  "common-infrastructure",

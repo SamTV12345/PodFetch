@@ -95,3 +95,6 @@ testcontainers-modules = { workspace = true }
 derive_builder = { workspace = true }
 fake = { workspace = true }
 bollard = { workspace = true }
+
+[build-dependencies]
+built = { workspace = true }
