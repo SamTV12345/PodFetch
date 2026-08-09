@@ -151,10 +151,18 @@ responses(
 tag="info"
 )]
 pub async fn get_info() -> Json<VersionInfo> {
+    let version = match option_env!("VW_VERSION") {
+        Some(v) if v != "unknown" => v,
+        _ => env!("CARGO_PKG_VERSION"),
+    };
+    let commit = match option_env!("GIT_REV") {
+        Some(rev) if rev != "unknown" => rev,
+        _ => "unknown",
+    };
     Json(sys::get_version_info(
-        option_env!("VW_VERSION").unwrap_or("unknown"),
+        version,
         option_env!("GIT_BRANCH").unwrap_or("unknown"),
-        option_env!("GIT_EXACT_TAG").unwrap_or("unknown"),
+        commit,
         built_info::CI_PLATFORM.unwrap_or("No CI platform"),
         built_info::BUILT_TIME_UTC,
         built_info::CFG_OS,
