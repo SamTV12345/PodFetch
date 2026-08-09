@@ -34,30 +34,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 pub mod built_info {
-    pub const CI_PLATFORM: Option<&str> = option_env!("CI");
-    pub const BUILT_TIME_UTC: &str = "unknown";
-    pub const CFG_OS: &str = std::env::consts::OS;
-    pub const CFG_ENDIAN: &str = if cfg!(target_endian = "big") {
-        "big"
-    } else {
-        "little"
-    };
-    pub const TARGET: &str = match option_env!("TARGET") {
-        Some(v) => v,
-        None => "unknown",
-    };
-    pub const DEBUG: &str = if cfg!(debug_assertions) {
-        "true"
-    } else {
-        "false"
-    };
-    pub const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
-    pub const PKG_AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
-    pub const PKG_NAME: &str = env!("CARGO_PKG_NAME");
-    pub const PKG_DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
-    pub const PKG_HOMEPAGE: &str = env!("CARGO_PKG_HOMEPAGE");
-    pub const PKG_REPOSITORY: &str = env!("CARGO_PKG_REPOSITORY");
-    pub const RUSTC_VERSION: &str = "unknown";
+    include!(concat!(env!("OUT_DIR"), "/built.rs"));
 }
 
 #[utoipa::path(
