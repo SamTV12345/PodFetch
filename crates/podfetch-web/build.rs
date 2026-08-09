@@ -2,7 +2,7 @@ use std::process::Command;
 
 fn main() {
     // Exact tag for the current commit (empty if not on a tag)
-    if let Some(exact) = run(&["git", "describe", "--abbrev=0", "--tags", "--exact-match"]).ok() {
+    if let Ok(exact) = run(&["git", "describe", "--abbrev=0", "--tags", "--exact-match"]) {
         println!("cargo:rustc-env=GIT_EXACT_TAG={exact}");
     } else {
         println!("cargo:rustc-env=GIT_EXACT_TAG=unknown");
@@ -32,10 +32,9 @@ fn main() {
 
     // Commit hash
     let rev = run(&["git", "rev-parse", "HEAD"])
-        .map(|r| {
+        .inspect(|r| {
             let short = r.get(..8).unwrap_or_default();
             println!("cargo:rustc-env=GIT_REV={short}");
-            r
         })
         .unwrap_or_else(|_| {
             println!("cargo:rustc-env=GIT_REV=unknown");
