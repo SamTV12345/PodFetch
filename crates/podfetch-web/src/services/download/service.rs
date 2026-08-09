@@ -303,14 +303,13 @@ impl DownloadService {
 
         let image_written =
             should_download_main_image && image_data.as_ref().is_some_and(|d| !d.1.is_empty());
-        if image_written
-            && let Some(ref mut data) = image_data {
-                FileHandleWrapper::write_file(
-                    &paths.image_filename,
-                    data.1.as_mut_slice(),
-                    &ENVIRONMENT_SERVICE.default_file_handler,
-                )?;
-            }
+        if image_written && let Some(ref mut data) = image_data {
+            FileHandleWrapper::write_file(
+                &paths.image_filename,
+                data.1.as_mut_slice(),
+                &ENVIRONMENT_SERVICE.default_file_handler,
+            )?;
+        }
 
         FileHandleWrapper::write_file(
             &paths.filename,

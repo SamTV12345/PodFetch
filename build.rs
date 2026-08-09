@@ -65,10 +65,9 @@ fn version_from_git_info() -> Result<String, std::io::Error> {
 
     // The current git commit hash
     let rev = run(&["git", "rev-parse", "HEAD"])
-        .map(|r| {
+        .inspect(|r| {
             let short = r.get(..8).unwrap_or_default();
             println!("cargo:rustc-env=GIT_REV={short}");
-            r
         })
         .unwrap_or_else(|_| {
             println!("cargo:rustc-env=GIT_REV=unknown");
@@ -76,10 +75,8 @@ fn version_from_git_info() -> Result<String, std::io::Error> {
         });
     let rev_short = rev.get(..8).unwrap_or("unknown");
 
-    // Combined version
-    if let Some(exact) = exact_tag {
-        Ok(exact)
-    } else if last_tag == "unknown" && branch == "unknown" && rev_short == "unknown" {
+    // Combined version — always <tag>-<hash> format, matching Jenkins pipeline
+    if last_tag == "unknown" && rev_short == "unknown" {
         // No git info at all — signal the caller to use the fallback
         Err(std::io::Error::other("No git information available"))
     } else if &branch != "main" && &branch != "master" && &branch != "unknown" {

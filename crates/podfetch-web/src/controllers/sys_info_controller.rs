@@ -151,22 +151,28 @@ responses(
 tag="info"
 )]
 pub async fn get_info() -> Json<VersionInfo> {
-    let version = match option_env!("VW_VERSION") {
-        Some(v) if v != "unknown" => v,
-        _ => env!("CARGO_PKG_VERSION"),
-    };
-    let commit = match option_env!("GIT_REV") {
-        Some(rev) if rev != "unknown" => rev,
-        _ => "unknown",
-    };
     Json(sys::get_version_info(
-        version,
+        resolve_version(),
         option_env!("GIT_BRANCH").unwrap_or("unknown"),
-        commit,
+        resolve_commit(),
         built_info::CI_PLATFORM.unwrap_or("No CI platform"),
         built_info::BUILT_TIME_UTC,
         built_info::CFG_OS,
     ))
+}
+
+fn resolve_version() -> &'static str {
+    match option_env!("VW_VERSION") {
+        Some(v) if v != "unknown" => v,
+        _ => env!("CARGO_PKG_VERSION"),
+    }
+}
+
+fn resolve_commit() -> &'static str {
+    match option_env!("GIT_REV") {
+        Some(rev) if rev != "unknown" => rev,
+        _ => "unknown",
+    }
 }
 
 pub fn get_sys_info_router() -> OpenApiRouter<AppState> {
@@ -309,9 +315,107 @@ mod tests {
         assert_eq!(response.status_code(), 200);
 
         let payload = response.json::<Value>();
-        assert!(payload["version"].as_str().is_some());
-        assert!(payload["commit"].as_str().is_some());
-        assert!(payload["os"].as_str().is_some());
+
+        let version = payload["version"]
+            .as_str()
+            .expect("version must be present");
+        let commit = payload["commit"].as_str().expect("commit must be present");
+        let os = payload["os"].as_str().expect("os must be present");
+        let branch = payload["ref"]
+            .as_str()
+            .expect("ref (branch) must be present");
+
+        // Never "unknown" in a dev/CI environment with git available
+        assert_ne!(
+            version, "unknown",
+            "version should not be 'unknown' when git is available"
+        );
+        assert_ne!(
+            commit, "unknown",
+            "commit should not be 'unknown' when git is available"
+        );
+
+        // commit must be exactly 8 hex characters
+        assert_eq!(
+            commit.len(),
+            8,
+            "commit '{commit}' must be 8 characters (short git hash)"
+        );
+        assert!(
+            commit.chars().all(|c| c.is_ascii_hexdigit()),
+            "commit '{commit}' must be hexadecimal"
+        );
+
+        // version format: <tag>-<hash> or <tag>-<hash> (branch)
+        // The commit hash must appear in the version string
+        assert!(
+            version.contains(commit),
+            "version '{version}' must contain commit hash '{commit}'"
+        );
+
+        // os must match the compile-time target
+        assert_eq!(
+            os,
+            std::env::consts::OS,
+            "os must match compile-time target"
+        );
+
+        // branch must not be empty
+        assert!(!branch.is_empty(), "branch must not be empty");
+        assert_ne!(
+            branch, "unknown",
+            "branch should not be 'unknown' when git is available"
+        );
+    }
+
+    #[test]
+    fn test_get_version_info_maps_fields_correctly() {
+        let info = crate::sys::get_version_info(
+            "v5.2.2-abc12345",
+            "feature/fix-commit-tag",
+            "abc12345",
+            "GitHub Actions",
+            "2025-01-15",
+            "linux",
+        );
+
+        assert_eq!(info.version, "v5.2.2-abc12345");
+        assert_eq!(info.r#ref, "feature/fix-commit-tag");
+        assert_eq!(
+            info.commit, "abc12345",
+            "commit field must contain the hash, not the tag"
+        );
+        assert_eq!(info.ci, "GitHub Actions");
+        assert_eq!(info.time, "2025-01-15");
+        assert_eq!(info.os, "linux");
+    }
+
+    #[test]
+    fn test_resolve_commit_is_not_the_tag() {
+        // Ensures the commit field gets GIT_REV (hash), not GIT_EXACT_TAG (tag name).
+        // GIT_EXACT_TAG would look like "v5.2.2" or be "unknown",
+        // whereas GIT_REV is always 8 hex chars when git is available.
+        let commit = super::resolve_commit();
+        if commit != "unknown" {
+            // Must be 8 hex chars — a tag name like "v5.2.2" would fail here
+            assert_eq!(commit.len(), 8, "commit '{commit}' must be 8 chars");
+            assert!(
+                commit.chars().all(|c| c.is_ascii_hexdigit()),
+                "commit '{commit}' must be hex, not a tag name"
+            );
+        }
+    }
+
+    #[test]
+    fn test_resolve_version_contains_commit_when_git_available() {
+        let version = super::resolve_version();
+        let commit = super::resolve_commit();
+        if commit != "unknown" {
+            assert!(
+                version.contains(commit),
+                "version '{version}' must contain commit hash '{commit}'"
+            );
+        }
     }
 
     #[tokio::test]
