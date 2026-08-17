@@ -192,6 +192,7 @@ impl DownloadService {
             .no_gzip()
             .no_brotli()
             .no_deflate()
+            .timeout(None)
             .no_zstd()
             .build()
             .map_err(map_reqwest_error)?;
