@@ -26,6 +26,7 @@ use rss::{
     ItemBuilder, SourceBuilder,
 };
 use std::collections::{BTreeMap, HashMap};
+use chrono::DateTime;
 
 /// Namespace declared on generated channels so `<podcast:transcript>` items
 /// are valid Podcasting 2.0 markup.
@@ -264,8 +265,7 @@ pub async fn get_rss_feed_for_podcast(
         .summary(podcast.summary.clone())
         .build();
 
-    // Per-podcast feed: the channel title already is the show name, so no
-    // per-item source is needed.
+
     let items = get_podcast_items_rss(&state, &downloaded_episodes, &api_key, &server_url, None);
     let channel_builder = ChannelBuilder::default()
         .namespaces(podcast_namespace())
@@ -338,9 +338,15 @@ fn get_podcast_items_rss(
                     .build()
             });
 
+            let mut pub_date = None;
+
+            if let Ok(date) = DateTime::parse_from_rfc3339(&episode.date_of_recording) {
+                pub_date = Some(date.to_rfc2822());
+            }
+
             let mut item = ItemBuilder::default()
                 .guid(Some(guid))
-                .pub_date(Some(episode.date_of_recording.to_string()))
+                .pub_date(pub_date)
                 .title(Some(episode.name.to_string()))
                 .description(Some(episode.description.to_string()))
                 // Without a <link> readers fall back to showing the opaque guid;
