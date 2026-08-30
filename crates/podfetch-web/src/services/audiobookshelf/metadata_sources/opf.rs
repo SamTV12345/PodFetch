@@ -50,7 +50,7 @@ pub fn parse(xml: &str) -> Option<MetadataPatch> {
         match reader.read_event_into(&mut buf) {
             Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
                 let name = e.name();
-                let raw_tag = std::str::from_utf8(name.as_ref()).ok()?;
+                let raw_tag = name.as_ref();
                 let local = raw_tag.rsplit_once(':').map(|(_, l)| l).unwrap_or(raw_tag);
                 let lower_tag = local.to_ascii_lowercase();
                 current_role = None;
@@ -58,9 +58,9 @@ pub fn parse(xml: &str) -> Option<MetadataPatch> {
 
                 let mut attrs: Vec<(String, String)> = Vec::new();
                 for attr in e.attributes().flatten() {
-                    let key = std::str::from_utf8(attr.key.as_ref()).ok()?;
+                    let key = attr.key.as_ref();
                     let local_key = key.rsplit_once(':').map(|(_, l)| l).unwrap_or(key);
-                    let value = std::str::from_utf8(&attr.value).ok()?.to_string();
+                    let value = attr.value.to_string();
                     attrs.push((local_key.to_ascii_lowercase(), value));
                 }
                 if lower_tag == "creator" {
@@ -99,7 +99,7 @@ pub fn parse(xml: &str) -> Option<MetadataPatch> {
                 let Some(tag) = current_tag.as_deref() else {
                     continue;
                 };
-                let value = e.decode().ok()?.into_owned();
+                let value = e.into_owned().to_string();
                 let value = super::nfo::unescape_xml(&value);
                 let value = value.trim();
                 if value.is_empty() {
