@@ -54,15 +54,13 @@ pub fn parse(xml: &str) -> Option<MetadataPatch> {
     loop {
         match reader.read_event_into(&mut buf) {
             Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
-                let tag = std::str::from_utf8(e.name().as_ref())
-                    .ok()?
+                let tag = e.name().as_ref()
                     .to_ascii_lowercase();
                 current_attrs.clear();
                 for attr in e.attributes().flatten() {
-                    let key = std::str::from_utf8(attr.key.as_ref())
-                        .ok()?
+                    let key = attr.key.as_ref()
                         .to_ascii_lowercase();
-                    let value = std::str::from_utf8(&attr.value).ok()?.to_string();
+                    let value = attr.value.to_string();
                     current_attrs.push((key, value));
                 }
                 if tag == "series" {
@@ -80,7 +78,7 @@ pub fn parse(xml: &str) -> Option<MetadataPatch> {
                 let Some(tag) = current_tag.as_deref() else {
                     continue;
                 };
-                let text = e.decode().ok()?.into_owned();
+                let text = e.into_owned().to_string();
                 let text = unescape_xml(&text);
                 let value = text.trim();
                 if value.is_empty() {
