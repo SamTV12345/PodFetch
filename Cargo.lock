@@ -160,9 +160,9 @@ dependencies = [
 
 [[package]]
 name = "aws-lc-rs"
-version = "1.16.2"
+version = "1.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a054912289d18629dc78375ba2c3726a3afe3ff71b4edba9dedfca0e3446d1fc"
+checksum = "b281d307588d634de920874890732659e2e7672f72b5e10e81badc1a8a83621e"
 dependencies = [
  "aws-lc-sys",
  "zeroize",
@@ -170,14 +170,15 @@ dependencies = [
 
 [[package]]
 name = "aws-lc-sys"
-version = "0.39.1"
+version = "0.45.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83a25cf98105baa966497416dbd42565ce3a8cf8dbfd59803ec9ad46f3126399"
+checksum = "9bff6c3b54fad79a2e60b8102caf565819711497c1f5f092f49508e2f5c31b27"
 dependencies = [
  "cc",
  "cmake",
  "dunce",
  "fs_extra",
+ "pkg-config",
 ]
 
 [[package]]
@@ -637,7 +638,7 @@ dependencies = [
  "r2d2",
  "r2d2_postgres",
  "regex",
- "reqwest 0.13.4",
+ "reqwest 0.13.5",
  "rss",
  "rust-s3",
  "serde",
@@ -1015,9 +1016,9 @@ checksum = "339544cc9e2c4dc3fc7149fd630c5f22263a4fdf18a98afd0075784968b5cf00"
 
 [[package]]
 name = "diesel"
-version = "2.3.12"
+version = "2.3.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "715377c6e464cb44bb89bd8487584240516c8d5052bc645d6babc50bb8be46c3"
+checksum = "e3b934ddbdcb2abb9f9fc9c30bd47bcc5618b615eea1d334cda5fdf8ff9b072a"
 dependencies = [
  "bitflags",
  "byteorder",
@@ -2603,9 +2604,9 @@ checksum = "ae960838283323069879657ca3de837e9f7bbb4c7bf6ea7f1b290d5e9476d2e0"
 
 [[package]]
 name = "mdns-sd"
-version = "0.21.1"
+version = "0.21.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0a19dd805348943831582c4d9e6921c66de689127d6b27665a4e155c2117799"
+checksum = "a63c9b854b5ad0812ac5969f8db92a59f28b45d0a5ae599b9a45b84c5c8a08e8"
 dependencies = [
  "fastrand",
  "flume",
@@ -2775,7 +2776,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -3237,7 +3238,7 @@ dependencies = [
  "common-infrastructure",
  "file-format",
  "regex",
- "reqwest 0.13.4",
+ "reqwest 0.13.5",
  "rust-s3",
  "thiserror 2.0.20",
  "tracing",
@@ -3282,7 +3283,7 @@ dependencies = [
  "r2d2",
  "rand 0.10.2",
  "regex",
- "reqwest 0.13.4",
+ "reqwest 0.13.5",
  "rss",
  "serde",
  "serde_json",
@@ -3824,11 +3825,11 @@ dependencies = [
 
 [[package]]
 name = "reqwest"
-version = "0.13.4"
+version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "219c5811de6525e5416c7d5d53bb656d3afdbc6c5af816e0802bcfa42dbdc1c3"
+checksum = "16a1cfa75cc186dd73d5818e510e042e40927bccc9c236b061cea97e1eb08029"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "bytes",
  "encoding_rs",
  "futures-channel",
@@ -3934,9 +3935,9 @@ dependencies = [
 
 [[package]]
 name = "rss"
-version = "2.1.0"
+version = "2.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc13570823abc675c60d7837f1fe7daaf18dd181a3cacb3c6ba7a062eef581c0"
+checksum = "5fdc977a288e79bfacb4faeaba370da8aef9893ac38b68ae1df6a30d4224a2f9"
 dependencies = [
  "atom_syndication",
  "derive_builder",
@@ -4095,9 +4096,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.43"
+version = "0.23.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0283386ce02abc0151e1761d08802dfe86c173b0b494af5cbc086574e453da06"
+checksum = "6725596c3f2c3a0aef021139e145d4eafe314a6623e4680ca83852b2c67ab2ba"
 dependencies = [
  "aws-lc-rs",
  "log",
@@ -4149,7 +4150,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -4160,9 +4161,9 @@ checksum = "f87165f0995f63a9fbeea62b64d10b4d9d8e78ec6d7d51fb2125fda7bb36788f"
 
 [[package]]
 name = "rustls-webpki"
-version = "0.103.13"
+version = "0.103.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61c429a8649f110dddef65e2a5ad240f747e85f7758a6bccc7e5777bd33f756e"
+checksum = "f3c3cf1d8b1e7d4927e2d154c3fcb02979afb9939629c62cd9048d4f07b60ac2"
 dependencies = [
  "aws-lc-rs",
  "ring",
@@ -4601,7 +4602,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a766e1110788c36f4fa1c2b71b387a7815aa65f88ce0229841826633d93723e"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -5955,7 +5956,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
