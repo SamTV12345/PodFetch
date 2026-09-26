@@ -149,7 +149,7 @@ urlencoding = "2.1.3"
 utoipa = { version = "5.5.0", features = ["chrono", "axum_extras"] }
 utoipa-axum = "0.2.0"
 utoipa-rapidoc = { version = "7.0.0", features = ["axum"] }
-utoipa-redoc = { version = "6.0.0", features = ["axum"] }
+utoipa-redoc = { version = "7.0.0", features = ["axum"] }
 utoipa-scalar = { version = "0.3.0", features = ["axum"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
 uuid = { version = "1.23.2", features = ["v4", "serde"] }
