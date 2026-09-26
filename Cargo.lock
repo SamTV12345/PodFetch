@@ -645,7 +645,7 @@ dependencies = [
  "tracing-log",
  "tracing-subscriber",
  "url",
- "utoipa 5.5.0",
+ "utoipa 6.0.0",
 ]
 
 [[package]]
@@ -3352,7 +3352,7 @@ dependencies = [
  "tracing",
  "url",
  "urlencoding",
- "utoipa 5.5.0",
+ "utoipa 6.0.0",
  "utoipa-axum",
  "utoipa-rapidoc",
  "utoipa-redoc",
@@ -5700,7 +5700,6 @@ checksum = "6ba0b99ee52df3028635d93840c797102da61f8a7bb3cf751032455895b52ef8"
 dependencies = [
  "proc-macro2",
  "quote",
- "regex",
  "syn 2.0.119",
 ]
 
@@ -5712,6 +5711,7 @@ checksum = "d935f1c83fdf8b88f09bbe050d0cea78ea4afee6d7b0317403228c1200b2c8ab"
 dependencies = [
  "proc-macro2",
  "quote",
+ "regex",
  "syn 3.0.6",
 ]
 
