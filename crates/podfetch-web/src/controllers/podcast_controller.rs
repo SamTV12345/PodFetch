@@ -609,6 +609,7 @@ pub async fn update_active_podcast(
     Ok(StatusCode::OK)
 }
 
+#[allow(clippy::double_must_use)]
 #[async_recursion(?Send)]
 async fn insert_outline(podcast: Outline, mut rng: ThreadRng, added_by: Option<uuid::Uuid>) {
     if !podcast.outlines.is_empty() {
