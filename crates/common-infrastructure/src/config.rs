@@ -193,13 +193,13 @@ impl From<&S3Config> for Result<Box<Bucket>, S3Error> {
 
 impl From<&S3Config> for Credentials {
     fn from(val: &S3Config) -> Self {
-        Credentials {
-            access_key: Some(val.access_key.clone()),
-            secret_key: Some(val.secret_key.clone()),
-            security_token: val.security_token.clone(),
-            session_token: val.session_token.clone(),
-            expiration: None,
-        }
+        Credentials::new(
+            Some(&val.access_key),
+            Some(&val.secret_key),
+            val.security_token.as_deref(),
+            val.session_token.as_deref(),
+            val.profile.as_deref()
+        ).expect("Failed to create S3 credentials from environment variables")
     }
 }
 

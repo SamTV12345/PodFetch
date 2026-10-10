@@ -122,7 +122,7 @@ regex = "1.12.3"
 reqwest = { version = "0.13.4", features = ["stream", "json", "blocking", "rustls", "query", "multipart"] }
 rpassword = "7.5.4"
 rss = "2.0.13"
-rust-s3 = { version = "0.37.2", features = ["blocking", "fail-on-err", "futures-util", "tokio", "tokio-rustls-tls"], default-features = false }
+rust-s3 = { version = "0.38.0", features = ["blocking", "fail-on-err", "futures-util", "tokio", "tokio-rustls-tls"], default-features = false }
 serial_test = "4.0.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
