@@ -196,9 +196,9 @@ impl From<&S3Config> for Credentials {
         Credentials::new(
             Some(&val.access_key),
             Some(&val.secret_key),
-            val.security_token.map(|s|s.as_str()),
-            val.session_token.map(|s|s.as_str()),
-            val.profile.map(|s|s.as_str()),
+            val.security_token.as_deref(),
+            val.session_token.as_deref(),
+            val.profile.as_deref()
         ).expect("Failed to create S3 credentials from environment variables")
     }
 }
