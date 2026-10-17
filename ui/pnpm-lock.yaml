@@ -112,8 +112,8 @@ importers:
         specifier: ^1.0.0
         version: 1.0.0
       happy-dom:
-        specifier: ^20.14.5
-        version: 20.14.5
+        specifier: ^21.0.1
+        version: 21.0.1
       jsdom:
         specifier: ^30.1.2
         version: 30.1.2(@noble/hashes@1.8.0)
@@ -137,7 +137,7 @@ importers:
         version: 8.3.4(@types/node@26.6.5)(esbuild@0.27.2)(jiti@2.7.0)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)
       vitest:
         specifier: ^5.0.4
-        version: 5.0.4(@types/node@26.6.5)(happy-dom@20.14.5)(jsdom@30.1.2(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@26.6.5)(typescript@7.0.2))(vite@8.3.4(@types/node@26.6.5)(esbuild@0.27.2)(jiti@2.7.0)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0))
+        version: 5.0.4(@types/node@26.6.5)(happy-dom@21.0.1)(jsdom@30.1.2(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@26.6.5)(typescript@7.0.2))(vite@8.3.4(@types/node@26.6.5)(esbuild@0.27.2)(jiti@2.7.0)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0))
 
 packages:
 
@@ -1325,8 +1325,8 @@ packages:
     resolution: {integrity: sha512-Chq1s4CY7jmh8gO2qvLIJyfCDIN+EHLFW/9iShnp1z8FjBQMoodWP1kDC36VAMXXIvAjj4ARa7ntfAV2BrjsbA==}
     engines: {node: ^12.22.0 || ^14.16.0 || ^16.0.0 || >=17.0.0}
 
-  happy-dom@20.14.5:
-    resolution: {integrity: sha512-x/RzkpWO40bTjIoT30iQtt64FLLmH/iRcUCN2X//bLx7H3ifkdfPXyqsro/OYtqzIAhiLMMA7mmiOR9C3NOKjQ==}
+  happy-dom@21.0.1:
+    resolution: {integrity: sha512-pRBs/u9fhrncyByOl58DMex0R2uAj6ZPKWIjV5j5yNGZBqLw3P6BTRhlc0DD5b/Ht4/6JYTMuE2LJhUWRC6SGw==}
     engines: {node: '>=20.0.0'}
 
   has-flag@4.0.0:
@@ -3233,7 +3233,7 @@ snapshots:
   graphql@16.14.2:
     optional: true
 
-  happy-dom@20.14.5:
+  happy-dom@21.0.1:
     dependencies:
       '@types/node': 26.6.5
       '@types/whatwg-mimetype': 3.0.2
@@ -4029,7 +4029,7 @@ snapshots:
       sass-embedded: 1.98.0
       terser: 5.31.0
 
-  vitest@5.0.4(@types/node@26.6.5)(happy-dom@20.14.5)(jsdom@30.1.2(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@26.6.5)(typescript@7.0.2))(vite@8.3.4(@types/node@26.6.5)(esbuild@0.27.2)(jiti@2.7.0)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)):
+  vitest@5.0.4(@types/node@26.6.5)(happy-dom@21.0.1)(jsdom@30.1.2(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@26.6.5)(typescript@7.0.2))(vite@8.3.4(@types/node@26.6.5)(esbuild@0.27.2)(jiti@2.7.0)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/mocker': 5.0.4(msw@2.14.6(@types/node@26.6.5)(typescript@7.0.2))(vite@8.3.4(@types/node@26.6.5)(esbuild@0.27.2)(jiti@2.7.0)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0))
@@ -4047,7 +4047,7 @@ snapshots:
       why-is-node-running: 3.2.1
     optionalDependencies:
       '@types/node': 26.6.5
-      happy-dom: 20.14.5
+      happy-dom: 21.0.1
       jsdom: 30.1.2(@noble/hashes@1.8.0)
     transitivePeerDependencies:
       - msw
