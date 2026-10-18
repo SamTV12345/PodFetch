@@ -161,6 +161,54 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
         })
     }
 
+    const markEpisodeAsPlayedInCache = (episodeId: string, totalTime: number) => {
+        if (!params.id) {
+            return
+        }
+        const now = new Date().toISOString()
+        for (const cache of queryClient.getQueryCache().getAll()) {
+            if (cache.queryKey[0] == "get" && (cache.queryKey[1] as string) === ("/api/v1/podcasts/{id}/episodes")
+                && (cache.queryKey[2] as {params: operations['find_all_podcast_episodes_of_podcast']['parameters']}).params.path.id === params.id) {
+                queryClient.setQueryData(cache.queryKey, (oldData?: components["schemas"]["PodcastEpisodeWithHistory"][]) => {
+                    if (!oldData) {
+                        return oldData
+                    }
+                    return oldData.map(item => {
+                        if (item.podcastEpisode.episode_id !== episodeId) {
+                            return item
+                        }
+                        if (item.podcastHistoryItem) {
+                            return {
+                                ...item,
+                                podcastHistoryItem: {
+                                    ...item.podcastHistoryItem,
+                                    action: "play",
+                                    position: totalTime,
+                                    total: totalTime,
+                                    timestamp: now
+                                }
+                            }
+                        }
+                        return {
+                            ...item,
+                            podcastHistoryItem: {
+                                action: "play",
+                                device: "webview",
+                                episode: item.podcastEpisode.episode_id,
+                                guid: item.podcastEpisode.guid,
+                                podcast: item.podcastEpisode.podcast_id,
+                                started: 0,
+                                timestamp: now,
+                                total: totalTime,
+                                position: totalTime
+                            }
+                        }
+                    })
+                })
+            }
+        }
+    }
+
     return (
         <Fragment key={'episode_' + episode.podcastEpisode.id}>
             <div id={'episode_' + episode.podcastEpisode.id} className="
@@ -210,29 +258,43 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                         <Check size={20} className="cursor-pointer ui-icon active:scale-95" onClick={(e)=>{
                             // Prevent icon click from triggering info modal
                             e.stopPropagation()
-                            logCurrentPlaybackTime(episode.podcastEpisode.episode_id, episode.podcastHistoryItem?.total || 0)
-                            const mappedEpisodes = selectedEpisodes.map(s=>{
-                                if (s.podcastEpisode.episode_id === episode.podcastEpisode.episode_id){
-                                    if (s.podcastHistoryItem) {
-                                        s.podcastHistoryItem.position = episode.podcastEpisode.total_time
-                                    } else {
-                                        s.podcastHistoryItem = {
-                                            action: "new",
-                                            device: "",
-                                            episode: "",
-                                            guid: "",
-                                            podcast: "",
-                                            started: 0,
-                                            timestamp: "",
-                                            total: episode.podcastEpisode.total_time,
-                                            position: episode.podcastEpisode.total_time
+                            const totalTime = episode.podcastEpisode.total_time || 0
+                            const now = new Date().toISOString()
+                            logCurrentPlaybackTime(episode.podcastEpisode.episode_id, totalTime)
+                            const mappedEpisodes: components["schemas"]["PodcastEpisodeWithHistory"][] = selectedEpisodes.map(s => {
+                                if (s.podcastEpisode.episode_id !== episode.podcastEpisode.episode_id) {
+                                    return s
+                                }
+                                if (s.podcastHistoryItem) {
+                                    return {
+                                        ...s,
+                                        podcastHistoryItem: {
+                                            ...s.podcastHistoryItem,
+                                            action: "play",
+                                            position: totalTime,
+                                            total: totalTime,
+                                            timestamp: now
                                         }
                                     }
-
                                 }
-                                return s
+                                const podcastHistoryItem: components["schemas"]["EpisodeDto"] = {
+                                    action: "play",
+                                    device: "webview",
+                                    episode: s.podcastEpisode.episode_id,
+                                    guid: s.podcastEpisode.guid,
+                                    podcast: s.podcastEpisode.podcast_id,
+                                    started: 0,
+                                    timestamp: now,
+                                    total: totalTime,
+                                    position: totalTime
+                                }
+                                return {
+                                    ...s,
+                                    podcastHistoryItem
+                                }
                             })
                             setSelectedEpisodes(mappedEpisodes)
+                            markEpisodeAsPlayedInCache(episode.podcastEpisode.episode_id, totalTime)
                         }} />
                         {transcriptionEnabled && episode.podcastEpisode.status && (
                             <Captions
