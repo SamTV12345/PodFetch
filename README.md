@@ -3,6 +3,8 @@
 [![dependency status](https://deps.rs/repo/github/SamTV12345/PodFetch/status.svg)](https://deps.rs/repo/github/SamTV12345/PodFetch)
 [![Build documentation](https://github.com/SamTV12345/PodFetch/actions/workflows/build-documentation.yml/badge.svg)](https://github.com/SamTV12345/PodFetch/actions/workflows/build-documentation.yml)
 [![Build](https://github.com/SamTV12345/PodFetch/actions/workflows/pr-build.yml/badge.svg)](https://github.com/SamTV12345/PodFetch/actions/workflows/pr-build.yml)
+<a href="https://repocloud.io/details/PodFetch/"><img src="https://dnk92k33or340.cloudfront.net/deploy-20px.png" alt="Deploy on RepoCloud" height="20"></a>
+<a href="https://railway.com/deploy/podfetch-template"><img src="https://railway.com/button.svg" alt="Deploy on Railway" height="20"></a>
 
 Podfetch is a self-hosted podcast manager.
 It is a web app that lets you download podcasts and listen to them online.
