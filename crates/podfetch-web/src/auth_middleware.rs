@@ -235,7 +235,7 @@ impl AuthFilter {
         let found_user = user_auth_service.find_by_username(username);
 
         match found_user {
-            Ok(user) => Ok(user),
+            Ok(user) => user_auth_service.ensure_api_key(user),
             Err(_) => {
                 let preferred_username_claim = match decoded_token.claims.get("preferred_username")
                 {
@@ -253,7 +253,8 @@ impl AuthFilter {
                     None,
                     false,
                 )?;
-                Ok(user)
+                // The UI needs an api key to open its socket.io connection
+                user_auth_service.ensure_api_key(user)
             }
         }
     }
