@@ -226,29 +226,21 @@ impl AuthFilter {
                 Err(CustomError::from(CustomErrorInner::Forbidden(Warning)))
             }
         }?;
-        let username = decoded_token
-            .claims
-            .get("preferred_username")
-            .unwrap()
-            .as_str()
-            .unwrap();
+        let username = match decoded_token.claims.get("preferred_username") {
+            Some(claim) => match claim.as_str() {
+                Some(content) => Ok(content),
+                None => Err(CustomError::from(CustomErrorInner::Forbidden(Warning))),
+            },
+            None => Err(CustomErrorInner::Forbidden(Warning).into()),
+        }?;
         let found_user = user_auth_service.find_by_username(username);
 
         match found_user {
             Ok(user) => user_auth_service.ensure_api_key(user),
             Err(_) => {
-                let preferred_username_claim = match decoded_token.claims.get("preferred_username")
-                {
-                    Some(claim) => match claim.as_str() {
-                        Some(content) => Ok(content),
-                        None => Err(CustomError::from(CustomErrorInner::Forbidden(Warning))),
-                    },
-                    None => Err(CustomErrorInner::Forbidden(Warning).into()),
-                }?;
-
                 // User is authenticated so we can onboard him if he is new
                 let user = user_auth_service.create_user(
-                    preferred_username_claim.to_string(),
+                    username.to_string(),
                     "user".to_string(),
                     None,
                     false,
