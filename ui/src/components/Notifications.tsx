@@ -11,7 +11,7 @@ import { Skeleton } from "./ui/skeleton";
 
 type NotificationModel = components["schemas"]["Notification"]
 
-const unreadNotificationsQueryKey = ['get', '/api/v1/notifications/unread'] as const
+const unreadNotificationsQueryKey = $api.queryOptions('get', '/api/v1/notifications/unread', {}).queryKey
 const maxBadgeCount = 99
 
 const notificationIcon = (type: string) => {
@@ -108,7 +108,7 @@ export const Notifications: FC = () => {
 
         setIsClearingAll(true)
 
-        const previous = queryClient.getQueryData<NotificationModel[]>(unreadNotificationsQueryKey) ?? []
+        const previous = orderedNotifications
         queryClient.setQueryData(unreadNotificationsQueryKey, [])
 
         const result = await Promise.allSettled(
