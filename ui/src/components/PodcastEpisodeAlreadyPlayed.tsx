@@ -8,6 +8,7 @@ import useAudioPlayer from "../store/AudioPlayerSlice";
 import {removeHTML} from "../utils/Utilities";
 import {components} from "../../schema";
 import {startAudioPlayer} from "../utils/audioPlayer";
+import {usePlaybackLogger} from "../hooks/usePlaybackLogger";
 
 export const PodcastEpisodeAlreadyPlayed = () => {
     const infoModalOpen = useCommon(state => state.podcastAlreadyPlayed)
@@ -15,6 +16,7 @@ export const PodcastEpisodeAlreadyPlayed = () => {
     const setSelectedPodcastEpisodes = useCommon(state => state.setSelectedEpisodes)
     const selectedPodcastEpisodes = useCommon(state => state.selectedEpisodes)
     const {t} = useTranslation()
+    const logPlaybackTime = usePlaybackLogger()
     const setCurrentPodcastEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
     const setPodcastAlreadyPlayed = useCommon(state => state.setPodcastAlreadyPlayed)
 
@@ -50,7 +52,6 @@ export const PodcastEpisodeAlreadyPlayed = () => {
                             position: 0
                         }
 
-                        let index = 0
                         const newSelectedEpisodes = selectedPodcastEpisodes.map(e => {
                             if (e.podcastEpisode.episode_id === selectedPodcastEpisode.podcastEpisode.episode_id) {
                                 return {
@@ -58,11 +59,15 @@ export const PodcastEpisodeAlreadyPlayed = () => {
                                     podcastHistoryItem: watchedModel
                                 }
                             }
-                            index += 1
                             return e
                         })
+                        const index = selectedPodcastEpisodes.findIndex(e => e.podcastEpisode.episode_id === selectedPodcastEpisode.podcastEpisode.episode_id)
                         setSelectedPodcastEpisodes(newSelectedEpisodes)
-                        setCurrentPodcastEpisode(index)
+                        if (index !== -1) {
+                            setCurrentPodcastEpisode(index)
+                        }
+                        logPlaybackTime(selectedPodcastEpisode.podcastEpisode.episode_id, 0)
+                        setPodcastAlreadyPlayed(false)
                         await startAudioPlayer(selectedPodcastEpisode.podcastEpisode.local_url, 0)
                     }}>{t('restart-playing')}</CustomButtonPrimary>
                 </div>
