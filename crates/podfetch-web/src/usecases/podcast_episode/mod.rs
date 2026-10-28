@@ -330,6 +330,12 @@ impl PodcastEpisodeUseCase {
             .map_err(Into::into)
     }
 
+    pub fn update_total_time(episode_id: &str, total_time: i32) -> Result<(), CustomError> {
+        Self::repo()
+            .update_total_time(episode_id, total_time)
+            .map_err(Into::into)
+    }
+
     pub fn delete_episodes_of_podcast(podcast_id: Uuid) -> Result<(), CustomError> {
         let triage_service = EpisodeTriageService::default_service();
         Self::get_episodes_by_podcast_id(podcast_id)?
