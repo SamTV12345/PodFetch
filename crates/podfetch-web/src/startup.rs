@@ -509,6 +509,40 @@ pub fn build_server_router() -> Router {
         .layer(tower_http::trace::TraceLayer::new_for_http())
 }
 
+/// Query parameters that carry credentials and must never reach the log.
+const SECRET_QUERY_PARAMS: [&str; 3] = ["apiKey", "api_key", "token"];
+
+/// Replaces the value of every credential query parameter, and the path
+/// segment that follows an `apiKey` segment (`/rss/apiKey/<key>`), with `***`.
+/// The rest of the path and all other parameters stay untouched.
+fn redact_secrets(path_and_query: &str) -> String {
+    let (path, query) = match path_and_query.split_once('?') {
+        Some((path, query)) => (path, Some(query)),
+        None => (path_and_query, None),
+    };
+    let mut after_api_key = false;
+    let path = path
+        .split('/')
+        .map(|segment| {
+            let redact = std::mem::replace(&mut after_api_key, segment == "apiKey");
+            if redact { "***" } else { segment }
+        })
+        .collect::<Vec<_>>()
+        .join("/");
+    let Some(query) = query else {
+        return path;
+    };
+    let query = query
+        .split('&')
+        .map(|param| match param.split_once('=') {
+            Some((key, _)) if SECRET_QUERY_PARAMS.contains(&key) => format!("{key}=***"),
+            _ => param.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join("&");
+    format!("{path}?{query}")
+}
+
 /// Logs every HTTP request as one line with method + path + status + latency.
 /// Goes in front of `TraceLayer` so the message includes the path directly
 /// (TraceLayer puts the URI in a span; the default subscriber doesn't
@@ -523,10 +557,11 @@ async fn http_request_logger(
     let response = next.run(req).await;
     let elapsed_ms = started.elapsed().as_millis();
     let status = response.status().as_u16();
-    let path_and_query = uri
-        .path_and_query()
-        .map(|p| p.as_str())
-        .unwrap_or(uri.path());
+    let path_and_query = redact_secrets(
+        uri.path_and_query()
+            .map(|p| p.as_str())
+            .unwrap_or(uri.path()),
+    );
     if status >= 500 {
         tracing::error!("{method} {path_and_query} -> {status} in {elapsed_ms}ms");
     } else if status >= 400 {
@@ -605,4 +640,114 @@ pub fn handle_config_for_server_startup() -> Router {
     }
 
     router
+}
+
+#[cfg(test)]
+mod tests {
+    use super::redact_secrets;
+
+    #[test]
+    fn redact_no_query() {
+        assert_eq!(redact_secrets("/api/v1/podcasts"), "/api/v1/podcasts");
+    }
+
+    #[test]
+    fn redact_query_without_secrets() {
+        assert_eq!(
+            redact_secrets("/proxy/podcast?episodeId=abc&page=2"),
+            "/proxy/podcast?episodeId=abc&page=2"
+        );
+    }
+
+    #[test]
+    fn redact_first_param() {
+        assert_eq!(
+            redact_secrets("/socket.io/?apiKey=secret&EIO=4&transport=polling"),
+            "/socket.io/?apiKey=***&EIO=4&transport=polling"
+        );
+    }
+
+    #[test]
+    fn redact_middle_param() {
+        assert_eq!(
+            redact_secrets("/rss/1?a=1&apiKey=secret&b=2"),
+            "/rss/1?a=1&apiKey=***&b=2"
+        );
+    }
+
+    #[test]
+    fn redact_last_param() {
+        assert_eq!(
+            redact_secrets("/api/items?limit=5&token=secret"),
+            "/api/items?limit=5&token=***"
+        );
+    }
+
+    #[test]
+    fn redact_empty_value() {
+        assert_eq!(
+            redact_secrets("/rss/1?apiKey=&a=1"),
+            "/rss/1?apiKey=***&a=1"
+        );
+    }
+
+    #[test]
+    fn redact_multiple_secrets() {
+        assert_eq!(
+            redact_secrets("/x?apiKey=one&a=1&token=two&api_key=three"),
+            "/x?apiKey=***&a=1&token=***&api_key=***"
+        );
+    }
+
+    #[test]
+    fn redact_keeps_similar_names() {
+        assert_eq!(
+            redact_secrets("/x?tokenType=a&myapiKey=b"),
+            "/x?tokenType=a&myapiKey=b"
+        );
+    }
+
+    #[test]
+    fn redact_rss_path_with_and_without_id() {
+        assert_eq!(redact_secrets("/rss/apiKey/abc/5"), "/rss/apiKey/***/5");
+        assert_eq!(redact_secrets("/rss/apiKey/abc"), "/rss/apiKey/***");
+    }
+
+    #[test]
+    fn redact_proxy_path_with_query() {
+        assert_eq!(
+            redact_secrets("/proxy/podcast/apiKey/abc?episodeId=1"),
+            "/proxy/podcast/apiKey/***?episodeId=1"
+        );
+    }
+
+    #[test]
+    fn redact_transcript_path() {
+        assert_eq!(
+            redact_secrets("/api/v1/podcasts/episodes/e1/transcripts/t1/file/apiKey/abc"),
+            "/api/v1/podcasts/episodes/e1/transcripts/t1/file/apiKey/***"
+        );
+    }
+
+    #[test]
+    fn redact_path_and_query_together() {
+        assert_eq!(
+            redact_secrets("/rss/apiKey/abc/5?token=two&a=1"),
+            "/rss/apiKey/***/5?token=***&a=1"
+        );
+    }
+
+    #[test]
+    fn redact_trailing_api_key_segment() {
+        assert_eq!(redact_secrets("/rss/apiKey"), "/rss/apiKey");
+        assert_eq!(redact_secrets("/rss/apiKey/"), "/rss/apiKey/***");
+    }
+
+    #[test]
+    fn redact_path_exact_segment_only() {
+        assert_eq!(
+            redact_secrets("/rss/apiKeys/abc/myapiKey/def"),
+            "/rss/apiKeys/abc/myapiKey/def"
+        );
+    }
 }
