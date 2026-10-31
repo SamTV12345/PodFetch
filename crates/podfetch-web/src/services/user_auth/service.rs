@@ -5,6 +5,7 @@ use common_infrastructure::error::{CustomError, CustomErrorInner};
 use podfetch_domain::user::User;
 use podfetch_domain::user_admin::{ManagedUser, UserAdminRepository};
 use std::sync::Arc;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct UserAuthService {
@@ -59,6 +60,16 @@ impl UserAuthService {
             country: None,
             language: None,
         })
+    }
+
+    /// Generates and persists an api_key for users that don't have one yet.
+    /// Users that already have a key are returned untouched, without a write.
+    pub fn ensure_api_key(&self, mut user: User) -> Result<User, CustomError> {
+        if user.api_key.as_deref().is_some_and(|k| !k.is_empty()) {
+            return Ok(user);
+        }
+        user.api_key = Some(Uuid::new_v4().simple().to_string());
+        self.repository.update(user)
     }
 
     pub fn find_by_api_key(&self, api_key: &str) -> Result<Option<User>, CustomError> {
@@ -269,5 +280,34 @@ mod tests {
                 .is_none(),
             "standard user must not be seeded when a named admin is configured",
         );
+    }
+
+    /// OIDC onboarding creates users without an api_key, but the UI needs one
+    /// to open its socket.io connection (#2282).
+    #[tokio::test]
+    #[serial]
+    async fn ensure_api_key_generates_once_and_persists() {
+        let _ts = handle_test_startup().await;
+
+        let service = UserAuthService::new(
+            Arc::new(UserAdminRepositoryImpl::new(database())),
+            Arc::new(EnvironmentService::for_tests()),
+        );
+
+        let created = service
+            .create_user("oidc_user".to_string(), "user".to_string(), None, false)
+            .unwrap();
+        assert!(created.api_key.is_none());
+
+        let with_key = service.ensure_api_key(created).unwrap();
+        let api_key = with_key.api_key.clone().expect("api key must be set");
+        assert_eq!(api_key.len(), 32);
+        assert!(!api_key.contains('-'));
+
+        // Persisted, and a second call keeps the existing key.
+        let stored = service.find_by_username("oidc_user").unwrap();
+        assert_eq!(stored.api_key.as_deref(), Some(api_key.as_str()));
+        let again = service.ensure_api_key(stored).unwrap();
+        assert_eq!(again.api_key.as_deref(), Some(api_key.as_str()));
     }
 }
