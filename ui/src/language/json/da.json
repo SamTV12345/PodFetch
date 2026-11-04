@@ -291,5 +291,9 @@
   "transcription-running": "Transcription running",
   "transcription-failed": "Transcription failed",
   "auto-transcribe": "Auto-transcribe",
-  "TRANSCRIPTION_JOB_ALREADY_EXISTS": "A transcription job is already running for this episode"
+  "TRANSCRIPTION_JOB_ALREADY_EXISTS": "A transcription job is already running for this episode",
+  "gpodder-devices": "Synkroniserede enheder",
+  "gpodder-devices-description": "Podcast-apps, der er forbundet til PodFetch via GPodder-API'et (f.eks. AntennaPod). Når kontakten er slået til, vises podcasts, du markerer som favoritter i webgrænsefladen, også i appen. Alle enheder med kontakten slået til deler desuden deres abonnementer med hinanden.",
+  "gpodder-devices-empty-state": "Ingen enheder forbundet endnu. Opsæt din PodFetch-server med brugernavn og adgangskode i din podcast-app (f.eks. AntennaPod → Indstillinger → Synkronisering → gpodder.net). Enheden vises her efter den første synkronisering.",
+  "gpodder-devices-share-with-web": "Del webfavoritter"
 }

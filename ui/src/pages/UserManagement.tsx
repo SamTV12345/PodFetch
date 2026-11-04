@@ -11,6 +11,7 @@ import {$api} from "../utils/http";
 import {components} from "../../schema";
 import {useQueryClient} from "@tanstack/react-query";
 import {ProfileCastDevices} from "../components/ProfileCastDevices";
+import {ProfileGPodderDevices} from "../components/ProfileGPodderDevices";
 
 type UserManagementPageProps = {
 
@@ -114,6 +115,13 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
                 <Heading2>{t('cast-devices')}</Heading2>
                 <div className="mt-5">
                     <ProfileCastDevices/>
+                </div>
+            </div>
+
+            <div className="mt-12 pt-8 border-t ui-border">
+                <Heading2>{t('gpodder-devices')}</Heading2>
+                <div className="mt-5">
+                    <ProfileGPodderDevices/>
                 </div>
             </div>
         </div>

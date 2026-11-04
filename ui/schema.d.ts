@@ -278,6 +278,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/gpodder/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_gpodder_devices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gpodder/devices/{device_id}/web-sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["update_gpodder_device_web_sync"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/info": {
         parameters: {
             query?: never;
@@ -1725,6 +1757,19 @@ export interface components {
             device: string;
             podcast: string;
         };
+        GPodderDeviceResponse: {
+            /** @description Device id the client registered with, e.g. `antennapod_pixel8`. */
+            deviceId: string;
+            /** @description `mobile`, `desktop`, `laptop`, `server` or `other`. */
+            kind: string;
+            /** @description Human readable caption sent by the client. */
+            name: string;
+            /** @description Whether subscriptions are shared with the web interface. */
+            syncedWithWeb: boolean;
+        };
+        GPodderDeviceWebSyncRequest: {
+            enabled: boolean;
+        };
         Invite: {
             /** Format: date-time */
             acceptedAt?: string | null;
@@ -2271,6 +2316,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    get_gpodder_devices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description GPodder devices of the current user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GPodderDeviceResponse"][];
+                };
+            };
+        };
+    };
     list_cast_devices: {
         parameters: {
             query?: never;
@@ -3081,6 +3146,40 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PlaylistDto"];
                 };
+            };
+        };
+    };
+    update_gpodder_device_web_sync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description GPodder device id */
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GPodderDeviceWebSyncRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated GPodder devices of the current user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GPodderDeviceResponse"][];
+                };
+            };
+            /** @description Device not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

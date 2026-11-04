@@ -4,6 +4,7 @@ pub mod controller_utils;
 pub mod discover_controller;
 pub mod episode_triage_controller;
 pub mod file_hosting;
+pub mod gpodder_device_controller;
 pub mod id_resolver;
 pub mod manifest_controller;
 pub mod mopidy_controller;

@@ -372,5 +372,9 @@
   "transcription-running": "Transkription läuft",
   "transcription-failed": "Transkription fehlgeschlagen",
   "auto-transcribe": "Automatisch transkribieren",
-  "TRANSCRIPTION_JOB_ALREADY_EXISTS": "Für diese Episode läuft bereits eine Transkription"
+  "TRANSCRIPTION_JOB_ALREADY_EXISTS": "Für diese Episode läuft bereits eine Transkription",
+  "gpodder-devices": "Synchronisierte Geräte",
+  "gpodder-devices-description": "Podcast-Apps, die über die GPodder-Schnittstelle mit PodFetch verbunden sind (z. B. AntennaPod). Ist der Schalter aktiv, landen Podcasts, die du in der Weboberfläche als Favorit markierst, auch in der App. Alle Geräte mit aktivem Schalter teilen außerdem ihre Abos untereinander.",
+  "gpodder-devices-empty-state": "Noch keine Geräte verbunden. Richte in deiner Podcast-App (z. B. AntennaPod → Einstellungen → Synchronisierung → gpodder.net) deinen PodFetch-Server mit deinem Benutzernamen und Passwort ein. Nach der ersten Synchronisierung erscheint das Gerät hier.",
+  "gpodder-devices-share-with-web": "Web-Favoriten teilen"
 }
