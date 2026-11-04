@@ -32,11 +32,14 @@ test('timeline shows the downloaded fixture episodes', async ({ page }) => {
     await page.goto('/ui/timeline')
 
     // "Only favorite podcasts" is on by default; the fixture podcast is not
-    // favored, so widen the filter first.
-    await page
+    // favored, so widen the filter first. The switch is a skeleton until the
+    // filter has loaded, so wait for it before clicking.
+    const onlyFavored = page
         .getByText('Only favorite podcasts', { exact: true })
         .locator('xpath=following-sibling::*[1]')
-        .click()
+    await expect(onlyFavored.locator('input[type="checkbox"]')).toBeChecked()
+    await onlyFavored.click()
+    await expect(onlyFavored.locator('input[type="checkbox"]')).not.toBeChecked()
 
     await expect(page.getByText('Smoke Episode 1', { exact: true }).first()).toBeVisible()
 })
