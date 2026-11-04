@@ -286,24 +286,32 @@ impl EpisodeRepository for DieselEpisodeRepository {
             .map_err(Into::into)
     }
 
-    fn insert_episode(&self, episode: &Episode) -> Result<Episode, Self::Error> {
-        let user_id = self.require_user_id(&episode.username)?;
+    fn find_duplicate_action(&self, episode: &Episode) -> Result<Option<Episode>, Self::Error> {
+        let Some(user_id) = self.find_user_id(&episode.username)? else {
+            return Ok(None);
+        };
 
-        // Check for existing entry with same timestamp, device, podcast, and episode URL
-        let existing = episodes::table
+        episodes::table
             .filter(
                 episodes::user_id
-                    .eq(user_id.clone())
+                    .eq(user_id)
                     .and(episodes::timestamp.eq(episode.timestamp))
                     .and(episodes::device.eq(&episode.device))
                     .and(episodes::podcast.eq(&episode.podcast))
                     .and(episodes::episode.eq(&episode.episode)),
             )
             .first::<DbEpisodeEntity>(&mut self.database.connection()?)
-            .optional()?;
+            .optional()
+            .map(|entity| entity.map(|entity| Self::to_domain(entity, &episode.username)))
+            .map_err(Into::into)
+    }
 
-        if let Some(entity) = existing {
-            return Ok(Self::to_domain(entity, &episode.username));
+    fn insert_episode(&self, episode: &Episode) -> Result<Episode, Self::Error> {
+        let user_id = self.require_user_id(&episode.username)?;
+
+        // Check for existing entry with same timestamp, device, podcast, and episode URL
+        if let Some(existing) = self.find_duplicate_action(episode)? {
+            return Ok(existing);
         }
 
         // Insert new episode

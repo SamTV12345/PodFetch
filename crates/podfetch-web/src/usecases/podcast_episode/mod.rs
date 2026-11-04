@@ -742,7 +742,7 @@ impl PodcastEpisodeUseCase {
         Ok(())
     }
 
-    fn get_podcast_episode_by_guid(
+    pub fn get_podcast_episode_by_guid(
         guid_to_search: &str,
     ) -> Result<Option<PodcastEpisode>, CustomError> {
         Self::repo()
