@@ -7,6 +7,7 @@ use crate::controllers::cast_controller::get_cast_router;
 use crate::controllers::discover_controller::get_discover_router;
 use crate::controllers::episode_triage_controller::get_episode_triage_router;
 use crate::controllers::file_hosting::podcast_serving;
+use crate::controllers::gpodder_device_controller::get_gpodder_device_router;
 use crate::controllers::manifest_controller::get_manifest_router;
 use crate::controllers::mopidy_controller::get_mopidy_router;
 use crate::controllers::notification_controller::get_notification_router;
@@ -349,6 +350,7 @@ fn config(state: AppState) -> OpenApiRouter {
 fn get_private_api(state: AppState) -> OpenApiRouter {
     let mut router = OpenApiRouter::new()
         .merge(get_cast_router().with_state(state.clone()))
+        .merge(get_gpodder_device_router().with_state(state.clone()))
         .merge(get_discover_router().with_state(state.clone()))
         .merge(get_playlist_router().with_state(state.clone()))
         .merge(get_podcast_router().with_state(state.clone()))

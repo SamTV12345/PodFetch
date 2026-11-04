@@ -180,9 +180,10 @@ impl AppState {
                 ListeningEventRepositoryImpl::new(database.clone()),
             )),
         )));
-        let subscription_service = Arc::new(SubscriptionService::new(Arc::new(
-            SubscriptionRepositoryImpl::new(database.clone()),
-        )));
+        let subscription_service = Arc::new(SubscriptionService::new(
+            Arc::new(SubscriptionRepositoryImpl::new(database.clone())),
+            Arc::new(DeviceSyncGroupRepositoryImpl::new(database.clone())),
+        ));
         let tag_service = Arc::new(TagService::new(Arc::new(TagRepositoryImpl::new(
             database.clone(),
         ))));

@@ -291,5 +291,20 @@
   "transcription-running": "Transcription running",
   "transcription-failed": "Transcription failed",
   "auto-transcribe": "Auto-transcribe",
-  "TRANSCRIPTION_JOB_ALREADY_EXISTS": "A transcription job is already running for this episode"
+  "TRANSCRIPTION_JOB_ALREADY_EXISTS": "A transcription job is already running for this episode",
+  "gpodder-sync-groups": "Synkroniseringsgrupper",
+  "gpodder-sync-groups-description": "Podcast-apps, der er forbundet til PodFetch via GPodder-API'et (f.eks. AntennaPod), kan grupperes her ligesom på gpodder.net: alle enheder i en gruppe deler deres abonnementer. Webgrænsefladen er en selvstændig enhed – dens abonnementer er dine favoritter. Når den er med i en gruppe, vises favoritter i apps, og podcasts, du abonnerer på eller afmelder der, bliver til eller ophører med at være favoritter her (hvis podcasten findes i PodFetch). En enhed kan kun være i én gruppe.",
+  "gpodder-sync-group": "Gruppe {{number}}",
+  "gpodder-sync-group-dissolve": "Opløs",
+  "gpodder-sync-group-add-device": "Tilføj enhed …",
+  "gpodder-sync-group-merge": "Slå sammen med …",
+  "gpodder-sync-group-remove-device": "Fjern fra gruppe",
+  "gpodder-in-group": "i gruppe {{number}}",
+  "gpodder-not-synchronized": "Ikke synkroniseret",
+  "gpodder-all-synchronized": "Alle enheder er i en gruppe.",
+  "gpodder-create-group": "Ny gruppe fra valg",
+  "gpodder-create-group-hint": "Vælg mindst to enheder.",
+  "gpodder-web-device": "Webgrænseflade",
+  "gpodder-web-device-description": "Dine favoritter i PodFetch",
+  "gpodder-devices-empty-state": "Ingen podcast-app forbundet endnu. Opsæt din PodFetch-server med brugernavn og adgangskode i din app (f.eks. AntennaPod → Indstillinger → Synkronisering → gpodder.net). Enheden vises her efter den første synkronisering."
 }

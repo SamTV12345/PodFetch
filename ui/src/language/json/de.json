@@ -372,5 +372,20 @@
   "transcription-running": "Transkription läuft",
   "transcription-failed": "Transkription fehlgeschlagen",
   "auto-transcribe": "Automatisch transkribieren",
-  "TRANSCRIPTION_JOB_ALREADY_EXISTS": "Für diese Episode läuft bereits eine Transkription"
+  "TRANSCRIPTION_JOB_ALREADY_EXISTS": "Für diese Episode läuft bereits eine Transkription",
+  "gpodder-sync-groups": "Sync-Gruppen",
+  "gpodder-sync-groups-description": "Podcast-Apps, die über die GPodder-Schnittstelle mit PodFetch verbunden sind (z. B. AntennaPod), lassen sich hier wie bei gpodder.net zu Gruppen zusammenfassen: Alle Geräte einer Gruppe teilen ihre Abos. Die Weboberfläche ist dabei ein eigenes Gerät – ihre Abos sind deine Favoriten. Steckt sie in einer Gruppe, landen Favoriten in den Apps, und was du dort abonnierst oder abbestellst, wird hier zum Favoriten bzw. verliert den Status (sofern der Podcast in PodFetch vorhanden ist). Ein Gerät kann nur in einer Gruppe sein.",
+  "gpodder-sync-group": "Gruppe {{number}}",
+  "gpodder-sync-group-dissolve": "Auflösen",
+  "gpodder-sync-group-add-device": "Gerät hinzufügen …",
+  "gpodder-sync-group-merge": "Zusammenlegen mit …",
+  "gpodder-sync-group-remove-device": "Aus Gruppe entfernen",
+  "gpodder-in-group": "in Gruppe {{number}}",
+  "gpodder-not-synchronized": "Nicht synchronisiert",
+  "gpodder-all-synchronized": "Alle Geräte sind in einer Gruppe.",
+  "gpodder-create-group": "Neue Gruppe aus Auswahl",
+  "gpodder-create-group-hint": "Wähle mindestens zwei Geräte aus.",
+  "gpodder-web-device": "Weboberfläche",
+  "gpodder-web-device-description": "Deine Favoriten in PodFetch",
+  "gpodder-devices-empty-state": "Noch keine Podcast-App verbunden. Richte in deiner App (z. B. AntennaPod → Einstellungen → Synchronisierung → gpodder.net) deinen PodFetch-Server mit deinem Benutzernamen und Passwort ein. Nach der ersten Synchronisierung erscheint das Gerät hier."
 }

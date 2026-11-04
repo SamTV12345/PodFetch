@@ -278,6 +278,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/gpodder/sync-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_gpodder_sync_groups"];
+        put: operations["update_gpodder_sync_groups"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/info": {
         parameters: {
             query?: never;
@@ -1725,6 +1741,33 @@ export interface components {
             device: string;
             podcast: string;
         };
+        GPodderDeviceResponse: {
+            /** @description Device id the client registered with, e.g. `antennapod_pixel8`. */
+            deviceId: string;
+            /**
+             * @description `mobile`, `desktop`, `laptop`, `server`, `other` or `webview` for the
+             *     web interface itself.
+             */
+            kind: string;
+            /** @description Human readable caption sent by the client. */
+            name: string;
+        };
+        GPodderSyncGroupResponse: {
+            devices: components["schemas"]["GPodderDeviceResponse"][];
+            /** Format: int32 */
+            groupId: number;
+        };
+        GPodderSyncGroupsResponse: {
+            groups: components["schemas"]["GPodderSyncGroupResponse"][];
+            notSynchronized: components["schemas"]["GPodderDeviceResponse"][];
+        };
+        GPodderSyncGroupsUpdateRequest: {
+            /**
+             * @description The complete new configuration: one list of device ids per group.
+             *     Groups with fewer than two devices are dropped.
+             */
+            groups: string[][];
+        };
         Invite: {
             /** Format: date-time */
             acceptedAt?: string | null;
@@ -2271,6 +2314,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    get_gpodder_sync_groups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description GPodder sync groups of the current user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GPodderSyncGroupsResponse"];
+                };
+            };
+        };
+    };
     list_cast_devices: {
         parameters: {
             query?: never;
@@ -3081,6 +3144,37 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PlaylistDto"];
                 };
+            };
+        };
+    };
+    update_gpodder_sync_groups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GPodderSyncGroupsUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated GPodder sync groups of the current user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GPodderSyncGroupsResponse"];
+                };
+            };
+            /** @description Unknown device or device in more than one group */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
