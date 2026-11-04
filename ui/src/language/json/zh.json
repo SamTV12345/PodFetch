@@ -349,8 +349,19 @@
   "transcription-failed": "Transcription failed",
   "auto-transcribe": "Auto-transcribe",
   "TRANSCRIPTION_JOB_ALREADY_EXISTS": "A transcription job is already running for this episode",
-  "gpodder-devices": "已同步的设备",
-  "gpodder-devices-description": "通过 GPodder API 连接到 PodFetch 的播客应用（例如 AntennaPod）。开启开关后，你在这里的收藏与应用中的订阅会双向同步：收藏会出现在应用中，在应用中订阅或取消订阅的播客也会在这里被加入或移出收藏（前提是该播客已存在于 PodFetch 中）。所有开启开关的设备之间也会共享订阅。",
-  "gpodder-devices-empty-state": "尚未连接任何设备。在你的播客应用中（例如 AntennaPod → 设置 → 同步 → gpodder.net）使用你的用户名和密码设置 PodFetch 服务器。首次同步后，设备会显示在这里。",
-  "gpodder-devices-share-with-web": "与收藏同步"
+  "gpodder-sync-groups": "同步组",
+  "gpodder-sync-groups-description": "通过 GPodder API 连接到 PodFetch 的播客应用（例如 AntennaPod）可以像在 gpodder.net 上一样在这里分组：同一组内的所有设备共享订阅。网页界面本身也是一台设备，它的订阅就是你的收藏。当它加入某个组时，收藏会出现在应用中，在应用中订阅或取消订阅的播客也会在这里被加入或移出收藏（前提是该播客已存在于 PodFetch 中）。每台设备只能属于一个组。",
+  "gpodder-sync-group": "第 {{number}} 组",
+  "gpodder-sync-group-dissolve": "解散",
+  "gpodder-sync-group-add-device": "添加设备 …",
+  "gpodder-sync-group-merge": "合并到 …",
+  "gpodder-sync-group-remove-device": "移出该组",
+  "gpodder-in-group": "在第 {{number}} 组",
+  "gpodder-not-synchronized": "未同步",
+  "gpodder-all-synchronized": "所有设备都已在组中。",
+  "gpodder-create-group": "用所选设备新建组",
+  "gpodder-create-group-hint": "请至少选择两台设备。",
+  "gpodder-web-device": "网页界面",
+  "gpodder-web-device-description": "你在 PodFetch 中的收藏",
+  "gpodder-devices-empty-state": "尚未连接任何播客应用。在你的应用中（例如 AntennaPod → 设置 → 同步 → gpodder.net）使用你的用户名和密码设置 PodFetch 服务器。首次同步后，设备会显示在这里。"
 }

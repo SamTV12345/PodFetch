@@ -11,7 +11,7 @@ import {$api} from "../utils/http";
 import {components} from "../../schema";
 import {useQueryClient} from "@tanstack/react-query";
 import {ProfileCastDevices} from "../components/ProfileCastDevices";
-import {ProfileGPodderDevices} from "../components/ProfileGPodderDevices";
+import {ProfileGPodderSyncGroups} from "../components/ProfileGPodderSyncGroups";
 
 type UserManagementPageProps = {
 
@@ -119,9 +119,9 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
             </div>
 
             <div className="mt-12 pt-8 border-t ui-border">
-                <Heading2>{t('gpodder-devices')}</Heading2>
+                <Heading2>{t('gpodder-sync-groups')}</Heading2>
                 <div className="mt-5">
-                    <ProfileGPodderDevices/>
+                    <ProfileGPodderSyncGroups/>
                 </div>
             </div>
         </div>

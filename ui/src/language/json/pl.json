@@ -292,8 +292,19 @@
   "transcription-failed": "Transcription failed",
   "auto-transcribe": "Auto-transcribe",
   "TRANSCRIPTION_JOB_ALREADY_EXISTS": "A transcription job is already running for this episode",
-  "gpodder-devices": "Zsynchronizowane urządzenia",
-  "gpodder-devices-description": "Aplikacje do podcastów połączone z PodFetch przez API GPodder (np. AntennaPod). Gdy przełącznik jest włączony, ulubione tutaj i subskrypcje w aplikacji synchronizują się w obie strony: ulubione pojawiają się w aplikacji, a podcasty subskrybowane lub anulowane w aplikacji stają się lub przestają być ulubionymi tutaj (jeśli podcast istnieje w PodFetch). Wszystkie urządzenia z włączonym przełącznikiem współdzielą też między sobą subskrypcje.",
-  "gpodder-devices-empty-state": "Brak połączonych urządzeń. W aplikacji do podcastów (np. AntennaPod → Ustawienia → Synchronizacja → gpodder.net) skonfiguruj serwer PodFetch, podając nazwę użytkownika i hasło. Urządzenie pojawi się tutaj po pierwszej synchronizacji.",
-  "gpodder-devices-share-with-web": "Synchronizuj z ulubionymi"
+  "gpodder-sync-groups": "Grupy synchronizacji",
+  "gpodder-sync-groups-description": "Aplikacje do podcastów połączone z PodFetch przez API GPodder (np. AntennaPod) można tu grupować tak jak na gpodder.net: wszystkie urządzenia w grupie współdzielą subskrypcje. Interfejs webowy jest osobnym urządzeniem – jego subskrypcje to twoje ulubione. Gdy należy do grupy, ulubione pojawiają się w aplikacjach, a podcasty subskrybowane lub anulowane tam stają się lub przestają być ulubionymi tutaj (jeśli podcast istnieje w PodFetch). Urządzenie może należeć tylko do jednej grupy.",
+  "gpodder-sync-group": "Grupa {{number}}",
+  "gpodder-sync-group-dissolve": "Rozwiąż",
+  "gpodder-sync-group-add-device": "Dodaj urządzenie …",
+  "gpodder-sync-group-merge": "Połącz z …",
+  "gpodder-sync-group-remove-device": "Usuń z grupy",
+  "gpodder-in-group": "w grupie {{number}}",
+  "gpodder-not-synchronized": "Niezsynchronizowane",
+  "gpodder-all-synchronized": "Wszystkie urządzenia są w grupie.",
+  "gpodder-create-group": "Nowa grupa z zaznaczonych",
+  "gpodder-create-group-hint": "Zaznacz co najmniej dwa urządzenia.",
+  "gpodder-web-device": "Interfejs webowy",
+  "gpodder-web-device-description": "Twoje ulubione w PodFetch",
+  "gpodder-devices-empty-state": "Brak połączonej aplikacji do podcastów. W aplikacji (np. AntennaPod → Ustawienia → Synchronizacja → gpodder.net) skonfiguruj serwer PodFetch, podając nazwę użytkownika i hasło. Urządzenie pojawi się tutaj po pierwszej synchronizacji."
 }

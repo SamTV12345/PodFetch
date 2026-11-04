@@ -278,31 +278,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/gpodder/devices": {
+    "/api/v1/gpodder/sync-groups": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["get_gpodder_devices"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/gpodder/devices/{device_id}/web-sync": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["update_gpodder_device_web_sync"];
+        get: operations["get_gpodder_sync_groups"];
+        put: operations["update_gpodder_sync_groups"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1760,15 +1744,29 @@ export interface components {
         GPodderDeviceResponse: {
             /** @description Device id the client registered with, e.g. `antennapod_pixel8`. */
             deviceId: string;
-            /** @description `mobile`, `desktop`, `laptop`, `server` or `other`. */
+            /**
+             * @description `mobile`, `desktop`, `laptop`, `server`, `other` or `webview` for the
+             *     web interface itself.
+             */
             kind: string;
             /** @description Human readable caption sent by the client. */
             name: string;
-            /** @description Whether subscriptions are shared with the web interface. */
-            syncedWithWeb: boolean;
         };
-        GPodderDeviceWebSyncRequest: {
-            enabled: boolean;
+        GPodderSyncGroupResponse: {
+            devices: components["schemas"]["GPodderDeviceResponse"][];
+            /** Format: int32 */
+            groupId: number;
+        };
+        GPodderSyncGroupsResponse: {
+            groups: components["schemas"]["GPodderSyncGroupResponse"][];
+            notSynchronized: components["schemas"]["GPodderDeviceResponse"][];
+        };
+        GPodderSyncGroupsUpdateRequest: {
+            /**
+             * @description The complete new configuration: one list of device ids per group.
+             *     Groups with fewer than two devices are dropped.
+             */
+            groups: string[][];
         };
         Invite: {
             /** Format: date-time */
@@ -2316,7 +2314,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    get_gpodder_devices: {
+    get_gpodder_sync_groups: {
         parameters: {
             query?: never;
             header?: never;
@@ -2325,13 +2323,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description GPodder devices of the current user */
+            /** @description GPodder sync groups of the current user */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GPodderDeviceResponse"][];
+                    "application/json": components["schemas"]["GPodderSyncGroupsResponse"];
                 };
             };
         };
@@ -3149,33 +3147,30 @@ export interface operations {
             };
         };
     };
-    update_gpodder_device_web_sync: {
+    update_gpodder_sync_groups: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                /** @description GPodder device id */
-                device_id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["GPodderDeviceWebSyncRequest"];
+                "application/json": components["schemas"]["GPodderSyncGroupsUpdateRequest"];
             };
         };
         responses: {
-            /** @description Updated GPodder devices of the current user */
+            /** @description Updated GPodder sync groups of the current user */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GPodderDeviceResponse"][];
+                    "application/json": components["schemas"]["GPodderSyncGroupsResponse"];
                 };
             };
-            /** @description Device not found */
-            404: {
+            /** @description Unknown device or device in more than one group */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };

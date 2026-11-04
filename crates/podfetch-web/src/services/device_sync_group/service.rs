@@ -17,89 +17,51 @@ impl DeviceSyncGroupService {
         self.repository.get_by_user_id(user_id)
     }
 
-    /// Whether `device_id` shares its subscriptions with `peer_device_id`.
-    pub fn is_synced_with(
-        groups: &[DeviceSyncGroup],
-        device_id: &str,
-        peer_device_id: &str,
-    ) -> bool {
-        let group_of = |id: &str| {
-            groups
-                .iter()
-                .find(|g| g.device_id == id)
-                .map(|g| g.group_id)
-        };
-        matches!((group_of(device_id), group_of(peer_device_id)), (Some(a), Some(b)) if a == b)
-    }
-
-    /// Put `device_id` into the same sync group as `peer_device_id`
-    /// (`enabled = true`) or take it out of that group (`enabled = false`).
+    /// Validate a complete sync group configuration (one list of device ids
+    /// per group, as in GPodder's `synchronized` list) and turn it into rows.
     ///
-    /// Enabling merges the device's current group into the peer's group, so
-    /// devices that were already synchronized with it stay synchronized.
-    /// Groups left with a single member are dropped.
-    pub fn set_synced_with(
-        &self,
+    /// Every device must be in `known_devices` and may appear in at most one
+    /// group. Groups with fewer than two devices synchronize nothing and are
+    /// dropped. Group ids are renumbered from 1.
+    pub fn build_groups(
         user_id: Uuid,
-        device_id: &str,
-        peer_device_id: &str,
-        enabled: bool,
-    ) -> Result<(), CustomError> {
-        let groups = self.repository.get_by_user_id(user_id)?;
-        let groups = Self::apply_sync_change(groups, user_id, device_id, peer_device_id, enabled);
-        self.repository.replace_all(user_id, groups)
+        groups: &[Vec<String>],
+        known_devices: &std::collections::HashSet<String>,
+    ) -> Result<Vec<DeviceSyncGroup>, String> {
+        let mut seen = std::collections::HashSet::new();
+        let mut rows = vec![];
+        let mut group_id = 0;
+        for group in groups {
+            let mut members: Vec<&String> = vec![];
+            for device_id in group {
+                if !known_devices.contains(device_id) {
+                    return Err(format!("Unknown device '{device_id}'"));
+                }
+                if !seen.insert(device_id.clone()) {
+                    return Err(format!("Device '{device_id}' is in more than one group"));
+                }
+                members.push(device_id);
+            }
+            if members.len() < 2 {
+                continue;
+            }
+            group_id += 1;
+            rows.extend(members.into_iter().map(|device_id| DeviceSyncGroup {
+                id: podfetch_domain::ids::new_id(),
+                user_id,
+                group_id,
+                device_id: device_id.clone(),
+            }));
+        }
+        Ok(rows)
     }
 
-    fn apply_sync_change(
-        mut groups: Vec<DeviceSyncGroup>,
-        user_id: Uuid,
-        device_id: &str,
-        peer_device_id: &str,
-        enabled: bool,
-    ) -> Vec<DeviceSyncGroup> {
-        let group_of = |groups: &[DeviceSyncGroup], id: &str| {
-            groups
-                .iter()
-                .find(|g| g.device_id == id)
-                .map(|g| g.group_id)
-        };
-        let peer_group = group_of(&groups, peer_device_id);
-
-        if enabled {
-            let target = peer_group
-                .unwrap_or_else(|| groups.iter().map(|g| g.group_id).max().unwrap_or(0) + 1);
-            if peer_group.is_none() {
-                groups.push(DeviceSyncGroup {
-                    id: podfetch_domain::ids::new_id(),
-                    user_id,
-                    group_id: target,
-                    device_id: peer_device_id.to_string(),
-                });
-            }
-            match group_of(&groups, device_id) {
-                Some(current) if current == target => {}
-                Some(current) => groups
-                    .iter_mut()
-                    .filter(|g| g.group_id == current)
-                    .for_each(|g| g.group_id = target),
-                None => groups.push(DeviceSyncGroup {
-                    id: podfetch_domain::ids::new_id(),
-                    user_id,
-                    group_id: target,
-                    device_id: device_id.to_string(),
-                }),
-            }
-        } else if let Some(peer_group) = peer_group {
-            groups.retain(|g| !(g.device_id == device_id && g.group_id == peer_group));
-        }
-
-        // A group with a single device synchronizes nothing.
-        let mut sizes = std::collections::HashMap::new();
-        for g in &groups {
-            *sizes.entry(g.group_id).or_insert(0) += 1;
-        }
-        groups.retain(|g| sizes[&g.group_id] > 1);
+    /// The group id `device_id` belongs to, if any.
+    pub fn group_of(groups: &[DeviceSyncGroup], device_id: &str) -> Option<i32> {
         groups
+            .iter()
+            .find(|g| g.device_id == device_id)
+            .map(|g| g.group_id)
     }
 
     pub fn replace_all(
@@ -114,75 +76,51 @@ impl DeviceSyncGroupService {
 #[cfg(test)]
 mod tests {
     use super::DeviceSyncGroupService;
-    use podfetch_domain::device_sync_group::DeviceSyncGroup;
+    use std::collections::HashSet;
     use uuid::Uuid;
 
-    fn group(user_id: Uuid, group_id: i32, device_id: &str) -> DeviceSyncGroup {
-        DeviceSyncGroup {
-            id: Uuid::new_v4(),
-            user_id,
-            group_id,
-            device_id: device_id.to_string(),
-        }
+    fn known(ids: &[&str]) -> HashSet<String> {
+        ids.iter().map(|s| s.to_string()).collect()
     }
 
-    fn members(groups: &[DeviceSyncGroup], peer: &str) -> Vec<String> {
-        let mut ids: Vec<String> = groups
-            .iter()
-            .filter(|g| DeviceSyncGroupService::is_synced_with(groups, &g.device_id, peer))
-            .map(|g| g.device_id.clone())
-            .collect();
-        ids.sort();
-        ids
+    fn groups(raw: &[&[&str]]) -> Vec<Vec<String>> {
+        raw.iter()
+            .map(|g| g.iter().map(|s| s.to_string()).collect())
+            .collect()
     }
 
     #[test]
-    fn enabling_creates_group_with_peer() {
-        let user = Uuid::new_v4();
-        let groups =
-            DeviceSyncGroupService::apply_sync_change(vec![], user, "phone", "webview", true);
-        assert_eq!(members(&groups, "webview"), vec!["phone", "webview"]);
+    fn builds_and_renumbers_groups() {
+        let rows = DeviceSyncGroupService::build_groups(
+            Uuid::new_v4(),
+            &groups(&[&["phone", "webview"], &["tablet"], &["laptop", "desktop"]]),
+            &known(&["phone", "webview", "tablet", "laptop", "desktop"]),
+        )
+        .unwrap();
+        assert_eq!(rows.len(), 4);
+        assert_eq!(DeviceSyncGroupService::group_of(&rows, "phone"), Some(1));
+        assert_eq!(DeviceSyncGroupService::group_of(&rows, "laptop"), Some(2));
+        // A single device synchronizes nothing.
+        assert_eq!(DeviceSyncGroupService::group_of(&rows, "tablet"), None);
     }
 
     #[test]
-    fn enabling_merges_existing_group_into_peer_group() {
-        let user = Uuid::new_v4();
-        let groups = vec![
-            group(user, 1, "phone"),
-            group(user, 1, "tablet"),
-            group(user, 2, "webview"),
-            group(user, 2, "desktop"),
-        ];
-        let groups =
-            DeviceSyncGroupService::apply_sync_change(groups, user, "phone", "webview", true);
-        assert_eq!(
-            members(&groups, "webview"),
-            vec!["desktop", "phone", "tablet", "webview"]
+    fn rejects_unknown_devices() {
+        let result = DeviceSyncGroupService::build_groups(
+            Uuid::new_v4(),
+            &groups(&[&["phone", "someone-elses-device"]]),
+            &known(&["phone"]),
         );
+        assert!(result.is_err());
     }
 
     #[test]
-    fn disabling_removes_device_and_drops_single_member_groups() {
-        let user = Uuid::new_v4();
-        let groups = vec![group(user, 1, "phone"), group(user, 1, "webview")];
-        let groups =
-            DeviceSyncGroupService::apply_sync_change(groups, user, "phone", "webview", false);
-        assert!(groups.is_empty());
-    }
-
-    #[test]
-    fn disabling_keeps_other_members() {
-        let user = Uuid::new_v4();
-        let groups = vec![
-            group(user, 1, "phone"),
-            group(user, 1, "tablet"),
-            group(user, 1, "webview"),
-        ];
-        let groups =
-            DeviceSyncGroupService::apply_sync_change(groups, user, "phone", "webview", false);
-        assert_eq!(members(&groups, "webview"), vec!["tablet", "webview"]);
-        assert!(!DeviceSyncGroupService::is_synced_with(
-            &groups, "phone", "webview"
-        ));
+    fn rejects_device_in_two_groups() {
+        let result = DeviceSyncGroupService::build_groups(
+            Uuid::new_v4(),
+            &groups(&[&["phone", "webview"], &["phone", "tablet"]]),
+            &known(&["phone", "webview", "tablet"]),
+        );
+        assert!(result.is_err());
     }
 }
