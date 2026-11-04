@@ -168,6 +168,8 @@ pub trait PodcastEpisodeRepository: Send + Sync {
 
     fn update_guid(&self, episode_id: &str, guid: &str) -> Result<(), Self::Error>;
 
+    fn update_total_time(&self, episode_id: &str, total_time: i32) -> Result<(), Self::Error>;
+
     fn update_deleted(&self, episode_id: &str, deleted: bool) -> Result<usize, Self::Error>;
 
     fn update_episode_numbering_processed(

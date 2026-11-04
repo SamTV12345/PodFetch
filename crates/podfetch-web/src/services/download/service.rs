@@ -388,6 +388,11 @@ impl DownloadService {
             ),
         }
 
+        // The feed's itunes:duration can be shorter than the file (dynamic ad
+        // insertion), so prefer the real duration. Non-fatal — must never fail
+        // the download.
+        Self::sync_total_time_with_file(&podcast_episode, &paths.filename);
+
         let final_episode_path = if settings_in_db.auto_transcode_opus {
             match Self::transcode_to_opus(&paths.filename) {
                 Ok(opus_path) => opus_path,
@@ -419,6 +424,45 @@ impl DownloadService {
             &final_episode_path,
         )?;
         Ok(())
+    }
+
+    /// Returns the whole-second duration to store when the probed duration is
+    /// valid and differs from the stored `total_time`.
+    fn duration_to_store(current_total_time: i32, probed_seconds: f64) -> Option<i32> {
+        if !probed_seconds.is_finite() || probed_seconds <= 0.0 {
+            return None;
+        }
+        let rounded = probed_seconds.round();
+        if rounded < 1.0 || rounded > f64::from(i32::MAX) {
+            return None;
+        }
+        let rounded = rounded as i32;
+        (rounded != current_total_time).then_some(rounded)
+    }
+
+    fn sync_total_time_with_file(podcast_episode: &PodcastEpisode, file_path: &str) {
+        let probed = match crate::services::audiobookshelf::audio_probe::probe_audio_file(
+            std::path::Path::new(file_path),
+        ) {
+            Ok(probed) => probed,
+            Err(err) => {
+                tracing::debug!(
+                    "Could not probe duration of episode {}: {err}",
+                    podcast_episode.id
+                );
+                return;
+            }
+        };
+        if let Some(total_time) =
+            Self::duration_to_store(podcast_episode.total_time, probed.duration)
+            && let Err(err) =
+                PodcastEpisodeService::update_total_time(&podcast_episode.episode_id, total_time)
+        {
+            tracing::warn!(
+                "Could not update duration of episode {}: {err}",
+                podcast_episode.id
+            );
+        }
     }
 
     /// True when the downloaded body is an HLS playlist (`#EXTM3U`) instead of
@@ -946,6 +990,20 @@ impl DownloadService {
 #[cfg(test)]
 mod tests {
     use super::{DownloadService, FilenameBuilderReturn, Podcast, PodcastEpisode};
+
+    #[test]
+    fn duration_to_store_uses_probed_value_when_it_differs() {
+        assert_eq!(DownloadService::duration_to_store(1397, 1593.6), Some(1594));
+        assert_eq!(DownloadService::duration_to_store(0, 90.2), Some(90));
+        assert_eq!(DownloadService::duration_to_store(1594, 1593.7), None);
+        assert_eq!(DownloadService::duration_to_store(1397, 0.0), None);
+        assert_eq!(DownloadService::duration_to_store(1397, -5.0), None);
+        assert_eq!(DownloadService::duration_to_store(1397, f64::NAN), None);
+        assert_eq!(
+            DownloadService::duration_to_store(1397, f64::INFINITY),
+            None
+        );
+    }
 
     #[test]
     fn resolve_episode_title_handles_all_numbering_states() {

@@ -732,6 +732,14 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
             .map_err(Into::into)
     }
 
+    fn update_total_time(&self, episode_id: &str, total_time: i32) -> Result<(), Self::Error> {
+        diesel::update(podcast_episodes::table.filter(podcast_episodes::episode_id.eq(episode_id)))
+            .set(podcast_episodes::total_time.eq(total_time))
+            .execute(&mut self.database.connection()?)
+            .map(|_| ())
+            .map_err(Into::into)
+    }
+
     fn update_episode_numbering_processed(
         &self,
         episode_id: &str,
