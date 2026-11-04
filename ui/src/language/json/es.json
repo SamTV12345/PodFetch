@@ -293,7 +293,7 @@
   "auto-transcribe": "Auto-transcribe",
   "TRANSCRIPTION_JOB_ALREADY_EXISTS": "A transcription job is already running for this episode",
   "gpodder-devices": "Dispositivos sincronizados",
-  "gpodder-devices-description": "Aplicaciones de podcasts conectadas a PodFetch mediante la API de GPodder (p. ej. AntennaPod). Con el interruptor activado, los podcasts que marques como favoritos en la interfaz web también aparecen en la aplicación. Además, todos los dispositivos con el interruptor activado comparten sus suscripciones entre sí.",
+  "gpodder-devices-description": "Aplicaciones de podcasts conectadas a PodFetch mediante la API de GPodder (p. ej. AntennaPod). Con el interruptor activado, tus favoritos aquí y las suscripciones de la aplicación se sincronizan en ambos sentidos: los favoritos aparecen en la aplicación, y los podcasts a los que te suscribas o des de baja en la aplicación pasan a ser o dejan de ser favoritos aquí (si el podcast existe en PodFetch). Además, todos los dispositivos con el interruptor activado comparten sus suscripciones entre sí.",
   "gpodder-devices-empty-state": "Aún no hay dispositivos conectados. En tu aplicación de podcasts (p. ej. AntennaPod → Ajustes → Sincronización → gpodder.net), configura tu servidor PodFetch con tu usuario y contraseña. El dispositivo aparecerá aquí tras la primera sincronización.",
-  "gpodder-devices-share-with-web": "Compartir favoritos web"
+  "gpodder-devices-share-with-web": "Sincronizar con favoritos"
 }

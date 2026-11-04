@@ -109,6 +109,17 @@ pub async fn update_gpodder_device_web_sync(
         DEFAULT_DEVICE,
         request.enabled,
     )?;
+    if request.enabled {
+        // Podcasts the device already subscribed to become web favorites.
+        let urls = state
+            .subscription_service
+            .get_active_device_podcast_urls(&device_id, user.id)?;
+        crate::services::subscription::service::SubscriptionService::sync_favorites(
+            user.id,
+            &urls,
+            &[],
+        );
+    }
     list_devices(&state, &user).map(Json)
 }
 
@@ -206,5 +217,104 @@ mod tests {
             .json(&serde_json::json!({ "enabled": true }))
             .await;
         assert_eq!(response.status_code(), 404);
+    }
+
+    fn is_favorite(user_id: uuid::Uuid, podcast_id: &str) -> bool {
+        use podfetch_domain::favorite::FavoriteRepository;
+        podfetch_persistence::favorite::DieselFavoriteRepository::new(
+            podfetch_persistence::db::database(),
+        )
+        .find_favored_by_user_id(user_id)
+        .unwrap()
+        .iter()
+        .any(|f| f.favored && f.podcast_id.to_string() == podcast_id)
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_shared_device_subscriptions_become_web_favorites() {
+        let mut server = handle_test_startup().await;
+        let user = AppState::new()
+            .user_admin_service
+            .create_user(UserTestDataBuilder::new().build())
+            .unwrap();
+        create_auth_gpodder(&mut server, &user).await;
+        let username = user.username.clone();
+
+        let feed = "https://example.com/favorite-sync-feed.xml";
+        let podcast = crate::services::podcast::service::PodcastService::add_podcast_to_database(
+            "Favorite Sync Podcast",
+            "favorite-sync",
+            feed,
+            "http://localhost:8080/ui/default.jpg",
+            "favorite-sync",
+        )
+        .unwrap();
+
+        let device = DevicePostTestDataBuilder::new().build();
+        server
+            .test_server
+            .post(&format!(
+                "/api/2/devices/{username}/{}.json",
+                device.caption
+            ))
+            .json(&device)
+            .await;
+        let subscribe = |add: Vec<&str>, remove: Vec<&str>| {
+            server
+                .test_server
+                .post(&format!(
+                    "/api/2/subscriptions/{username}/{}.json",
+                    device.caption
+                ))
+                .json(&serde_json::json!({ "add": add, "remove": remove }))
+        };
+
+        // Subscribed in the app before sharing was enabled: no favorite yet.
+        assert_eq!(subscribe(vec![feed], vec![]).await.status_code(), 200);
+        assert!(!is_favorite(user.id, &podcast.id));
+
+        // Enabling sharing takes over the app's existing subscriptions.
+        let response = server
+            .test_server
+            .put(&format!(
+                "/api/v1/gpodder/devices/{}/web-sync",
+                device.caption
+            ))
+            .json(&serde_json::json!({ "enabled": true }))
+            .await;
+        assert_eq!(response.status_code(), 200);
+        assert!(is_favorite(user.id, &podcast.id));
+
+        // Unsubscribing in the app removes the favorite, subscribing adds it.
+        assert_eq!(subscribe(vec![], vec![feed]).await.status_code(), 200);
+        assert!(!is_favorite(user.id, &podcast.id));
+        assert_eq!(subscribe(vec![feed], vec![]).await.status_code(), 200);
+        assert!(is_favorite(user.id, &podcast.id));
+
+        // Removing the favorite in the web UI removes it from the app too.
+        let podcast_id = uuid::Uuid::parse_str(&podcast.id).unwrap();
+        crate::services::podcast::service::PodcastService::update_favor_podcast(
+            podcast_id, false, user.id,
+        )
+        .unwrap();
+        let changes = server
+            .test_server
+            .get(&format!(
+                "/api/2/subscriptions/{username}/{}.json?since=0",
+                device.caption
+            ))
+            .await
+            .json::<crate::subscription::SubscriptionChangesToClient>();
+        assert!(!changes.add.contains(&feed.to_string()));
+        assert!(changes.remove.contains(&feed.to_string()));
+
+        // Unknown feeds are ignored instead of failing the sync.
+        assert_eq!(
+            subscribe(vec!["https://example.com/not-in-podfetch.xml"], vec![])
+                .await
+                .status_code(),
+            200
+        );
     }
 }

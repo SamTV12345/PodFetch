@@ -293,7 +293,7 @@
   "auto-transcribe": "Auto-transcribe",
   "TRANSCRIPTION_JOB_ALREADY_EXISTS": "A transcription job is already running for this episode",
   "gpodder-devices": "Zsynchronizowane urządzenia",
-  "gpodder-devices-description": "Aplikacje do podcastów połączone z PodFetch przez API GPodder (np. AntennaPod). Gdy przełącznik jest włączony, podcasty oznaczone jako ulubione w interfejsie webowym pojawiają się też w aplikacji. Wszystkie urządzenia z włączonym przełącznikiem współdzielą też między sobą subskrypcje.",
+  "gpodder-devices-description": "Aplikacje do podcastów połączone z PodFetch przez API GPodder (np. AntennaPod). Gdy przełącznik jest włączony, ulubione tutaj i subskrypcje w aplikacji synchronizują się w obie strony: ulubione pojawiają się w aplikacji, a podcasty subskrybowane lub anulowane w aplikacji stają się lub przestają być ulubionymi tutaj (jeśli podcast istnieje w PodFetch). Wszystkie urządzenia z włączonym przełącznikiem współdzielą też między sobą subskrypcje.",
   "gpodder-devices-empty-state": "Brak połączonych urządzeń. W aplikacji do podcastów (np. AntennaPod → Ustawienia → Synchronizacja → gpodder.net) skonfiguruj serwer PodFetch, podając nazwę użytkownika i hasło. Urządzenie pojawi się tutaj po pierwszej synchronizacji.",
-  "gpodder-devices-share-with-web": "Udostępniaj ulubione z weba"
+  "gpodder-devices-share-with-web": "Synchronizuj z ulubionymi"
 }

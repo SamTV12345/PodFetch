@@ -4,6 +4,7 @@ use crate::subscription::{
 };
 use chrono::{DateTime, NaiveDateTime};
 use common_infrastructure::error::CustomError;
+use common_infrastructure::runtime::DEFAULT_DEVICE;
 use podfetch_domain::device_sync_group::DeviceSyncGroupRepository;
 use podfetch_domain::subscription::{Subscription, SubscriptionRepository};
 use std::collections::BTreeMap;
@@ -157,7 +158,24 @@ impl SubscriptionService {
                 update_urls = rewritten;
             }
         }
+
+        // A device that shares its subscriptions with the web UI also keeps
+        // the web favorites in sync.
+        if device_id != DEFAULT_DEVICE && devices.iter().any(|d| d == DEFAULT_DEVICE) {
+            Self::sync_favorites(user_id, &request.add, &request.remove);
+        }
         Ok(update_urls)
+    }
+
+    /// Best effort: a failing favorite update must not fail the client's sync.
+    pub fn sync_favorites(user_id: Uuid, add: &[String], remove: &[String]) {
+        if let Err(err) =
+            crate::services::podcast::service::PodcastService::apply_gpodder_subscriptions_to_favorites(
+                user_id, add, remove,
+            )
+        {
+            tracing::warn!("Could not update favorites from GPodder subscriptions: {err:?}");
+        }
     }
 
     pub fn get_active_device_podcast_urls(

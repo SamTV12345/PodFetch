@@ -293,7 +293,7 @@
   "auto-transcribe": "Auto-transcribe",
   "TRANSCRIPTION_JOB_ALREADY_EXISTS": "A transcription job is already running for this episode",
   "gpodder-devices": "Appareils synchronisés",
-  "gpodder-devices-description": "Applications de podcasts connectées à PodFetch via l'API GPodder (par ex. AntennaPod). Lorsque l'interrupteur est activé, les podcasts que vous marquez comme favoris dans l'interface web apparaissent aussi dans l'application. Tous les appareils dont l'interrupteur est activé partagent en outre leurs abonnements entre eux.",
+  "gpodder-devices-description": "Applications de podcasts connectées à PodFetch via l'API GPodder (par ex. AntennaPod). Lorsque l'interrupteur est activé, vos favoris ici et les abonnements de l'application sont synchronisés dans les deux sens : les favoris apparaissent dans l'application, et les podcasts auxquels vous vous abonnez ou vous désabonnez dans l'application deviennent ou cessent d'être des favoris ici (si le podcast existe dans PodFetch). Tous les appareils dont l'interrupteur est activé partagent en outre leurs abonnements entre eux.",
   "gpodder-devices-empty-state": "Aucun appareil connecté pour l'instant. Dans votre application de podcasts (par ex. AntennaPod → Paramètres → Synchronisation → gpodder.net), configurez votre serveur PodFetch avec votre nom d'utilisateur et votre mot de passe. L'appareil apparaîtra ici après la première synchronisation.",
-  "gpodder-devices-share-with-web": "Partager les favoris web"
+  "gpodder-devices-share-with-web": "Synchroniser avec les favoris"
 }
