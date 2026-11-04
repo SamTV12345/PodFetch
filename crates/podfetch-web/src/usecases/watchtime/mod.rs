@@ -69,6 +69,9 @@ impl WatchtimeUseCase {
     /// won't match the original URLs stored by PodFetch. If a GUID is present, we first
     /// check for an existing action with the same GUID and update it instead of creating
     /// a duplicate entry.
+    ///
+    /// Every new `play` action is additionally recorded as a listening event so
+    /// that listening done in GPodder clients shows up on the statistics page.
     pub fn upsert_episode_by_guid(
         episode: podfetch_domain::episode::Episode,
     ) -> Result<Episode, CustomError> {
@@ -79,6 +82,11 @@ impl WatchtimeUseCase {
                 .find_by_username_and_guid(&episode.username, guid)
                 .map_err(CustomError::from)?
         {
+            let is_duplicate =
+                existing.timestamp == episode.timestamp && existing.position == episode.position;
+            if !is_duplicate {
+                Self::record_gpodder_listening_event(&episode, Some(&existing));
+            }
             if let Some(position) = episode.position {
                 repo.update_position(existing.id, position, episode.timestamp)
                     .map_err(CustomError::from)?;
@@ -89,9 +97,105 @@ impl WatchtimeUseCase {
                 .map_err(Into::into);
         }
 
-        repo.insert_episode(&episode)
-            .map(Into::into)
-            .map_err(Into::into)
+        if let Some(existing) = repo
+            .find_duplicate_action(&episode)
+            .map_err(CustomError::from)?
+        {
+            return Ok(existing.into());
+        }
+
+        let inserted = repo.insert_episode(&episode).map_err(CustomError::from)?;
+        Self::record_gpodder_listening_event(&episode, None);
+        Ok(inserted.into())
+    }
+
+    /// Create a listening event for a `play` action uploaded by a GPodder client.
+    ///
+    /// Failures are logged and swallowed: a missing statistics entry must never
+    /// make the client's sync request fail.
+    fn record_gpodder_listening_event(
+        action: &podfetch_domain::episode::Episode,
+        previous: Option<&podfetch_domain::episode::Episode>,
+    ) {
+        if let Err(err) = Self::try_record_gpodder_listening_event(action, previous) {
+            tracing::warn!(
+                "Could not record listening event for GPodder action of {}: {err:?}",
+                action.username
+            );
+        }
+    }
+
+    fn try_record_gpodder_listening_event(
+        action: &podfetch_domain::episode::Episode,
+        previous: Option<&podfetch_domain::episode::Episode>,
+    ) -> Result<(), CustomError> {
+        if !action.action.eq_ignore_ascii_case("play") {
+            return Ok(());
+        }
+        let Some(position) = action.position else {
+            return Ok(());
+        };
+        let delta = Self::calculate_gpodder_delta(
+            action.started,
+            previous.and_then(|p| p.position),
+            position,
+            action.total,
+        );
+        if delta <= 0 {
+            return Ok(());
+        }
+
+        let Some(podcast_episode) = Self::find_podcast_episode_for_action(action)? else {
+            return Ok(());
+        };
+        let user_id = Self::get_user_id_by_username(&action.username)?;
+
+        ListeningEventService::create_event(NewListeningEvent {
+            user_id,
+            device: action.device.clone(),
+            podcast_episode_id: podcast_episode.episode_id.clone(),
+            podcast_id: Self::parse_id(&podcast_episode.podcast_id)?,
+            podcast_episode_db_id: Self::parse_id(&podcast_episode.id)?,
+            delta_seconds: delta,
+            start_position: position.saturating_sub(delta),
+            end_position: position,
+            listened_at: action.timestamp,
+        })?;
+        Ok(())
+    }
+
+    fn find_podcast_episode_for_action(
+        action: &podfetch_domain::episode::Episode,
+    ) -> Result<Option<PodcastEpisode>, CustomError> {
+        use crate::usecases::podcast_episode::PodcastEpisodeUseCase;
+
+        if let Some(guid) = action.guid.as_deref().filter(|g| !g.is_empty())
+            && let Some(found) = PodcastEpisodeUseCase::get_podcast_episode_by_guid(guid)?
+        {
+            return Ok(Some(found));
+        }
+        PodcastEpisodeUseCase::get_podcast_episode_by_url(&action.episode, None)
+    }
+
+    /// Seconds listened for a GPodder `play` action.
+    ///
+    /// A play action describes one playback session from `started` to
+    /// `position`. Clients that omit `started` are measured against the last
+    /// known position of the episode instead.
+    fn calculate_gpodder_delta(
+        started: Option<i32>,
+        previous_position: Option<i32>,
+        position: i32,
+        total: Option<i32>,
+    ) -> i32 {
+        let Some(from) = started.filter(|s| *s >= 0).or(previous_position) else {
+            return 0;
+        };
+        let delta = position.saturating_sub(from).max(0);
+        match total {
+            Some(total) if total > 0 => delta.min(total),
+            _ => delta,
+        }
     }
 
     pub fn get_actions_by_username(
@@ -359,6 +463,42 @@ mod tests {
             dt(10, 0, 5),
         );
         assert_eq!(delta, 20);
+    }
+
+    #[test]
+    fn gpodder_delta_uses_started_position() {
+        assert_eq!(
+            WatchtimeUseCase::calculate_gpodder_delta(Some(60), Some(10), 180, Some(300)),
+            120
+        );
+    }
+
+    #[test]
+    fn gpodder_delta_falls_back_to_previous_position() {
+        assert_eq!(
+            WatchtimeUseCase::calculate_gpodder_delta(None, Some(100), 160, None),
+            60
+        );
+    }
+
+    #[test]
+    fn gpodder_delta_is_zero_without_reference_or_on_seek_back() {
+        assert_eq!(
+            WatchtimeUseCase::calculate_gpodder_delta(None, None, 160, None),
+            0
+        );
+        assert_eq!(
+            WatchtimeUseCase::calculate_gpodder_delta(Some(200), None, 100, None),
+            0
+        );
+    }
+
+    #[test]
+    fn gpodder_delta_is_capped_by_total() {
+        assert_eq!(
+            WatchtimeUseCase::calculate_gpodder_delta(Some(0), None, 5000, Some(300)),
+            300
+        );
     }
 
     #[test]

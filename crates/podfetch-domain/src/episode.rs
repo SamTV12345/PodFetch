@@ -54,6 +54,10 @@ pub trait EpisodeRepository: Send + Sync {
     /// Checks for existing entry with same timestamp, device, podcast, and episode URL.
     fn insert_episode(&self, episode: &Episode) -> Result<Episode, Self::Error>;
 
+    /// Find an already stored action that is identical to `episode`
+    /// (same user, timestamp, device, podcast and episode URL).
+    fn find_duplicate_action(&self, episode: &Episode) -> Result<Option<Episode>, Self::Error>;
+
     /// Find episode action by username and episode URL.
     fn find_by_username_and_episode(
         &self,

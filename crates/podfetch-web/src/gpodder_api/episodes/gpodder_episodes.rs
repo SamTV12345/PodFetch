@@ -270,4 +270,114 @@ pub mod tests {
         let json = resp.json::<Vec<serde_json::Value>>();
         assert!(json.is_empty());
     }
+
+    fn insert_podcast_episode(podcast_id: &str, guid: &str) -> String {
+        use diesel::{ExpressionMethods, RunQueryDsl};
+        use podfetch_persistence::db::get_connection;
+        use podfetch_persistence::podcast_episode::PodcastEpisodeEntity;
+        use podfetch_persistence::schema::podcast_episodes::dsl as pe_dsl;
+
+        let episode_id = format!("gpodder-stats-{guid}");
+        diesel::insert_into(pe_dsl::podcast_episodes)
+            .values((
+                pe_dsl::id.eq(podfetch_domain::ids::new_id().to_string()),
+                pe_dsl::podcast_id.eq(podcast_id.to_string()),
+                pe_dsl::episode_id.eq(episode_id.clone()),
+                pe_dsl::name.eq("GPodder stats episode".to_string()),
+                pe_dsl::url.eq(format!("https://example.com/{episode_id}.mp3")),
+                pe_dsl::date_of_recording.eq("2026-02-27T00:00:00Z".to_string()),
+                pe_dsl::image_url.eq("http://localhost:8080/ui/default.jpg".to_string()),
+                pe_dsl::total_time.eq(1800),
+                pe_dsl::description.eq("test description".to_string()),
+                pe_dsl::guid.eq(guid.to_string()),
+                pe_dsl::deleted.eq(false),
+                pe_dsl::episode_numbering_processed.eq(false),
+            ))
+            .get_result::<PodcastEpisodeEntity>(&mut get_connection())
+            .unwrap()
+            .episode_id
+    }
+
+    #[serial]
+    #[tokio::test]
+    async fn test_play_actions_create_listening_events() {
+        use crate::services::listening_event::service::ListeningEventService;
+
+        let mut test_server = handle_test_startup().await;
+        let state = app_state();
+        let user = state
+            .user_admin_service
+            .create_user(UserTestDataBuilder::new().build())
+            .unwrap();
+        create_auth_gpodder(&mut test_server, &user).await;
+
+        let podcast = crate::services::podcast::service::PodcastService::add_podcast_to_database(
+            "GPodder Stats Podcast",
+            "gpodder-stats",
+            "https://example.com/gpodder-stats.xml",
+            "http://localhost:8080/ui/default.jpg",
+            "gpodder-stats",
+        )
+        .unwrap();
+        let guid = uuid::Uuid::new_v4().to_string();
+        let episode_id = insert_podcast_episode(&podcast.id, &guid);
+
+        let first_play = serde_json::json!([{
+            "podcast": "https://example.com/gpodder-stats.xml",
+            "episode": "https://example.com/some-episode.mp3",
+            "guid": guid,
+            "action": "play",
+            "device": "phone",
+            "timestamp": "2026-01-01T12:00:00",
+            "started": 0,
+            "position": 120,
+            "total": 1800
+        }]);
+        for _ in 0..2 {
+            // Uploading the same action twice must not count it twice.
+            let resp = test_server
+                .test_server
+                .post(&format!("/api/2/episodes/{}", user.username))
+                .json(&first_play)
+                .await;
+            assert_eq!(resp.status_code(), 200);
+        }
+
+        let resp = test_server
+            .test_server
+            .post(&format!("/api/2/episodes/{}", user.username))
+            .json(&serde_json::json!([
+                {
+                    "podcast": "http://192.168.1.50:8000/rss/1",
+                    "episode": "http://192.168.1.50:8000/podcasts/episode1.mp3",
+                    "guid": guid,
+                    "action": "play",
+                    "device": "phone",
+                    "timestamp": "2026-01-01T12:10:00",
+                    "started": 120,
+                    "position": 300,
+                    "total": 1800
+                },
+                {
+                    "podcast": "https://example.com/gpodder-stats.xml",
+                    "episode": "https://example.com/some-episode.mp3",
+                    "guid": guid,
+                    "action": "download",
+                    "device": "phone",
+                    "timestamp": "2026-01-01T12:11:00"
+                }
+            ]))
+            .await;
+        assert_eq!(resp.status_code(), 200);
+
+        let events = ListeningEventService::default_service()
+            .get_by_user_and_range(user.id, None, None)
+            .unwrap();
+        assert_eq!(events.len(), 2, "one listening event per new play action");
+        assert!(events.iter().all(|e| e.device == "phone"));
+        assert!(events.iter().all(|e| e.podcast_episode_id == episode_id));
+        assert_eq!(events.iter().map(|e| e.delta_seconds).sum::<i32>(), 300);
+        assert_eq!(events[1].start_position, 120);
+        assert_eq!(events[1].end_position, 300);
+    }
 }
