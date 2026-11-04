@@ -623,4 +623,84 @@ mod tests {
         assert!(urls.contains(&"https://example.com/feed-a.xml".to_string()));
         assert!(urls.contains(&"https://example.com/feed-b.xml".to_string()));
     }
+
+    async fn get_device_changes(
+        server: &TestServerWrapper<'_>,
+        username: &str,
+        device: &str,
+    ) -> SubscriptionChangesToClient {
+        let response = server
+            .test_server
+            .get(&format!(
+                "/api/2/subscriptions/{username}/{device}.json?since=0"
+            ))
+            .await;
+        assert_eq!(response.status_code(), 200);
+        response.json::<SubscriptionChangesToClient>()
+    }
+
+    async fn post_device_changes(
+        server: &TestServerWrapper<'_>,
+        username: &str,
+        device: &str,
+        add: &[&str],
+        remove: &[&str],
+    ) {
+        let response = server
+            .test_server
+            .post(&format!("/api/2/subscriptions/{username}/{device}.json"))
+            .json(&serde_json::json!({ "add": add, "remove": remove }))
+            .await;
+        assert_eq!(response.status_code(), 200);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_sync_groups_share_subscriptions_between_devices() {
+        let mut server = handle_test_startup().await;
+        let state = app_state();
+        let user = state
+            .user_admin_service
+            .create_user(UserTestDataBuilder::new().build())
+            .unwrap();
+        create_auth_gpodder(&mut server, &user).await;
+        let username = user.username.clone();
+        let feed_a = "https://example.com/sync-feed-a.xml";
+        let feed_b = "https://example.com/sync-feed-b.xml";
+
+        // Subscribed in the web UI only.
+        post_device_changes(&server, &username, "webview", &[feed_a], &[]).await;
+
+        // Without a sync group every device keeps its own list.
+        let phone = get_device_changes(&server, &username, "phone").await;
+        assert!(phone.add.is_empty());
+
+        let response = server
+            .test_server
+            .post(&format!("/api/2/sync-devices/{username}.json"))
+            .json(&serde_json::json!({ "synchronize": [["phone", "webview"]] }))
+            .await;
+        assert_eq!(response.status_code(), 200);
+
+        // The phone now sees the web UI subscription ...
+        let phone = get_device_changes(&server, &username, "phone").await;
+        assert_eq!(phone.add, vec![feed_a.to_string()]);
+
+        // ... and its own uploads reach the web UI device.
+        post_device_changes(&server, &username, "phone", &[feed_b], &[]).await;
+        let webview = get_device_changes(&server, &username, "webview").await;
+        assert!(webview.add.contains(&feed_a.to_string()));
+        assert!(webview.add.contains(&feed_b.to_string()));
+
+        // Removals are shared as well.
+        post_device_changes(&server, &username, "phone", &[], &[feed_a]).await;
+        let webview = get_device_changes(&server, &username, "webview").await;
+        assert_eq!(webview.add, vec![feed_b.to_string()]);
+        assert_eq!(webview.remove, vec![feed_a.to_string()]);
+
+        // Devices outside the group are unaffected.
+        let desktop = get_device_changes(&server, &username, "desktop").await;
+        assert!(desktop.add.is_empty());
+        assert!(desktop.remove.is_empty());
+    }
 }
