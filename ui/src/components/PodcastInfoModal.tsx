@@ -65,7 +65,7 @@ export const PodcastInfoModal: FC<PodcastInfoModalProps> = ({ open, onOpenChange
             */}
             <DialogContent className="w-full max-w-2xl sm:max-w-2xl max-h-[85vh] flex flex-col">
                 <div className="mb-4 shrink-0">
-                    <DialogTitle render={<Heading2 className="inline align-middle mr-2 break-all">{episode?.name || ''}</Heading2>} />
+                    <DialogTitle render={<Heading2 className="inline align-middle mr-2 break-normal">{episode?.name || ''}</Heading2>} />
                     <DialogDescription className="sr-only">
                         {t('podcast-episode-details')}
                     </DialogDescription>
