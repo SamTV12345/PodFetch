@@ -61,7 +61,7 @@ export const EpisodeCard: FC<EpisodeCardProps> = ({ podcast, podcastEpisode,  po
 
             {/* Titles */}
             <div>
-                <span className="block font-bold leading-[1.2] mb-2 text-sm ui-text transition-colors group-hover:ui-text-hover break-all">{podcastEpisode.name}</span>
+                <span className="block font-bold leading-[1.2] mb-2 text-sm ui-text transition-colors group-hover:ui-text-hover break-normal">{podcastEpisode.name}</span>
                 <span className="block leading-[1.2] text-xs ui-text">{podcast.name}</span>
             </div>
         </div>
