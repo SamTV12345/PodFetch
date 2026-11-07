@@ -54,12 +54,10 @@ pub fn parse(xml: &str) -> Option<MetadataPatch> {
     loop {
         match reader.read_event_into(&mut buf) {
             Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
-                let tag = e.name().as_ref()
-                    .to_ascii_lowercase();
+                let tag = e.name().as_ref().to_ascii_lowercase();
                 current_attrs.clear();
                 for attr in e.attributes().flatten() {
-                    let key = attr.key.as_ref()
-                        .to_ascii_lowercase();
+                    let key = attr.key.as_ref().to_ascii_lowercase();
                     let value = attr.value.to_string();
                     current_attrs.push((key, value));
                 }

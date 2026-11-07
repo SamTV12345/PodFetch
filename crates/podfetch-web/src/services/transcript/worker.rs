@@ -218,7 +218,7 @@ mod tests {
 
         let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let handle = tokio::spawn(run_worker_with_config(config, stop.clone()));
-        tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+        tokio::time::sleep(Duration::from_millis(400)).await;
         assert!(
             !handle.is_finished(),
             "worker task ended right after startup — it should be alive and polling"

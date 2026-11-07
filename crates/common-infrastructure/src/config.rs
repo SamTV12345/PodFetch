@@ -198,8 +198,9 @@ impl From<&S3Config> for Credentials {
             Some(&val.secret_key),
             val.security_token.as_deref(),
             val.session_token.as_deref(),
-            val.profile.as_deref()
-        ).expect("Failed to create S3 credentials from environment variables")
+            val.profile.as_deref(),
+        )
+        .expect("Failed to create S3 credentials from environment variables")
     }
 }
 

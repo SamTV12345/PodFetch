@@ -6,8 +6,9 @@ use common_infrastructure::config::ConfigModel;
 use common_infrastructure::error::ErrorSeverity::Info;
 use common_infrastructure::error::ErrorType::CustomErrorType;
 use common_infrastructure::error::{
-    ApiError, CustomError, CustomErrorInner, ErrorSeverity, ErrorType,
+    ApiError, CustomError, CustomErrorInner, ErrorSeverity, ErrorType, map_sys_error,
 };
+
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 fn get_size(path: &str) -> Result<u64, std::io::Error> {
     let mut total: u64 = 0;
@@ -52,8 +53,9 @@ pub async fn get_sys_info(
         return Err(CustomErrorInner::Forbidden(Info).into());
     }
 
-    let mut sys = System::new();
-    let disks = Disks::new_with_refreshed_list();
+    let mut sys = System::new().map_err(|e| map_sys_error(e, ErrorSeverity::Critical))?;
+    let disks =
+        Disks::new_with_refreshed_list().map_err(|e| map_sys_error(e, ErrorSeverity::Critical))?;
     let simplified_disks = disks.iter().map(sys::map_disk).collect();
 
     sys.refresh_all();

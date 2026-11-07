@@ -150,7 +150,7 @@ pub fn map_system(sys: &System) -> SystemDto {
                     name: cpu.name().to_string(),
                     vendor_id: cpu.vendor_id().to_string(),
                     usage: CpuUsageDto {
-                        percent: cpu.cpu_usage(),
+                        percent: cpu.usage(),
                     },
                     brand: cpu.brand().to_string(),
                     frequency: cpu.frequency(),

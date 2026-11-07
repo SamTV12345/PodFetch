@@ -672,9 +672,9 @@ mod tests {
     use diesel::prelude::*;
     use podfetch_domain::podcast_episode_transcript::TranscriptSearchHit;
     use podfetch_persistence::db::{get_connection, run_migrations};
+    use podfetch_persistence::podcast_episode;
     use podfetch_persistence::schema::{podcast_episodes, podcasts};
     use std::sync::MutexGuard;
-
     // ── shared DB test setup ────────────────────────────────────────────
 
     fn lock_and_prepare_db() -> MutexGuard<'static, ()> {
@@ -774,12 +774,13 @@ mod tests {
             .execute(&mut get_connection())
             .expect("seed episode");
 
-        let mut episode = PodcastEpisode::default();
-        episode.id = id.to_string();
-        episode.podcast_id = podcast_id.to_string();
-        episode.name = "Test Episode".to_string();
-        episode.file_episode_path = file_episode_path.map(|s| s.to_string());
-        episode
+        podcast_episode::PodcastEpisodeEntity {
+            id: id.to_string(),
+            podcast_id: podcast_id.to_string(),
+            name: "Test Episode".to_string(),
+            file_episode_path: file_episode_path.map(|s| s.to_string()),
+            ..Default::default()
+        }
     }
 
     fn service() -> TranscriptService {

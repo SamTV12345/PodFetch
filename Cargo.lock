@@ -638,6 +638,7 @@ dependencies = [
  "serial_test",
  "sha256",
  "strfmt",
+ "sysinfo 0.40.1",
  "thiserror 2.0.21",
  "tokio",
  "tracing",

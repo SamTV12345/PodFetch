@@ -153,6 +153,7 @@ impl From<CustomErrorInner> for CustomError {
             | CustomErrorInner::Unknown(sev) => sev.clone(),
             CustomErrorInner::DatabaseError(_, sev)
             | CustomErrorInner::Conflict(_, sev)
+            | CustomErrorInner::SysInfoError(_, sev)
             | CustomErrorInner::BadRequest(_, sev)
             | CustomErrorInner::UnAuthorized(_, sev) => sev.clone(),
         };
@@ -271,6 +272,7 @@ impl IntoResponse for CustomError {
             CustomErrorInner::Conflict(_, _) => StatusCode::CONFLICT,
             CustomErrorInner::BadRequest(_, _) => StatusCode::BAD_REQUEST,
             CustomErrorInner::UnAuthorized(_, _) => StatusCode::UNAUTHORIZED,
+            CustomErrorInner::SysInfoError(_, _) => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
         (status, self.error_response().message).into_response()
@@ -287,6 +289,7 @@ impl CustomError {
             CustomErrorInner::Conflict(_, _) => 409,
             CustomErrorInner::Unknown(_) => 500,
             CustomErrorInner::DatabaseError(_, _) => 500,
+            CustomErrorInner::SysInfoError(_, _) => 500,
         };
         ErrorResponse {
             code: status_code as u16,
@@ -353,6 +356,8 @@ pub enum CustomErrorInner {
     Unknown(ErrorSeverity),
     #[error("Unknown Internal Error")]
     DatabaseError(diesel::result::Error, ErrorSeverity),
+    #[error("Sysinfo Error")]
+    SysInfoError(sysinfo::Error, ErrorSeverity),
 }
 
 impl CustomErrorInner {
@@ -365,6 +370,7 @@ impl CustomErrorInner {
             Self::Conflict(e, _) => e.to_string(),
             Self::BadRequest(e, _) => e.to_string(),
             Self::UnAuthorized(_, _) => "UnAuthorized".to_string(),
+            Self::SysInfoError(_, _) => "Unknown".to_string(),
         }
     }
 }
@@ -428,6 +434,10 @@ pub fn map_db_error(e: diesel::result::Error, severity: ErrorSeverity) -> Custom
             CustomError::from(CustomErrorInner::Unknown(severity))
         }
     }
+}
+
+pub fn map_sys_error(e: sysinfo::Error, severity: ErrorSeverity) -> CustomError {
+    CustomError::from(CustomErrorInner::SysInfoError(e, severity))
 }
 
 pub fn map_r2d2_error(e: r2d2::Error, error_severity: ErrorSeverity) -> CustomError {

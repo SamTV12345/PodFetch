@@ -1013,7 +1013,7 @@ pub mod tests {
             .unwrap();
         let resp = ts_server
             .test_server
-            .put(&format!("/api/v1/podcasts/{}/name", &saved_podcast.id))
+            .put(&format!("/api/v1/podcasts/{}/name", saved_podcast.id))
             .json(&PodcastUpdateNameRequest {
                 name: "New Podcast Name".to_string(),
             })

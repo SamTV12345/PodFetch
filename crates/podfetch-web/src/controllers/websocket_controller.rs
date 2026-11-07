@@ -11,6 +11,7 @@ use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use crate::podcast_episode_dto::PodcastEpisodeDto;
 pub use crate::rss::{RSSAPiKey, RSSQuery};
 use crate::url_rewriting::resolve_server_url_from_headers;
+use chrono::DateTime;
 use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
@@ -26,7 +27,6 @@ use rss::{
     ItemBuilder, SourceBuilder,
 };
 use std::collections::{BTreeMap, HashMap};
-use chrono::DateTime;
 
 /// Namespace declared on generated channels so `<podcast:transcript>` items
 /// are valid Podcasting 2.0 markup.
@@ -264,7 +264,6 @@ pub async fn get_rss_feed_for_podcast(
         ))
         .summary(podcast.summary.clone())
         .build();
-
 
     let items = get_podcast_items_rss(&state, &downloaded_episodes, &api_key, &server_url, None);
     let channel_builder = ChannelBuilder::default()
