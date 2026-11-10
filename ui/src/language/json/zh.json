@@ -28,6 +28,7 @@
   "download-computer": "下载到电脑",
   "download-to-server": "下载到服务器",
   "episode-downloaded-to-server": "单集已下载到服务器",
+  "episode-download-started": "已开始下载到服务器",
   "hardware": "硬件",
   "cpu-brand": "CPU 品牌",
   "cpu-cores": "CPU 核心数",

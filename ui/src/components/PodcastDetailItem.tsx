@@ -65,9 +65,10 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
         return { key: 'transcription-pending', tooltip: undefined, done: false }
     }, [generatedTranscript])
 
-    const waitForDownloadCompletion = async (episodeId: string) => {
+    /** Polls until the episode is on the server; resolves to whether it got there. */
+    const waitForDownloadCompletion = async (episodeId: string): Promise<boolean> => {
         if (!params.id) {
-            return
+            return false
         }
         const maxAttempts = 20
         for (let i = 0; i < maxAttempts; i++) {
@@ -109,8 +110,9 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
             }
 
             setEpisodeDownloaded(episodeId)
-            return
+            return true
         }
+        return false
     }
 
     const playedTime = useMemo(()=>{
@@ -249,8 +251,11 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                             downloadEpisodeMutation.mutateAsync({
                                 params: { path: { id: episode.podcastEpisode.episode_id } }
                             }).then(async () => {
-                                enqueueSnackbar(t('episode-downloaded-to-server'), { variant: "success" })
-                                await waitForDownloadCompletion(episode.podcastEpisode.episode_id)
+                                // The request only queues the download.
+                                enqueueSnackbar(t('episode-download-started'), { variant: "info" })
+                                if (await waitForDownloadCompletion(episode.podcastEpisode.episode_id)) {
+                                    enqueueSnackbar(t('episode-downloaded-to-server'), { variant: "success" })
+                                }
                             })
                         }}
                     />
