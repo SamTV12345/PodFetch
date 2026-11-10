@@ -5,6 +5,10 @@
 //                published at runtime via POST /control/publish.
 //  - /feed2.xml  "Second Fixture Podcast" — one plain episode, used by the
 //                add/delete-podcast UI tests.
+//  - /feed3.xml  "iTunes Image Podcast" — channel image only as
+//                <itunes:image> (like Substack feeds) and seven episodes, so
+//                the two oldest stay undownloaded with the default prefill
+//                of five. Used by library.spec.ts.
 // Loopback only.
 import http from 'node:http'
 
@@ -44,14 +48,14 @@ const item = ({ title, guid, slug, pubDate, transcript }) => `    <item>
       <itunes:duration>20</itunes:duration>
 ${transcript ? `      <podcast:transcript url="${BASE}/transcript.vtt" type="text/vtt" language="en"/>\n` : ''}    </item>`
 
-const feed = (title, items) => `<?xml version="1.0" encoding="UTF-8"?>
+const feed = (title, items, channelExtra = '') => `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:podcast="https://podcastindex.org/namespace/1.0">
   <channel>
     <title>${title}</title>
     <link>${BASE}/</link>
     <description>Fixture feed for the playwright suite</description>
     <language>en</language>
-${items.join('\n')}
+${channelExtra}${items.join('\n')}
   </channel>
 </rss>
 `
@@ -73,6 +77,23 @@ const feed1Items = [
     }),
 ]
 let publishedCounter = 0
+
+// 1x1 PNG served as the iTunes-only channel image of feed3.
+const ITUNES_COVER_PNG = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==',
+    'base64'
+)
+
+const feed3Items = Array.from({ length: 7 }, (_, index) => {
+    const number = 7 - index
+    return item({
+        title: `iTunes Episode ${number}`,
+        guid: `itunes-episode-${number}`,
+        slug: `itunes-episode-${number}`,
+        pubDate: new Date(Date.UTC(2026, 5, number, 10)).toUTCString(),
+        transcript: false,
+    })
+})
 
 const feed2Items = [
     item({
@@ -119,6 +140,16 @@ http.createServer((req, res) => {
     }
     if (url.pathname === '/feed2.xml') {
         return respond(feed('Second Fixture Podcast', feed2Items), 'application/rss+xml')
+    }
+    if (url.pathname === '/feed3.xml') {
+        return respond(
+            feed('iTunes Image Podcast', feed3Items, `    <itunes:image href="${BASE}/itunes-cover.png"/>\n`),
+            'application/rss+xml'
+        )
+    }
+    if (url.pathname === '/itunes-cover.png') {
+        res.writeHead(200, { 'Content-Type': 'image/png', 'Content-Length': ITUNES_COVER_PNG.length })
+        return res.end(ITUNES_COVER_PNG)
     }
     if (url.pathname === '/transcript.vtt') {
         return respond(TRANSCRIPT_VTT, 'text/vtt')
