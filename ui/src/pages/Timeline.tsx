@@ -23,6 +23,11 @@ export const Timeline = () => {
                 favoredEpisodes: notFavored
             }
         }
+    }, {
+        // The timeline request persists `favoredOnly` as the user's choice.
+        // Sent before the saved filter has loaded it would always store
+        // `false` and switch "Only favorite podcasts" off on every visit.
+        enabled: filter.isSuccess
     })
 
     const { t } = useTranslation()
