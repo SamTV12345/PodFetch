@@ -337,10 +337,7 @@ pub async fn add_podcast_by_feed(
             feed_url: rss_feed.clone().rss_feed_url.clone(),
             title: channel.title.clone(),
             id: num,
-            image_url: channel
-                .image
-                .clone()
-                .map(|i| i.url)
+            image_url: crate::podcast::channel_image_url(&channel)
                 .unwrap_or_else(|| get_default_image(&server_url)),
         },
         Some(channel),
@@ -637,8 +634,8 @@ async fn insert_outline(podcast: Outline, mut rng: ThreadRng, added_by: Option<u
 
     match channel {
         Ok(channel) => {
-            let image_url = match channel.image {
-                Some(ref image) => image.url.clone(),
+            let image_url = match crate::podcast::channel_image_url(&channel) {
+                Some(image_url) => image_url,
                 None => {
                     tracing::info!(
                         "No image found for podcast; storing empty image_url, default will be applied at response time"

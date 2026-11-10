@@ -37,6 +37,25 @@ pub struct PodcastSearchPlan {
     pub filter: Filter,
 }
 
+/// The podcast's main image from an RSS channel: `<image><url>`, falling
+/// back to `<itunes:image href>` - many feeds (e.g. Substack) only have the
+/// latter.
+pub fn channel_image_url(channel: &rss::Channel) -> Option<String> {
+    let non_empty = |url: &str| {
+        let url = url.trim();
+        (!url.is_empty()).then(|| url.to_string())
+    };
+    channel
+        .image()
+        .and_then(|image| non_empty(&image.url))
+        .or_else(|| {
+            channel
+                .itunes_ext()
+                .and_then(|ext| ext.image())
+                .and_then(non_empty)
+        })
+}
+
 pub fn build_podcast_search_plan(
     query: PodcastSearchModelUtoipa,
     user_id: Uuid,
@@ -568,5 +587,39 @@ mod tests {
         let id = sample_id();
         let url = build_podfetch_feed(id, Some("secret"), "");
         assert_eq!(url, format!("/rss/{id}?apiKey=secret"));
+    }
+}
+
+#[cfg(test)]
+mod channel_image_tests {
+    use super::channel_image_url;
+
+    fn channel(xml_channel_body: &str) -> rss::Channel {
+        let xml = format!(
+            r#"<?xml version="1.0"?><rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"><channel><title>t</title><link>https://x</link><description>d</description>{xml_channel_body}</channel></rss>"#
+        );
+        rss::Channel::read_from(xml.as_bytes()).unwrap()
+    }
+
+    #[test]
+    fn prefers_rss_image() {
+        let c = channel(
+            r#"<image><url>https://x/rss.jpg</url><title>t</title><link>https://x</link></image><itunes:image href="https://x/itunes.jpg"/>"#,
+        );
+        assert_eq!(channel_image_url(&c).as_deref(), Some("https://x/rss.jpg"));
+    }
+
+    #[test]
+    fn falls_back_to_itunes_image() {
+        let c = channel(r#"<itunes:image href="https://x/itunes.jpg"/>"#);
+        assert_eq!(
+            channel_image_url(&c).as_deref(),
+            Some("https://x/itunes.jpg")
+        );
+    }
+
+    #[test]
+    fn none_without_any_image() {
+        assert_eq!(channel_image_url(&channel("")), None);
     }
 }
