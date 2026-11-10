@@ -396,5 +396,11 @@
   "gpodder-devices-empty-state": "No podcast app connected yet. In your app (e.g. AntennaPod → Settings → Synchronization → gpodder.net), set up your PodFetch server with your username and password. The device appears here after its first sync.",
   "use-direct-paths-explanation": "When enabled, episodes are stored directly in the podcast's folder, e.g. \"My Podcast/Episode 1.mp3\" and \"My Podcast/Episode 1.jpg\". When disabled, every episode gets its own subfolder, e.g. \"My Podcast/Episode 1/podcast.mp3\" and \"My Podcast/Episode 1/image.jpg\". Applies to new downloads; use a rescan with \"Re-apply filename and directory format\" to move existing files.",
   "cover-filename-explanation": "File name (without extension) of the podcast cover in the podcast's folder, e.g. \"cover\" for cover.jpg. Without \"No subfolder per episode\", episode covers in the episode subfolders use it too; with it, episode covers are named like the episode. Applies to new podcasts and downloads; a rescan with \"Re-apply filename and directory format\" renames existing covers.",
-  "notifications-more": "+ {{count}} more – use \"Clear all\" to dismiss them"
+  "notifications-more": "+ {{count}} more – use \"Clear all\" to dismiss them",
+  "mark-all-played": "Mark all as played",
+  "mark-all-unplayed": "Mark all as unplayed",
+  "mark-all-played-confirm": "Mark every episode of \"{{name}}\" as played? This is synced to your GPodder apps and does not count as listening time.",
+  "mark-all-unplayed-confirm": "Mark every episode of \"{{name}}\" as unplayed? The playback position of all episodes will be reset.",
+  "all-episodes-marked-played": "{{count}} episodes marked as played",
+  "all-episodes-marked-unplayed": "{{count}} episodes marked as unplayed"
 }

@@ -338,6 +338,68 @@ impl WatchtimeUseCase {
         Ok(())
     }
 
+    /// Mark every episode of a podcast as played (`position == total`) or
+    /// unplayed (`position = 0`) for the user. The actions are recorded for
+    /// the web device, so GPodder clients pick them up on their next sync.
+    /// No listening events are created - nothing was actually listened to.
+    pub fn set_podcast_episodes_played(
+        podcast_id: uuid::Uuid,
+        username: &str,
+        played: bool,
+    ) -> Result<usize, CustomError> {
+        let podcast = crate::services::podcast::service::PodcastService::get_podcast(podcast_id)?;
+        let episodes =
+            crate::usecases::podcast_episode::PodcastEpisodeUseCase::get_episodes_by_podcast_id(
+                podcast_id,
+            )?;
+        let now = Utc::now().naive_utc();
+        let repo = Self::repo();
+        let mut changed = 0;
+
+        for episode in episodes {
+            let total = episode.total_time.max(0);
+            let position = if played { total } else { 0 };
+            match Self::get_watchlog_by_device_and_episode(username, &episode.guid, DEFAULT_DEVICE)?
+            {
+                Some(existing) => {
+                    if existing.position == Some(position) && existing.total == Some(total) {
+                        continue;
+                    }
+                    repo.update_progress(existing.id, position, total, now)
+                        .map_err(CustomError::from)?;
+                }
+                None => {
+                    if !played {
+                        // Never started on this device: nothing to reset
+                        // unless another device has progress.
+                        if Self::repo()
+                            .find_by_username_and_guid(username, &episode.guid)
+                            .map_err(CustomError::from)?
+                            .is_none()
+                        {
+                            continue;
+                        }
+                    }
+                    repo.create(NewEpisode {
+                        username: username.to_string(),
+                        device: DEFAULT_DEVICE.to_string(),
+                        podcast: podcast.rssfeed.clone(),
+                        episode: episode.url.clone(),
+                        timestamp: now,
+                        guid: Some(episode.guid.clone()),
+                        action: "play".to_string(),
+                        started: Some(position),
+                        position: Some(position),
+                        total: Some(total),
+                    })
+                    .map_err(CustomError::from)?;
+                }
+            }
+            changed += 1;
+        }
+        Ok(changed)
+    }
+
     pub fn get_watchlog_by_device_and_episode(
         username: &str,
         episode_guid: &str,

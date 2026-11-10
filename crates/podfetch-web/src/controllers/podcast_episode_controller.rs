@@ -408,6 +408,40 @@ pub(crate) fn resolve_episode_uuid(id: &str) -> Result<uuid::Uuid, CustomError> 
     }
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, utoipa::ToSchema)]
+pub struct PodcastEpisodesPlayedRequest {
+    pub played: bool,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, utoipa::ToSchema)]
+pub struct PodcastEpisodesPlayedResponse {
+    /// Number of episodes whose state changed.
+    pub changed: usize,
+}
+
+#[utoipa::path(
+put,
+path="/podcasts/{id}/episodes/played",
+request_body = PodcastEpisodesPlayedRequest,
+responses(
+(status = 200, description = "Marks all episodes of the podcast as played or unplayed for the current user.", body = PodcastEpisodesPlayedResponse)),
+tag = "podcast_episodes"
+)]
+pub async fn set_all_podcast_episodes_played(
+    Extension(requester): Extension<User>,
+    Path(id): Path<String>,
+    Json(request): Json<PodcastEpisodesPlayedRequest>,
+) -> Result<Json<PodcastEpisodesPlayedResponse>, CustomError> {
+    let podcast_id = resolve_podcast_uuid(&id)?;
+    let username = requester.username.clone();
+    let changed = tokio::task::spawn_blocking(move || {
+        WatchtimeService::set_podcast_episodes_played(podcast_id, &username, request.played)
+    })
+    .await
+    .map_err(|_| CustomError::from(CustomErrorInner::Unknown(Warning)))??;
+    Ok(Json(PodcastEpisodesPlayedResponse { changed }))
+}
+
 #[utoipa::path(
 post,
 path="/podcasts/{id}/episodes/download-all",
@@ -611,6 +645,7 @@ pub fn get_podcast_episode_router() -> OpenApiRouter<AppState> {
         .routes(routes!(download_podcast_episodes_of_podcast))
         .routes(routes!(delete_podcast_episode_locally))
         .routes(routes!(download_all_missing_episodes))
+        .routes(routes!(set_all_podcast_episodes_played))
         .routes(routes!(download_episode_range))
         .routes(routes!(resync_files_for_podcast))
         .routes(routes!(resync_db_for_podcast))
@@ -1371,5 +1406,89 @@ mod tests {
             .post("/api/v1/podcasts/not-a-number/episodes/resync-db")
             .await;
         assert_client_error_status(response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_mark_all_episodes_played_and_unplayed() {
+        let server = handle_test_startup().await;
+        let podcast = crate::services::podcast::service::PodcastService::add_podcast_to_database(
+            "Mark Played Podcast",
+            "mark-played",
+            "https://example.com/mark-played.xml",
+            "http://localhost:8080/ui/default.jpg",
+            "mark-played",
+        )
+        .unwrap();
+        for i in 0..3 {
+            insert_episode(
+                &podcast.id,
+                &format!("mark-played-{i}"),
+                &format!("mark-played-guid-{i}"),
+                &format!("Mark Played {i}"),
+            );
+        }
+        let unplayed = |server: &crate::test_support::tests::TestServerWrapper<'_>| {
+            server.test_server.get(&format!(
+                "/api/v1/podcasts/{}/episodes?only_unlistened=true",
+                podcast.id
+            ))
+        };
+        assert_eq!(
+            unplayed(&server)
+                .await
+                .json::<serde_json::Value>()
+                .as_array()
+                .unwrap()
+                .len(),
+            3
+        );
+
+        let response = server
+            .test_server
+            .put(&format!("/api/v1/podcasts/{}/episodes/played", podcast.id))
+            .json(&json!({ "played": true }))
+            .await;
+        assert_eq!(response.status_code(), 200);
+        assert_eq!(response.json::<serde_json::Value>()["changed"], json!(3));
+        assert!(
+            unplayed(&server)
+                .await
+                .json::<serde_json::Value>()
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
+
+        // Marking does not count as listening time.
+        let events =
+            crate::services::listening_event::service::ListeningEventService::default_service()
+                .get_by_user_and_range(admin_user_id(), None, None)
+                .unwrap();
+        assert!(events.is_empty());
+
+        // Repeating is a no-op.
+        let response = server
+            .test_server
+            .put(&format!("/api/v1/podcasts/{}/episodes/played", podcast.id))
+            .json(&json!({ "played": true }))
+            .await;
+        assert_eq!(response.json::<serde_json::Value>()["changed"], json!(0));
+
+        let response = server
+            .test_server
+            .put(&format!("/api/v1/podcasts/{}/episodes/played", podcast.id))
+            .json(&json!({ "played": false }))
+            .await;
+        assert_eq!(response.json::<serde_json::Value>()["changed"], json!(3));
+        assert_eq!(
+            unplayed(&server)
+                .await
+                .json::<serde_json::Value>()
+                .as_array()
+                .unwrap()
+                .len(),
+            3
+        );
     }
 }

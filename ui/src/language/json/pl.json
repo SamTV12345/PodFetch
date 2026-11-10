@@ -311,5 +311,11 @@
   "use-direct-paths-explanation": "Po włączeniu odcinki są zapisywane bezpośrednio w folderze podcastu, np. „Mój podcast/Odcinek 1.mp3” i „Mój podcast/Odcinek 1.jpg”. Po wyłączeniu każdy odcinek ma własny podfolder, np. „Mój podcast/Odcinek 1/podcast.mp3” i „Mój podcast/Odcinek 1/image.jpg”. Dotyczy nowych pobrań; istniejące pliki przeniesie ponowne skanowanie z opcją „Zastosuj ponownie format nazw plików i katalogów”.",
   "cover-filename": "Nazwa pliku okładki",
   "cover-filename-explanation": "Nazwa pliku (bez rozszerzenia) okładki podcastu w jego folderze, np. „cover” dla cover.jpg. Bez opcji „Bez podfolderu dla każdego odcinka” okładki odcinków w podfolderach też ją otrzymują; z tą opcją nazywają się jak odcinek. Dotyczy nowych podcastów i pobrań; ponowne skanowanie z opcją „Zastosuj ponownie format nazw plików i katalogów” zmienia nazwy istniejących okładek.",
-  "notifications-more": "+ {{count}} więcej – usuń je przyciskiem „Wyczyść wszystko”"
+  "notifications-more": "+ {{count}} więcej – usuń je przyciskiem „Wyczyść wszystko”",
+  "mark-all-played": "Oznacz wszystkie jako odtworzone",
+  "mark-all-unplayed": "Oznacz wszystkie jako nieodtworzone",
+  "mark-all-played-confirm": "Oznaczyć wszystkie odcinki „{{name}}” jako odtworzone? Zostanie to zsynchronizowane z aplikacjami GPodder i nie liczy się jako czas słuchania.",
+  "mark-all-unplayed-confirm": "Oznaczyć wszystkie odcinki „{{name}}” jako nieodtworzone? Pozycja odtwarzania wszystkich odcinków zostanie zresetowana.",
+  "all-episodes-marked-played": "Oznaczono {{count}} odcinków jako odtworzone",
+  "all-episodes-marked-unplayed": "Oznaczono {{count}} odcinków jako nieodtworzone"
 }

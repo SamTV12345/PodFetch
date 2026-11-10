@@ -368,5 +368,11 @@
   "use-direct-paths-explanation": "开启后，剧集直接保存在播客文件夹中，例如“我的播客/第1集.mp3”和“我的播客/第1集.jpg”。关闭后，每集都有自己的子文件夹，例如“我的播客/第1集/podcast.mp3”和“我的播客/第1集/image.jpg”。仅对新下载生效；使用“重新应用文件名和目录格式”重新扫描可移动现有文件。",
   "cover-filename": "封面文件名",
   "cover-filename-explanation": "播客文件夹中播客封面的文件名（不含扩展名），例如 cover 对应 cover.jpg。未开启“不为每集创建子文件夹”时，各集子文件夹中的封面也使用此名称；开启后，剧集封面按剧集命名。对新播客和新下载生效；使用“重新应用文件名和目录格式”重新扫描会重命名现有封面。",
-  "notifications-more": "还有 {{count}} 条 – 使用“全部清除”将其移除"
+  "notifications-more": "还有 {{count}} 条 – 使用“全部清除”将其移除",
+  "mark-all-played": "全部标记为已播放",
+  "mark-all-unplayed": "全部标记为未播放",
+  "mark-all-played-confirm": "将“{{name}}”的所有剧集标记为已播放？这会同步到你的 GPodder 应用，且不计入收听时间。",
+  "mark-all-unplayed-confirm": "将“{{name}}”的所有剧集标记为未播放？所有剧集的播放进度将被重置。",
+  "all-episodes-marked-played": "已将 {{count}} 集标记为已播放",
+  "all-episodes-marked-unplayed": "已将 {{count}} 集标记为未播放"
 }

@@ -311,5 +311,11 @@
   "use-direct-paths-explanation": "Si activé, les épisodes sont enregistrés directement dans le dossier du podcast, par ex. « Mon podcast/Épisode 1.mp3 » et « Mon podcast/Épisode 1.jpg ». Si désactivé, chaque épisode a son propre sous-dossier, par ex. « Mon podcast/Épisode 1/podcast.mp3 » et « Mon podcast/Épisode 1/image.jpg ». S'applique aux nouveaux téléchargements ; un rescan avec « Réappliquer le format des noms de fichiers et dossiers » déplace les fichiers existants.",
   "cover-filename": "Nom de fichier de la couverture",
   "cover-filename-explanation": "Nom de fichier (sans extension) de la couverture du podcast dans son dossier, par ex. « cover » pour cover.jpg. Sans « Pas de sous-dossier par épisode », les couvertures des épisodes dans leurs sous-dossiers l'utilisent aussi ; avec l'option, elles portent le nom de l'épisode. S'applique aux nouveaux podcasts et téléchargements ; un rescan avec « Réappliquer le format des noms de fichiers et dossiers » renomme les couvertures existantes.",
-  "notifications-more": "+ {{count}} de plus – utilisez « Tout effacer » pour les supprimer"
+  "notifications-more": "+ {{count}} de plus – utilisez « Tout effacer » pour les supprimer",
+  "mark-all-played": "Tout marquer comme écouté",
+  "mark-all-unplayed": "Tout marquer comme non écouté",
+  "mark-all-played-confirm": "Marquer tous les épisodes de « {{name}} » comme écoutés ? Cela est synchronisé avec vos applications GPodder et ne compte pas comme temps d'écoute.",
+  "mark-all-unplayed-confirm": "Marquer tous les épisodes de « {{name}} » comme non écoutés ? La position de lecture de tous les épisodes sera réinitialisée.",
+  "all-episodes-marked-played": "{{count}} épisodes marqués comme écoutés",
+  "all-episodes-marked-unplayed": "{{count}} épisodes marqués comme non écoutés"
 }

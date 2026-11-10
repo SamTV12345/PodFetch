@@ -311,5 +311,11 @@
   "use-direct-paths-explanation": "Når den er slået til, gemmes episoder direkte i podcastens mappe, f.eks. \"Min podcast/Episode 1.mp3\" og \"Min podcast/Episode 1.jpg\". Når den er slået fra, får hver episode sin egen undermappe, f.eks. \"Min podcast/Episode 1/podcast.mp3\" og \"Min podcast/Episode 1/image.jpg\". Gælder nye downloads; brug en genscanning med \"Anvend filnavn- og mappeformat igen\" for at flytte eksisterende filer.",
   "cover-filename": "Filnavn for cover",
   "cover-filename-explanation": "Filnavn (uden endelse) for podcastens cover i podcastens mappe, f.eks. \"cover\" for cover.jpg. Uden \"Ingen undermappe pr. episode\" bruger episodecovers i undermapperne også dette navn; med indstillingen navngives episodecovers som episoden. Gælder nye podcasts og downloads; en genscanning med \"Anvend filnavn- og mappeformat igen\" omdøber eksisterende covers.",
-  "notifications-more": "+ {{count}} flere – fjern dem med \"Ryd alt\""
+  "notifications-more": "+ {{count}} flere – fjern dem med \"Ryd alt\"",
+  "mark-all-played": "Markér alle som afspillet",
+  "mark-all-unplayed": "Markér alle som ikke afspillet",
+  "mark-all-played-confirm": "Markér alle episoder af \"{{name}}\" som afspillet? Det synkroniseres med dine GPodder-apps og tæller ikke som lyttetid.",
+  "mark-all-unplayed-confirm": "Markér alle episoder af \"{{name}}\" som ikke afspillet? Afspilningspositionen for alle episoder nulstilles.",
+  "all-episodes-marked-played": "{{count}} episoder markeret som afspillet",
+  "all-episodes-marked-unplayed": "{{count}} episoder markeret som ikke afspillet"
 }
