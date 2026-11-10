@@ -89,7 +89,7 @@
   "cancel": "Anuluj",
   "podcast-deleted": "Usunięto podcast",
   "manage-podcasts": "Zarządzaj podcastami",
-  "data-retention": "Przechowywanie danych",
+  "data-retention": "Pobieranie i przechowywanie",
   "opml-export": "Eksport OPML",
   "local": "Lokalny",
   "online": "Online",
@@ -174,7 +174,7 @@
   "created-playlist": "Playlista została utworzona",
   "episode-name": "Nazwa odcinka",
   "clear-all": "Wyczyść wszystko",
-  "use-direct-paths": "Użyj bezpośrednich ścieżek",
+  "use-direct-paths": "Bez podfolderu dla każdego odcinka",
   "not-yet-played": "Nieodtworzone",
   "podcast-episode-played": "{{percentage}} został odtworzony.",
   "restart-playing": "Restartuj odtwarzanie",
@@ -307,5 +307,8 @@
   "gpodder-create-group-hint": "Zaznacz co najmniej dwa urządzenia.",
   "gpodder-web-device": "Interfejs webowy",
   "gpodder-web-device-description": "Twoje ulubione w PodFetch",
-  "gpodder-devices-empty-state": "Brak połączonej aplikacji do podcastów. W aplikacji (np. AntennaPod → Ustawienia → Synchronizacja → gpodder.net) skonfiguruj serwer PodFetch, podając nazwę użytkownika i hasło. Urządzenie pojawi się tutaj po pierwszej synchronizacji."
+  "gpodder-devices-empty-state": "Brak połączonej aplikacji do podcastów. W aplikacji (np. AntennaPod → Ustawienia → Synchronizacja → gpodder.net) skonfiguruj serwer PodFetch, podając nazwę użytkownika i hasło. Urządzenie pojawi się tutaj po pierwszej synchronizacji.",
+  "use-direct-paths-explanation": "Po włączeniu odcinki są zapisywane bezpośrednio w folderze podcastu, np. „Mój podcast/Odcinek 1.mp3” i „Mój podcast/Odcinek 1.jpg”. Po wyłączeniu każdy odcinek ma własny podfolder, np. „Mój podcast/Odcinek 1/podcast.mp3” i „Mój podcast/Odcinek 1/image.jpg”. Dotyczy nowych pobrań; istniejące pliki przeniesie ponowne skanowanie z opcją „Zastosuj ponownie format nazw plików i katalogów”.",
+  "cover-filename": "Nazwa pliku okładki",
+  "cover-filename-explanation": "Nazwa pliku (bez rozszerzenia) okładki podcastu w jego folderze, np. „cover” dla cover.jpg. Bez opcji „Bez podfolderu dla każdego odcinka” okładki odcinków w podfolderach też ją otrzymują; z tą opcją nazywają się jak odcinek. Dotyczy nowych podcastów i pobrań; ponowne skanowanie z opcją „Zastosuj ponownie format nazw plików i katalogów” zmienia nazwy istniejących okładek."
 }

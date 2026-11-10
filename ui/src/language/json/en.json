@@ -166,7 +166,7 @@
   "next": "Next",
   "podcast-deleted": "Podcast deleted",
   "manage-podcasts": "Manage Podcasts",
-  "data-retention": "Data Retention",
+  "data-retention": "Downloads & storage",
   "opml-export": "OPML Export",
   "local": "Local",
   "online": "Online",
@@ -264,7 +264,7 @@
   "item_other": "{{count}} items",
   "episode-name": "Episode name",
   "clear-all": "Clear all",
-  "use-direct-paths": "Use direct paths",
+  "use-direct-paths": "No subfolder per episode",
   "not-yet-played": "Not yet played",
   "podcast-episode-played": "{{percentage}} played",
   "restart-playing": "Restart playing",
@@ -393,5 +393,7 @@
   "gpodder-create-group-hint": "Select at least two devices.",
   "gpodder-web-device": "Web interface",
   "gpodder-web-device-description": "Your favorites in PodFetch",
-  "gpodder-devices-empty-state": "No podcast app connected yet. In your app (e.g. AntennaPod → Settings → Synchronization → gpodder.net), set up your PodFetch server with your username and password. The device appears here after its first sync."
+  "gpodder-devices-empty-state": "No podcast app connected yet. In your app (e.g. AntennaPod → Settings → Synchronization → gpodder.net), set up your PodFetch server with your username and password. The device appears here after its first sync.",
+  "use-direct-paths-explanation": "When enabled, episodes are stored directly in the podcast's folder, e.g. \"My Podcast/Episode 1.mp3\" and \"My Podcast/Episode 1.jpg\". When disabled, every episode gets its own subfolder, e.g. \"My Podcast/Episode 1/podcast.mp3\" and \"My Podcast/Episode 1/image.jpg\". Applies to new downloads; use a rescan with \"Re-apply filename and directory format\" to move existing files.",
+  "cover-filename-explanation": "File name (without extension) of the podcast cover in the podcast's folder, e.g. \"cover\" for cover.jpg. Without \"No subfolder per episode\", episode covers in the episode subfolders use it too; with it, episode covers are named like the episode. Applies to new podcasts and downloads; a rescan with \"Re-apply filename and directory format\" renames existing covers."
 }

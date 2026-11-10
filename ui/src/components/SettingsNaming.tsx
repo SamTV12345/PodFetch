@@ -224,7 +224,10 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
 
 
                     <fieldset className="xs:contents mb-4">
-                        <legend className="self-start mb-2 xs:mb-0 ui-text">{t('use-direct-paths')}</legend>
+                        <legend className="self-start mb-2 xs:mb-0 ui-text">
+                            {t('use-direct-paths')}
+                            <SettingsInfoIcon headerKey="use-direct-paths" textKey="use-direct-paths-explanation"/>
+                        </legend>
 
                         <div className="flex flex-col gap-2">
                             <div className="flex">

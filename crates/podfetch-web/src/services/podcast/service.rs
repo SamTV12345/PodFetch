@@ -232,10 +232,16 @@ impl PodcastService {
             .map(Into::into)
             .map_err(CustomError::from)?;
 
+        // Resolve the cover name via the podcast's UUID; `podcast_insert.id`
+        // is the feed/track id and can't be used to look up settings.
+        let cover_filename = uuid::Uuid::parse_str(&inserted_podcast.id)
+            .map(crate::services::nfo::service::resolve_cover_filename)
+            .unwrap_or_else(|_| crate::settings::default_cover_filename());
         FileService::download_podcast_image(
             &inserted_podcast.directory_name.clone().to_string(),
             podcast_insert.image_url.clone().to_string(),
             &podcast_insert.id.clone().to_string(),
+            &cover_filename,
         )
         .await?;
         let podcast: Option<Podcast> = podcast_repo()
