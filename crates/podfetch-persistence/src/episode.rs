@@ -617,6 +617,26 @@ impl EpisodeRepository for DieselEpisodeRepository {
             .map_err(Into::into)
     }
 
+    fn update_progress(
+        &self,
+        id: Uuid,
+        position: i32,
+        total: i32,
+        timestamp: NaiveDateTime,
+    ) -> Result<(), Self::Error> {
+        diesel::update(episodes::table.filter(episodes::id.eq(id.to_string())))
+            .set((
+                episodes::action.eq("play"),
+                episodes::started.eq(position),
+                episodes::position.eq(position),
+                episodes::total.eq(total),
+                episodes::timestamp.eq(timestamp),
+            ))
+            .execute(&mut self.database.connection()?)
+            .map(|_| ())
+            .map_err(Into::into)
+    }
+
     fn delete_by_username(&self, username: &str) -> Result<(), Self::Error> {
         let Some(user_id) = self.find_user_id(username)? else {
             return Ok(());

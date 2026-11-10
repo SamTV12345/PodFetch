@@ -8,7 +8,7 @@ import {Heading2} from '../components/Heading2'
 import {PodcastDetailItem} from '../components/PodcastDetailItem'
 import {PodcastInfoModal} from '../components/PodcastInfoModal'
 import {Switcher} from '../components/Switcher'
-import { Rss, RotateCw } from 'lucide-react'
+import { CheckCheck, RotateCcw, RotateCw, Rss } from 'lucide-react'
 import {PodcastEpisodeAlreadyPlayed} from "../components/PodcastEpisodeAlreadyPlayed";
 import {PodcastSettingsModal} from "../components/PodcastSettingsModal";
 import {$api} from '../utils/http'
@@ -17,6 +17,9 @@ import {ADMIN_ROLE} from "../models/constants";
 import {Loading} from "../components/Loading";
 import {useQueryClient} from "@tanstack/react-query";
 import {components} from "../../schema";
+import {ConfirmModal} from "../components/ConfirmModal";
+import {CustomButtonSecondary} from "../components/CustomButtonSecondary";
+import {useSnackbar} from "@/utils/toast";
 
 export const PodcastDetailPage = () => {
     const setCurrentPodcast = useAudioPlayer(state => state.setCurrentPodcast)
@@ -28,6 +31,8 @@ export const PodcastDetailPage = () => {
     const queryClient = useQueryClient()
 
     const [onlyUnplayed, setOnlyUnplayed] = useState<boolean>(false)
+    const [markPlayedTarget, setMarkPlayedTarget] = useState<boolean | undefined>(undefined)
+    const {enqueueSnackbar} = useSnackbar()
     const {data, error, isLoading} = $api.useQuery('get', '/api/v1/users/{username}', {
         params: {
             path: {
@@ -63,6 +68,21 @@ export const PodcastDetailPage = () => {
 
     const refreshPodcastEpisodes = $api.useMutation('post','/api/v1/podcasts/{id}/refresh')
     const togglePodcastActive = $api.useMutation('put', '/api/v1/podcasts/{id}/active')
+    const setAllPlayed = $api.useMutation('put', '/api/v1/podcasts/{id}/episodes/played')
+
+    const markAllEpisodes = async (played: boolean) => {
+        setMarkPlayedTarget(undefined)
+        try {
+            const result = await setAllPlayed.mutateAsync({
+                params: {path: {id: currentDetailedPodcastId}},
+                body: {played}
+            })
+            await queryClient.invalidateQueries({queryKey: ['get', '/api/v1/podcasts/{id}/episodes']})
+            enqueueSnackbar(t(played ? 'all-episodes-marked-played' : 'all-episodes-marked-unplayed', {count: result.changed}), {variant: 'success'})
+        } catch {
+            // surfaced by middleware
+        }
+    }
 
     useEffect(() => {
         if (params.podcastid) {
@@ -239,7 +259,32 @@ export const PodcastDetailPage = () => {
 
                 {/* Episode list */}
                 <div>
-                    <Heading2 className="mb-8">{t('available-episodes')}</Heading2>
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
+                        <Heading2>{t('available-episodes')}</Heading2>
+                        <div className="flex flex-wrap gap-2">
+                            <CustomButtonSecondary
+                                className="flex items-center gap-2 text-sm"
+                                disabled={setAllPlayed.isPending}
+                                onClick={() => setMarkPlayedTarget(true)}>
+                                <CheckCheck size={16}/> {t('mark-all-played')}
+                            </CustomButtonSecondary>
+                            <CustomButtonSecondary
+                                className="flex items-center gap-2 text-sm"
+                                disabled={setAllPlayed.isPending}
+                                onClick={() => setMarkPlayedTarget(false)}>
+                                <RotateCcw size={16}/> {t('mark-all-unplayed')}
+                            </CustomButtonSecondary>
+                        </div>
+                    </div>
+                    <ConfirmModal
+                        open={markPlayedTarget !== undefined}
+                        onOpenChange={(open) => !open && setMarkPlayedTarget(undefined)}
+                        headerText={t(markPlayedTarget === false ? 'mark-all-unplayed' : 'mark-all-played')}
+                        bodyText={t(markPlayedTarget === false ? 'mark-all-unplayed-confirm' : 'mark-all-played-confirm', {name: currentPodcast.data?.name ?? ''})}
+                        acceptText={t(markPlayedTarget === false ? 'mark-all-unplayed' : 'mark-all-played')}
+                        rejectText={t('cancel')}
+                        onAccept={() => markAllEpisodes(markPlayedTarget !== false)}
+                    />
 
                     {currentPodcastEpisodes.data?.map((episode, index) => (
                         <PodcastDetailItem episode={episode} currentEpisodes={currentPodcastEpisodes.data ?? []}

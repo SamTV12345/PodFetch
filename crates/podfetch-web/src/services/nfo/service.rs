@@ -16,7 +16,7 @@ use podfetch_storage::{FileHandleWrapper, FileRequest};
 use std::str::FromStr;
 use uuid::Uuid;
 
-const COVER_CANDIDATES: &[&str] = &["image", "cover", "folder", "poster"];
+pub(crate) const COVER_CANDIDATES: &[&str] = &["image", "cover", "folder", "poster"];
 
 /// Resolve the effective NFO format: per-podcast override (when activated)
 /// falls back to the global setting.

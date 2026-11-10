@@ -438,6 +438,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/notifications/dismiss-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["dismiss_all_notifications"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/notifications/unread": {
         parameters: {
             query?: never;
@@ -993,6 +1009,22 @@ export interface paths {
         get?: never;
         /** * id is the episode id (uuid) */
         put: operations["like_podcast_episode"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/podcasts/{id}/episodes/played": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["set_all_podcast_episodes_played"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1952,6 +1984,13 @@ export interface components {
             podcastEpisode: components["schemas"]["PodcastEpisodeDto"];
             podcastHistoryItem?: null | components["schemas"]["EpisodeDto"];
         };
+        PodcastEpisodesPlayedRequest: {
+            played: boolean;
+        };
+        PodcastEpisodesPlayedResponse: {
+            /** @description Number of episodes whose state changed. */
+            changed: number;
+        };
         PodcastFavorUpdateModel: {
             favored: boolean;
             id: string;
@@ -2314,6 +2353,24 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    dismiss_all_notifications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dismisses all unread notifications at once */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     get_gpodder_sync_groups: {
         parameters: {
             query?: never;
@@ -2378,6 +2435,32 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    set_all_podcast_episodes_played: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PodcastEpisodesPlayedRequest"];
+            };
+        };
+        responses: {
+            /** @description Marks all episodes of the podcast as played or unplayed for the current user. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PodcastEpisodesPlayedResponse"];
+                };
             };
         };
     };

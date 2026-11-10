@@ -66,6 +66,11 @@ export const Podcasts: FC<PodcastsProps> = ({onlyFavorites}) => {
                 tag: tag
             }
         }
+    }, {
+        // The search persists the sort order it is called with. Running it
+        // before the saved filter is loaded would store "Z-A" (DESC without
+        // an order option) as the user's filter on every page load.
+        enabled: filters.isSuccess
     })
     const memorizedSelection = useMemo(() => {
         return JSON.stringify({sorting: filters?.data?.filter?.toUpperCase(), ascending: filters?.data?.ascending})

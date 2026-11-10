@@ -132,7 +132,10 @@ export const Settings = () => {
                     />
                 </div>
                 <div className="flex flex-col gap-2 xs:contents mb-4">
-                    <label htmlFor="cover-filename" className="flex gap-1">{t('cover-filename')}</label>
+                    <label htmlFor="cover-filename" className="flex gap-1">
+                        {t('cover-filename')}
+                        <SettingsInfoIcon headerKey="cover-filename" textKey="cover-filename-explanation"/>
+                    </label>
                     <CustomInput loading={settingsModel.isLoading} id="cover-filename" placeholder="image" onChange={(e) => {
                         queryClient.setQueryData(['get', '/api/v1/settings'], (oldData: Setting) => ({
                             ...oldData,

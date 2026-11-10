@@ -13,6 +13,8 @@ type NotificationModel = components["schemas"]["Notification"]
 
 const unreadNotificationsQueryKey = $api.queryOptions('get', '/api/v1/notifications/unread', {}).queryKey
 const maxBadgeCount = 99
+// Rendering tens of thousands of entries freezes the popover.
+const maxRenderedNotifications = 200
 
 const notificationIcon = (type: string) => {
     switch (type) {
@@ -60,6 +62,7 @@ export const Notifications: FC = () => {
         refetchOnWindowFocus: true
     })
     const dismissNotificationMutation = $api.useMutation('put', '/api/v1/notifications/dismiss')
+    const dismissAllNotificationsMutation = $api.useMutation('put', '/api/v1/notifications/dismiss-all')
 
     const notifications = notificationsQuery.data ?? []
     const unreadCount = notifications.length
@@ -111,17 +114,15 @@ export const Notifications: FC = () => {
         const previous = orderedNotifications
         queryClient.setQueryData(unreadNotificationsQueryKey, [])
 
-        const result = await Promise.allSettled(
-            previous.map((notification) => dismissNotificationMutation.mutateAsync({
-                body: { id: notification.id }
-            }))
-        )
-
-        if (result.some(v => v.status === 'rejected')) {
+        // One request for all of them: one request per notification fails
+        // (and rolls everything back) with thousands of notifications.
+        try {
+            await dismissAllNotificationsMutation.mutateAsync({})
+        } catch {
             queryClient.setQueryData(unreadNotificationsQueryKey, previous)
+        } finally {
+            setIsClearingAll(false)
         }
-
-        setIsClearingAll(false)
     }
 
     return (
@@ -214,7 +215,7 @@ export const Notifications: FC = () => {
 
                         {!notificationsQuery.isLoading && !notificationsQuery.isError && orderedNotifications.length > 0 && (
                             <>
-                                {orderedNotifications.map((notification) => (
+                                {orderedNotifications.slice(0, maxRenderedNotifications).map((notification) => (
                                     // Entry-only animation via tw-animate-css. The previous
                                     // framer-motion exit animation (height collapse + fade)
                                     // is dropped - the dismiss button is explicit, so an
@@ -248,6 +249,11 @@ export const Notifications: FC = () => {
                                         </button>
                                     </div>
                                 ))}
+                                {orderedNotifications.length > maxRenderedNotifications && (
+                                    <p className="px-4 py-3 text-center text-xs ui-text-muted">
+                                        {t('notifications-more', { count: orderedNotifications.length - maxRenderedNotifications })}
+                                    </p>
+                                )}
                             </>
                         )}
                     </div>

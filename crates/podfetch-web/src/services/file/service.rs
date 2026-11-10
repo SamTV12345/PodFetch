@@ -111,10 +111,15 @@ impl FileService {
         }
     }
 
+    /// Download the podcast's main image to `<podcast_path>/<cover_filename>.<ext>`.
+    ///
+    /// `directory_id` is the podcast's feed/track id (`podcasts.directory_id`),
+    /// which is what the image URL is stored by - not the podcast UUID.
     pub async fn download_podcast_image(
         podcast_path: &str,
         image_url: String,
-        podcast_id: &str,
+        directory_id: &str,
+        cover_filename: &str,
     ) -> Result<(), CustomError> {
         let mut image_suffix = if DownloadService::is_default_fallback_image_url(&image_url) {
             DownloadService::get_default_fallback_image_data()
@@ -132,13 +137,10 @@ impl FileService {
             .await?
         };
 
-        let cover_filename = uuid::Uuid::parse_str(podcast_id)
-            .map(crate::services::nfo::service::resolve_cover_filename)
-            .unwrap_or_else(|_| "image".to_string());
         let file_path = build_podcast_image_paths(
             podcast_path,
             &image_suffix.0,
-            &cover_filename,
+            cover_filename,
             PodcastEpisodeService::map_to_local_url,
         );
         FileHandleWrapper::write_file_async(
@@ -147,7 +149,7 @@ impl FileService {
             &ENVIRONMENT_SERVICE.default_file_handler,
         )
         .await?;
-        PodcastEpisodeService::update_podcast_image(podcast_id, &file_path.1)?;
+        PodcastEpisodeService::update_podcast_image(directory_id, &file_path.1)?;
         Ok(())
     }
 

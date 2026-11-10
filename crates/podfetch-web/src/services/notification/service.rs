@@ -52,4 +52,8 @@ impl NotificationApplicationService for NotificationService {
     fn dismiss_notification(&self, id: uuid::Uuid) -> Result<(), Self::Error> {
         self.update_status_of_notification(id, "dismissed")
     }
+
+    fn dismiss_all_notifications(&self) -> Result<usize, Self::Error> {
+        self.repository.update_status_of_all_unread("dismissed")
+    }
 }

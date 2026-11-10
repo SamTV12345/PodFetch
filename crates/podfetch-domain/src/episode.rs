@@ -122,6 +122,16 @@ pub trait EpisodeRepository: Send + Sync {
         timestamp: NaiveDateTime,
     ) -> Result<(), Self::Error>;
 
+    /// Update position and total of an episode action (e.g. to mark an
+    /// episode as played: `position == total`).
+    fn update_progress(
+        &self,
+        id: Uuid,
+        position: i32,
+        total: i32,
+        timestamp: NaiveDateTime,
+    ) -> Result<(), Self::Error>;
+
     /// Delete all episode actions for a user.
     fn delete_by_username(&self, username: &str) -> Result<(), Self::Error>;
 

@@ -102,7 +102,7 @@ const NAMING_LABELS = [
     'Sample episode format',
     'Standard podcast format',
     'Sample podcast format',
-    'Use direct paths',
+    'No subfolder per episode',
 ]
 
 const NAMING_CHECKBOXES = ['use-existing-filenames', 'replace-invalid-characters', 'directPaths']

@@ -15,4 +15,6 @@ pub trait NotificationRepository: Send + Sync {
     fn create(&self, notification: Notification) -> Result<Notification, Self::Error>;
     fn get_unread_notifications(&self) -> Result<Vec<Notification>, Self::Error>;
     fn update_status_of_notification(&self, id: Uuid, status: &str) -> Result<(), Self::Error>;
+    /// Set the status of all unread notifications; returns how many changed.
+    fn update_status_of_all_unread(&self, status: &str) -> Result<usize, Self::Error>;
 }

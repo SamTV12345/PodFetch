@@ -687,21 +687,48 @@ impl PodcastEpisodeUseCase {
         podcast: &Podcast,
         channel: &Channel,
     ) -> Result<(), CustomError> {
-        match channel.image() {
-            Some(image) => {
-                crate::services::podcast::service::PodcastService::update_original_image_url(
-                    &image.url.to_string(),
-                    Self::parse_id(&podcast.id)?,
-                )?;
-            }
-            None => {
-                crate::services::podcast::service::PodcastService::update_original_image_url(
-                    "",
-                    Self::parse_id(&podcast.id)?,
-                )?;
-            }
+        let image_url = crate::podcast::channel_image_url(channel);
+        crate::services::podcast::service::PodcastService::update_original_image_url(
+            image_url.as_deref().unwrap_or(""),
+            Self::parse_id(&podcast.id)?,
+        )?;
+
+        // Podcasts that were added without a usable image (e.g. a feed that
+        // only had <itunes:image>, which older versions ignored) got the
+        // default cover. Fetch the real one now that the feed provides it.
+        let had_no_image =
+            crate::services::download::service::DownloadService::is_default_fallback_image_url(
+                &podcast.original_image_url,
+            );
+        if had_no_image && let Some(image_url) = image_url {
+            Self::schedule_podcast_cover_download(podcast, image_url);
         }
         Ok(())
+    }
+
+    fn schedule_podcast_cover_download(podcast: &Podcast, image_url: String) {
+        let Ok(runtime) = tokio::runtime::Handle::try_current() else {
+            return;
+        };
+        let directory_name = podcast.directory_name.clone();
+        let directory_id = podcast.directory_id.clone();
+        let cover_filename = uuid::Uuid::parse_str(&podcast.id)
+            .map(crate::services::nfo::service::resolve_cover_filename)
+            .unwrap_or_else(|_| crate::settings::default_cover_filename());
+        let name = podcast.name.clone();
+        runtime.spawn(async move {
+            tracing::info!("Downloading newly found cover of podcast {name}");
+            if let Err(err) = crate::services::file::service::FileService::download_podcast_image(
+                &directory_name,
+                image_url,
+                &directory_id,
+                &cover_filename,
+            )
+            .await
+            {
+                tracing::warn!("Could not download cover of podcast {name}: {err}");
+            }
+        });
     }
 
     fn handle_itunes_extension(podcast: &Podcast, channel: &Channel) -> Result<(), CustomError> {

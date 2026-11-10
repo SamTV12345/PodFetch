@@ -115,7 +115,7 @@ impl EpisodeRescanService {
             return Ok(());
         }
 
-        let podcast = PodcastService::get_podcast_by_id(podcast_uuid);
+        let mut podcast = PodcastService::get_podcast_by_id(podcast_uuid);
         let settings =
             SettingsService::shared()
                 .get_settings()?
@@ -149,7 +149,30 @@ impl EpisodeRescanService {
             }
         }
 
-        let working_image_path = episode.file_image_path.clone().unwrap_or_default();
+        let mut working_image_path = episode.file_image_path.clone().unwrap_or_default();
+
+        // Rename the podcast's shared cover to the configured cover filename
+        // (e.g. image.jpg -> cover.jpg) and repoint episodes that still use
+        // the shared cover under its old name.
+        if opts.apply_filenames || opts.regenerate_nfo {
+            crate::services::nfo::service::ensure_cover_filename(&podcast);
+            podcast = PodcastService::get_podcast_by_id(podcast_uuid);
+            if let Some(new_cover) = shared_cover_fs_path(&podcast)
+                && Self::is_stale_shared_cover(
+                    &working_image_path,
+                    &new_cover,
+                    &podcast.directory_name,
+                    &download_location,
+                )
+            {
+                PodcastEpisodeService::update_local_paths(
+                    &episode.episode_id,
+                    &new_cover,
+                    &working_audio_path,
+                )?;
+                working_image_path = new_cover;
+            }
+        }
 
         // Step 2: rename / move to the path the current naming settings
         // would produce. We persist new paths to the DB even when we skip
@@ -384,6 +407,32 @@ impl EpisodeRescanService {
         Ok(())
     }
 
+    /// Whether `image_path` points at the podcast's shared cover under a
+    /// previous cover filename that no longer exists on disk.
+    fn is_stale_shared_cover(
+        image_path: &str,
+        current_cover: &str,
+        podcast_directory: &str,
+        download_location: &FileHandlerType,
+    ) -> bool {
+        if image_path.is_empty() || image_path == current_cover {
+            return false;
+        }
+        let path = Path::new(image_path);
+        let in_podcast_dir = path
+            .parent()
+            .and_then(|p| p.to_str())
+            .is_some_and(|p| p == podcast_directory);
+        let is_cover_name = path
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .is_some_and(|stem| crate::services::nfo::service::COVER_CANDIDATES.contains(&stem));
+        in_podcast_dir
+            && is_cover_name
+            && !FileHandleWrapper::path_exists(image_path, FileRequest::File, download_location)
+            && FileHandleWrapper::path_exists(current_cover, FileRequest::File, download_location)
+    }
+
     fn compute_target_paths(
         episode: &PodcastEpisode,
         podcast: &Podcast,
@@ -491,15 +540,23 @@ fn extension_lower(path: &str) -> Option<String> {
 
 /// Derive the on-disk path of a podcast's shared cover. `podcast.image_url`
 /// is a URL-encoded path (produced by `map_to_local_url`), so we can't use
-/// it directly as a filesystem path. The shared cover always lives at
-/// `<directory_name>/image.<ext>`; we just need the extension, which we
-/// take from the stored image_url (decoded if necessary).
+/// it directly as a filesystem path. The shared cover lives directly in
+/// `<directory_name>`; its file name (configurable "cover filename", e.g.
+/// `image.jpg` or `cover.png`) is taken from the last segment of the stored
+/// image_url and decoded.
 fn shared_cover_fs_path(podcast: &Podcast) -> Option<String> {
     if podcast.directory_name.is_empty() {
         return None;
     }
-    let ext = extension_lower(&podcast.image_url)?;
-    Some(format!("{}/image.{}", podcast.directory_name, ext))
+    extension_lower(&podcast.image_url)?;
+    let last_segment = podcast.image_url.rsplit(['/', '\\']).next()?;
+    let file_name = urlencoding::decode(last_segment)
+        .map(|decoded| decoded.into_owned())
+        .unwrap_or_else(|_| last_segment.to_string());
+    if file_name.is_empty() {
+        return None;
+    }
+    Some(format!("{}/{}", podcast.directory_name, file_name))
 }
 
 #[cfg(test)]
@@ -590,6 +647,67 @@ mod tests {
             shared_cover_fs_path(&podcast).as_deref(),
             Some("podcasts/1 Minute Podcast/image.jpg")
         );
+    }
+
+    #[test]
+    fn shared_cover_fs_path_uses_configured_cover_filename() {
+        let podcast = make_podcast(
+            "http://localhost:8000/podcasts/My%20Show/My%20Cover.png",
+            "podcasts/My Show",
+        );
+        assert_eq!(
+            shared_cover_fs_path(&podcast).as_deref(),
+            Some("podcasts/My Show/My Cover.png")
+        );
+    }
+
+    #[test]
+    fn stale_shared_cover_is_detected_after_cover_rename() {
+        let base = std::env::temp_dir().join(format!("podfetch-cover-{}", uuid::Uuid::new_v4()));
+        let podcast_dir = base.join("My Show");
+        std::fs::create_dir_all(&podcast_dir).unwrap();
+        let podcast_dir = podcast_dir.to_str().unwrap().to_string();
+        let new_cover = format!("{podcast_dir}/cover.jpg");
+        std::fs::write(&new_cover, b"jpg").unwrap();
+        let local = FileHandlerType::Local;
+
+        // Old shared cover name, file renamed away -> stale.
+        assert!(EpisodeRescanService::is_stale_shared_cover(
+            &format!("{podcast_dir}/image.jpg"),
+            &new_cover,
+            &podcast_dir,
+            &local,
+        ));
+        // Already the current cover.
+        assert!(!EpisodeRescanService::is_stale_shared_cover(
+            &new_cover,
+            &new_cover,
+            &podcast_dir,
+            &local,
+        ));
+        // Per-episode cover in a subfolder is not the shared cover.
+        assert!(!EpisodeRescanService::is_stale_shared_cover(
+            &format!("{podcast_dir}/Episode 1/image.jpg"),
+            &new_cover,
+            &podcast_dir,
+            &local,
+        ));
+        // A per-episode cover named like the episode is left alone.
+        assert!(!EpisodeRescanService::is_stale_shared_cover(
+            &format!("{podcast_dir}/Episode 1.jpg"),
+            &new_cover,
+            &podcast_dir,
+            &local,
+        ));
+        // Old name still exists on disk -> nothing to repoint.
+        std::fs::write(format!("{podcast_dir}/image.jpg"), b"jpg").unwrap();
+        assert!(!EpisodeRescanService::is_stale_shared_cover(
+            &format!("{podcast_dir}/image.jpg"),
+            &new_cover,
+            &podcast_dir,
+            &local,
+        ));
+        let _ = std::fs::remove_dir_all(&base);
     }
 
     #[test]

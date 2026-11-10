@@ -89,4 +89,13 @@ impl NotificationRepository for DieselNotificationRepository {
             .map(|_| ())
             .map_err(Into::into)
     }
+
+    fn update_status_of_all_unread(&self, status_update: &str) -> Result<usize, Self::Error> {
+        use self::notifications::dsl::*;
+
+        diesel::update(notifications.filter(status.eq("unread")))
+            .set(status.eq(status_update))
+            .execute(&mut self.database.connection()?)
+            .map_err(Into::into)
+    }
 }
