@@ -356,7 +356,11 @@ impl WatchtimeUseCase {
         let repo = Self::repo();
         let mut changed = 0;
 
-        for episode in episodes {
+        for (index, episode) in episodes.into_iter().enumerate() {
+            // Episode actions are unique per (user, device, podcast, episode
+            // URL, timestamp); feeds that reuse an enclosure URL would collide
+            // with one shared timestamp.
+            let now = now + chrono::Duration::microseconds(index as i64);
             let total = episode.total_time.max(0);
             let position = if played { total } else { 0 };
             match Self::get_watchlog_by_device_and_episode(username, &episode.guid, DEFAULT_DEVICE)?

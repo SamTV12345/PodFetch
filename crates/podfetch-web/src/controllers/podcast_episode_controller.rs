@@ -1428,6 +1428,14 @@ mod tests {
                 &format!("Mark Played {i}"),
             );
         }
+        // Some feeds reuse the same enclosure URL for several episodes.
+        {
+            use diesel::RunQueryDsl;
+            diesel::update(pe_dsl::podcast_episodes.filter(pe_dsl::podcast_id.eq(&podcast.id)))
+                .set(pe_dsl::url.eq("https://example.com/same.mp3"))
+                .execute(&mut get_connection())
+                .unwrap();
+        }
         let unplayed = |server: &crate::test_support::tests::TestServerWrapper<'_>| {
             server.test_server.get(&format!(
                 "/api/v1/podcasts/{}/episodes?only_unlistened=true",
