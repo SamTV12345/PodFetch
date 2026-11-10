@@ -438,6 +438,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/notifications/dismiss-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["dismiss_all_notifications"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/notifications/unread": {
         parameters: {
             query?: never;
@@ -2314,6 +2330,24 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    dismiss_all_notifications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dismisses all unread notifications at once */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     get_gpodder_sync_groups: {
         parameters: {
             query?: never;

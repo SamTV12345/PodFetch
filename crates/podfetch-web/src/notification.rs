@@ -46,6 +46,7 @@ pub trait NotificationApplicationService {
 
     fn get_unread_notifications(&self) -> Result<Vec<Notification>, Self::Error>;
     fn dismiss_notification(&self, id: Uuid) -> Result<(), Self::Error>;
+    fn dismiss_all_notifications(&self) -> Result<usize, Self::Error>;
 }
 
 pub fn get_unread_notifications<S>(service: &S) -> Result<Vec<Notification>, S::Error>

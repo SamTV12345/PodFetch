@@ -413,6 +413,12 @@ impl NotificationRepository for NotificationRepositoryImpl {
             .update_status_of_notification(id, status)
             .map_err(Into::into)
     }
+
+    fn update_status_of_all_unread(&self, status: &str) -> Result<usize, Self::Error> {
+        self.inner
+            .update_status_of_all_unread(status)
+            .map_err(Into::into)
+    }
 }
 
 // ── Playlist ────────────────────────────────────────────────────────────────

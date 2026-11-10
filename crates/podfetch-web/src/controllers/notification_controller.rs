@@ -41,10 +41,27 @@ pub async fn dismiss_notifications(
     Ok(StatusCode::OK)
 }
 
+#[utoipa::path(
+put,
+path="/notifications/dismiss-all",
+responses(
+(status = 200, description = "Dismisses all unread notifications at once")),
+tag="notifications"
+)]
+pub async fn dismiss_all_notifications(
+    State(state): State<AppState>,
+) -> Result<StatusCode, CustomError> {
+    use crate::notification::NotificationApplicationService;
+    let dismissed = state.notification_service.dismiss_all_notifications()?;
+    tracing::info!("Dismissed {dismissed} notifications");
+    Ok(StatusCode::OK)
+}
+
 pub fn get_notification_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(get_unread_notifications))
         .routes(routes!(dismiss_notifications))
+        .routes(routes!(dismiss_all_notifications))
 }
 
 #[cfg(test)]
@@ -394,5 +411,30 @@ mod tests {
             .await
             .json::<Vec<Notification>>();
         assert_eq!(unread_after.len(), 1);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_dismiss_all_notifications_with_many_notifications() {
+        let test_server = handle_test_startup().await;
+        for _ in 0..1500 {
+            NotificationService::create_notification(
+                NotificationTestDataBuilder::new().build().into(),
+            )
+            .unwrap();
+        }
+
+        let response = test_server
+            .test_server
+            .put("/api/v1/notifications/dismiss-all")
+            .await;
+        assert!(response.status_code().is_success());
+
+        let unread_after = test_server
+            .test_server
+            .get("/api/v1/notifications/unread")
+            .await
+            .json::<Vec<Notification>>();
+        assert!(unread_after.is_empty());
     }
 }
