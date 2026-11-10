@@ -34,7 +34,7 @@ pub fn default_podcast_filter() -> Filter {
         user_id: Uuid::nil().to_string(),
         title: None,
         ascending: true,
-        filter: Some("PUBLISHEDDATE".to_string()),
+        filter: Some("TITLE".to_string()),
         only_favored: false,
     }
 }
