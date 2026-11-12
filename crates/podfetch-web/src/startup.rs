@@ -641,6 +641,10 @@ pub fn handle_config_for_server_startup() -> Router {
         tokio::spawn(crate::services::transcript::worker::run_transcription_worker());
     }
 
+    if let Some(oidc_config) = ENVIRONMENT_SERVICE.oidc_config.as_ref() {
+        crate::services::oidc::discovery::spawn_endpoint_discovery(oidc_config);
+    }
+
     router
 }
 

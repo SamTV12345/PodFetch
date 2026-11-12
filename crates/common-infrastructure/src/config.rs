@@ -42,6 +42,8 @@ pub const DEFAULT_AUDIOBOOKSHELF_TRANSCODER_MAX_CONCURRENT: u32 = 2;
 pub const DATABASE_URL: &str = "DATABASE_URL";
 pub const DATABASE_URL_DEFAULT_SQLITE: &str = "sqlite://./podcast.db";
 pub const OIDC_JWKS: &str = "OIDC_JWKS";
+pub const OIDC_AUTHORIZATION_ENDPOINT: &str = "OIDC_AUTHORIZATION_ENDPOINT";
+pub const OIDC_TOKEN_ENDPOINT: &str = "OIDC_TOKEN_ENDPOINT";
 pub const OIDC_REFRESH_INTERVAL: &str = "OIDC_REFRESH_INTERVAL";
 pub const DEFAULT_OIDC_REFRESH_INTERVAL: u64 = 1000 * 60 * 2;
 pub const REVERSE_PROXY: &str = "REVERSE_PROXY";
@@ -106,6 +108,81 @@ pub struct OidcConfig {
     pub scope: String,
     pub jwks_uri: String,
     pub refresh_interval: u64,
+    /// Where the browser is sent to log in. From `OIDC_AUTHORIZATION_ENDPOINT`,
+    /// the provider's discovery document, or - for older setups that put the
+    /// authorization endpoint into `OIDC_AUTHORITY` - the authority itself.
+    pub authorization_endpoint: String,
+    /// Where the code is exchanged for tokens. From `OIDC_TOKEN_ENDPOINT`,
+    /// the discovery document, or `<authority>/../token` for older setups.
+    pub token_endpoint: String,
+}
+
+/// Endpoints found in the provider's `/.well-known/openid-configuration`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OidcEndpoints {
+    pub authorization_endpoint: String,
+    pub token_endpoint: String,
+}
+
+static DISCOVERED_OIDC_ENDPOINTS: std::sync::OnceLock<OidcEndpoints> = std::sync::OnceLock::new();
+
+/// Remember the endpoints discovered at startup (first call wins).
+pub fn set_discovered_oidc_endpoints(endpoints: OidcEndpoints) {
+    let _ = DISCOVERED_OIDC_ENDPOINTS.set(endpoints);
+}
+
+impl OidcConfig {
+    /// The pre-discovery behaviour: `OIDC_AUTHORITY` is the authorization
+    /// endpoint and the token endpoint is its sibling `token`
+    /// (e.g. Keycloak's `.../openid-connect/auth` and `.../openid-connect/token`).
+    pub fn legacy_endpoints(authority: &str) -> OidcEndpoints {
+        let base = format!("{}/", authority.trim_end_matches('/'));
+        let token_endpoint = url::Url::parse(&base)
+            .and_then(|url| url.join("../token"))
+            .map(|url| url.to_string())
+            .unwrap_or_else(|_| format!("{base}../token"));
+        OidcEndpoints {
+            authorization_endpoint: authority.to_string(),
+            token_endpoint,
+        }
+    }
+
+    /// URL of the provider's discovery document for `OIDC_AUTHORITY` used as
+    /// issuer (e.g. `https://id.example.com` or `<keycloak>/realms/<realm>`).
+    pub fn discovery_url(&self) -> String {
+        format!(
+            "{}/.well-known/openid-configuration",
+            self.authority.trim_end_matches('/')
+        )
+    }
+
+    /// Whether both endpoints were configured explicitly, so discovery is
+    /// not needed.
+    pub fn endpoints_configured_explicitly() -> bool {
+        var(OIDC_AUTHORIZATION_ENDPOINT).is_ok_and(|v| !v.trim().is_empty())
+            && var(OIDC_TOKEN_ENDPOINT).is_ok_and(|v| !v.trim().is_empty())
+    }
+
+    /// Apply discovered endpoints, keeping explicitly configured ones.
+    fn with_discovered_endpoints(mut self, discovered: Option<&OidcEndpoints>) -> Self {
+        let Some(discovered) = discovered else {
+            return self;
+        };
+        if non_empty_var(OIDC_AUTHORIZATION_ENDPOINT).is_none() {
+            self.authorization_endpoint = discovered.authorization_endpoint.clone();
+        }
+        if non_empty_var(OIDC_TOKEN_ENDPOINT).is_none() {
+            self.token_endpoint = discovered.token_endpoint.clone();
+        }
+        self
+    }
+}
+
+fn non_empty_var(name: &str) -> Option<String> {
+    var(name)
+        .ok()
+        .map(|v| v.trim().to_string())
+        .filter(|v| !v.is_empty())
 }
 
 #[derive(Serialize, Deserialize, ToSchema)]
@@ -265,9 +342,14 @@ impl EnvironmentService {
     fn handle_oidc() -> Option<OidcConfig> {
         let oidc_configured = is_env_var_present_and_true(OIDC_AUTH);
         if oidc_configured {
+            let authority = var(OIDC_AUTHORITY).expect("OIDC authority not configured");
+            let legacy = OidcConfig::legacy_endpoints(&authority);
             Some(OidcConfig {
                 redirect_uri: var(OIDC_REDIRECT_URI).expect("OIDC redirect uri not configured"),
-                authority: var(OIDC_AUTHORITY).expect("OIDC authority not configured"),
+                authorization_endpoint: non_empty_var(OIDC_AUTHORIZATION_ENDPOINT)
+                    .unwrap_or(legacy.authorization_endpoint),
+                token_endpoint: non_empty_var(OIDC_TOKEN_ENDPOINT).unwrap_or(legacy.token_endpoint),
+                authority,
                 client_id: var(OIDC_CLIENT_ID).expect("OIDC client id not configured"),
                 scope: var(OIDC_SCOPE).unwrap_or("openid profile email".to_string()),
                 jwks_uri: var(OIDC_JWKS).unwrap(),
@@ -467,7 +549,10 @@ impl EnvironmentService {
             reverse_proxy: self.reverse_proxy,
             basic_auth: self.http_basic,
             oidc_configured: self.oidc_configured,
-            oidc_config: self.oidc_config.clone(),
+            oidc_config: self
+                .oidc_config
+                .clone()
+                .map(|config| config.with_discovered_endpoints(DISCOVERED_OIDC_ENDPOINTS.get())),
             ws_url: String::new(),
             mopidy_integration_enabled: self.mopidy_integration_enabled,
             transcription_enabled: self.transcription_config.is_some(),

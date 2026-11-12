@@ -1900,12 +1900,23 @@ export interface components {
         };
         OidcConfig: {
             authority: string;
+            /**
+             * @description Where the browser is sent to log in. From `OIDC_AUTHORIZATION_ENDPOINT`,
+             *     the provider's discovery document, or - for older setups that put the
+             *     authorization endpoint into `OIDC_AUTHORITY` - the authority itself.
+             */
+            authorizationEndpoint: string;
             clientId: string;
             jwksUri: string;
             redirectUri: string;
             /** Format: int64 */
             refreshInterval: number;
             scope: string;
+            /**
+             * @description Where the code is exchanged for tokens. From `OIDC_TOKEN_ENDPOINT`,
+             *     the discovery document, or `<authority>/../token` for older setups.
+             */
+            tokenEndpoint: string;
         };
         OpmlModel: {
             content: string;
