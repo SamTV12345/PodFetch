@@ -10,6 +10,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { styles } from '@/styles/styles';
 import { useStore } from '@/store/store';
 import { validatePodFetchServer, validateBasicAuth, exchangeOidcCode, fetchUserProfile } from '@/client';
+import { oidcAuthorizationEndpoint, oidcTokenEndpoint } from '@/utils/oidcEndpoints';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { PodFetchLogo } from '@/components/PodFetchLogo';
 import { components } from '@/schema';
@@ -142,7 +143,7 @@ const ServerSetupScreen = () => {
                 ? oidcConfig.scope
                 : `${oidcConfig.scope} offline_access`;
 
-            const authUrl = new URL(`${oidcConfig.authority}/protocol/openid-connect/auth`);
+            const authUrl = new URL(oidcAuthorizationEndpoint(oidcConfig));
             authUrl.searchParams.set('client_id', oidcConfig.clientId);
             authUrl.searchParams.set('redirect_uri', redirectUri);
             authUrl.searchParams.set('response_type', 'code');
@@ -162,7 +163,7 @@ const ServerSetupScreen = () => {
 
                 if (code) {
                     // Exchange code for tokens
-                    const tokenEndpoint = `${oidcConfig.authority}/protocol/openid-connect/token`;
+                    const tokenEndpoint = oidcTokenEndpoint(oidcConfig);
                     const tokenResult = await exchangeOidcCode(
                         tokenEndpoint,
                         code,

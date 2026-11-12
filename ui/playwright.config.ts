@@ -48,5 +48,21 @@ export default defineConfig({
             stdout: 'pipe',
             stderr: 'pipe',
         },
+        // OIDC login (oidc.spec.ts): strict mock provider + a second podfetch
+        // instance on :8001 that authenticates against it.
+        {
+            command: 'node e2e/servers/mock-oidc.mjs',
+            url: 'http://127.0.0.1:9997/.well-known/openid-configuration',
+            reuseExistingServer: false,
+            timeout: 15_000,
+        },
+        {
+            command: 'bash e2e/servers/start-podfetch-oidc.sh',
+            url: 'http://127.0.0.1:8001/api/v1/sys/config',
+            reuseExistingServer: false,
+            timeout: 120_000,
+            stdout: 'pipe',
+            stderr: 'pipe',
+        },
     ],
 })

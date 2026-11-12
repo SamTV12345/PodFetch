@@ -317,5 +317,6 @@
   "mark-all-played-confirm": "¿Marcar todos los episodios de \"{{name}}\" como reproducidos? Se sincroniza con tus aplicaciones GPodder y no cuenta como tiempo de escucha.",
   "mark-all-unplayed-confirm": "¿Marcar todos los episodios de \"{{name}}\" como no reproducidos? Se restablecerá la posición de reproducción de todos los episodios.",
   "all-episodes-marked-played": "{{count}} episodios marcados como reproducidos",
-  "all-episodes-marked-unplayed": "{{count}} episodios marcados como no reproducidos"
+  "all-episodes-marked-unplayed": "{{count}} episodios marcados como no reproducidos",
+  "oidc-state-mismatch": "La respuesta del proveedor de inicio de sesión no coincide con este intento (state no coincide). Vuelve a iniciar sesión."
 }

@@ -18,6 +18,7 @@ pub mod login;
 pub mod mopidy;
 pub mod nfo;
 pub mod notification;
+pub mod oidc;
 pub mod playlist;
 pub mod podcast;
 pub mod podcast_episode_chapter;

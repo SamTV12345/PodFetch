@@ -317,5 +317,6 @@
   "mark-all-played-confirm": "Markér alle episoder af \"{{name}}\" som afspillet? Det synkroniseres med dine GPodder-apps og tæller ikke som lyttetid.",
   "mark-all-unplayed-confirm": "Markér alle episoder af \"{{name}}\" som ikke afspillet? Afspilningspositionen for alle episoder nulstilles.",
   "all-episodes-marked-played": "{{count}} episoder markeret som afspillet",
-  "all-episodes-marked-unplayed": "{{count}} episoder markeret som ikke afspillet"
+  "all-episodes-marked-unplayed": "{{count}} episoder markeret som ikke afspillet",
+  "oidc-state-mismatch": "Svaret fra login-udbyderen passer ikke til dette loginforsøg (state stemmer ikke overens). Log ind igen."
 }

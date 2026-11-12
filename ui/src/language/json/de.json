@@ -398,5 +398,6 @@
   "mark-all-played-confirm": "Alle Episoden von „{{name}}“ als gespielt markieren? Das wird mit deinen GPodder-Apps synchronisiert und zählt nicht als Hörzeit.",
   "mark-all-unplayed-confirm": "Alle Episoden von „{{name}}“ als ungespielt markieren? Die Wiedergabeposition aller Episoden wird zurückgesetzt.",
   "all-episodes-marked-played": "{{count}} Episoden als gespielt markiert",
-  "all-episodes-marked-unplayed": "{{count}} Episoden als ungespielt markiert"
+  "all-episodes-marked-unplayed": "{{count}} Episoden als ungespielt markiert",
+  "oidc-state-mismatch": "Die Antwort des Anmeldeanbieters passt nicht zu diesem Anmeldeversuch (state stimmt nicht überein). Bitte melde dich erneut an."
 }

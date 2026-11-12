@@ -317,5 +317,6 @@
   "mark-all-played-confirm": "Marquer tous les épisodes de « {{name}} » comme écoutés ? Cela est synchronisé avec vos applications GPodder et ne compte pas comme temps d'écoute.",
   "mark-all-unplayed-confirm": "Marquer tous les épisodes de « {{name}} » comme non écoutés ? La position de lecture de tous les épisodes sera réinitialisée.",
   "all-episodes-marked-played": "{{count}} épisodes marqués comme écoutés",
-  "all-episodes-marked-unplayed": "{{count}} épisodes marqués comme non écoutés"
+  "all-episodes-marked-unplayed": "{{count}} épisodes marqués comme non écoutés",
+  "oidc-state-mismatch": "La réponse du fournisseur de connexion ne correspond pas à cette tentative (state différent). Veuillez vous reconnecter."
 }
