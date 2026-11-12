@@ -1540,12 +1540,16 @@ export interface components {
         };
         OidcConfig: {
             authority: string;
+            /** @description Only sent by newer servers. */
+            authorizationEndpoint?: string;
             clientId: string;
             jwksUri: string;
             redirectUri: string;
             /** Format: int64 */
             refreshInterval: number;
             scope: string;
+            /** @description Only sent by newer servers. */
+            tokenEndpoint?: string;
         };
         OpmlModel: {
             content: string;

@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useStore } from '@/store/store';
 import { refreshOidcToken } from '@/client';
+import { oidcTokenEndpoint } from '@/utils/oidcEndpoints';
 
 /**
  * Hook that automatically refreshes OIDC tokens before they expire.
@@ -28,7 +29,7 @@ export const useAuthRefresh = () => {
         }
 
         try {
-            const tokenEndpoint = `${serverConfig.oidcConfig.authority}/protocol/openid-connect/token`;
+            const tokenEndpoint = oidcTokenEndpoint(serverConfig.oidcConfig);
             const result = await refreshOidcToken(
                 tokenEndpoint,
                 oidcRefreshToken,
