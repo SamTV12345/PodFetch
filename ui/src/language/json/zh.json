@@ -374,5 +374,6 @@
   "mark-all-played-confirm": "将“{{name}}”的所有剧集标记为已播放？这会同步到你的 GPodder 应用，且不计入收听时间。",
   "mark-all-unplayed-confirm": "将“{{name}}”的所有剧集标记为未播放？所有剧集的播放进度将被重置。",
   "all-episodes-marked-played": "已将 {{count}} 集标记为已播放",
-  "all-episodes-marked-unplayed": "已将 {{count}} 集标记为未播放"
+  "all-episodes-marked-unplayed": "已将 {{count}} 集标记为未播放",
+  "oidc-state-mismatch": "登录提供方的响应与本次登录尝试不匹配（state 不一致）。请重新登录。"
 }

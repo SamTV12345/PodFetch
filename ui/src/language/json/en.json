@@ -402,5 +402,6 @@
   "mark-all-played-confirm": "Mark every episode of \"{{name}}\" as played? This is synced to your GPodder apps and does not count as listening time.",
   "mark-all-unplayed-confirm": "Mark every episode of \"{{name}}\" as unplayed? The playback position of all episodes will be reset.",
   "all-episodes-marked-played": "{{count}} episodes marked as played",
-  "all-episodes-marked-unplayed": "{{count}} episodes marked as unplayed"
+  "all-episodes-marked-unplayed": "{{count}} episodes marked as unplayed",
+  "oidc-state-mismatch": "The login response did not match this login attempt (state mismatch). Please sign in again."
 }

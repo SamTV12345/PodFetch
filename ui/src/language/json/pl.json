@@ -317,5 +317,6 @@
   "mark-all-played-confirm": "Oznaczyć wszystkie odcinki „{{name}}” jako odtworzone? Zostanie to zsynchronizowane z aplikacjami GPodder i nie liczy się jako czas słuchania.",
   "mark-all-unplayed-confirm": "Oznaczyć wszystkie odcinki „{{name}}” jako nieodtworzone? Pozycja odtwarzania wszystkich odcinków zostanie zresetowana.",
   "all-episodes-marked-played": "Oznaczono {{count}} odcinków jako odtworzone",
-  "all-episodes-marked-unplayed": "Oznaczono {{count}} odcinków jako nieodtworzone"
+  "all-episodes-marked-unplayed": "Oznaczono {{count}} odcinków jako nieodtworzone",
+  "oidc-state-mismatch": "Odpowiedź dostawcy logowania nie pasuje do tej próby logowania (niezgodny state). Zaloguj się ponownie."
 }

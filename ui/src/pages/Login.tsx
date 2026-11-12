@@ -12,6 +12,7 @@ import { OIDCButton } from '../components/OIDCButton'
 import { Mic } from 'lucide-react'
 import {$api} from "../utils/http";
 import {setAuth, setLogin} from "../utils/login";
+import {takeLoginError} from "../utils/oidc";
 
 export type LoginData = {
     username: string,
@@ -22,7 +23,8 @@ export const Login = () => {
     const configModel = $api.useQuery('get', '/api/v1/sys/config')
     const loginMutation = $api.useMutation('post', '/api/v1/login')
     const navigate = useNavigate()
-    const [alert, setAlert] = useState<string>()
+    // An OIDC login that failed before the app was rendered (see main.tsx).
+    const [alert, setAlert] = useState<string | undefined>(() => takeLoginError() ?? undefined)
     const { t } = useTranslation()
 
     const { control, handleSubmit, formState: {} } = useForm<LoginData>({
@@ -119,7 +121,15 @@ export const Login = () => {
                 )}
 
                 {configModel.data?.oidcConfigured && configModel.data?.oidcConfig && (
-                    <OIDCButton />
+                    <div className="flex flex-col gap-6">
+                        {alert && !configModel.data?.basicAuth && (
+                            <div className="ui-danger-surface px-6 py-5 rounded-lg relative text-sm ui-text-danger" role="alert">
+                                <span className="block font-bold mb-2">{t('error-authenticating')}</span>
+                                <span className="block sm:inline">{alert}</span>
+                            </div>
+                        )}
+                        <OIDCButton />
+                    </div>
                 )}
             </div>
         </div>
