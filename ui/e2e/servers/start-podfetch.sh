@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # Prepares a clean runtime directory (fresh sqlite DB, built UI as ./static)
 # and starts the podfetch binary for the playwright suite.
+#
+# E2E_RUN_DIR, E2E_PORT and E2E_SERVER_URL allow a second instance (see
+# start-podfetch-oidc.sh); the defaults are the main instance on port 8000.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-RUN_DIR="$ROOT/.e2e-run"
+RUN_DIR="${E2E_RUN_DIR:-$ROOT/.e2e-run}"
 BINARY="$ROOT/target/debug/podfetch"
 
 if [ ! -x "$BINARY" ]; then
@@ -30,7 +33,8 @@ case "$(uname -s)" in
     MINGW* | MSYS* | CYGWIN*) export DATABASE_URL="podcast.db" ;;
     *) export DATABASE_URL="sqlite://$RUN_DIR/podcast.db" ;;
 esac
-export SERVER_URL="http://127.0.0.1:8000"
+export SERVER_URL="${E2E_SERVER_URL:-http://127.0.0.1:8000}"
+export PORT="${E2E_PORT:-8000}"
 export TRANSCRIPTION_API_BASE_URL="http://127.0.0.1:9998"
 
 exec "$BINARY"

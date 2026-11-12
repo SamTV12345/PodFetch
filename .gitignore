@@ -20,5 +20,6 @@ settings.local.json
 # superpowers scratch
 .superpowers/
 .e2e-run/
+.e2e-run-oidc/
 ui/playwright-report/
 ui/test-results/
