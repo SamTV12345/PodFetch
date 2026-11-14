@@ -21,7 +21,7 @@ impl PermissionsDto {
             download: true,
             update: is_admin,
             delete: is_admin,
-            upload: is_admin,
+            upload: is_admin || role.eq_ignore_ascii_case("uploader"),
             access_all_libraries: true,
             access_all_tags: true,
             access_explicit_content: true,

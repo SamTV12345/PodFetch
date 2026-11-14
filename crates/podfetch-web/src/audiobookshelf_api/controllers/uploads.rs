@@ -30,9 +30,14 @@ use utoipa_axum::routes;
 )]
 pub async fn upload(
     State(state): State<AppState>,
-    _user: AuthenticatedUser,
+    AuthenticatedUser(user): AuthenticatedUser,
     mut multipart: Multipart,
 ) -> Result<Json<Value>, CustomError> {
+    // Writes files into the library folders: admins and uploaders only, in
+    // line with the `upload` permission reported at login.
+    if !user.is_privileged_user() {
+        return Err(CustomErrorInner::Forbidden(Warning).into());
+    }
     let mut library_id: Option<String> = None;
     let mut author: Option<String> = None;
     let mut title: Option<String> = None;

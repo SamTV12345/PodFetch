@@ -165,7 +165,7 @@ fn permissions_for_role(role: &str) -> Value {
         "download": true,
         "update": is_admin,
         "delete": is_admin,
-        "upload": is_admin,
+        "upload": is_admin || role.eq_ignore_ascii_case("uploader"),
         "accessAllLibraries": true,
         "accessAllTags": true,
         "accessExplicitContent": true,

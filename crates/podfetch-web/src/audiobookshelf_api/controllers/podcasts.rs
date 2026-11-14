@@ -45,9 +45,12 @@ pub struct GetPodcastFeedRequest {
 )]
 pub async fn get_podcast_feed(
     State(_state): State<AppState>,
-    AuthenticatedUser(_user): AuthenticatedUser,
+    AuthenticatedUser(user): AuthenticatedUser,
     Json(body): Json<GetPodcastFeedRequest>,
 ) -> Result<Json<Value>, CustomError> {
+    // The preview makes the server fetch an arbitrary URL; only users who
+    // may add podcasts at all get to do that.
+    PodcastService::ensure_can_add_podcasts(&user, 0)?;
     let feed_url = body.rss_feed.trim().to_string();
     if feed_url.is_empty()
         || (!feed_url.starts_with("http://") && !feed_url.starts_with("https://"))
@@ -106,6 +109,9 @@ pub async fn create_podcast(
     headers: axum::http::HeaderMap,
     Json(body): Json<CreatePodcastRequest>,
 ) -> Result<Json<Value>, CustomError> {
+    // Same rules as POST /api/v1/podcasts/feed: admins and uploaders, other
+    // users only within USER_PODCAST_LIMIT.
+    PodcastService::ensure_can_add_podcasts(&user, 1)?;
     let feed_url = body.media.metadata.feed_url.trim().to_string();
     if feed_url.is_empty() {
         return Err(CustomErrorInner::BadRequest(
