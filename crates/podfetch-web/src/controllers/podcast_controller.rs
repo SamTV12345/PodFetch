@@ -30,9 +30,9 @@ pub use crate::podcast::{
     SearchType::{ITunes, Podindex},
 };
 use crate::podcast::{
-    build_podcast_search_plan, check_podcast_add_permission, ensure_podindex_configured,
-    ensure_proxy_api_access, map_podcast_error, map_proxy_podcast_error, parse_search_type,
-    require_admin, require_privileged, require_proxy_episode, sanitize_proxy_request_headers,
+    build_podcast_search_plan, ensure_podindex_configured, ensure_proxy_api_access,
+    map_podcast_error, map_proxy_podcast_error, parse_search_type, require_admin,
+    require_privileged, require_proxy_episode, sanitize_proxy_request_headers,
     spawn_podindex_download,
 };
 use crate::services::file::service::{FileService, perform_podcast_variable_replacement};
@@ -41,10 +41,7 @@ use common_infrastructure::config::is_env_var_present_and_true;
 use common_infrastructure::http::get_http_client;
 use common_infrastructure::request::add_basic_auth_headers_conditionally;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
-use podfetch_domain::podcast::PodcastRepository;
 use podfetch_domain::user::User;
-use podfetch_persistence::db::database;
-use podfetch_persistence::podcast::DieselPodcastRepository;
 use reqwest::header::HeaderMap as ReqwestHeaderMap;
 use tokio::runtime::Runtime;
 
@@ -251,16 +248,7 @@ pub async fn add_podcast(
     headers: HeaderMap,
     Json(track_id): Json<PodcastAddModel>,
 ) -> Result<Json<PodcastDto>, CustomError> {
-    let current_count = DieselPodcastRepository::new(database())
-        .count_by_added_by(requester.id)
-        .map_err(CustomError::from)?;
-    check_podcast_add_permission::<CustomError>(
-        requester.is_privileged_user(),
-        ENVIRONMENT_SERVICE.user_podcast_limit,
-        current_count,
-        1,
-    )
-    .map_err(map_podcast_error)?;
+    PodcastService::ensure_can_add_podcasts(&requester, 1)?;
 
     let query: Vec<(&str, String)> = vec![
         ("id", track_id.track_id.to_string()),
@@ -306,16 +294,7 @@ pub async fn add_podcast_by_feed(
     headers: HeaderMap,
     Json(rss_feed): Json<PodcastRSSAddModel>,
 ) -> Result<Json<PodcastDto>, CustomError> {
-    let current_count = DieselPodcastRepository::new(database())
-        .count_by_added_by(requester.id)
-        .map_err(CustomError::from)?;
-    check_podcast_add_permission::<CustomError>(
-        requester.is_privileged_user(),
-        ENVIRONMENT_SERVICE.user_podcast_limit,
-        current_count,
-        1,
-    )
-    .map_err(map_podcast_error)?;
+    PodcastService::ensure_can_add_podcasts(&requester, 1)?;
     let mut header_map = ReqwestHeaderMap::new();
     header_map.insert("User-Agent", COMMON_USER_AGENT.parse().unwrap());
     add_basic_auth_headers_conditionally(rss_feed.clone().rss_feed_url, &mut header_map);
@@ -363,16 +342,7 @@ pub async fn import_podcasts_from_opml(
 ) -> Result<StatusCode, CustomError> {
     let document = OPML::from_str(&opml.content).unwrap();
     let outline_count = count_opml_feeds(&document.body.outlines);
-    let current_count = DieselPodcastRepository::new(database())
-        .count_by_added_by(requester.id)
-        .map_err(CustomError::from)?;
-    check_podcast_add_permission::<CustomError>(
-        requester.is_privileged_user(),
-        ENVIRONMENT_SERVICE.user_podcast_limit,
-        current_count,
-        outline_count,
-    )
-    .map_err(map_podcast_error)?;
+    PodcastService::ensure_can_add_podcasts(&requester, outline_count)?;
 
     let user_id = requester.id;
     spawn_blocking(move || {
@@ -414,16 +384,7 @@ pub async fn add_podcast_from_podindex(
     Extension(requester): Extension<User>,
     Json(id): Json<PodcastAddModel>,
 ) -> Result<StatusCode, CustomError> {
-    let current_count = DieselPodcastRepository::new(database())
-        .count_by_added_by(requester.id)
-        .map_err(CustomError::from)?;
-    check_podcast_add_permission::<CustomError>(
-        requester.is_privileged_user(),
-        ENVIRONMENT_SERVICE.user_podcast_limit,
-        current_count,
-        1,
-    )
-    .map_err(map_podcast_error)?;
+    PodcastService::ensure_can_add_podcasts(&requester, 1)?;
     ensure_podindex_configured::<CustomError>(
         !ENVIRONMENT_SERVICE.podindex_api_key.is_empty()
             && !ENVIRONMENT_SERVICE.podindex_api_secret.is_empty(),

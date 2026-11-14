@@ -28,6 +28,19 @@ fn create_user_for_audiobookshelf(state: &AppState) -> podfetch_domain::user::Us
         .expect("assign unique api_key for test user")
 }
 
+fn create_user_with_role(state: &AppState, role: &str) -> podfetch_domain::user::User {
+    let mut user = create_user_for_audiobookshelf(state);
+    user.role = role.to_string();
+    state
+        .user_admin_service
+        .update_user(user)
+        .expect("assign role to test user")
+}
+
+fn create_admin_for_audiobookshelf(state: &AppState) -> podfetch_domain::user::User {
+    create_user_with_role(state, "admin")
+}
+
 // ── /ping + /status (unauthenticated) ───────────────────────────────────────
 
 #[tokio::test]
@@ -1740,7 +1753,7 @@ async fn file_watcher_attaches_to_existing_folder_without_panicking() {
 async fn upload_writes_file_and_returns_target_dir() {
     let mut server = handle_test_startup().await;
     let state = AppState::new();
-    let user = create_user_for_audiobookshelf(&state);
+    let user = create_admin_for_audiobookshelf(&state);
 
     let lib = state
         .audiobookshelf_library_service
@@ -1809,7 +1822,7 @@ async fn upload_writes_file_and_returns_target_dir() {
 async fn upload_without_library_returns_4xx() {
     let mut server = handle_test_startup().await;
     let state = AppState::new();
-    let user = create_user_for_audiobookshelf(&state);
+    let user = create_admin_for_audiobookshelf(&state);
     login_audiobookshelf(&mut server, &user).await;
 
     let resp = server
@@ -1836,7 +1849,7 @@ async fn upload_without_library_returns_4xx() {
 async fn upload_without_files_returns_4xx() {
     let mut server = handle_test_startup().await;
     let state = AppState::new();
-    let user = create_user_for_audiobookshelf(&state);
+    let user = create_admin_for_audiobookshelf(&state);
     let lib = state
         .audiobookshelf_library_service
         .list()
@@ -1864,7 +1877,7 @@ async fn upload_without_files_returns_4xx() {
 async fn scan_report_exposes_added_updated_counters() {
     let mut server = handle_test_startup().await;
     let state = AppState::new();
-    let user = create_user_for_audiobookshelf(&state);
+    let user = create_admin_for_audiobookshelf(&state);
     let lib = state
         .audiobookshelf_library_service
         .list()
@@ -2943,4 +2956,146 @@ fn write_temp_audio_file(bytes: &[u8], filename: &str) -> String {
     let path = dir.join(unique);
     std::fs::write(&path, bytes).expect("write temp file");
     path.to_string_lossy().to_string()
+}
+
+// ── Permissions: server-wide actions follow the native API's rules ─────────
+
+#[tokio::test]
+#[serial]
+async fn regular_user_cannot_subscribe_the_server_to_feeds() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    // Role `user` with the default USER_PODCAST_LIMIT=0.
+    let user = create_user_for_audiobookshelf(&state);
+    login_audiobookshelf(&mut server, &user).await;
+    let feed_url = "http://127.0.0.1:9/abs-permission-test.xml";
+
+    let create = server
+        .test_server
+        .post("/api/podcasts")
+        .json(&json!({ "media": { "metadata": { "feedUrl": feed_url } } }))
+        .await;
+    assert_eq!(create.status_code().as_u16(), 403);
+
+    // The feed preview would make the server fetch the URL as well.
+    let preview = server
+        .test_server
+        .post("/api/podcasts/feed")
+        .json(&json!({ "rssFeed": feed_url }))
+        .await;
+    assert_eq!(preview.status_code().as_u16(), 403);
+
+    // The native API agrees.
+    let native = server
+        .test_server
+        .post("/api/v1/podcasts/feed")
+        .json(&json!({ "rssFeedUrl": feed_url }))
+        .await;
+    assert_eq!(native.status_code().as_u16(), 403);
+
+    use podfetch_domain::podcast::PodcastRepository;
+    let added = podfetch_persistence::podcast::DieselPodcastRepository::new(
+        podfetch_persistence::db::database(),
+    )
+    .count_by_added_by(user.id)
+    .unwrap();
+    assert_eq!(added, 0);
+}
+
+#[tokio::test]
+#[serial]
+async fn privileged_users_pass_the_podcast_permission_check() {
+    for role in ["admin", "uploader"] {
+        let mut server = handle_test_startup().await;
+        let state = AppState::new();
+        let user = create_user_with_role(&state, role);
+        login_audiobookshelf(&mut server, &user).await;
+
+        // Past the permission check the request fails on the (invalid) URL.
+        let preview = server
+            .test_server
+            .post("/api/podcasts/feed")
+            .json(&json!({ "rssFeed": "not-a-url" }))
+            .await;
+        assert_eq!(preview.status_code().as_u16(), 400, "role {role}");
+    }
+}
+
+#[tokio::test]
+#[serial]
+async fn regular_user_cannot_upload_or_scan() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    login_audiobookshelf(&mut server, &user).await;
+    let library_id = state
+        .audiobookshelf_library_service
+        .find_default_podcasts_library()
+        .unwrap()
+        .unwrap()
+        .id;
+
+    let upload = server
+        .test_server
+        .post("/api/upload")
+        .multipart(
+            axum_test::multipart::MultipartForm::new()
+                .add_text("library", library_id.clone())
+                .add_text("title", "Not allowed")
+                .add_part(
+                    "file",
+                    axum_test::multipart::Part::bytes(b"x".to_vec())
+                        .file_name("a.mp3")
+                        .mime_type("audio/mpeg"),
+                ),
+        )
+        .await;
+    assert_eq!(upload.status_code().as_u16(), 403);
+
+    let scan = server
+        .test_server
+        .post(&format!("/api/libraries/{library_id}/scan"))
+        .await;
+    assert_eq!(scan.status_code().as_u16(), 403);
+}
+
+#[tokio::test]
+#[serial]
+async fn uploader_may_upload_but_not_scan() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_with_role(&state, "uploader");
+    login_audiobookshelf(&mut server, &user).await;
+    let library_id = state
+        .audiobookshelf_library_service
+        .find_default_podcasts_library()
+        .unwrap()
+        .unwrap()
+        .id;
+
+    // Past the permission check: rejected by the upload itself (no files /
+    // no library folder), not as forbidden.
+    let upload = server
+        .test_server
+        .post("/api/upload")
+        .multipart(
+            axum_test::multipart::MultipartForm::new().add_text("library", library_id.clone()),
+        )
+        .await;
+    assert!(upload.status_code().is_client_error());
+    assert_ne!(upload.status_code().as_u16(), 403);
+
+    let scan = server
+        .test_server
+        .post(&format!("/api/libraries/{library_id}/scan"))
+        .await;
+    assert_eq!(scan.status_code().as_u16(), 403);
+}
+
+#[test]
+fn reported_upload_permission_matches_the_upload_endpoint() {
+    use crate::audiobookshelf_api::dto::user::PermissionsDto;
+    assert!(PermissionsDto::for_role("admin").upload);
+    assert!(PermissionsDto::for_role("uploader").upload);
+    assert!(!PermissionsDto::for_role("user").upload);
 }

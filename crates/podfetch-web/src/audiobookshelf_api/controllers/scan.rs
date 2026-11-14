@@ -5,7 +5,7 @@ use crate::audiobookshelf_api::socket_io::broadcaster;
 use crate::audiobookshelf_api::socket_io::events::{EVENT_ITEM_ADDED, EVENT_ITEM_UPDATED};
 use axum::Json;
 use axum::extract::{Path, State};
-use common_infrastructure::error::CustomError;
+use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use serde_json::{Value, json};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -19,9 +19,13 @@ use utoipa_axum::routes;
 )]
 pub async fn scan_library(
     State(state): State<AppState>,
-    _user: AuthenticatedUser,
+    AuthenticatedUser(user): AuthenticatedUser,
     Path(library_id): Path<String>,
 ) -> Result<Json<Value>, CustomError> {
+    // Library scans are an admin task (audiobookshelf: admin only).
+    if !user.is_admin() {
+        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
+    }
     let report = state.audiobookshelf_scanner.scan_library(&library_id)?;
     if let Ok(Some(library)) = state.audiobookshelf_library_service.find_by_id(&library_id) {
         broadcaster::emit_library_updated(&library);

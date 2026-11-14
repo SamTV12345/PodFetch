@@ -515,6 +515,26 @@ impl PodcastService {
             .map_err(|e| common_infrastructure::error::map_db_error(e, ErrorSeverity::Critical))
     }
 
+    /// Whether `user` may add `adding` more podcasts to the server: admins
+    /// and uploaders always, other users only within USER_PODCAST_LIMIT
+    /// (0 = not at all). Every endpoint that subscribes the server to a feed -
+    /// native API and compatibility layers alike - must call this.
+    pub fn ensure_can_add_podcasts(
+        user: &podfetch_domain::user::User,
+        adding: u32,
+    ) -> Result<(), CustomError> {
+        let current_count = podcast_repo()
+            .count_by_added_by(user.id)
+            .map_err(CustomError::from)?;
+        crate::podcast::check_podcast_add_permission::<CustomError>(
+            user.is_privileged_user(),
+            common_infrastructure::runtime::ENVIRONMENT_SERVICE.user_podcast_limit,
+            current_count,
+            adding,
+        )
+        .map_err(crate::podcast::map_podcast_error)
+    }
+
     /// Mirror subscription changes made on a GPodder device that shares its
     /// subscriptions with the web UI into the user's favorites.
     ///
