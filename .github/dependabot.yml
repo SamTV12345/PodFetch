@@ -39,6 +39,17 @@ updates:
           - "patch"
     # Expo SDK pins exact versions of native modules; major bumps break the
     # build. Upgrade via `npx expo install --fix` instead.
+    # React Native and the native modules are pinned by the Expo SDK even
+    # within 0.x "minor" versions (react-native 0.86 -> 0.88 broke the
+    # Android build: AGP needed a newer Gradle than Expo's template), so
+    # only Expo SDK upgrades may move them.
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
+      - dependency-name: "@types/react"
+      - dependency-name: "react-native"
+      - dependency-name: "react-native-*"
+      - dependency-name: "@react-native-community/*"
+      - dependency-name: "@react-native/*"

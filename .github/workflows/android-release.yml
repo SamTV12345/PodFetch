@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*.*.*"
+  # Build (unsigned, not uploaded) on PRs that touch the app, so dependency
+  # bumps that break the native build show up before a release.
+  pull_request:
+    paths:
+      - "mobile/**"
+      - ".github/workflows/android-release.yml"
 
 jobs:
   build:
@@ -41,12 +47,17 @@ jobs:
       - name: Generate native project
         run: npx expo prebuild --platform android
 
+      - name: Check Expo SDK compatibility
+        run: npx expo install --check
+
       - name: Decode keystore
+        if: startsWith(github.ref, 'refs/tags/')
         run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
 
       - name: Build APK
+        if: startsWith(github.ref, 'refs/tags/')
         working-directory: mobile/android
         run: ./gradlew assembleRelease
         env:
@@ -54,7 +65,13 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
+      - name: Build APK (unsigned check)
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        working-directory: mobile/android
+        run: ./gradlew assembleDebug
+
       - name: Upload APK to Release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: mobile/android/app/build/outputs/apk/release/app-release.apk
