@@ -1553,9 +1553,9 @@ dependencies = [
 
 [[package]]
 name = "frankenstein"
-version = "0.52.1"
+version = "0.53.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ac41b3efdf616c36be9e544f1e6866cb4df69651b3c76ca2ab852fe57154885"
+checksum = "5978d61a2c53e82b1dcbd434eaa43d5db3623b1dcea91ece0360a4900c3db936"
 dependencies = [
  "bon",
  "macro_rules_attribute",
@@ -4912,7 +4912,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix 1.1.5",
  "windows-sys 0.61.2",
