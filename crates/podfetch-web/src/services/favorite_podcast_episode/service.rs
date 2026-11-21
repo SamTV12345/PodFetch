@@ -52,4 +52,8 @@ impl FavoritePodcastEpisodeService {
     ) -> Result<Vec<FavoritePodcastEpisode>, CustomError> {
         self.repository.get_favorites_by_user_id(user_id)
     }
+
+    pub fn delete_by_podcast_id(&self, podcast_id: Uuid) -> Result<usize, CustomError> {
+        self.repository.delete_by_podcast_id(podcast_id)
+    }
 }

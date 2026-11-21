@@ -138,4 +138,23 @@ impl FavoritePodcastEpisodeRepository for DieselFavoritePodcastEpisodeRepository
             .map(|favorite| favorite.map(|found| found.favorite).unwrap_or(false))
             .map_err(Into::into)
     }
+
+    fn delete_by_podcast_id(&self, podcast_id_to_delete: Uuid) -> Result<usize, Self::Error> {
+        use self::favorite_podcast_episodes::dsl as fpe_dsl;
+        use self::favorite_podcast_episodes::table as fpe_table;
+        use crate::schema::podcast_episodes::dsl as pe_dsl;
+
+        let conn = &mut self.database.connection()?;
+        let episode_ids: Vec<String> = pe_dsl::podcast_episodes
+            .filter(pe_dsl::podcast_id.eq(podcast_id_to_delete.to_string()))
+            .select(pe_dsl::id)
+            .load(conn)?;
+        // Chunked to stay below the bind parameter limit for large podcasts.
+        let mut deleted = 0;
+        for chunk in episode_ids.chunks(500) {
+            deleted += diesel::delete(fpe_table.filter(fpe_dsl::episode_id.eq_any(chunk)))
+                .execute(conn)?;
+        }
+        Ok(deleted)
+    }
 }

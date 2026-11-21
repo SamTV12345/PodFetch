@@ -664,19 +664,36 @@ pub async fn delete_podcast(
     require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
 
     let (podcast_uuid, podcast) = resolve_podcast(&id)?;
-    if data.delete_files {
-        spawn_blocking(move || FileService::delete_podcast_files(&podcast))
-            .await
-            .expect(
-                "Error deleting \
-        files",
-            );
-    }
+    // Collect the file paths while the episodes still exist, but delete the
+    // files only after the database rows: if a database step fails, the
+    // podcast stays complete and the delete can simply be retried.
+    let files = data
+        .delete_files
+        .then(|| FileService::collect_podcast_files(&podcast));
+
     WatchtimeService::delete_watchtime(podcast_uuid)?;
     PodcastEpisodeService::delete_episodes_of_podcast(podcast_uuid)?;
     state.tag_service.delete_podcast_tags(podcast_uuid)?;
-
     PodcastService::delete_podcast(podcast_uuid)?;
+
+    if let Some(files) = files {
+        let directory = files.podcast.directory_name.clone();
+        match spawn_blocking(move || FileService::remove_podcast_files(&files)).await {
+            Ok(Ok(())) => {}
+            // The podcast is gone; leftover files must not turn that into an
+            // error the user can't act on (the podcast can't be deleted twice).
+            Ok(Err(err)) => {
+                tracing::error!(
+                    "Podcast {podcast_uuid} deleted, but its files in {directory} could not be removed: {err}"
+                )
+            }
+            Err(err) => {
+                tracing::error!(
+                    "Podcast {podcast_uuid} deleted, but removing its files in {directory} failed: {err}"
+                )
+            }
+        }
+    }
     Ok(StatusCode::OK)
 }
 use axum::response::Response;
