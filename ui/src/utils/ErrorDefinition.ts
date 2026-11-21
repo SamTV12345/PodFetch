@@ -12,6 +12,7 @@ export class APIError extends Error {
     }
 
     toString() {
-        return t(this.details.errorCode, this.details.arguments);
+        // i18next 27 no longer accepts `undefined` as options.
+        return t(this.details.errorCode, this.details.arguments ?? {});
     }
 }
