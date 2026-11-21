@@ -1499,4 +1499,111 @@ mod tests {
             3
         );
     }
+
+    fn podcast_with_directory(directory: &str) -> String {
+        let name = format!("Delete Test {}", uuid::Uuid::new_v4().simple());
+        crate::services::podcast::service::PodcastService::add_podcast_to_database(
+            &name,
+            &name,
+            &format!("https://example.com/{}.xml", uuid::Uuid::new_v4().simple()),
+            "http://localhost:8080/ui/default.jpg",
+            directory,
+        )
+        .unwrap()
+        .id
+        .to_string()
+    }
+
+    fn favorite_rows_for_podcast(podcast_id: &str) -> i64 {
+        use podfetch_persistence::schema::favorite_podcast_episodes::dsl as fpe;
+        let episode_ids: Vec<String> = pe_dsl::podcast_episodes
+            .filter(pe_dsl::podcast_id.eq(podcast_id))
+            .select(pe_dsl::id)
+            .load(&mut get_connection())
+            .unwrap();
+        fpe::favorite_podcast_episodes
+            .filter(fpe::episode_id.eq_any(episode_ids))
+            .count()
+            .get_result(&mut get_connection())
+            .unwrap()
+    }
+
+    fn episode_rows_for_podcast(podcast_id: &str) -> i64 {
+        pe_dsl::podcast_episodes
+            .filter(pe_dsl::podcast_id.eq(podcast_id))
+            .count()
+            .get_result(&mut get_connection())
+            .unwrap()
+    }
+
+    fn temp_podcast_dir() -> std::path::PathBuf {
+        std::env::temp_dir()
+            .join("podfetch-delete-tests")
+            .join(uuid::Uuid::new_v4().simple().to_string())
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_podcast_with_favourited_episode() {
+        let server = handle_test_startup().await;
+        let podcast_id = podcast_with_directory(temp_podcast_dir().to_str().unwrap());
+        let episode = insert_episode(&podcast_id, "fav-delete-1", "fav-delete-guid-1", "Fav 1");
+        insert_episode(&podcast_id, "fav-delete-2", "fav-delete-guid-2", "Fav 2");
+        crate::services::favorite_podcast_episode::service::FavoritePodcastEpisodeService::default_service()
+            .set_favorite(admin_user_id(), uuid::Uuid::parse_str(&episode.id).unwrap(), true)
+            .unwrap();
+        assert_eq!(favorite_rows_for_podcast(&podcast_id), 1);
+
+        let response = server
+            .test_server
+            .delete(&format!("/api/v1/podcasts/{}", podcast_id))
+            .json(&json!({ "delete_files": false }))
+            .await;
+        assert_eq!(response.status_code(), 200, "{}", response.text());
+
+        assert_eq!(episode_rows_for_podcast(&podcast_id), 0);
+        assert_eq!(favorite_rows_for_podcast(&podcast_id), 0);
+        let get = server
+            .test_server
+            .get(&format!("/api/v1/podcasts/{}", podcast_id))
+            .await;
+        assert_eq!(get.status_code(), 404);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_podcast_files_when_directory_is_already_gone() {
+        let server = handle_test_startup().await;
+        let missing = temp_podcast_dir();
+        assert!(!missing.exists());
+        let podcast_id = podcast_with_directory(missing.to_str().unwrap());
+        insert_episode(&podcast_id, "gone-dir-1", "gone-dir-guid-1", "Gone 1");
+
+        let response = server
+            .test_server
+            .delete(&format!("/api/v1/podcasts/{}", podcast_id))
+            .json(&json!({ "delete_files": true }))
+            .await;
+        assert_eq!(response.status_code(), 200, "{}", response.text());
+        assert_eq!(episode_rows_for_podcast(&podcast_id), 0);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_podcast_removes_its_directory() {
+        let server = handle_test_startup().await;
+        let directory = temp_podcast_dir();
+        std::fs::create_dir_all(directory.join("Episode 1")).unwrap();
+        std::fs::write(directory.join("Episode 1").join("podcast.mp3"), b"audio").unwrap();
+        let podcast_id = podcast_with_directory(directory.to_str().unwrap());
+        insert_episode(&podcast_id, "dir-delete-1", "dir-delete-guid-1", "Dir 1");
+
+        let response = server
+            .test_server
+            .delete(&format!("/api/v1/podcasts/{}", podcast_id))
+            .json(&json!({ "delete_files": true }))
+            .await;
+        assert_eq!(response.status_code(), 200, "{}", response.text());
+        assert!(!directory.exists(), "podcast directory should be removed");
+    }
 }

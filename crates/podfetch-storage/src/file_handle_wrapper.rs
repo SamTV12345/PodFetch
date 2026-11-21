@@ -100,8 +100,21 @@ impl FileHandleWrapper {
     ) -> Result<(), CustomError> {
         match resolve_file_handler_type(podcast.download_location.clone()) {
             FileHandlerType::Local => {
-                LocalStorageBackend::remove_dir(&podcast.directory_name)
-                    .map_err(Self::map_storage_error)?;
+                match LocalStorageBackend::remove_dir(&podcast.directory_name) {
+                    Ok(()) => {}
+                    // Already gone (removed by hand or by an interrupted
+                    // delete): that is the state we want. Still clean up the
+                    // episodes stored in S3 below.
+                    Err(crate::StorageError::Io { source, .. })
+                        if source.kind() == std::io::ErrorKind::NotFound =>
+                    {
+                        tracing::debug!(
+                            "Podcast directory {} is already gone",
+                            podcast.directory_name
+                        );
+                    }
+                    Err(err) => return Err(Self::map_storage_error(err)),
+                }
                 episodes.iter().for_each(|episode| {
                     if let Some(download_type) = &episode.download_location {
                         let file_type = FileHandlerType::from(download_type.as_str());
@@ -195,5 +208,37 @@ impl FileHandleWrapper {
             )
             .into()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{FileHandleWrapper, PodcastFileInfo};
+
+    fn local_podcast(directory: &str) -> PodcastFileInfo {
+        PodcastFileInfo {
+            id: 0,
+            image_url: String::new(),
+            directory_name: directory.to_string(),
+            download_location: Some("Local".to_string()),
+        }
+    }
+
+    #[test]
+    fn removing_a_missing_local_directory_succeeds() {
+        let missing = std::env::temp_dir().join(format!("podfetch-missing-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&missing);
+        assert!(
+            FileHandleWrapper::remove_dir(&local_podcast(missing.to_str().unwrap()), &[]).is_ok()
+        );
+    }
+
+    #[test]
+    fn removing_an_existing_local_directory_deletes_it() {
+        let dir = std::env::temp_dir().join(format!("podfetch-existing-{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("sub")).unwrap();
+        std::fs::write(dir.join("sub").join("file.mp3"), b"x").unwrap();
+        FileHandleWrapper::remove_dir(&local_podcast(dir.to_str().unwrap()), &[]).unwrap();
+        assert!(!dir.exists());
     }
 }

@@ -337,6 +337,10 @@ impl PodcastEpisodeUseCase {
     }
 
     pub fn delete_episodes_of_podcast(podcast_id: Uuid) -> Result<(), CustomError> {
+        // Rows that reference the episodes without `ON DELETE CASCADE` have to
+        // go first, otherwise the bulk delete fails with a foreign key error.
+        crate::services::favorite_podcast_episode::service::FavoritePodcastEpisodeService::default_service()
+            .delete_by_podcast_id(podcast_id)?;
         let triage_service = EpisodeTriageService::default_service();
         Self::get_episodes_by_podcast_id(podcast_id)?
             .iter()

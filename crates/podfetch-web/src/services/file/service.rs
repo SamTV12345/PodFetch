@@ -29,6 +29,12 @@ use regex::Regex;
 use rss::Channel;
 use tokio::task::spawn_blocking;
 
+/// Files of a podcast, see [`FileService::collect_podcast_files`].
+pub struct PodcastFiles {
+    pub podcast: podfetch_storage::PodcastFileInfo,
+    pub episodes: Vec<podfetch_storage::EpisodeFileInfo>,
+}
+
 #[derive(Clone)]
 pub struct FileService {}
 
@@ -176,11 +182,13 @@ impl FileService {
         Ok(())
     }
 
-    pub fn delete_podcast_files(podcast: &Podcast) {
+    /// Everything needed to delete a podcast's files later, collected while
+    /// its episodes are still in the database.
+    pub fn collect_podcast_files(podcast: &Podcast) -> PodcastFiles {
         let podcast_uuid = uuid::Uuid::parse_str(&podcast.id).unwrap_or_else(|_| uuid::Uuid::nil());
         let episodes =
             PodcastEpisodeService::get_episodes_by_podcast_id(podcast_uuid).unwrap_or_default();
-        let episode_infos: Vec<podfetch_storage::EpisodeFileInfo> = episodes
+        let episodes = episodes
             .iter()
             .map(|e| podfetch_storage::EpisodeFileInfo {
                 download_location: e.download_location.clone(),
@@ -188,7 +196,7 @@ impl FileService {
                 file_episode_path: e.file_episode_path.clone(),
             })
             .collect();
-        let podcast_info = podfetch_storage::PodcastFileInfo {
+        let podcast = podfetch_storage::PodcastFileInfo {
             // `id` is unused by the storage layer's directory removal; the
             // podcast is identified by `directory_name`. The storage DTO still
             // types it as i32, so pass a placeholder now that ids are UUIDs.
@@ -197,7 +205,13 @@ impl FileService {
             directory_name: podcast.directory_name.clone(),
             download_location: podcast.download_location.clone(),
         };
-        FileHandleWrapper::remove_dir(&podcast_info, &episode_infos).unwrap();
+        PodcastFiles { podcast, episodes }
+    }
+
+    /// Remove a podcast's directory and its episode files. A directory that is
+    /// already gone counts as removed.
+    pub fn remove_podcast_files(files: &PodcastFiles) -> Result<(), CustomError> {
+        FileHandleWrapper::remove_dir(&files.podcast, &files.episodes)
     }
 
     pub fn ensure_podcast_episode_directory_available(
