@@ -10,12 +10,12 @@ pub const SQLITE_MIGRATIONS: EmbeddedMigrations = embed_migrations!("../../migra
 pub const POSTGRES_MIGRATIONS: EmbeddedMigrations = embed_migrations!("../../migrations/postgres");
 
 pub fn database() -> Database {
-    common_infrastructure::db::shared_database(&ENVIRONMENT_SERVICE)
+    shared_database(&ENVIRONMENT_SERVICE)
         .unwrap_or_else(|e| panic!("Failed to connect to database: {e}"))
 }
 
 pub fn get_connection() -> r2d2::PooledConnection<diesel::r2d2::ConnectionManager<DBType>> {
-    common_infrastructure::db::shared_connection(&ENVIRONMENT_SERVICE)
+    shared_connection(&ENVIRONMENT_SERVICE)
         .unwrap_or_else(|e| panic!("Failed to connect to database: {e}"))
 }
 
@@ -55,7 +55,7 @@ pub(crate) mod test_db {
     pub(crate) fn setup() -> MutexGuard<'static, ()> {
         let guard = TEST_DB_LOCK
             .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         super::run_migrations();
         guard
     }

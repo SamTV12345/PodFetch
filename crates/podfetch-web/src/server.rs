@@ -33,25 +33,19 @@ impl ChatServerHandle {
         T: ?Sized + Serialize,
     {
         let room_id = "/".to_owned() + room_id.as_str();
-        let socket = match SOCKET_IO_LAYER.get() {
-            Some(socket) => socket,
-            None => {
-                tracing::warn!(
-                    "Skipping websocket broadcast for event '{}' because socket layer is not initialized",
-                    event.as_ref()
-                );
-                return;
-            }
+        let Some(socket) = SOCKET_IO_LAYER.get() else {
+            tracing::warn!(
+                "Skipping websocket broadcast for event '{}' because socket layer is not initialized",
+                event.as_ref()
+            );
+            return;
         };
-        let namespace = match socket.of(room_id) {
-            Some(namespace) => namespace,
-            None => {
-                tracing::warn!(
-                    "Skipping websocket broadcast for event '{}' because namespace is unavailable",
-                    event.as_ref()
-                );
-                return;
-            }
+        let Some(namespace) = socket.of(room_id) else {
+            tracing::warn!(
+                "Skipping websocket broadcast for event '{}' because namespace is unavailable",
+                event.as_ref()
+            );
+            return;
         };
         if let Err(err) = block_on(namespace.emit(event.as_ref(), msg)) {
             tracing::warn!(
@@ -105,7 +99,7 @@ impl ChatServerHandle {
                 message,
             },
             "opmlError",
-        )
+        );
     }
 
     pub fn broadcast_opml_added(podcast: &Podcast) {
@@ -145,7 +139,7 @@ impl ChatServerHandle {
             MAIN_ROOM.parse().unwrap(),
             &PodcastAddedMessage::<PodcastDto> {
                 type_of: PodcastType::AddPodcast,
-                message: format!("Podcast {} has been added", podcast_name),
+                message: format!("Podcast {podcast_name} has been added"),
                 podcast,
             },
             "addedPodcast",
@@ -192,7 +186,7 @@ impl ChatServerHandle {
                 podcast_episodes,
                 podcast,
                 type_of: PodcastType::AddPodcastEpisodes,
-                message: format!("Added podcast episodes: {}", podcast_name),
+                message: format!("Added podcast episodes: {podcast_name}"),
             },
             "addedEpisodes",
         );
@@ -207,7 +201,7 @@ impl ChatServerHandle {
             &TranscriptionStatusMessage {
                 episode_id: episode_id.to_string(),
                 status: status.to_string(),
-                error: error.map(|e| e.to_string()),
+                error: error.map(ToString::to_string),
             },
             "transcriptionStatus",
         );

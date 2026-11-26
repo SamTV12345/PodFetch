@@ -105,7 +105,7 @@ impl FileHandleWrapper {
                     // Already gone (removed by hand or by an interrupted
                     // delete): that is the state we want. Still clean up the
                     // episodes stored in S3 below.
-                    Err(crate::StorageError::Io { source, .. })
+                    Err(StorageError::Io { source, .. })
                         if source.kind() == std::io::ErrorKind::NotFound =>
                     {
                         tracing::debug!(

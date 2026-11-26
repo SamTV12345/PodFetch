@@ -261,8 +261,7 @@ impl TranscriptService {
 
         candidates.sort_by_key(|t| {
             let format_rank = TranscriptFormat::detect(&t.mime_type, t.original_url.as_deref())
-                .map(|f| f.preference_rank())
-                .unwrap_or(u8::MAX);
+                .map_or(u8::MAX, |f| f.preference_rank());
             let language_mismatch = match (&podcast_language, &t.language) {
                 (Some(podcast_lang), Some(transcript_lang)) => {
                     !primary_language_subtag_matches(podcast_lang, transcript_lang)
@@ -352,8 +351,8 @@ impl TranscriptService {
             .collect();
 
         groups.sort_by(|a, b| {
-            let rank_a = a.hits.first().map(|h| h.rank).unwrap_or(f32::MIN);
-            let rank_b = b.hits.first().map(|h| h.rank).unwrap_or(f32::MIN);
+            let rank_a = a.hits.first().map_or(f32::MIN, |h| h.rank);
+            let rank_b = b.hits.first().map_or(f32::MIN, |h| h.rank);
             rank_b
                 .partial_cmp(&rank_a)
                 .unwrap_or(std::cmp::Ordering::Equal)
@@ -681,7 +680,7 @@ mod tests {
         ensure_test_env_vars();
         let guard = GLOBAL_MUTEX
             .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         run_migrations();
 
         let mut conn = get_connection();
@@ -746,7 +745,7 @@ mod tests {
                 active: true,
                 original_image_url: "https://example.com/img.png".to_string(),
                 directory_name: format!("podcast-{id}"),
-                language: language.map(|s| s.to_string()),
+                language: language.map(ToString::to_string),
             })
             .execute(&mut get_connection())
             .expect("seed podcast");
@@ -769,7 +768,7 @@ mod tests {
                 guid: Uuid::new_v4().to_string(),
                 deleted: false,
                 episode_numbering_processed: false,
-                file_episode_path: file_episode_path.map(|s| s.to_string()),
+                file_episode_path: file_episode_path.map(ToString::to_string),
             })
             .execute(&mut get_connection())
             .expect("seed episode");
@@ -778,7 +777,7 @@ mod tests {
             id: id.to_string(),
             podcast_id: podcast_id.to_string(),
             name: "Test Episode".to_string(),
-            file_episode_path: file_episode_path.map(|s| s.to_string()),
+            file_episode_path: file_episode_path.map(ToString::to_string),
             ..Default::default()
         }
     }

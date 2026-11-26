@@ -103,7 +103,7 @@ impl PodcastEpisodeChapterRepository for DieselPodcastEpisodeChapterRepository {
                 updated_at: now,
             },
             None => PodcastEpisodeChapterInsertEntity {
-                id: uuid::Uuid::new_v4().to_string(),
+                id: Uuid::new_v4().to_string(),
                 episode_id: episode_id.clone(),
                 title: chapter.title,
                 start_time: chapter.start_time,

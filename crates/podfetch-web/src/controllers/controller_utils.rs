@@ -8,9 +8,10 @@ pub fn unwrap_string(value: &Value) -> String {
 }
 
 pub fn unwrap_string_audio(value: &Value, server_url: &str) -> String {
-    match value.to_string().is_empty() {
-        true => format!("{}{DEFAULT_IMAGE_URL}", normalize_server_url(server_url)),
-        false => value.to_string().replace('\"', ""),
+    if value.to_string().is_empty() {
+        format!("{}{DEFAULT_IMAGE_URL}", normalize_server_url(server_url))
+    } else {
+        value.to_string().replace('\"', "")
     }
 }
 

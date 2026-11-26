@@ -126,7 +126,7 @@ impl AuthFilter {
     pub fn basic_auth_login(rq: &str) -> Result<(String, String), CustomError> {
         let (u, p) = Self::extract_basic_auth(rq)?;
 
-        Ok((u.to_string(), p.to_string()))
+        Ok((u.clone(), p.clone()))
     }
 
     fn handle_basic_auth_internal(
@@ -209,14 +209,7 @@ impl AuthFilter {
         }?;
         let mut validation = Validation::new(alg);
         let mut aud_hashset = HashSet::new();
-        aud_hashset.insert(
-            environment
-                .oidc_config
-                .clone()
-                .unwrap()
-                .client_id
-                .to_string(),
-        );
+        aud_hashset.insert(environment.oidc_config.clone().unwrap().client_id.clone());
         validation.aud = Some(aud_hashset);
 
         let decoded_token = match decode::<Value>(&token, &key, &validation) {
@@ -256,10 +249,7 @@ impl AuthFilter {
         reverse_proxy_config: &ReverseProxyConfig,
         user_auth_service: &UserAuthService,
     ) -> Result<User, CustomError> {
-        let header_val = match req
-            .headers()
-            .get(reverse_proxy_config.header_name.to_string())
-        {
+        let header_val = match req.headers().get(reverse_proxy_config.header_name.clone()) {
             Some(header) => Ok::<&HeaderValue, CustomError>(header),
             None => {
                 info!("Reverse proxy is enabled but no header is provided");

@@ -820,8 +820,7 @@ mod tests {
         let delete_response = server
             .test_server
             .delete(&format!(
-                "/api/v1/playlist/{}/episode/not-a-number",
-                playlist_id
+                "/api/v1/playlist/{playlist_id}/episode/not-a-number"
             ))
             .await;
         assert_client_error_status(delete_response.status_code().as_u16());
@@ -939,8 +938,7 @@ mod tests {
         let response = server
             .test_server
             .delete(&format!(
-                "/api/v1/playlist/{}/episode/2147483648",
-                playlist_id
+                "/api/v1/playlist/{playlist_id}/episode/2147483648"
             ))
             .await;
         assert_client_error_status(response.status_code().as_u16());

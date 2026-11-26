@@ -135,7 +135,7 @@ impl FavoritePodcastEpisodeRepository for DieselFavoritePodcastEpisodeRepository
             .filter(fpe_dsl::favorite.eq(true))
             .first::<FavoritePodcastEpisodeEntity>(&mut self.database.connection()?)
             .optional()
-            .map(|favorite| favorite.map(|found| found.favorite).unwrap_or(false))
+            .map(|favorite| favorite.is_some_and(|found| found.favorite))
             .map_err(Into::into)
     }
 

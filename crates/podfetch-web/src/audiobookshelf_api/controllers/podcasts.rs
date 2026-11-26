@@ -106,7 +106,7 @@ pub struct CreatePodcastMetadata {
 pub async fn create_podcast(
     State(state): State<AppState>,
     AuthenticatedUser(user): AuthenticatedUser,
-    headers: axum::http::HeaderMap,
+    headers: http::HeaderMap,
     Json(body): Json<CreatePodcastRequest>,
 ) -> Result<Json<Value>, CustomError> {
     // Same rules as POST /api/v1/podcasts/feed: admins and uploaders, other
@@ -140,8 +140,7 @@ pub async fn create_podcast(
         .media
         .metadata
         .itunes_id
-        .map(|v| v as i32)
-        .unwrap_or_else(|| rand::rng().random_range(100..10_000_000));
+        .map_or_else(|| rand::rng().random_range(100..10_000_000), |v| v as i32);
 
     let inserted = PodcastService::handle_insert_of_podcast(
         PodcastInsertModel {

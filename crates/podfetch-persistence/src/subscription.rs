@@ -191,7 +191,7 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
 
         for podcast in add {
             if !podcast.starts_with("http") && !podcast.starts_with("https") {
-                rewritten_urls.push(vec![podcast.to_string(), "".to_string()]);
+                rewritten_urls.push(vec![podcast.clone(), String::new()]);
                 continue;
             }
 
@@ -218,7 +218,7 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
                     let subscription = Subscription::new(
                         Uuid::parse_str(&user_id_to_update).expect("valid uuid"),
                         device_id.to_string(),
-                        podcast.to_string(),
+                        podcast.clone(),
                     );
                     diesel::insert_into(subscriptions_dsl::subscriptions)
                         .values(NewSubscriptionEntity {
@@ -236,7 +236,7 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
 
         for podcast in remove {
             if !podcast.starts_with("http") && !podcast.starts_with("https") {
-                rewritten_urls.push(vec![podcast.to_string(), "".to_string()]);
+                rewritten_urls.push(vec![podcast.clone(), String::new()]);
                 continue;
             }
 

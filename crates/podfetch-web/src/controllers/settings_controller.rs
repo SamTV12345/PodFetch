@@ -209,7 +209,7 @@ pub async fn update_name(
 }
 
 use common_infrastructure::error::ErrorSeverity::{Critical, Debug, Error, Warning};
-use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
+use common_infrastructure::error::{CustomError, CustomErrorInner};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -225,8 +225,7 @@ fn map_rescan_error(error: RescanError<CustomError>) -> CustomError {
     match error {
         RescanError::Forbidden => CustomErrorInner::Forbidden(Warning).into(),
         RescanError::UnsupportedFormat => {
-            CustomErrorInner::Conflict("Unsupported file format".to_string(), ErrorSeverity::Error)
-                .into()
+            CustomErrorInner::Conflict("Unsupported file format".to_string(), Error).into()
         }
         RescanError::Service(error) => error,
     }

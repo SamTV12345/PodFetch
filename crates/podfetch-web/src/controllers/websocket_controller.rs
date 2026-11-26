@@ -157,15 +157,16 @@ fn generate_itunes_extension_conditionally(
     server_url: &str,
 ) -> Channel {
     if let Some(e) = podcast {
-        match !e.image_url.is_empty() {
-            true => itunes_ext.set_image(add_api_key_to_url(
-                server_url.to_string() + &*e.image_url,
-                api_key,
-            )),
-            false => itunes_ext.set_image(add_api_key_to_url(
+        if e.image_url.is_empty() {
+            itunes_ext.set_image(add_api_key_to_url(
                 server_url.to_string() + &*e.original_image_url,
                 api_key,
-            )),
+            ));
+        } else {
+            itunes_ext.set_image(add_api_key_to_url(
+                server_url.to_string() + &*e.image_url,
+                api_key,
+            ));
         }
     }
 
@@ -231,12 +232,12 @@ pub async fn get_rss_feed_for_podcast(
     let mut itunes_owner = get_itunes_owner("", "");
 
     if let Some(author) = podcast.author.clone() {
-        itunes_owner = get_itunes_owner(&author, "local@local.com")
+        itunes_owner = get_itunes_owner(&author, "local@local.com");
     }
 
     let mut categories: Vec<Category> = vec![];
     if let Some(keyword) = podcast.keywords.clone() {
-        let keywords: Vec<String> = keyword.split(',').map(|s| s.to_string()).collect();
+        let keywords: Vec<String> = keyword.split(',').map(ToString::to_string).collect();
         categories = keywords
             .iter()
             .map(|keyword| CategoryBuilder::default().name(keyword).build())
@@ -249,7 +250,7 @@ pub async fn get_rss_feed_for_podcast(
         .unwrap_or_default()
         .split(',')
         .filter(|keyword| !keyword.is_empty())
-        .map(|s| s.to_string())
+        .map(ToString::to_string)
         .collect();
 
     let itunes_ext = ITunesChannelExtensionBuilder::default()
@@ -318,7 +319,7 @@ fn get_podcast_items_rss(
 
             let itunes_extension = ITunesItemExtensionBuilder::default()
                 .duration(Some(episode.total_time.to_string()))
-                .image(Some(episode.local_image_url.to_string()))
+                .image(Some(episode.local_image_url.clone()))
                 .author(podcast.map(|p| p.name.clone()))
                 .build();
 
@@ -346,8 +347,8 @@ fn get_podcast_items_rss(
             let mut item = ItemBuilder::default()
                 .guid(Some(guid))
                 .pub_date(pub_date)
-                .title(Some(episode.name.to_string()))
-                .description(Some(episode.description.to_string()))
+                .title(Some(episode.name.clone()))
+                .description(Some(episode.description.clone()))
                 // Without a <link> readers fall back to showing the opaque guid;
                 // point it at the episode's page in the podfetch UI (#2055).
                 .link(Some(format!(
@@ -455,7 +456,7 @@ fn get_mime_type_for_episode(url: &str) -> String {
 fn get_categories(categories: Vec<String>) -> Vec<ITunesCategory> {
     categories
         .iter()
-        .map(|category| get_category(category.to_string()))
+        .map(|category| get_category(category.clone()))
         .collect::<Vec<ITunesCategory>>()
 }
 
@@ -715,7 +716,7 @@ mod tests {
         let api_key = create_api_key_user();
         let unique = Uuid::new_v4();
         let episode = insert_downloaded_episode(
-            &podcast.id.to_string(),
+            &podcast.id.clone(),
             &format!("rss-transcript-ep-{unique}"),
             &format!("rss-transcript-guid-{unique}"),
             &format!("podcasts/rss-transcript-{unique}/episode.mp3"),
@@ -781,7 +782,7 @@ mod tests {
         let api_key = create_api_key_user();
         let unique = Uuid::new_v4();
         let episode = insert_downloaded_episode(
-            &podcast.id.to_string(),
+            &podcast.id.clone(),
             &format!("rss-transcript-pending-ep-{unique}"),
             &format!("rss-transcript-pending-guid-{unique}"),
             &format!("podcasts/rss-transcript-pending-{unique}/episode.mp3"),
@@ -825,7 +826,7 @@ mod tests {
         let file_episode_path = format!("podcasts/rss-rewrite-{unique}/episode.mp3");
         let file_image_path = format!("podcasts/rss-rewrite-{unique}/image.jpg");
         let _episode = insert_downloaded_episode(
-            &podcast.id.to_string(),
+            &podcast.id.clone(),
             &format!("rss-rewrite-ep-{unique}"),
             &format!("rss-rewrite-guid-{unique}"),
             &file_episode_path,

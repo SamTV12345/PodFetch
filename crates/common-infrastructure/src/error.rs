@@ -369,8 +369,8 @@ impl CustomErrorInner {
             Self::Forbidden(_) => "Forbidden".to_string(),
             Self::Unknown(_) => "Unknown".to_string(),
             Self::DatabaseError(_, _) => "DatabaseError".to_string(),
-            Self::Conflict(e, _) => e.to_string(),
-            Self::BadRequest(e, _) => e.to_string(),
+            Self::Conflict(e, _) => e.clone(),
+            Self::BadRequest(e, _) => e.clone(),
             Self::UnAuthorized(_, _) => "UnAuthorized".to_string(),
             Self::SysInfoError(_, _) => "Unknown".to_string(),
         }
@@ -412,7 +412,7 @@ pub fn map_io_extra_error(
     error!(
         "IO extra error: {} for path {}",
         e,
-        path.unwrap_or("".to_string())
+        path.unwrap_or_default()
     );
     CustomError::from(CustomErrorInner::Unknown(severity))
 }

@@ -132,20 +132,17 @@ impl TimelineItem {
 
         let mut total_count = part_query.count().into_boxed();
 
-        match favored_only.favored_only.unwrap_or(false) {
-            true => {
-                if let Some(last_id) = favored_only.last_timestamp {
-                    query = query.filter(date_of_recording.lt(last_id.clone()));
-                }
-
-                query = query.filter(f_user_id.eq(user_id_to_search.clone()));
-                query = query.filter(favored.eq(true));
-                total_count = total_count.filter(f_user_id.eq(user_id_to_search.clone()));
+        if favored_only.favored_only.unwrap_or(false) {
+            if let Some(last_id) = favored_only.last_timestamp {
+                query = query.filter(date_of_recording.lt(last_id.clone()));
             }
-            false => {
-                if let Some(last_id) = favored_only.last_timestamp {
-                    query = query.filter(date_of_recording.lt(last_id));
-                }
+
+            query = query.filter(f_user_id.eq(user_id_to_search.clone()));
+            query = query.filter(favored.eq(true));
+            total_count = total_count.filter(f_user_id.eq(user_id_to_search.clone()));
+        } else {
+            if let Some(last_id) = favored_only.last_timestamp {
+                query = query.filter(date_of_recording.lt(last_id));
             }
         }
 

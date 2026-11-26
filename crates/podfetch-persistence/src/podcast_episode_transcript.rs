@@ -765,13 +765,13 @@ mod tests {
 
     fn seed_podcast() -> String {
         use seed_schema::podcasts;
-        let id = uuid::Uuid::new_v4().to_string();
+        let id = Uuid::new_v4().to_string();
         let mut conn = database().connection().expect("db connection");
         diesel::insert_into(podcasts::table)
             .values(SeedPodcast {
                 id: id.clone(),
                 name: format!("Test Podcast {id}"),
-                directory_id: uuid::Uuid::new_v4().to_string(),
+                directory_id: Uuid::new_v4().to_string(),
                 rssfeed: format!("https://example.com/feed/{id}.xml"),
                 image_url: "https://example.com/img.png".to_string(),
                 active: true,
@@ -791,14 +791,14 @@ mod tests {
             .values(SeedEpisode {
                 id: id.to_string(),
                 podcast_id: podcast_id.to_string(),
-                episode_id: uuid::Uuid::new_v4().to_string(),
+                episode_id: Uuid::new_v4().to_string(),
                 name: "Test Episode".to_string(),
                 url: format!("https://example.com/ep/{id}.mp3"),
                 date_of_recording: "2024-01-01".to_string(),
                 image_url: "https://example.com/ep.png".to_string(),
                 total_time: 3600,
                 description: "Test description".to_string(),
-                guid: uuid::Uuid::new_v4().to_string(),
+                guid: Uuid::new_v4().to_string(),
                 deleted: false,
                 episode_numbering_processed: false,
             })
@@ -815,7 +815,7 @@ mod tests {
             } else {
                 TranscriptSource::Generated
             },
-            original_url: original_url.map(|s| s.to_string()),
+            original_url: original_url.map(ToString::to_string),
             mime_type: "text/vtt".to_string(),
             language: Some("en".to_string()),
         }

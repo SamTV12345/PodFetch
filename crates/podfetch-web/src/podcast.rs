@@ -61,14 +61,11 @@ pub fn build_podcast_search_plan(
     user_id: Uuid,
     existing_filter: Option<Filter>,
 ) -> PodcastSearchPlan {
-    let order = query.order.map(|o| o.into()).unwrap_or(OrderCriteria::Asc);
+    let order = query.order.map_or(OrderCriteria::Asc, Into::into);
     let order_option = query
         .order_option
-        .map(OrderOption::from_string)
-        .unwrap_or(OrderOption::Title);
-    let only_favored = existing_filter
-        .map(|filter| filter.only_favored)
-        .unwrap_or(true);
+        .map_or(OrderOption::Title, OrderOption::from_string);
+    let only_favored = existing_filter.is_none_or(|filter| filter.only_favored);
     let filter = Filter::new(
         user_id,
         query.title.clone(),
@@ -502,8 +499,7 @@ pub fn check_podcast_add_permission<Err: Display>(
     let new_total = current_count + adding_count as i64;
     if new_total > user_podcast_limit as i64 {
         return Err(PodcastControllerError::QuotaExceeded(format!(
-            "Adding {} podcast(s) would exceed your limit of {}. You currently have {}.",
-            adding_count, user_podcast_limit, current_count
+            "Adding {adding_count} podcast(s) would exceed your limit of {user_podcast_limit}. You currently have {current_count}."
         )));
     }
 

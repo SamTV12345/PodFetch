@@ -278,9 +278,8 @@ fn parse_srt(raw: &[u8]) -> Vec<TranscriptSegment> {
         }
 
         let mut lines = block.lines();
-        let first = match lines.next() {
-            Some(l) => l,
-            None => continue,
+        let Some(first) = lines.next() else {
+            continue;
         };
         // The cue index line (a plain number) is optional; skip it if present.
         let timing_line = if first.contains("-->") {

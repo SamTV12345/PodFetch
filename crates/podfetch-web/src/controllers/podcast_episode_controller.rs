@@ -288,16 +288,13 @@ pub(crate) fn spawn_single_episode_download(episode_id: String) {
     tokio::task::spawn_blocking(move || {
         match PodcastEpisodeService::get_podcast_episode_by_id(&episode_id) {
             Ok(Some(podcast_episode)) => {
-                let podcast_uuid = match uuid::Uuid::parse_str(&podcast_episode.podcast_id) {
-                    Ok(uuid) => uuid,
-                    Err(_) => {
-                        tracing::error!(
-                            "Invalid podcast id {} for episode {}",
-                            podcast_episode.podcast_id,
-                            podcast_episode.episode_id
-                        );
-                        return;
-                    }
+                let Ok(podcast_uuid) = uuid::Uuid::parse_str(&podcast_episode.podcast_id) else {
+                    tracing::error!(
+                        "Invalid podcast id {} for episode {}",
+                        podcast_episode.podcast_id,
+                        podcast_episode.episode_id
+                    );
+                    return;
                 };
                 match PodcastService::get_podcast(podcast_uuid) {
                     Ok(podcast_found) => {
@@ -689,7 +686,7 @@ mod tests {
         AppState::new()
     }
 
-    fn admin_user_id() -> uuid::Uuid {
+    fn admin_user_id() -> Uuid {
         let username = ENVIRONMENT_SERVICE
             .username
             .clone()
@@ -838,7 +835,7 @@ mod tests {
         let favorite = FavoritePodcastEpisodeService::default_service()
             .get_by_user_id_and_episode_id(
                 admin_user_id(),
-                uuid::Uuid::parse_str(&inserted_episode.id).unwrap(),
+                Uuid::parse_str(&inserted_episode.id).unwrap(),
             )
             .unwrap();
         assert!(favorite.is_some());
@@ -1354,7 +1351,7 @@ mod tests {
         FavoritePodcastEpisodeService::default_service()
             .set_favorite(
                 admin_user_id(),
-                uuid::Uuid::parse_str(&fav_episode.id).unwrap(),
+                Uuid::parse_str(&fav_episode.id).unwrap(),
                 true,
             )
             .unwrap();
@@ -1501,17 +1498,17 @@ mod tests {
     }
 
     fn podcast_with_directory(directory: &str) -> String {
-        let name = format!("Delete Test {}", uuid::Uuid::new_v4().simple());
+        let name = format!("Delete Test {}", Uuid::new_v4().simple());
         crate::services::podcast::service::PodcastService::add_podcast_to_database(
             &name,
             &name,
-            &format!("https://example.com/{}.xml", uuid::Uuid::new_v4().simple()),
+            &format!("https://example.com/{}.xml", Uuid::new_v4().simple()),
             "http://localhost:8080/ui/default.jpg",
             directory,
         )
         .unwrap()
         .id
-        .to_string()
+        .clone()
     }
 
     fn favorite_rows_for_podcast(podcast_id: &str) -> i64 {
@@ -1539,7 +1536,7 @@ mod tests {
     fn temp_podcast_dir() -> std::path::PathBuf {
         std::env::temp_dir()
             .join("podfetch-delete-tests")
-            .join(uuid::Uuid::new_v4().simple().to_string())
+            .join(Uuid::new_v4().simple().to_string())
     }
 
     #[tokio::test]
@@ -1549,14 +1546,14 @@ mod tests {
         let podcast_id = podcast_with_directory(temp_podcast_dir().to_str().unwrap());
         let episode = insert_episode(&podcast_id, "fav-delete-1", "fav-delete-guid-1", "Fav 1");
         insert_episode(&podcast_id, "fav-delete-2", "fav-delete-guid-2", "Fav 2");
-        crate::services::favorite_podcast_episode::service::FavoritePodcastEpisodeService::default_service()
-            .set_favorite(admin_user_id(), uuid::Uuid::parse_str(&episode.id).unwrap(), true)
+        FavoritePodcastEpisodeService::default_service()
+            .set_favorite(admin_user_id(), Uuid::parse_str(&episode.id).unwrap(), true)
             .unwrap();
         assert_eq!(favorite_rows_for_podcast(&podcast_id), 1);
 
         let response = server
             .test_server
-            .delete(&format!("/api/v1/podcasts/{}", podcast_id))
+            .delete(&format!("/api/v1/podcasts/{podcast_id}"))
             .json(&json!({ "delete_files": false }))
             .await;
         assert_eq!(response.status_code(), 200, "{}", response.text());
@@ -1565,7 +1562,7 @@ mod tests {
         assert_eq!(favorite_rows_for_podcast(&podcast_id), 0);
         let get = server
             .test_server
-            .get(&format!("/api/v1/podcasts/{}", podcast_id))
+            .get(&format!("/api/v1/podcasts/{podcast_id}"))
             .await;
         assert_eq!(get.status_code(), 404);
     }
@@ -1581,7 +1578,7 @@ mod tests {
 
         let response = server
             .test_server
-            .delete(&format!("/api/v1/podcasts/{}", podcast_id))
+            .delete(&format!("/api/v1/podcasts/{podcast_id}"))
             .json(&json!({ "delete_files": true }))
             .await;
         assert_eq!(response.status_code(), 200, "{}", response.text());
@@ -1600,7 +1597,7 @@ mod tests {
 
         let response = server
             .test_server
-            .delete(&format!("/api/v1/podcasts/{}", podcast_id))
+            .delete(&format!("/api/v1/podcasts/{podcast_id}"))
             .json(&json!({ "delete_files": true }))
             .await;
         assert_eq!(response.status_code(), 200, "{}", response.text());

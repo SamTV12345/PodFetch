@@ -23,8 +23,7 @@ pub fn load(folder: &Path) -> Option<MetadataPatch> {
         if p.is_file()
             && p.extension()
                 .and_then(|e| e.to_str())
-                .map(|e| e.eq_ignore_ascii_case("opf"))
-                .unwrap_or(false)
+                .is_some_and(|e| e.eq_ignore_ascii_case("opf"))
         {
             return std::fs::read_to_string(&p).ok().and_then(|xml| parse(&xml));
         }
@@ -48,10 +47,10 @@ pub fn parse(xml: &str) -> Option<MetadataPatch> {
 
     loop {
         match reader.read_event_into(&mut buf) {
-            Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
+            Ok(Event::Start(e) | Event::Empty(e)) => {
                 let name = e.name();
                 let raw_tag = name.as_ref();
-                let local = raw_tag.rsplit_once(':').map(|(_, l)| l).unwrap_or(raw_tag);
+                let local = raw_tag.rsplit_once(':').map_or(raw_tag, |(_, l)| l);
                 let lower_tag = local.to_ascii_lowercase();
                 current_role = None;
                 current_identifier_scheme = None;
@@ -59,7 +58,7 @@ pub fn parse(xml: &str) -> Option<MetadataPatch> {
                 let mut attrs: Vec<(String, String)> = Vec::new();
                 for attr in e.attributes().flatten() {
                     let key = attr.key.as_ref();
-                    let local_key = key.rsplit_once(':').map(|(_, l)| l).unwrap_or(key);
+                    let local_key = key.rsplit_once(':').map_or(key, |(_, l)| l);
                     let value = attr.value.to_string();
                     attrs.push((local_key.to_ascii_lowercase(), value));
                 }
@@ -130,7 +129,7 @@ pub fn parse(xml: &str) -> Option<MetadataPatch> {
                     }
                     "identifier" => match current_identifier_scheme.as_deref() {
                         Some("isbn") => patch.isbn = Some(value.to_string()),
-                        Some("asin") | Some("amazon") => patch.asin = Some(value.to_string()),
+                        Some("asin" | "amazon") => patch.asin = Some(value.to_string()),
                         _ => {}
                     },
                     _ => {}

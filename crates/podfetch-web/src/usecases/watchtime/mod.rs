@@ -343,7 +343,7 @@ impl WatchtimeUseCase {
     /// the web device, so GPodder clients pick them up on their next sync.
     /// No listening events are created - nothing was actually listened to.
     pub fn set_podcast_episodes_played(
-        podcast_id: uuid::Uuid,
+        podcast_id: Uuid,
         username: &str,
         played: bool,
     ) -> Result<usize, CustomError> {

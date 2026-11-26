@@ -360,7 +360,7 @@ impl FavoriteRepository for DieselFavoriteRepository {
         }
 
         if let Some(title) = title {
-            query = query.filter(podcasts::name.like(format!("%{}%", title)));
+            query = query.filter(podcasts::name.like(format!("%{title}%")));
         }
 
         let results = query.load::<(

@@ -118,7 +118,7 @@ pub enum ReplacementStrategy {
     ReplaceWithDash,
 }
 
-impl std::fmt::Display for ReplacementStrategy {
+impl Display for ReplacementStrategy {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let value = match self {
             ReplacementStrategy::ReplaceWithDashAndUnderscore => "replace-with-dash-and-underscore",
@@ -344,7 +344,7 @@ where
             }
         }
 
-        last_id = episodes.last().map(|e| e.id).unwrap_or(last_id);
+        last_id = episodes.last().map_or(last_id, |e| e.id);
     }
 
     Ok(stats)

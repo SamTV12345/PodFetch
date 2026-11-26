@@ -80,9 +80,10 @@ impl StatsApplicationService for StatsService {
                 let podcast = podcast_index.get(&podcast_id.to_string());
                 TopPodcastStats {
                     podcast_id: podcast_id.to_string(),
-                    podcast_name: podcast
-                        .map(|podcast| podcast.name.clone())
-                        .unwrap_or_else(|| "Unknown Podcast".to_string()),
+                    podcast_name: podcast.map_or_else(
+                        || "Unknown Podcast".to_string(),
+                        |podcast| podcast.name.clone(),
+                    ),
                     image_url: podcast
                         .map(|podcast| podcast.image_url.clone())
                         .unwrap_or_default(),

@@ -64,8 +64,7 @@ fn map_itunes_result(r: &ItunesModel) -> Value {
     let explicit = r
         .track_explicitness
         .as_deref()
-        .map(|s| s.eq_ignore_ascii_case("explicit"))
-        .unwrap_or(false);
+        .is_some_and(|s| s.eq_ignore_ascii_case("explicit"));
     json!({
         "id": r.collection_id,
         "artistId": r.artist_id,

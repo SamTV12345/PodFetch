@@ -62,9 +62,9 @@ use crate::services::user_auth::service::UserAuthService;
 use common_infrastructure::error::ErrorSeverity::Warning;
 use std::sync::Arc;
 
-static AUDIOBOOKSHELF_FILE_WATCHER: std::sync::OnceLock<
+static AUDIOBOOKSHELF_FILE_WATCHER: OnceLock<
     Arc<crate::services::audiobookshelf::file_watcher::AudiobookFileWatcher>,
-> = std::sync::OnceLock::new();
+> = OnceLock::new();
 
 fn start_audiobookshelf_file_watcher(state: &AppState) {
     if AUDIOBOOKSHELF_FILE_WATCHER.get().is_some() {
@@ -124,7 +124,6 @@ pub fn run_poll() -> Result<(), CustomError> {
                     &podcast.name,
                     e
                 );
-                continue;
             }
         }
     }
@@ -549,10 +548,7 @@ fn redact_secrets(path_and_query: &str) -> String {
 /// Goes in front of `TraceLayer` so the message includes the path directly
 /// (TraceLayer puts the URI in a span; the default subscriber doesn't
 /// render span fields, so the message alone would be path-less).
-async fn http_request_logger(
-    req: axum::extract::Request,
-    next: axum::middleware::Next,
-) -> axum::response::Response {
+async fn http_request_logger(req: Request, next: axum::middleware::Next) -> Response {
     let method = req.method().clone();
     let uri = req.uri().clone();
     let started = std::time::Instant::now();
@@ -561,8 +557,7 @@ async fn http_request_logger(
     let status = response.status().as_u16();
     let path_and_query = redact_secrets(
         uri.path_and_query()
-            .map(|p| p.as_str())
-            .unwrap_or(uri.path()),
+            .map_or(uri.path(), http::uri::PathAndQuery::as_str),
     );
     if status >= 500 {
         tracing::error!("{method} {path_and_query} -> {status} in {elapsed_ms}ms");
@@ -616,7 +611,7 @@ pub fn handle_config_for_server_startup() -> Router {
             match settings {
                 Some(settings) => {
                     if settings.auto_cleanup {
-                        PodcastEpisodeService::cleanup_old_episodes(settings.auto_cleanup_days)
+                        PodcastEpisodeService::cleanup_old_episodes(settings.auto_cleanup_days);
                     }
                 }
                 None => {

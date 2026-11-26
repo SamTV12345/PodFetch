@@ -149,11 +149,8 @@ impl AudiobookScanner {
         let folder_path_str = folder.to_string_lossy().to_string();
         let existing = self.book_repository.find_by_folder_path(&folder_path_str)?;
         let is_new = existing.is_none();
-        let book_id = existing
-            .as_ref()
-            .map(|b| b.id.clone())
-            .unwrap_or_else(new_book_id);
-        let added_at = existing.as_ref().map(|b| b.added_at).unwrap_or(now);
+        let book_id = existing.as_ref().map_or_else(new_book_id, |b| b.id.clone());
+        let added_at = existing.as_ref().map_or(now, |b| b.added_at);
         let book = Book {
             id: book_id.clone(),
             library_id: library_id.to_string(),
@@ -198,14 +195,14 @@ impl AudiobookScanner {
         // Audio files
         let mut audio_rows: Vec<BookAudioFile> = Vec::with_capacity(probed.len());
         for (idx, (path, probe)) in probed.iter().enumerate() {
-            let relative = path
-                .strip_prefix(folder)
-                .map(|p| p.to_string_lossy().to_string())
-                .unwrap_or_else(|_| {
+            let relative = path.strip_prefix(folder).map_or_else(
+                |_| {
                     path.file_name()
                         .map(|s| s.to_string_lossy().to_string())
                         .unwrap_or_default()
-                });
+                },
+                |p| p.to_string_lossy().to_string(),
+            );
             let ext = path
                 .extension()
                 .and_then(|e| e.to_str())

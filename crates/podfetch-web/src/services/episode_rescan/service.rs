@@ -454,13 +454,13 @@ impl EpisodeRescanService {
         // resolver to find a free `<stem>-<n>` directory. If the episode
         // currently lives in a `<stem>-<n>` directory, prefer keeping that
         // one to avoid pointlessly spinning to `-2`, `-3`, ...
-        let preferred_dir = if !direct_paths {
+        let preferred_dir = if direct_paths {
+            None
+        } else {
             Path::new(current_audio_path)
                 .parent()
                 .and_then(|p| p.to_str())
-                .map(|s| s.to_string())
-        } else {
-            None
+                .map(ToString::to_string)
         };
 
         let download_location =
@@ -535,7 +535,7 @@ fn extension_lower(path: &str) -> Option<String> {
     Path::new(path)
         .extension()
         .and_then(|ext| ext.to_str())
-        .map(|ext| ext.to_ascii_lowercase())
+        .map(str::to_ascii_lowercase)
 }
 
 /// Derive the on-disk path of a podcast's shared cover. `podcast.image_url`
@@ -551,8 +551,7 @@ fn shared_cover_fs_path(podcast: &Podcast) -> Option<String> {
     extension_lower(&podcast.image_url)?;
     let last_segment = podcast.image_url.rsplit(['/', '\\']).next()?;
     let file_name = urlencoding::decode(last_segment)
-        .map(|decoded| decoded.into_owned())
-        .unwrap_or_else(|_| last_segment.to_string());
+        .map_or_else(|_| last_segment.to_string(), std::borrow::Cow::into_owned);
     if file_name.is_empty() {
         return None;
     }

@@ -215,7 +215,7 @@ fn apply_audio_tags(meta: &mut ResolvedBookMetadata, tags: &ProbedTags) {
     meta.explicit = meta.explicit
         || matches!(
             tags.explicit.as_deref(),
-            Some("1") | Some("yes") | Some("true") | Some("explicit") | Some("4")
+            Some("1" | "yes" | "true" | "explicit" | "4")
         );
 }
 

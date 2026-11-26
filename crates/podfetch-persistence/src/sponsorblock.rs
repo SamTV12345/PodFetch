@@ -172,7 +172,7 @@ mod sponsorblock_tests {
         username: String,
         role: String,
         explicit_consent: bool,
-        created_at: chrono::NaiveDateTime,
+        created_at: NaiveDateTime,
     }
 
     #[derive(diesel::Insertable)]

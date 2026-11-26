@@ -68,7 +68,7 @@ pub const TRANSCRIPTION_MODEL: &str = "TRANSCRIPTION_MODEL";
 pub const DEFAULT_TRANSCRIPTION_MODEL: &str = "whisper-1";
 
 pub fn is_env_var_present_and_true(env_var: &str) -> bool {
-    match env::var(env_var) {
+    match var(env_var) {
         Ok(val) => val == "true" || val == "1" || val == "yes",
         Err(_) => false,
     }
@@ -139,8 +139,7 @@ impl OidcConfig {
         let base = format!("{}/", authority.trim_end_matches('/'));
         let token_endpoint = url::Url::parse(&base)
             .and_then(|url| url.join("../token"))
-            .map(|url| url.to_string())
-            .unwrap_or_else(|_| format!("{base}../token"));
+            .map_or_else(|_| format!("{base}../token"), |url| url.to_string());
         OidcEndpoints {
             authorization_endpoint: authority.to_string(),
             token_endpoint,
@@ -569,7 +568,7 @@ impl EnvironmentService {
  |_|   \___/ \__,_|_|  \___|\__\___|_| |_|
 
         "
-        )
+        );
     }
 }
 

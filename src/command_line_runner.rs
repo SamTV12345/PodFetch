@@ -24,12 +24,9 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
     let device_service = DeviceService::new(Arc::new(DeviceRepositoryImpl::new(database())));
     // Skip first argument
     args.next();
-    let arg = match args.next() {
-        Some(arg) => arg,
-        None => {
-            println!("Please provide a command");
-            exit(1);
-        }
+    let Some(arg) = args.next() else {
+        println!("Please provide a command");
+        exit(1);
     };
 
     match arg.as_str() {
@@ -44,12 +41,9 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
         }
         "podcasts" => {
             println!("Podcast management");
-            let podcast_args = match args.next() {
-                Some(arg) => arg,
-                None => {
-                    println!("Please provide a command");
-                    exit(1);
-                }
+            let Some(podcast_args) = args.next() else {
+                println!("Please provide a command");
+                exit(1);
             };
             match podcast_args.as_str() {
                 "refresh" => {
@@ -120,16 +114,13 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
         }
         "users" => {
             println!("User management");
-            let user_args = match args.next() {
-                Some(arg) => arg,
-                None => {
-                    println!("Please provide a command");
-                    exit(1);
-                }
+            let Some(user_args) = args.next() else {
+                println!("Please provide a command");
+                exit(1);
             };
             match user_args.as_str() {
                 "add" => {
-                    let mut user = read_user_account(&state)?;
+                    let mut user = read_user_account(&state);
 
                     println!("Should a user with the following settings be applied {user:?}");
 
@@ -137,22 +128,19 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                         user.password =
                             Some(digest(user.password.expect("Error digesting password")));
                         if state.user_admin_service.create_user(user).is_ok() {
-                            println!("User succesfully created")
+                            println!("User succesfully created");
                         }
                     }
                     Ok(())
                 }
                 "generate" => {
-                    let arg = match args.next() {
-                        Some(arg) => arg,
-                        None => {
-                            error!("Command not found");
-                            return Err(CustomErrorInner::BadRequest(
-                                "Command not found".to_string(),
-                                ErrorSeverityError,
-                            )
-                            .into());
-                        }
+                    let Some(arg) = args.next() else {
+                        error!("Command not found");
+                        return Err(CustomErrorInner::BadRequest(
+                            "Command not found".to_string(),
+                            ErrorSeverityError,
+                        )
+                        .into());
                     };
 
                     match arg.as_str() {
@@ -289,26 +277,26 @@ fn list_users(state: &AppState) -> Result<Vec<UserWithoutPassword>, CustomError>
     Ok(users)
 }
 
-pub fn read_user_account(state: &AppState) -> Result<User, CustomError> {
-    let mut username = String::new();
-
+pub fn read_user_account(state: &AppState) -> User {
     let role = Role::VALUES.map(|v| v.to_string()).join(", ");
-    retry_read("Enter your username: ", &mut username);
-
-    let user = state.user_auth_service.find_by_username(&username);
-
-    if user.is_err() {
-        println!("User does not exist");
-    }
+    let username = loop {
+        let mut username = String::new();
+        retry_read("Enter your username: ", &mut username);
+        let username = trim_string(&username);
+        if state.user_auth_service.find_by_username(&username).is_ok() {
+            println!("A user named {username} already exists");
+        } else {
+            break username;
+        }
+    };
 
     let password = retry_read_secret("Enter your password: ");
     let assigned_role = retry_read_role(&format!("Select your role {role}"));
-    let mut api_key_generated = uuid::Uuid::new_v4().to_string();
-    api_key_generated = api_key_generated.replace('-', "");
+    let api_key_generated = uuid::Uuid::new_v4().simple().to_string();
 
-    let user = User {
+    User {
         id: uuid::Uuid::new_v4(),
-        username: trim_string(&username),
+        username,
         role: assigned_role.to_string(),
         password: Some(trim_string(&password)),
         explicit_consent: false,
@@ -316,104 +304,77 @@ pub fn read_user_account(state: &AppState) -> Result<User, CustomError> {
         api_key: Some(api_key_generated),
         country: None,
         language: None,
-    };
-
-    Ok(user)
+    }
 }
 
+/// Reads one line from stdin, exiting the process if the terminal is gone.
+fn read_line_or_exit() -> String {
+    let mut line = String::new();
+    match stdin().read_line(&mut line) {
+        Ok(0) | Err(_) => {
+            println!("Error reading from terminal");
+            exit(1);
+        }
+        Ok(_) => line,
+    }
+}
+
+/// Prompts until the user enters a non-blank line and stores it in `input`.
 pub fn retry_read(prompt: &str, input: &mut String) {
-    println!("{prompt}");
-    match stdin().read_line(input) {
-        Ok(..) => {}
-        Err(..) => {
-            println!("Error reading from terminal");
-            exit(1);
-        }
-    }
-    match !input.is_empty() {
-        true => {
-            if input.trim().is_empty() {
-                retry_read(prompt, input);
-            }
-        }
-        false => {
-            retry_read(prompt, input);
+    loop {
+        println!("{prompt}");
+        let line = read_line_or_exit();
+        if !line.trim().is_empty() {
+            *input = line;
+            return;
         }
     }
 }
 
+/// Prompts (without echo) until the user enters a non-blank secret.
 pub fn retry_read_secret(prompt: &str) -> String {
-    let input = match rpassword::prompt_password(prompt) {
-        Ok(input) => input,
-        Err(..) => {
+    loop {
+        let Ok(input) = rpassword::prompt_password(prompt) else {
             println!("Error reading from terminal");
             exit(1);
-        }
-    };
-    match !input.is_empty() {
-        true => {
-            if input.trim().is_empty() {
-                retry_read_secret(prompt);
-            }
-        }
-        false => {
-            retry_read_secret(prompt);
+        };
+        if !input.trim().is_empty() {
+            return input;
         }
     }
-    input
 }
 
 pub fn retry_read_role(prompt: &str) -> Role {
-    let mut input = String::new();
-    println!("{prompt}");
-    match stdin().read_line(&mut input) {
-        Ok(..) => {}
-        Err(..) => {
-            println!("Error reading from terminal");
-            exit(1);
+    loop {
+        println!("{prompt}");
+        match Role::try_from(trim_string(&read_line_or_exit())) {
+            Ok(role) => return role,
+            Err(_) => println!("Error setting role. Please choose one of the possible roles."),
         }
-    }
-    let res = Role::try_from(trim_string(&input));
-    match res {
-        Err(..) => {
-            println!("Error setting role. Please choose one of the possible roles.");
-            retry_read_role(prompt)
-        }
-        Ok(e) => e,
     }
 }
 
 fn ask_for_confirmation() -> Result<(), Error> {
-    let mut input = String::new();
     println!("Y[es]/N[o]");
-    stdin()
-        .read_line(&mut input)
-        .expect("Error reading from terminal");
-    match input.to_lowercase().starts_with('y') {
-        true => Ok(()),
-        false => Err(Error::new(ErrorKind::WouldBlock, "Interrupted by user.")),
+    let input = read_line_or_exit();
+    if input.to_lowercase().starts_with('y') {
+        Ok(())
+    } else {
+        Err(Error::new(ErrorKind::WouldBlock, "Interrupted by user."))
     }
 }
 
 fn trim_string(string_to_trim: &str) -> String {
-    string_to_trim
-        .trim_end_matches('\n')
-        .trim()
-        .parse()
-        .expect("Error parsing string")
+    string_to_trim.trim().to_owned()
 }
 
 fn do_user_update(state: &AppState, mut user: User) {
-    let mut input = String::new();
     println!("The following settings of a user should be updated: {user:?}");
     println!(
         "Enter which field of a user should be updated [role, password, \
     consent]"
     );
-    stdin()
-        .read_line(&mut input)
-        .expect("Error reading from terminal");
-    input = trim_string(&input);
+    let input = trim_string(&read_line_or_exit());
     match input.as_str() {
         "role" => {
             user.role = Role::to_string(&retry_read_role(

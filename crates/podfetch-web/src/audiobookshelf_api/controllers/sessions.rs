@@ -192,7 +192,7 @@ async fn start_session(
         "imageUrl": podcast.image_url,
         "explicit": matches!(
             podcast.explicit.as_deref(),
-            Some("yes") | Some("true") | Some("1")
+            Some("yes" | "true" | "1")
         ),
         "language": podcast.language,
         "type": "episodic",
@@ -238,7 +238,7 @@ async fn start_session(
     } else {
         mime_type
     };
-    let now_ms = chrono::Utc::now().timestamp_millis();
+    let now_ms = Utc::now().timestamp_millis();
     let audio_tracks = vec![PlaybackAudioTrackDto {
         index: 1,
         ino: format!("ino_ep_{}", episode.id),
@@ -443,8 +443,7 @@ async fn start_book_session(
     let source_mime = aggregate
         .audio_files
         .first()
-        .map(|af| af.mime_type.clone())
-        .unwrap_or_else(|| "audio/mpeg".to_string());
+        .map_or_else(|| "audio/mpeg".to_string(), |af| af.mime_type.clone());
     let supported_mime_types = body
         .as_ref()
         .and_then(|b| b.supported_mime_types.clone())
@@ -508,7 +507,7 @@ async fn start_book_session(
     // covering the full duration; for direct streaming we expose one per
     // file with `/api/items/<itemId>/file/<ino>` content URLs (upstream
     // parity: `PodcastEpisode.getAudioTrack` / `Book.getTracklist`).
-    let now_ms = chrono::Utc::now().timestamp_millis();
+    let now_ms = Utc::now().timestamp_millis();
     let audio_tracks: Vec<PlaybackAudioTrackDto> = if use_hls {
         let title = aggregate.book.title.clone();
         let first_file = aggregate.audio_files.first().cloned();
@@ -553,7 +552,7 @@ async fn start_book_session(
             bit_rate: 0,
             language: None,
             time_base: "1/1000".to_string(),
-            channels: first_file.as_ref().map(|af| af.channels).unwrap_or(2),
+            channels: first_file.as_ref().map_or(2, |af| af.channels),
             channel_layout: "stereo".to_string(),
             chapters: Vec::new(),
             embedded_cover_art: None,
@@ -636,7 +635,7 @@ fn upsert_progress(
         &session.library_item_id,
         session.episode_id.as_deref(),
     )?;
-    let started_at = existing.as_ref().map(|p| p.started_at).unwrap_or(now);
+    let started_at = existing.as_ref().map_or(now, |p| p.started_at);
     let was_finished = existing.as_ref().is_some_and(|p| p.is_finished);
     let is_finished = force_finished
         || (session.duration > 0.0 && session.current_time / session.duration > 0.95);

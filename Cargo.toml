@@ -9,6 +9,9 @@ edition = "2024"
 rust-version = "1.94.1"
 build = "build.rs"
 
+[lints]
+workspace = true
+
 [build-dependencies]
 built = { workspace = true }
 
@@ -75,6 +78,36 @@ debug = "line-tables-only"
 
 [profile.release.package."*"]
 debug = false
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[workspace.lints.clippy]
+# A curated subset of `clippy::pedantic`: the lints that catch real
+# non-idiomatic code without drowning the codebase in doc-section noise.
+cloned_instead_of_copied = "warn"
+explicit_into_iter_loop = "warn"
+explicit_iter_loop = "warn"
+flat_map_option = "warn"
+from_iter_instead_of_collect = "warn"
+if_not_else = "warn"
+implicit_clone = "warn"
+inconsistent_struct_constructor = "warn"
+inefficient_to_string = "warn"
+manual_let_else = "warn"
+manual_string_new = "warn"
+map_unwrap_or = "warn"
+match_bool = "warn"
+needless_continue = "warn"
+redundant_closure_for_method_calls = "warn"
+redundant_else = "warn"
+semicolon_if_nothing_returned = "warn"
+single_char_pattern = "warn"
+string_add_assign = "warn"
+uninlined_format_args = "warn"
+unnecessary_wraps = "warn"
+unnested_or_patterns = "warn"
+unused_self = "warn"
 
 [workspace.dependencies]
 # Workspace internal crates

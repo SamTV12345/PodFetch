@@ -160,7 +160,7 @@ fn metadata_json(podcast: &Podcast) -> Value {
         "itunesArtistId": Value::Null,
         "explicit": matches!(
             podcast.explicit.as_deref(),
-            Some("yes") | Some("true") | Some("1")
+            Some("yes" | "true" | "1")
         ),
         "language": podcast.language,
         "type": "episodic",
@@ -276,7 +276,7 @@ pub fn map_episode(
         "subtitle": Value::Null,
         "description": episode.description,
         "enclosure": enclosure,
-        "guid": Some(episode.guid.clone()).filter(|s| !s.is_empty()).map(Value::from).unwrap_or(Value::Null),
+        "guid": Some(episode.guid.clone()).filter(|s| !s.is_empty()).map_or(Value::Null, Value::from),
         "pubDate": episode.date_of_recording,
         "chapters": Value::Array(vec![]),
         "audioFile": audio_file,

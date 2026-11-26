@@ -89,8 +89,7 @@ impl UserAuthService {
 
     pub fn is_api_key_valid(&self, api_key: &str) -> bool {
         self.find_by_api_key(api_key)
-            .map(|user| user.is_some())
-            .unwrap_or(false)
+            .is_ok_and(|user| user.is_some())
     }
 
     pub fn configured_admin_user(&self) -> User {

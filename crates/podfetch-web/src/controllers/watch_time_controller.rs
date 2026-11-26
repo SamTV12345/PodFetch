@@ -157,7 +157,7 @@ mod tests {
         )
         .unwrap();
         let podcast_episode = insert_episode(
-            &podcast.id.to_string(),
+            &podcast.id.clone(),
             "watchtime-episode-1",
             "watchtime-guid-1",
             "Watchtime Episode 1",
@@ -267,7 +267,7 @@ mod tests {
         )
         .unwrap();
         let podcast_episode = insert_episode(
-            &podcast.id.to_string(),
+            &podcast.id.clone(),
             &format!("watchtime-rewrite-episode-{unique}"),
             &format!("watchtime-rewrite-guid-{unique}"),
             "Watchtime Rewrite Episode",
@@ -345,7 +345,7 @@ mod tests {
         )
         .unwrap();
         let podcast_episode = insert_episode(
-            &podcast.id.to_string(),
+            &podcast.id.clone(),
             &episode_id,
             &format!("watchtime-update-guid-{unique}"),
             "Watchtime Update Episode",
@@ -398,7 +398,7 @@ mod tests {
         )
         .unwrap();
         let podcast_episode = insert_episode(
-            &podcast.id.to_string(),
+            &podcast.id.clone(),
             &episode_id,
             &format!("watchtime-seekback-guid-{unique}"),
             "Watchtime Seekback Episode",
@@ -450,7 +450,7 @@ mod tests {
         )
         .unwrap();
         let podcast_episode = insert_episode(
-            &podcast.id.to_string(),
+            &podcast.id.clone(),
             &format!("watchtime-host-fallback-episode-{unique}"),
             &format!("watchtime-host-fallback-guid-{unique}"),
             "Watchtime Host Fallback Episode",

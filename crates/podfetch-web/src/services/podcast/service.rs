@@ -128,7 +128,7 @@ impl PodcastService {
         if !categories.is_empty() {
             let joined = categories
                 .iter()
-                .map(|id| id.to_string())
+                .map(ToString::to_string)
                 .collect::<Vec<_>>()
                 .join(",");
             params.push(("cat", joined));
@@ -234,7 +234,7 @@ impl PodcastService {
 
         // Remember which image the cover was downloaded from, so the first
         // feed refresh doesn't treat the podcast as having no image yet.
-        if let Ok(podcast_uuid) = uuid::Uuid::parse_str(&inserted_podcast.id)
+        if let Ok(podcast_uuid) = Uuid::parse_str(&inserted_podcast.id)
             && !crate::services::download::service::DownloadService::is_default_fallback_image_url(
                 &podcast_insert.image_url,
             )
@@ -244,12 +244,13 @@ impl PodcastService {
 
         // Resolve the cover name via the podcast's UUID; `podcast_insert.id`
         // is the feed/track id and can't be used to look up settings.
-        let cover_filename = uuid::Uuid::parse_str(&inserted_podcast.id)
-            .map(crate::services::nfo::service::resolve_cover_filename)
-            .unwrap_or_else(|_| crate::settings::default_cover_filename());
+        let cover_filename = Uuid::parse_str(&inserted_podcast.id).map_or_else(
+            |_| crate::settings::default_cover_filename(),
+            crate::services::nfo::service::resolve_cover_filename,
+        );
         FileService::download_podcast_image(
-            &inserted_podcast.directory_name.clone().to_string(),
-            podcast_insert.image_url.clone().to_string(),
+            &inserted_podcast.directory_name.clone().clone(),
+            podcast_insert.image_url.clone().clone(),
             &podcast_insert.id.clone().to_string(),
             &cover_filename,
         )
@@ -289,7 +290,7 @@ impl PodcastService {
             }
             None => {
                 tracing::error!("No podcast found after insert");
-                Err(CustomErrorInner::NotFound(ErrorSeverity::Error).into())
+                Err(CustomErrorInner::NotFound(Error).into())
             }
         }
     }
@@ -512,23 +513,20 @@ impl PodcastService {
                     .or(description.like(format!("%{query}%"))),
             )
             .load::<PodcastEpisode>(&mut get_connection())
-            .map_err(|e| common_infrastructure::error::map_db_error(e, ErrorSeverity::Critical))
+            .map_err(|e| common_infrastructure::error::map_db_error(e, Critical))
     }
 
     /// Whether `user` may add `adding` more podcasts to the server: admins
     /// and uploaders always, other users only within USER_PODCAST_LIMIT
     /// (0 = not at all). Every endpoint that subscribes the server to a feed -
     /// native API and compatibility layers alike - must call this.
-    pub fn ensure_can_add_podcasts(
-        user: &podfetch_domain::user::User,
-        adding: u32,
-    ) -> Result<(), CustomError> {
+    pub fn ensure_can_add_podcasts(user: &User, adding: u32) -> Result<(), CustomError> {
         let current_count = podcast_repo()
             .count_by_added_by(user.id)
             .map_err(CustomError::from)?;
         crate::podcast::check_podcast_add_permission::<CustomError>(
             user.is_privileged_user(),
-            common_infrastructure::runtime::ENVIRONMENT_SERVICE.user_podcast_limit,
+            ENVIRONMENT_SERVICE.user_podcast_limit,
             current_count,
             adding,
         )
@@ -674,7 +672,7 @@ impl PodcastService {
         let result = hasher.finalize();
         let hashed_auth_key = result
             .iter()
-            .map(|b| format!("{:02x}", b))
+            .map(|b| format!("{b:02x}"))
             .collect::<String>();
 
         headers.insert(

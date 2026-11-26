@@ -54,7 +54,7 @@ struct ApiKeyQuery {
 }
 
 fn extract_api_key(headers: &HeaderMap, query: Option<&ApiKeyQuery>) -> Option<String> {
-    if let Some(value) = headers.get(axum::http::header::AUTHORIZATION)
+    if let Some(value) = headers.get(http::header::AUTHORIZATION)
         && let Ok(s) = value.to_str()
         && let Some(rest) = s.strip_prefix("Bearer ")
     {
@@ -139,7 +139,7 @@ async fn handle_agent_socket(state: AppState, user: User, socket: WebSocket) {
                 warn!(agent_id = %agent_id, "agent ws: binary frame ignored");
                 continue;
             }
-            Ok(Message::Ping(_)) | Ok(Message::Pong(_)) => continue,
+            Ok(Message::Ping(_) | Message::Pong(_)) => continue,
             Ok(Message::Close(_)) => break,
             Err(err) => {
                 warn!(agent_id = %agent_id, "agent ws: stream error: {err}");

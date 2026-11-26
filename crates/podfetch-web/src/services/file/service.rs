@@ -59,12 +59,12 @@ impl FileService {
 
     pub fn create_podcast_root_directory_exists() -> Result<(), CustomError> {
         if !FileHandleWrapper::path_exists(
-            &ENVIRONMENT_SERVICE.default_podfetch_folder.to_string(),
+            &ENVIRONMENT_SERVICE.default_podfetch_folder.clone(),
             FileRequest::Directory,
             &ENVIRONMENT_SERVICE.default_file_handler,
         ) {
             return FileHandleWrapper::create_dir(
-                &ENVIRONMENT_SERVICE.default_podfetch_folder.to_string(),
+                &ENVIRONMENT_SERVICE.default_podfetch_folder.clone(),
                 &ENVIRONMENT_SERVICE.default_file_handler,
             );
         }
@@ -80,17 +80,11 @@ impl FileService {
             prepare_podcast_title_to_directory(podcast_insert_model, channel).await?;
         let escaped_path = format!("podcasts/{escaped_title}");
 
-        if !FileHandleWrapper::path_exists(
+        if FileHandleWrapper::path_exists(
             &escaped_path,
             FileRequest::Directory,
             &ENVIRONMENT_SERVICE.default_file_handler,
         ) {
-            FileHandleWrapper::create_dir(
-                &escaped_path,
-                &ENVIRONMENT_SERVICE.default_file_handler,
-            )?;
-            Ok(escaped_path)
-        } else {
             // Check if this is a new podcast with the same name as an old one
 
             let podcast =
@@ -114,6 +108,12 @@ impl FileService {
                     Ok(format!("podcasts/{escaped_title}-{i}"))
                 }
             }
+        } else {
+            FileHandleWrapper::create_dir(
+                &escaped_path,
+                &ENVIRONMENT_SERVICE.default_file_handler,
+            )?;
+            Ok(escaped_path)
         }
     }
 
@@ -259,12 +259,11 @@ pub async fn prepare_podcast_title_to_directory(
 }
 
 fn replace_date_of_str(date: &str) -> String {
-    match date.contains('T') {
-        true => {
-            let splitted_date = date.split('T').collect::<Vec<&str>>();
-            splitted_date[0].to_string()
-        }
-        false => date.to_string(),
+    if date.contains('T') {
+        let splitted_date = date.split('T').collect::<Vec<&str>>();
+        splitted_date[0].to_string()
+    } else {
+        date.to_string()
     }
 }
 
@@ -401,7 +400,7 @@ pub fn perform_episode_variable_replacement(
     let episode_number_str = match total_episode_count {
         Some(total) if total > 0 => {
             let digits = (total as f64).log10().floor() as usize + 1;
-            format!("{:0>width$}", episode_number, width = digits)
+            format!("{episode_number:0>digits$}")
         }
         _ => episode_number.to_string(),
     };
@@ -432,7 +431,7 @@ pub fn perform_episode_variable_replacement(
     let result = strfmt::strfmt(fixed_string.trim(), &vars);
 
     match result {
-        Ok(res) => Ok(res.to_string()),
+        Ok(res) => Ok(res.clone()),
         Err(err) => {
             tracing::error!("Error formatting episode title: {err}");
             Err(CustomErrorInner::Conflict(err.to_string(), ErrorSeverity::Error).into())
@@ -672,8 +671,8 @@ mod tests {
             podcast_id: uuid::Uuid::nil().to_string(),
             file_episode_path: None,
             file_image_path: None,
-            episode_id: "".to_string(),
-            image_url: "".to_string(),
+            episode_id: String::new(),
+            image_url: String::new(),
             download_time: None,
             deleted: false,
             episode_numbering_processed: false,
@@ -722,8 +721,8 @@ mod tests {
             podcast_id: uuid::Uuid::nil().to_string(),
             file_episode_path: None,
             file_image_path: None,
-            episode_id: "".to_string(),
-            image_url: "".to_string(),
+            episode_id: String::new(),
+            image_url: String::new(),
             download_time: None,
             deleted: false,
             episode_numbering_processed: false,
@@ -772,8 +771,8 @@ mod tests {
             podcast_id: uuid::Uuid::nil().to_string(),
             file_episode_path: None,
             file_image_path: None,
-            episode_id: "".to_string(),
-            image_url: "".to_string(),
+            episode_id: String::new(),
+            image_url: String::new(),
             download_time: None,
             deleted: false,
             episode_numbering_processed: false,
@@ -822,8 +821,8 @@ mod tests {
             podcast_id: uuid::Uuid::nil().to_string(),
             file_episode_path: None,
             file_image_path: None,
-            episode_id: "".to_string(),
-            image_url: "".to_string(),
+            episode_id: String::new(),
+            image_url: String::new(),
             download_time: None,
             deleted: false,
             episode_numbering_processed: false,
@@ -862,7 +861,7 @@ mod tests {
 
         let podcast_episode = PodcastParsed {
             title: "Test".to_string(),
-            language: "".to_string(),
+            language: String::new(),
             explicit: "false".to_string(),
             keywords: "test,test2".to_string(),
             summary: "test123".to_string(),

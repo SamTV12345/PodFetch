@@ -167,9 +167,9 @@ struct FavoritePodcastEpisodeEntity {
 impl From<PodcastEpisodeEntity> for PodcastEpisode {
     fn from(entity: PodcastEpisodeEntity) -> Self {
         Self {
-            id: uuid::Uuid::parse_str(&entity.id).expect("valid uuid in db"),
+            id: Uuid::parse_str(&entity.id).expect("valid uuid in db"),
             legacy_id: entity.legacy_id,
-            podcast_id: uuid::Uuid::parse_str(&entity.podcast_id).expect("valid uuid in db"),
+            podcast_id: Uuid::parse_str(&entity.podcast_id).expect("valid uuid in db"),
             episode_id: entity.episode_id,
             name: entity.name,
             url: entity.url,
@@ -236,8 +236,8 @@ impl From<NewPodcastEpisode> for NewPodcastEpisodeEntity {
 impl From<FavoritePodcastEpisodeEntity> for FavoritePodcastEpisode {
     fn from(entity: FavoritePodcastEpisodeEntity) -> Self {
         Self {
-            user_id: uuid::Uuid::parse_str(&entity.user_id).expect("valid uuid in db"),
-            episode_id: uuid::Uuid::parse_str(&entity.episode_id).expect("valid uuid in db"),
+            user_id: Uuid::parse_str(&entity.user_id).expect("valid uuid in db"),
+            episode_id: Uuid::parse_str(&entity.episode_id).expect("valid uuid in db"),
             favorite: entity.favorite,
         }
     }
@@ -400,7 +400,7 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
     }
 
     fn query_by_url_like(&self, url_pattern: &str) -> Result<Option<PodcastEpisode>, Self::Error> {
-        let pattern = format!("%{}%", url_pattern);
+        let pattern = format!("%{url_pattern}%");
         podcast_episodes::table
             .filter(podcast_episodes::url.like(pattern))
             .first::<PodcastEpisodeEntity>(&mut self.database.connection()?)
@@ -495,8 +495,7 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
                             ep.map(|entity| {
                                 let _user_id = entity.user_id;
                                 Episode {
-                                    id: uuid::Uuid::parse_str(&entity.id)
-                                        .expect("valid uuid in db"),
+                                    id: Uuid::parse_str(&entity.id).expect("valid uuid in db"),
                                     username: username.to_string(),
                                     device: entity.device,
                                     podcast: entity.podcast,
@@ -569,7 +568,7 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
     ) -> Result<Vec<PodcastEpisode>, Self::Error> {
         let exclude: Vec<String> = exclude_episode_ids
             .iter()
-            .map(|id| id.to_string())
+            .map(ToString::to_string)
             .collect();
 
         // `ne_all` on an empty list renders as an always-true predicate in

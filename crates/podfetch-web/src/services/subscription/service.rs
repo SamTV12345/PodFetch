@@ -205,7 +205,7 @@ impl SubscriptionService {
             .map(|podcasts| podcasts.into_iter().map(Into::into).collect())
     }
 
-    fn parse_since(since: i32) -> chrono::NaiveDateTime {
+    fn parse_since(since: i32) -> NaiveDateTime {
         DateTime::from_timestamp(since as i64, 0)
             .map(|value| value.naive_utc())
             .unwrap_or_default()

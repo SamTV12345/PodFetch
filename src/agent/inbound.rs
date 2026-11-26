@@ -65,15 +65,12 @@ impl AgentService {
         media: PlayMedia,
         devices: &[DiscoveredCastDevice],
     ) -> InboundOutcome {
-        let target = match resolve_target(&chromecast_uuid, devices) {
-            Some(t) => t,
-            None => {
-                return InboundOutcome::Reply(vec![AgentMsg::Error {
-                    request_id: Some(request_id),
-                    code: ErrorCode::DeviceNotFound,
-                    message: format!("device {chromecast_uuid} not in discovery snapshot"),
-                }]);
-            }
+        let Some(target) = resolve_target(&chromecast_uuid, devices) else {
+            return InboundOutcome::Reply(vec![AgentMsg::Error {
+                request_id: Some(request_id),
+                code: ErrorCode::DeviceNotFound,
+                message: format!("device {chromecast_uuid} not in discovery snapshot"),
+            }]);
         };
         let cast_media = CastMedia {
             url: media.url,

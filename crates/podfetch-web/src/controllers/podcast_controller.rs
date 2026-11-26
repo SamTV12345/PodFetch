@@ -125,30 +125,27 @@ pub async fn search_podcasts(
     state.filter_service.save_filter(search_plan.filter)?;
     let server_url = resolve_server_url_from_headers(&headers);
 
-    match search_plan.favored_only {
-        true => {
-            let podcasts = PodcastService::search_podcasts_favored(
-                search_plan.order,
-                search_plan.title,
-                search_plan.order_option,
-                search_plan.user_id,
-                search_plan.tag,
-                &requester,
-                &server_url,
-            )?;
-            Ok(Json(podcasts))
-        }
-        false => {
-            let podcasts = PodcastService::search_podcasts(
-                search_plan.order,
-                search_plan.title,
-                search_plan.order_option,
-                search_plan.tag,
-                &requester,
-                &server_url,
-            )?;
-            Ok(Json(podcasts))
-        }
+    if search_plan.favored_only {
+        let podcasts = PodcastService::search_podcasts_favored(
+            search_plan.order,
+            search_plan.title,
+            search_plan.order_option,
+            search_plan.user_id,
+            search_plan.tag,
+            &requester,
+            &server_url,
+        )?;
+        Ok(Json(podcasts))
+    } else {
+        let podcasts = PodcastService::search_podcasts(
+            search_plan.order,
+            search_plan.title,
+            search_plan.order_option,
+            search_plan.tag,
+            &requester,
+            &server_url,
+        )?;
+        Ok(Json(podcasts))
     }
 }
 
@@ -524,7 +521,7 @@ pub async fn update_name_of_podcast(
     require_admin::<CustomError>(requester.is_admin()).map_err(map_podcast_error)?;
     let (podcast_uuid, _found_podcast) = match resolve_podcast(&id) {
         Ok(p) => Ok(p),
-        Err(..) => Err(CustomErrorInner::NotFound(ErrorSeverity::Debug)),
+        Err(..) => Err(CustomErrorInner::NotFound(Debug)),
     }?;
 
     PodcastService::update_podcast_name(podcast_uuid, &req.name)?;
@@ -608,7 +605,7 @@ async fn insert_outline(podcast: Outline, mut rng: ThreadRng, added_by: Option<u
             let inserted_podcast = PodcastService::handle_insert_of_podcast(
                 PodcastInsertModel {
                     feed_url: podcast.clone().xml_url.expect("No feed url"),
-                    title: channel.clone().title.to_string(),
+                    title: channel.clone().title.clone(),
                     id: rng.random::<i32>(),
                     image_url,
                 },
@@ -685,12 +682,12 @@ pub async fn delete_podcast(
             Ok(Err(err)) => {
                 tracing::error!(
                     "Podcast {podcast_uuid} deleted, but its files in {directory} could not be removed: {err}"
-                )
+                );
             }
             Err(err) => {
                 tracing::error!(
                     "Podcast {podcast_uuid} deleted, but removing its files in {directory} failed: {err}"
-                )
+                );
             }
         }
     }
@@ -712,8 +709,8 @@ pub(crate) async fn proxy_podcast(
     Query(params): Query<ProxyPodcastParams>,
     OptionalQuery(api_key): OptionalQuery<RSSAPiKey>,
     req: axum::extract::Request,
-) -> Result<axum::http::response::Response<Body>, CustomError> {
-    println!("Got a request: {:?}", req);
+) -> Result<http::response::Response<Body>, CustomError> {
+    println!("Got a request: {req:?}");
     let mut req = req.map(|body| reqwest::Body::wrap_stream(body.into_data_stream()));
     let headers = req.headers_mut();
 
@@ -779,7 +776,7 @@ pub(crate) async fn proxy_podcast_with_path_api_key(
     Path(api_key): Path<String>,
     Query(params): Query<ProxyPodcastParams>,
     req: axum::extract::Request,
-) -> Result<axum::http::response::Response<Body>, CustomError> {
+) -> Result<http::response::Response<Body>, CustomError> {
     let api_key_query = OptionalQuery(Some(RSSAPiKey {
         api_key: Some(api_key),
     }));
@@ -858,7 +855,7 @@ pub async fn retrieve_podcast_sample_format(
         replace_invalid_characters: false,
         use_existing_filename: false,
         replacement_strategy: "remove".to_string(),
-        episode_format: "".to_string(),
+        episode_format: String::new(),
         podcast_format: sample_string.0.content,
         direct_paths: true,
         auto_transcode_opus: false,
@@ -996,7 +993,7 @@ pub mod tests {
         assert_eq!(resp.status_code(), 200);
         assert_eq!(
             crate::services::podcast::service::PodcastService::get_podcast(
-                uuid::Uuid::parse_str(&saved_podcast.id).unwrap()
+                Uuid::parse_str(&saved_podcast.id).unwrap()
             )
             .unwrap()
             .name,
@@ -1114,7 +1111,7 @@ pub mod tests {
         assert_eq!(resp.status_code(), 200);
 
         let persisted = crate::services::podcast::service::PodcastService::get_podcast(
-            uuid::Uuid::parse_str(&saved_podcast.id).unwrap(),
+            Uuid::parse_str(&saved_podcast.id).unwrap(),
         )
         .unwrap();
         assert_eq!(persisted.name, original_name);
@@ -1464,12 +1461,10 @@ pub mod tests {
     // ── Path-based API key proxy tests ──────────────────────────────────
 
     fn create_api_key_user() -> String {
-        let state = crate::app_state::AppState::new();
-        let mut user =
-            crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder::new()
-                .build();
-        user.username = format!("proxy-test-user-{}", uuid::Uuid::new_v4());
-        let api_key = format!("proxy-test-key-{}", uuid::Uuid::new_v4());
+        let state = AppState::new();
+        let mut user = UserTestDataBuilder::new().build();
+        user.username = format!("proxy-test-user-{}", Uuid::new_v4());
+        let api_key = format!("proxy-test-key-{}", Uuid::new_v4());
         user.api_key = Some(api_key.clone());
         let _created = state.user_admin_service.create_user(user).unwrap();
         api_key

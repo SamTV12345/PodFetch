@@ -208,9 +208,7 @@ impl DownloadService {
             );
             podcast_data = Self::download_hls_episode(&podcast_episode.url)?;
         }
-        let settings_in_db = crate::services::settings::service::SettingsService::shared()
-            .get_settings()?
-            .unwrap();
+        let settings_in_db = SettingsService::shared().get_settings()?.unwrap();
         let podcast_settings_override =
             PodcastSettingsService::get_settings_for_podcast(parse_id(&podcast.id)?)?;
         let use_one_cover_for_all_episodes = Self::use_one_cover_from(
@@ -268,8 +266,7 @@ impl DownloadService {
             .with_image_suffix(
                 &image_data
                     .as_ref()
-                    .map(|data| data.0.clone())
-                    .unwrap_or_else(|| "jpg".to_string()),
+                    .map_or_else(|| "jpg".to_string(), |data| data.0.clone()),
             )
             .with_image_filename(&cover_filename)
             .with_filename(PODCAST_FILENAME)
@@ -361,8 +358,7 @@ impl DownloadService {
         // flight. Non-fatal — must never fail the download.
         let auto_transcribe = podcast_settings_override
             .as_ref()
-            .map(|settings| settings.auto_transcribe)
-            .unwrap_or(false);
+            .is_some_and(|settings| settings.auto_transcribe);
         if ENVIRONMENT_SERVICE.transcription_config.is_some()
             && auto_transcribe
             && let Ok(episode_uuid) = parse_id(&podcast_episode.id)
@@ -880,7 +876,7 @@ impl DownloadService {
 
     pub fn read_chapters_from_mp3(path: &String) -> Result<Vec<Chapter>, CustomError> {
         let tag = Tag::read_from_path(path)
-            .map_err(|e| format!("Error reading ID3 tag from `{}`: {}", path, e));
+            .map_err(|e| format!("Error reading ID3 tag from `{path}`: {e}"));
 
         let tag = match tag {
             Ok(tag) => tag,
@@ -933,10 +929,10 @@ impl DownloadService {
             }
 
             chapters.push(Chapter {
-                title,
-                link,
                 start,
                 end,
+                title,
+                link,
                 ..Default::default()
             });
         }
@@ -1009,21 +1005,21 @@ mod tests {
     fn resolve_episode_title_handles_all_numbering_states() {
         // numbering on, not yet processed -> prefix + mark processed
         assert_eq!(
-            super::DownloadService::resolve_episode_title("Ep", false, true, 5),
+            DownloadService::resolve_episode_title("Ep", false, true, 5),
             Some(("5 - Ep".to_string(), true))
         );
         // numbering on, already processed -> leave as-is
         assert_eq!(
-            super::DownloadService::resolve_episode_title("Ep", true, true, 5),
+            DownloadService::resolve_episode_title("Ep", true, true, 5),
             None
         );
         // numbering off -> plain title, mark not-processed
         assert_eq!(
-            super::DownloadService::resolve_episode_title("Ep", false, false, 5),
+            DownloadService::resolve_episode_title("Ep", false, false, 5),
             Some(("Ep".to_string(), false))
         );
         assert_eq!(
-            super::DownloadService::resolve_episode_title("Ep", true, false, 5),
+            DownloadService::resolve_episode_title("Ep", true, false, 5),
             Some(("Ep".to_string(), false))
         );
     }
@@ -1211,7 +1207,7 @@ mod tests {
             },
         ];
         for c in &cases {
-            let got = super::DownloadService::should_download_image(
+            let got = DownloadService::should_download_image(
                 c.use_one_cover,
                 c.episode_own,
                 c.main_downloaded,
@@ -1242,7 +1238,7 @@ mod tests {
             directory_id: directory_id.to_string(),
             rssfeed: "https://example.com/feed.xml".into(),
             image_url: image_url.to_string(),
-            directory_name: format!("podcasts/{}", directory_id),
+            directory_name: format!("podcasts/{directory_id}"),
             added_by: None,
         };
         repo.create(podcast).expect("seed podcast");
@@ -1253,8 +1249,7 @@ mod tests {
         use diesel::RunQueryDsl;
         use podfetch_persistence::db::get_connection;
         let _ = diesel::sql_query(format!(
-            "DELETE FROM podcasts WHERE directory_id = '{}'",
-            directory_id
+            "DELETE FROM podcasts WHERE directory_id = '{directory_id}'"
         ))
         .execute(&mut get_connection());
     }

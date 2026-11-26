@@ -58,7 +58,7 @@ pub fn parse(json: &str) -> Option<MetadataPatch> {
     if let Some(v) = string_field(obj, "language") {
         patch.language = Some(v);
     }
-    if let Some(b) = obj.get("explicit").and_then(|v| v.as_bool()) {
+    if let Some(b) = obj.get("explicit").and_then(Value::as_bool) {
         patch.explicit = Some(b);
     }
     if let Some(authors) = string_or_name_array(obj, "authors")
@@ -83,7 +83,7 @@ fn string_field(obj: &serde_json::Map<String, Value>, key: &str) -> Option<Strin
         .and_then(|v| v.as_str())
         .map(str::trim)
         .filter(|s| !s.is_empty())
-        .map(|s| s.to_string())
+        .map(ToString::to_string)
 }
 
 fn string_or_name_array(obj: &serde_json::Map<String, Value>, key: &str) -> Option<Vec<String>> {
@@ -130,7 +130,7 @@ fn parse_series(value: &Value) -> Option<(String, Option<String>)> {
             .or_else(|| {
                 obj.get("sequence")
                     .or_else(|| obj.get("position"))
-                    .and_then(|n| n.as_f64())
+                    .and_then(Value::as_f64)
                     .map(|f| {
                         if f.fract() == 0.0 {
                             format!("{}", f as i64)

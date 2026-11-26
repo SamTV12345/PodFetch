@@ -94,8 +94,7 @@ pub async fn upload(
     let title = title.filter(|s| !s.is_empty()).unwrap_or_else(|| {
         files
             .first()
-            .map(|(name, _)| strip_ext(name))
-            .unwrap_or_else(|| "Untitled".to_string())
+            .map_or_else(|| "Untitled".to_string(), |(name, _)| strip_ext(name))
     });
     let target_dir = match author.as_deref().filter(|s| !s.is_empty()) {
         Some(author) => PathBuf::from(&folder_root)
@@ -181,8 +180,7 @@ fn strip_ext(filename: &str) -> String {
     PathBuf::from(filename)
         .file_stem()
         .and_then(|s| s.to_str())
-        .map(|s| s.to_string())
-        .unwrap_or_else(|| filename.to_string())
+        .map_or_else(|| filename.to_string(), ToString::to_string)
 }
 
 pub fn get_upload_router() -> OpenApiRouter<AppState> {

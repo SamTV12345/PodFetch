@@ -31,7 +31,7 @@ jobs:
       - name: Run cargo build
         run: cargo build
       - name: Run lint
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Run cargo test
         run: cargo test --workspace
   build_sqlite:
@@ -57,7 +57,7 @@ jobs:
       - name: Run cargo build
         run: cargo build --no-default-features --features sqlite
       - name: Run lint
-        run: cargo clippy --no-default-features --features sqlite -- -D warnings
+        run: cargo clippy --workspace --all-targets --no-default-features --features sqlite -- -D warnings
       - name: Run cargo test
         run: cargo test --no-default-features --workspace --features sqlite
   build_postgres:

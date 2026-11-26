@@ -286,14 +286,14 @@ mod tests {
         mut multipart: Multipart,
     ) -> impl IntoResponse {
         let authorization = headers
-            .get(axum::http::header::AUTHORIZATION)
+            .get(http::header::AUTHORIZATION)
             .and_then(|v| v.to_str().ok())
-            .map(|s| s.to_string());
+            .map(ToString::to_string);
 
         let mut model = None;
         let mut saw_file_field = false;
         while let Some(field) = multipart.next_field().await.unwrap() {
-            match field.name().map(|n| n.to_string()).as_deref() {
+            match field.name().map(ToString::to_string).as_deref() {
                 Some("model") => {
                     model = field.text().await.ok();
                 }
@@ -310,14 +310,14 @@ mod tests {
         {
             let mut captured = state
                 .lock()
-                .unwrap_or_else(|poisoned| poisoned.into_inner());
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             captured.authorization = authorization;
             captured.model = model;
             captured.saw_file_field = saw_file_field;
         }
 
         (
-            axum::http::StatusCode::OK,
+            http::StatusCode::OK,
             [("content-type", "application/json")],
             VERBOSE_JSON_RESPONSE,
         )
@@ -415,7 +415,7 @@ mod tests {
     fn transcribe_returns_err_on_server_500() {
         let app = Router::new().route(
             "/v1/audio/transcriptions",
-            post(|| async { axum::http::StatusCode::INTERNAL_SERVER_ERROR }),
+            post(|| async { http::StatusCode::INTERNAL_SERVER_ERROR }),
         );
         let base_url = spawn_mock_server(app);
 
@@ -442,7 +442,7 @@ mod tests {
             "/v1/audio/transcriptions",
             post(|| async {
                 (
-                    axum::http::StatusCode::OK,
+                    http::StatusCode::OK,
                     [("content-type", "application/json")],
                     "not json at all {",
                 )

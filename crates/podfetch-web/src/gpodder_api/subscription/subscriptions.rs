@@ -173,7 +173,7 @@ pub async fn put_device_subscriptions(
     let update_urls = state.subscription_service.update_subscriptions(
         deviceid.0,
         flag.user_id,
-        crate::subscription::SubscriptionUpdateRequest {
+        SubscriptionUpdateRequest {
             add: to_add,
             remove: to_remove,
         },
@@ -278,7 +278,7 @@ pub async fn put_simple_subscriptions(
     let update_urls = state.subscription_service.update_subscriptions(
         deviceid.0,
         flag.user_id,
-        crate::subscription::SubscriptionUpdateRequest {
+        SubscriptionUpdateRequest {
             add: to_add,
             remove: to_remove,
         },

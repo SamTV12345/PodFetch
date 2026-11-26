@@ -152,7 +152,7 @@ pub fn ensure_cover_filename(podcast_entity: &PodcastEntity) {
     let Some(ext) = std::path::Path::new(&podcast_entity.image_url)
         .extension()
         .and_then(|e| e.to_str())
-        .map(|e| e.to_ascii_lowercase())
+        .map(str::to_ascii_lowercase)
     else {
         return;
     };

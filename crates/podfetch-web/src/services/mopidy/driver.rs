@@ -235,15 +235,13 @@ async fn poll_once(client: &MopidyRpcClient) -> Option<(CastState, f64, f32)> {
         .await
         .ok()
         .and_then(|v| v.as_i64())
-        .map(ms_to_secs)
-        .unwrap_or(0.0);
+        .map_or(0.0, ms_to_secs);
     let volume = client
         .call("core.mixer.get_volume", json!({}))
         .await
         .ok()
         .and_then(|v| v.as_i64())
-        .map(volume_from_mopidy)
-        .unwrap_or(1.0);
+        .map_or(1.0, volume_from_mopidy);
     Some((state, position, volume))
 }
 

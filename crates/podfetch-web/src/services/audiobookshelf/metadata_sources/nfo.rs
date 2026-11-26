@@ -29,8 +29,7 @@ pub fn load(folder: &Path) -> Option<MetadataPatch> {
             if p.is_file()
                 && p.extension()
                     .and_then(|e| e.to_str())
-                    .map(|e| e.eq_ignore_ascii_case("nfo"))
-                    .unwrap_or(false)
+                    .is_some_and(|e| e.eq_ignore_ascii_case("nfo"))
             {
                 return std::fs::read_to_string(&p).ok().and_then(|xml| parse(&xml));
             }
@@ -53,7 +52,7 @@ pub fn parse(xml: &str) -> Option<MetadataPatch> {
 
     loop {
         match reader.read_event_into(&mut buf) {
-            Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
+            Ok(Event::Start(e) | Event::Empty(e)) => {
                 let tag = e.name().as_ref().to_ascii_lowercase();
                 current_attrs.clear();
                 for attr in e.attributes().flatten() {
@@ -86,7 +85,7 @@ pub fn parse(xml: &str) -> Option<MetadataPatch> {
                     "title" => patch.title = Some(value.to_string()),
                     "subtitle" => patch.subtitle = Some(value.to_string()),
                     "description" | "plot" | "summary" => {
-                        patch.description = Some(value.to_string())
+                        patch.description = Some(value.to_string());
                     }
                     "author" | "creator" | "writer" => authors.push(value.to_string()),
                     "narrator" | "reader" => narrators.push(value.to_string()),

@@ -238,7 +238,7 @@ impl<L: CastDriver> CastOrchestrator<L> {
                 Some(id) => {
                     self.agent_dispatcher
                         .control(id, &session.session_id, &cmd)
-                        .await?
+                        .await?;
                 }
                 None => self.local_driver.control(&session.session_id, &cmd).await?,
             }
@@ -473,9 +473,7 @@ mod tests {
         // shared registry; tests that don't can use the simple helper.
         let registry = Arc::new(AgentRegistry::new());
         let (mopidy_tx, _mopidy_rx) = tokio::sync::mpsc::channel(8);
-        let mopidy_driver = Arc::new(crate::services::mopidy::driver::MopidyDriver::new(
-            mopidy_tx,
-        ));
+        let mopidy_driver = Arc::new(MopidyDriver::new(mopidy_tx));
         let orch = CastOrchestrator::new(
             device_service,
             Arc::new(StubCastDriver),
@@ -580,10 +578,8 @@ mod tests {
 
         let repo = Arc::new(FakeDeviceRepo::new(vec![device]));
         let device_service = Arc::new(DeviceService::new(repo));
-        let (mopidy_tx2, _mopidy_rx2) = tokio::sync::mpsc::channel(8);
-        let mopidy_driver2 = Arc::new(crate::services::mopidy::driver::MopidyDriver::new(
-            mopidy_tx2,
-        ));
+        let (mopidy_tx2, _mopidy_rx2) = mpsc::channel(8);
+        let mopidy_driver2 = Arc::new(MopidyDriver::new(mopidy_tx2));
         let orch = CastOrchestrator::new(
             device_service,
             Arc::new(StubCastDriver),

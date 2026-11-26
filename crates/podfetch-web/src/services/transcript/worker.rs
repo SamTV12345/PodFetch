@@ -117,7 +117,7 @@ pub async fn run_transcription_worker() {
         tracing::info!("Transcription worker not starting: no transcription backend configured");
         return;
     };
-    run_worker_with_config(config, Arc::new(std::sync::atomic::AtomicBool::new(false))).await
+    run_worker_with_config(config, Arc::new(std::sync::atomic::AtomicBool::new(false))).await;
 }
 
 /// The actual worker: one dedicated blocking thread runs the whole
@@ -142,7 +142,7 @@ async fn run_worker_with_config(
         Ok(reset) => {
             tracing::info!(
                 "Reset {reset} stuck transcription job(s) from running back to pending at startup"
-            )
+            );
         }
         Err(err) => tracing::error!("Failed to reset stuck transcription jobs at startup: {err}"),
     }
@@ -208,6 +208,10 @@ mod tests {
     /// `run_worker_with_config`). The worker task must still be alive and
     /// polling after startup instead of having died on a construction panic.
     #[tokio::test]
+    #[allow(
+        clippy::await_holding_lock,
+        reason = "the guard serialises access to the shared test database"
+    )]
     async fn worker_survives_startup_inside_the_async_runtime() {
         let _guard = lock_and_prepare_db();
         let config = TranscriptionConfig {
@@ -231,7 +235,7 @@ mod tests {
         ensure_test_env_vars();
         let guard = GLOBAL_MUTEX
             .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         run_migrations();
 
         let mut conn = get_connection();
@@ -313,7 +317,7 @@ mod tests {
                 guid: Uuid::new_v4().to_string(),
                 deleted: false,
                 episode_numbering_processed: false,
-                file_episode_path: file_episode_path.map(|s| s.to_string()),
+                file_episode_path: file_episode_path.map(ToString::to_string),
             })
             .execute(&mut get_connection())
             .expect("seed episode");
@@ -461,7 +465,7 @@ mod tests {
 
         let app = Router::new().route(
             "/v1/audio/transcriptions",
-            post(|| async { axum::http::StatusCode::INTERNAL_SERVER_ERROR }),
+            post(|| async { http::StatusCode::INTERNAL_SERVER_ERROR }),
         );
         let base_url = spawn_mock_server(app);
         let client = WhisperClient::new(whisper_config(base_url));
@@ -504,7 +508,7 @@ mod tests {
 
         let app = Router::new().route(
             "/v1/audio/transcriptions",
-            post(|| async { axum::http::StatusCode::INTERNAL_SERVER_ERROR }),
+            post(|| async { http::StatusCode::INTERNAL_SERVER_ERROR }),
         );
         let base_url = spawn_mock_server(app);
         let client = WhisperClient::new(whisper_config(base_url));

@@ -47,7 +47,7 @@ pub fn fetch_and_store_blocking(episode: &PodcastEpisode) -> Result<usize, Custo
 pub async fn fetch_and_store(episode: &PodcastEpisode) -> Result<usize, CustomError> {
     // Guard 1: global toggle.
     let settings = crate::services::settings::service::SettingsService::shared().get_settings()?;
-    let enabled = settings.map(|s| s.sponsorblock_enabled).unwrap_or(true);
+    let enabled = settings.is_none_or(|s| s.sponsorblock_enabled);
     if !enabled {
         return Ok(0);
     }

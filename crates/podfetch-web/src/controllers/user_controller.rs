@@ -15,9 +15,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::services::user_admin::service::map_requester;
-use common_infrastructure::error::{
-    ApiError, CustomError, CustomErrorInner, ErrorSeverity, ErrorType,
-};
+use common_infrastructure::error::{ApiError, CustomError, CustomErrorInner, ErrorType};
 
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -95,7 +93,7 @@ pub async fn update_role(
         &username,
         requester.is_admin(),
         UserRoleUpdateModel {
-            role: role.role.to_string(),
+            role: role.role.clone(),
             explicit_consent: role.explicit_consent,
         },
     )
@@ -210,7 +208,7 @@ responses(
 (status = 200, description = "Gets an invite by id", body = Option<String>)))]
 pub async fn get_invite_link(
     State(state): State<AppState>,
-    headers: axum::http::HeaderMap,
+    headers: http::HeaderMap,
     Path(invite_id): Path<String>,
     requester: Extension<User>,
 ) -> Result<String, CustomError> {
@@ -262,9 +260,7 @@ fn map_invite_link_error(error: InviteControllerError<CustomError>) -> CustomErr
 
 fn map_user_admin_error(error: UserAdminControllerError<CustomError>) -> CustomError {
     match error {
-        UserAdminControllerError::Forbidden => {
-            CustomErrorInner::Forbidden(ErrorSeverity::Warning).into()
-        }
+        UserAdminControllerError::Forbidden => CustomErrorInner::Forbidden(Warning).into(),
         UserAdminControllerError::NotFound => CustomErrorInner::NotFound(Info).into(),
         UserAdminControllerError::UpdatingAdminNotAllowed => {
             CustomErrorInner::BadRequest("UPDATE_OF_ADMIN_NOT_ALLOWED".to_string(), Info).into()
@@ -558,7 +554,7 @@ mod tests {
 
         let invite_link_result = super::get_invite_link(
             State(app_state()),
-            axum::http::HeaderMap::new(),
+            http::HeaderMap::new(),
             Path("some-id".to_string()),
             Extension(non_admin),
         )
@@ -641,7 +637,7 @@ mod tests {
         .await;
         match get_user_result {
             Err(ErrorType::CustomErrorType(err)) => {
-                assert!(matches!(err.inner, CustomErrorInner::Forbidden(_)))
+                assert!(matches!(err.inner, CustomErrorInner::Forbidden(_)));
             }
             _ => panic!("expected forbidden error for get_user"),
         }
