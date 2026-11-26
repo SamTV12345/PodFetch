@@ -1,0 +1,28 @@
+[package]
+name = "podfetch-notifications"
+version = "0.1.0"
+edition = "2024"
+description = "Notifications bounded context: in-app notifications and Telegram, driven by events"
+
+[lints]
+workspace = true
+
+[features]
+default = []
+sqlite = ["common-infrastructure/sqlite", "podfetch-events/sqlite"]
+postgresql = ["common-infrastructure/postgresql", "podfetch-events/postgresql"]
+
+[dependencies]
+common-infrastructure = { workspace = true }
+podfetch-events = { workspace = true }
+chrono = { workspace = true }
+diesel = { workspace = true }
+frankenstein = { workspace = true }
+serde = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+utoipa = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

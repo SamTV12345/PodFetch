@@ -9,7 +9,6 @@ pub mod filter;
 pub mod gpodder_setting;
 pub mod ids;
 pub mod listening_event;
-pub mod notification;
 pub mod ordering;
 pub mod playlist;
 pub mod podcast;

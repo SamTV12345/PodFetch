@@ -14,7 +14,6 @@ pub mod favorite_podcast_episode;
 pub mod filter;
 pub mod gpodder_setting;
 pub mod listening_event;
-pub mod notification;
 pub mod playlist;
 pub mod podcast;
 pub mod podcast_episode;

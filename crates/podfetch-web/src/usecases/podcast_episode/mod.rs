@@ -1,10 +1,9 @@
-use crate::notification::Notification;
+use crate::podcast_events::{self, EpisodeDownloadFailed, EpisodeDownloaded};
 use crate::server::ChatServerHandle;
 use crate::services::download::service::DownloadService;
 use crate::services::episode_triage::service::EpisodeTriageService;
 use crate::services::favorite_podcast_episode::service::FavoritePodcastEpisodeService;
 use crate::services::file::service::FileService;
-use crate::services::notification::service::NotificationService;
 use crate::services::playlist::service::PlaylistService;
 use crate::services::podcast::metadata::PodcastBuilder;
 use crate::services::podcast_settings::service::PodcastSettingsService;
@@ -12,8 +11,6 @@ use crate::services::settings::service::SettingsService;
 use crate::services::transcript::service::{FeedTranscriptTag, TranscriptService};
 use chrono::{DateTime, TimeZone, Utc};
 use common_infrastructure::config::FileHandlerType;
-use common_infrastructure::config::TELEGRAM_API_ENABLED;
-use common_infrastructure::config::is_env_var_present_and_true;
 use common_infrastructure::error::ErrorSeverity::{Critical, Warning};
 use common_infrastructure::error::{
     CustomError, CustomErrorInner, ErrorSeverity, map_db_error, map_reqwest_error,
@@ -23,7 +20,6 @@ use common_infrastructure::http::get_sync_client;
 use common_infrastructure::mutex::LockResultExt;
 use common_infrastructure::retry::do_retry;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
-use common_infrastructure::telegram::send_new_episode_notification;
 use common_infrastructure::time::opt_or_empty_string;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use podfetch_domain::podcast_episode::{NewPodcastEpisode, PodcastEpisodeRepository};
@@ -468,10 +464,6 @@ impl PodcastEpisodeUseCase {
         }
         let podcast_inserted = Self::perform_download(&podcast_episode_cloned, &podcast)?;
         ChatServerHandle::broadcast_podcast_episode_offline_available(&podcast_inserted, &podcast);
-
-        if is_env_var_present_and_true(TELEGRAM_API_ENABLED) {
-            send_new_episode_notification(&podcast_episode.name, &podcast.name);
-        }
         Ok(())
     }
 
@@ -490,33 +482,24 @@ impl PodcastEpisodeUseCase {
         if let Err(err) =
             DownloadService::download_podcast_episode(podcast_episode.clone(), podcast_cloned)
         {
-            if let Err(notification_err) = NotificationService::create_notification(Notification {
-                id: String::new(),
-                message: format!("{} ({})", podcast_episode.name, err.inner),
-                created_at: Utc::now().naive_utc().to_string(),
-                type_of_message: "DownloadFailed".to_string(),
-                status: "unread".to_string(),
-            }) {
-                tracing::error!(
-                    "Failed to insert failed-download notification for episode {}: {}",
-                    podcast_episode.episode_id,
-                    notification_err
-                );
-            }
+            podcast_events::publish(&EpisodeDownloadFailed {
+                episode_id: podcast_episode.episode_id.clone(),
+                episode_name: podcast_episode.name.clone(),
+                podcast_id: podcast_cloned.id.clone(),
+                reason: err.inner.to_string(),
+            });
             return Err(err);
         }
         let podcast = Self::update_podcast_episode_status(
             &podcast_episode.url,
             Some(ENVIRONMENT_SERVICE.default_file_handler.clone()),
         )?;
-        let notification = Notification {
-            id: String::new(),
-            message: podcast_episode.name.clone(),
-            created_at: Utc::now().naive_utc().to_string(),
-            type_of_message: "Download".to_string(),
-            status: "unread".to_string(),
-        };
-        NotificationService::create_notification(notification)?;
+        podcast_events::publish(&EpisodeDownloaded {
+            episode_id: podcast_episode.episode_id.clone(),
+            episode_name: podcast_episode.name.clone(),
+            podcast_id: podcast_cloned.id.clone(),
+            podcast_name: podcast_cloned.name.clone(),
+        });
         Ok(podcast)
     }
 

@@ -613,7 +613,6 @@ dependencies = [
  "base64 0.23.1",
  "chrono",
  "diesel",
- "frankenstein",
  "fs_extra",
  "libsqlite3-sys",
  "r2d2",
@@ -3272,6 +3271,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "podfetch-notifications"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "common-infrastructure",
+ "diesel",
+ "frankenstein",
+ "podfetch-events",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
 name = "podfetch-persistence"
 version = "0.1.0"
 dependencies = [
@@ -3337,6 +3353,7 @@ dependencies = [
  "podfetch-events",
  "podfetch-identity",
  "podfetch-kernel",
+ "podfetch-notifications",
  "podfetch-persistence",
  "podfetch-storage",
  "quick-xml 0.42.0",

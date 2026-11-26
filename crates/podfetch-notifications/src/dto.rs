@@ -12,8 +12,8 @@ pub struct Notification {
     pub status: String,
 }
 
-impl From<podfetch_domain::notification::Notification> for Notification {
-    fn from(value: podfetch_domain::notification::Notification) -> Self {
+impl From<crate::domain::Notification> for Notification {
+    fn from(value: crate::domain::Notification) -> Self {
         Self {
             id: value.id.to_string(),
             type_of_message: value.type_of_message,
@@ -24,7 +24,7 @@ impl From<podfetch_domain::notification::Notification> for Notification {
     }
 }
 
-impl From<Notification> for podfetch_domain::notification::Notification {
+impl From<Notification> for crate::domain::Notification {
     fn from(value: Notification) -> Self {
         Self {
             id: Uuid::parse_str(&value.id).unwrap_or_else(|_| Uuid::nil()),
