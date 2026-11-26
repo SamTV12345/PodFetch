@@ -52,7 +52,6 @@ sha1 = { workspace = true }
 # Async
 tokio = { workspace = true }
 futures = { workspace = true }
-async-recursion = { workspace = true }
 
 # HTTP client
 reqwest = { workspace = true }

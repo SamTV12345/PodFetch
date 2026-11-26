@@ -1,9 +1,9 @@
 use crate::app_state::AppState;
+use crate::background::spawn_detached;
 use crate::controllers::controller_utils::{get_default_image, unwrap_string};
 use crate::controllers::id_resolver::{ResolvedId, parse_resolved_id};
 use crate::services::podcast::service::PodcastService;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
-use async_recursion::async_recursion;
 use axum::body::Body;
 use axum::extract::{Path, Query, State};
 use axum::http::HeaderMap;
@@ -16,11 +16,11 @@ use common_infrastructure::http::COMMON_USER_AGENT;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use opml::{OPML, Outline};
 use rand::RngExt;
-use rand::rngs::ThreadRng;
+use reqwest::header::HeaderValue;
 use rss::Channel;
 use serde_json::Value;
+use std::sync::LazyLock;
 use std::thread;
-use tokio::task::spawn_blocking;
 
 use crate::filter::Filter;
 pub use crate::podcast::{
@@ -33,7 +33,6 @@ use crate::podcast::{
     build_podcast_search_plan, ensure_podindex_configured, ensure_proxy_api_access,
     map_podcast_error, map_proxy_podcast_error, parse_search_type, require_admin,
     require_privileged, require_proxy_episode, sanitize_proxy_request_headers,
-    spawn_podindex_download,
 };
 use crate::services::file::service::{FileService, perform_podcast_variable_replacement};
 use crate::url_rewriting::resolve_server_url_from_headers;
@@ -43,7 +42,14 @@ use common_infrastructure::request::add_basic_auth_headers_conditionally;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::user::User;
 use reqwest::header::HeaderMap as ReqwestHeaderMap;
-use tokio::runtime::Runtime;
+
+/// Client for streaming remote episodes through PodFetch.
+static PROXY_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
+    reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::limited(50))
+        .build()
+        .expect("static reqwest client configuration is valid")
+});
 
 /// Resolve a `{id}` podcast path segment (UUID or legacy integer) to the
 /// loaded podcast, returning the canonical `Uuid` alongside it.
@@ -257,19 +263,29 @@ pub async fn add_podcast(
         .query(&query)
         .send()
         .await
-        .unwrap();
+        .map_err(map_reqwest_error)?
+        .json::<Value>()
+        .await
+        .map_err(map_reqwest_error)?;
 
-    let res = res.json::<Value>().await.unwrap();
+    let result = &res["results"][0];
+    let collection_id = result["collectionId"]
+        .as_i64()
+        .and_then(|id| i32::try_from(id).ok())
+        .ok_or_else(|| {
+            CustomErrorInner::BadRequest(
+                format!("iTunes has no podcast with id {}", track_id.track_id),
+                ErrorSeverity::Info,
+            )
+        })?;
 
     let server_url = resolve_server_url_from_headers(&headers);
     let inserted = PodcastService::handle_insert_of_podcast(
         PodcastInsertModel {
-            feed_url: unwrap_string(&res["results"][0]["feedUrl"]),
-            title: unwrap_string(&res["results"][0]["collectionName"]),
-            id: unwrap_string(&res["results"][0]["collectionId"])
-                .parse()
-                .unwrap(),
-            image_url: unwrap_string(&res["results"][0]["artworkUrl600"]),
+            feed_url: unwrap_string(&result["feedUrl"]),
+            title: unwrap_string(&result["collectionName"]),
+            id: collection_id,
+            image_url: unwrap_string(&result["artworkUrl600"]),
         },
         None,
         Some(requester.id),
@@ -292,27 +308,32 @@ pub async fn add_podcast_by_feed(
     Json(rss_feed): Json<PodcastRSSAddModel>,
 ) -> Result<Json<PodcastDto>, CustomError> {
     PodcastService::ensure_can_add_podcasts(&requester, 1)?;
+    let PodcastRSSAddModel { rss_feed_url } = rss_feed;
     let mut header_map = ReqwestHeaderMap::new();
-    header_map.insert("User-Agent", COMMON_USER_AGENT.parse().unwrap());
-    add_basic_auth_headers_conditionally(rss_feed.clone().rss_feed_url, &mut header_map);
-    let result = get_http_client(&ENVIRONMENT_SERVICE)
-        .get(rss_feed.clone().rss_feed_url)
+    header_map.insert(
+        reqwest::header::USER_AGENT,
+        HeaderValue::from_static(COMMON_USER_AGENT),
+    );
+    add_basic_auth_headers_conditionally(rss_feed_url.clone(), &mut header_map);
+    let body = get_http_client(&ENVIRONMENT_SERVICE)
+        .get(&rss_feed_url)
         .headers(header_map)
         .send()
         .await
+        .map_err(map_reqwest_error)?
+        .bytes()
+        .await
         .map_err(map_reqwest_error)?;
+    let channel = parse_feed(&body)?;
 
-    let bytes = result.text().await.unwrap();
-
-    let channel = Channel::read_from(bytes.as_bytes()).unwrap();
-    let num = rand::rng().random_range(100..10000000);
-
+    // `ThreadRng` is not `Send`, so it must not live across the await below.
+    let id = rand::rng().random_range(100..10_000_000);
     let server_url = resolve_server_url_from_headers(&headers);
     let inserted = PodcastService::handle_insert_of_podcast(
         PodcastInsertModel {
-            feed_url: rss_feed.clone().rss_feed_url.clone(),
+            feed_url: rss_feed_url,
             title: channel.title.clone(),
-            id: num,
+            id,
             image_url: crate::podcast::channel_image_url(&channel)
                 .unwrap_or_else(|| get_default_image(&server_url)),
         },
@@ -337,36 +358,39 @@ pub async fn import_podcasts_from_opml(
     requester: Extension<User>,
     Json(opml): Json<OpmlModel>,
 ) -> Result<StatusCode, CustomError> {
-    let document = OPML::from_str(&opml.content).unwrap();
-    let outline_count = count_opml_feeds(&document.body.outlines);
-    PodcastService::ensure_can_add_podcasts(&requester, outline_count)?;
+    let document = OPML::from_str(&opml.content).map_err(|e| {
+        CustomErrorInner::BadRequest(format!("Invalid OPML file: {e}"), ErrorSeverity::Info)
+    })?;
+    let feed_urls = opml_feed_urls(&document.body.outlines);
+    let feed_count = u32::try_from(feed_urls.len()).unwrap_or(u32::MAX);
+    PodcastService::ensure_can_add_podcasts(&requester, feed_count)?;
 
-    let user_id = requester.id;
-    spawn_blocking(move || {
-        for outline in document.body.outlines {
-            let added_by = user_id;
-            thread::spawn(move || {
-                let rt = Runtime::new().unwrap();
-                let rng = rand::rng();
-                rt.block_on(insert_outline(outline.clone(), rng.clone(), Some(added_by)));
-            });
-        }
+    let added_by = Some(requester.id);
+    spawn_detached("opml-import", move || async move {
+        futures::future::join_all(
+            feed_urls
+                .into_iter()
+                .map(|feed_url| import_opml_feed(feed_url, added_by)),
+        )
+        .await;
+        Ok::<_, CustomError>(())
     });
 
     Ok(StatusCode::OK)
 }
 
-fn count_opml_feeds(outlines: &[Outline]) -> u32 {
+/// Collects the feed URLs of all leaf outlines, depth-first.
+fn opml_feed_urls(outlines: &[Outline]) -> Vec<String> {
     outlines
         .iter()
-        .map(|o| {
-            if o.outlines.is_empty() {
-                if o.xml_url.is_some() { 1 } else { 0 }
+        .flat_map(|outline| {
+            if outline.outlines.is_empty() {
+                outline.xml_url.clone().into_iter().collect()
             } else {
-                count_opml_feeds(&o.outlines)
+                opml_feed_urls(&outline.outlines)
             }
         })
-        .sum()
+        .collect()
 }
 
 #[utoipa::path(
@@ -389,15 +413,11 @@ pub async fn add_podcast_from_podindex(
     .map_err(map_podcast_error)?;
 
     let added_by = Some(requester.id);
-    spawn_blocking(move || {
-        spawn_podindex_download(id.track_id, move |track_id| {
-            let rt = Runtime::new().unwrap();
-            rt.block_on(async {
-                PodcastService::insert_podcast_from_podindex(track_id, added_by)
-                    .await
-                    .map(|_| ())
-            })
-        });
+    let track_id = id.track_id;
+    spawn_detached("podindex-import", move || async move {
+        PodcastService::insert_podcast_from_podindex(track_id, added_by)
+            .await
+            .map(|_| ())
     });
     Ok(StatusCode::OK)
 }
@@ -470,18 +490,11 @@ pub async fn download_podcast(
     let (_podcast_uuid, podcast) = resolve_podcast(&id)?;
     thread::spawn(move || {
         match PodcastService::refresh_podcast(&podcast) {
-            Ok(_) => {
-                tracing::info!("Succesfully refreshed podcast.");
-            }
-            Err(e) => {
-                tracing::error!("Error refreshing podcast: {e}");
-            }
+            Ok(_) => tracing::info!("Successfully refreshed podcast {}", podcast.name),
+            Err(e) => tracing::error!("Error refreshing podcast {}: {e}", podcast.name),
         }
-
-        let download = PodcastService::schedule_episode_download(&podcast);
-
-        if download.is_err() {
-            tracing::error!("Error downloading podcast: {}", download.err().unwrap());
+        if let Err(e) = PodcastService::schedule_episode_download(&podcast) {
+            tracing::error!("Error downloading episodes of {}: {e}", podcast.name);
         }
     });
 
@@ -564,69 +577,50 @@ pub async fn update_active_podcast(
     Ok(StatusCode::OK)
 }
 
-#[allow(clippy::double_must_use)]
-#[async_recursion(?Send)]
-async fn insert_outline(podcast: Outline, mut rng: ThreadRng, added_by: Option<uuid::Uuid>) {
-    if !podcast.outlines.is_empty() {
-        for outline_nested in podcast.clone().outlines {
-            insert_outline(outline_nested, rng.clone(), added_by).await;
-        }
-        return;
-    }
-    let feed_url = podcast.clone().xml_url;
-    if feed_url.is_none() {
-        return;
-    }
-
-    let feed_response = get_http_client(&ENVIRONMENT_SERVICE)
-        .get(feed_url.unwrap())
-        .send()
-        .await;
-    if feed_response.is_err() {
-        ChatServerHandle::broadcast_opml_error(feed_response.err().unwrap().to_string());
-        return;
-    }
-    let content = feed_response.unwrap().bytes().await.unwrap();
-
-    let channel = Channel::read_from(&content[..]);
-
-    match channel {
-        Ok(channel) => {
-            let image_url = match crate::podcast::channel_image_url(&channel) {
-                Some(image_url) => image_url,
-                None => {
-                    tracing::info!(
-                        "No image found for podcast; storing empty image_url, default will be applied at response time"
-                    );
-                    String::new()
-                }
-            };
-
-            let inserted_podcast = PodcastService::handle_insert_of_podcast(
-                PodcastInsertModel {
-                    feed_url: podcast.clone().xml_url.expect("No feed url"),
-                    title: channel.clone().title.clone(),
-                    id: rng.random::<i32>(),
-                    image_url,
-                },
-                Some(channel),
-                added_by,
-            )
-            .await;
-            match inserted_podcast {
-                Ok(podcast) => {
-                    ChatServerHandle::broadcast_opml_added(&podcast);
-                }
-                Err(e) => {
-                    ChatServerHandle::broadcast_opml_error(e.to_string());
-                }
-            }
-        }
-        Err(e) => {
-            ChatServerHandle::broadcast_opml_error(e.to_string());
-        }
+/// Imports a single feed of an OPML file and reports the outcome to the UI.
+async fn import_opml_feed(feed_url: String, added_by: Option<uuid::Uuid>) {
+    match fetch_and_insert_feed(&feed_url, added_by).await {
+        Ok(podcast) => ChatServerHandle::broadcast_opml_added(&podcast),
+        Err(error) => ChatServerHandle::broadcast_opml_error(error.to_string()),
     }
 }
+
+async fn fetch_and_insert_feed(
+    feed_url: &str,
+    added_by: Option<uuid::Uuid>,
+) -> Result<podfetch_persistence::podcast::PodcastEntity, CustomError> {
+    let body = get_http_client(&ENVIRONMENT_SERVICE)
+        .get(feed_url)
+        .send()
+        .await
+        .map_err(map_reqwest_error)?
+        .bytes()
+        .await
+        .map_err(map_reqwest_error)?;
+    let channel = parse_feed(&body)?;
+    // An empty image URL makes the default image apply at response time.
+    let image_url = crate::podcast::channel_image_url(&channel).unwrap_or_default();
+
+    PodcastService::handle_insert_of_podcast(
+        PodcastInsertModel {
+            feed_url: feed_url.to_owned(),
+            title: channel.title.clone(),
+            id: rand::random::<i32>(),
+            image_url,
+        },
+        Some(channel),
+        added_by,
+    )
+    .await
+}
+
+fn parse_feed(body: &[u8]) -> Result<Channel, CustomError> {
+    Channel::read_from(body).map_err(|e| {
+        CustomErrorInner::BadRequest(format!("Invalid podcast feed: {e}"), ErrorSeverity::Info)
+            .into()
+    })
+}
+
 use crate::podcast::PodcastDto;
 use crate::podcast::{map_podcast_to_dto, map_podcast_with_context_to_dto};
 use crate::podcast_episode_dto::PodcastEpisodeDto;
@@ -675,7 +669,7 @@ pub async fn delete_podcast(
 
     if let Some(files) = files {
         let directory = files.podcast.directory_name.clone();
-        match spawn_blocking(move || FileService::remove_podcast_files(&files)).await {
+        match tokio::task::spawn_blocking(move || FileService::remove_podcast_files(&files)).await {
             Ok(Ok(())) => {}
             // The podcast is gone; leftover files must not turn that into an
             // error the user can't act on (the podcast can't be deleted twice).
@@ -710,7 +704,6 @@ pub(crate) async fn proxy_podcast(
     OptionalQuery(api_key): OptionalQuery<RSSAPiKey>,
     req: axum::extract::Request,
 ) -> Result<http::response::Response<Body>, CustomError> {
-    println!("Got a request: {req:?}");
     let mut req = req.map(|body| reqwest::Body::wrap_stream(body.into_data_stream()));
     let headers = req.headers_mut();
 
@@ -733,35 +726,41 @@ pub(crate) async fn proxy_podcast(
 
     add_basic_auth_headers_conditionally(episode.url.clone(), headers);
 
-    *req.uri_mut() = episode.url.parse().unwrap();
-    let reqwest_to_make = reqwest::Request::try_from(req).expect(
-        "http::Uri to url::Url conversion \
-    failed",
-    );
+    let invalid_url = |_| {
+        CustomError::from(CustomErrorInner::BadRequest(
+            format!("Episode has an invalid URL: {}", episode.url),
+            ErrorSeverity::Warning,
+        ))
+    };
+    *req.uri_mut() = episode.url.parse().map_err(invalid_url)?;
+    let upstream_request = reqwest::Request::try_from(req).map_err(map_reqwest_error)?;
 
-    let client = reqwest::Client::builder()
-        .redirect(reqwest::redirect::Policy::limited(50))
-        .build()
-        .unwrap();
-    let mut resp = client.execute(reqwest_to_make).await.unwrap();
+    let client = &*PROXY_CLIENT;
+    let mut resp = client
+        .execute(upstream_request)
+        .await
+        .map_err(map_reqwest_error)?;
 
+    // Only reached when the redirect limit is exhausted; follow once more with
+    // the original headers.
     if resp.status().is_redirection()
-        && let Some(location) = resp.headers().get("Location")
+        && let Some(location) = resp.headers().get(reqwest::header::LOCATION)
+        && let Ok(location) = location.to_str()
     {
-        let redirect_url: String = location.to_str().unwrap().parse().unwrap();
         resp = client
-            .get(redirect_url)
+            .get(location)
             .headers(cloned_headers)
             .send()
             .await
-            .expect("http::Uri to url::Url conversion failed");
+            .map_err(map_reqwest_error)?;
     }
 
-    let mut response_builder = Response::builder().status(resp.status());
-    *response_builder.headers_mut().unwrap() = resp.headers().clone();
-    Ok(response_builder
-        .body(Body::from_stream(resp.bytes_stream()))
-        .unwrap())
+    let status = resp.status();
+    let headers = resp.headers().clone();
+    let mut response = Response::new(Body::from_stream(resp.bytes_stream()));
+    *response.status_mut() = status;
+    *response.headers_mut() = headers;
+    Ok(response)
 }
 
 #[utoipa::path(

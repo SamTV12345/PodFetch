@@ -120,7 +120,6 @@ podfetch-storage = { path = "crates/podfetch-storage" }
 podfetch-web = { path = "crates/podfetch-web", default-features = false }
 
 # External dependencies
-async-recursion = "1.1.1"
 axum = { version = "0.8.9", features = ["macros", "http2", "ws", "multipart"] }
 axum-extra = { version = "0.12.6", features = ["cookie", "query"] }
 axum-test = "21.0.0"

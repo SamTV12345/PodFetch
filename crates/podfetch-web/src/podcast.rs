@@ -8,7 +8,6 @@ use podfetch_domain::user::User;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
-use std::thread;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
@@ -450,18 +449,6 @@ pub fn map_proxy_podcast_error(error: ProxyPodcastError<CustomError>) -> CustomE
         ProxyPodcastError::NotFound => CustomErrorInner::NotFound(ErrorSeverity::Debug).into(),
         ProxyPodcastError::Service(error) => error,
     }
-}
-
-pub fn spawn_podindex_download<Err, F>(track_id: i32, download: F)
-where
-    F: FnOnce(i32) -> Result<(), Err> + Send + 'static,
-    Err: Display + Send + 'static,
-{
-    thread::spawn(move || {
-        if let Err(error) = download(track_id) {
-            tracing::error!("Error downloading podindex podcast: {error}");
-        }
-    });
 }
 
 pub fn require_privileged<Err: Display>(
