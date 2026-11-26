@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2024"
 build = "build.rs"
 
+[lints]
+workspace = true
+
 [lib]
 path = "src/lib.rs"
 
@@ -48,8 +51,8 @@ sha1 = { workspace = true }
 
 # Async
 tokio = { workspace = true }
+tokio-util = { workspace = true }
 futures = { workspace = true }
-async-recursion = { workspace = true }
 
 # HTTP client
 reqwest = { workspace = true }

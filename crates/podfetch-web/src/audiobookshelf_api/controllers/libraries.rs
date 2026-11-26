@@ -157,8 +157,7 @@ fn parse_episode_timestamp(ep: &podfetch_domain::podcast_episode::PodcastEpisode
         return dt.timestamp_millis();
     }
     ep.download_time
-        .map(|t| t.and_utc().timestamp_millis())
-        .unwrap_or(0)
+        .map_or(0, |t| t.and_utc().timestamp_millis())
 }
 
 /// Stub for upstream `GET /api/libraries/:id/personalized`. The mobile

@@ -2,21 +2,21 @@ use crate::app_state::AppState;
 use crate::auth::{AuthControllerError, parse_basic_auth};
 use crate::services::user_auth::service::UserAuthService;
 use axum::extract::{Request, State};
-use axum::http::HeaderValue;
+use axum::http::header::AUTHORIZATION;
 use axum::middleware::Next;
 use axum::response::Response;
 use common_infrastructure::config::{EnvironmentService, ReverseProxyConfig};
 use common_infrastructure::error::ErrorSeverity::Warning;
-use common_infrastructure::error::{CustomError, CustomErrorInner};
+use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use common_infrastructure::http::get_async_sync_client;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
-use jsonwebtoken::jwk::JwkSet;
-use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
+use jsonwebtoken::jwk::{Jwk, JwkSet};
+use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
 use podfetch_domain::user::User;
 use serde_json::Value;
 use sha256::digest;
-use std::collections::HashSet;
-use std::sync::OnceLock;
+use std::fmt::Display;
+use std::sync::{Arc, PoisonError, RwLock};
 use tracing::info;
 
 enum AuthType {
@@ -38,18 +38,93 @@ pub async fn handle_basic_auth(
     Ok(next.run(request).await)
 }
 
-static JWKS: OnceLock<JwkSet> = OnceLock::new();
+/// The identity provider's signing keys, fetched lazily and refreshed when a
+/// token is signed with a key we do not know yet (key rotation).
+static JWKS: RwLock<Option<Arc<JwkSet>>> = RwLock::new(None);
 
-pub async fn get_jwks(jwks_uri: &str) -> JwkSet {
-    let client = get_async_sync_client(&ENVIRONMENT_SERVICE).build().unwrap();
-    client
+fn unavailable(reason: impl Display) -> CustomError {
+    tracing::error!("OIDC provider unavailable: {reason}");
+    CustomErrorInner::Unknown(ErrorSeverity::Error).into()
+}
+
+fn forbidden() -> CustomError {
+    CustomErrorInner::Forbidden(Warning).into()
+}
+
+pub async fn get_jwks(jwks_uri: &str) -> Result<JwkSet, CustomError> {
+    get_async_sync_client(&ENVIRONMENT_SERVICE)
+        .build()
+        .map_err(unavailable)?
         .get(jwks_uri)
         .send()
         .await
-        .unwrap()
+        .map_err(unavailable)?
+        .error_for_status()
+        .map_err(unavailable)?
         .json::<JwkSet>()
         .await
-        .unwrap()
+        .map_err(unavailable)
+}
+
+/// Returns the key set, fetching it if it is missing or `force_refresh` is set.
+async fn jwks(jwks_uri: &str, force_refresh: bool) -> Result<Arc<JwkSet>, CustomError> {
+    if !force_refresh
+        && let Some(cached) = JWKS.read().unwrap_or_else(PoisonError::into_inner).clone()
+    {
+        return Ok(cached);
+    }
+    let fresh = Arc::new(get_jwks(jwks_uri).await?);
+    *JWKS.write().unwrap_or_else(PoisonError::into_inner) = Some(fresh.clone());
+    Ok(fresh)
+}
+
+/// Picks the key a token was signed with: the one matching its `kid`, or the
+/// first key when the token does not name one.
+fn select_jwk<'a>(jwks: &'a JwkSet, kid: Option<&str>) -> Option<&'a Jwk> {
+    match kid {
+        Some(kid) => jwks.find(kid),
+        None => jwks.keys.first(),
+    }
+}
+
+/// Verifies `token` against `jwk` and returns its `preferred_username` claim.
+fn verify_token(token: &str, jwk: &Jwk, client_id: &str) -> Result<String, CustomError> {
+    let key = DecodingKey::from_jwk(jwk).map_err(|e| {
+        tracing::error!("Unusable JWK: {e}");
+        forbidden()
+    })?;
+    let Some(alg) = jwk
+        .common
+        .key_algorithm
+        .and_then(|alg| Algorithm::try_from(alg).ok())
+    else {
+        tracing::error!("JWK has no supported signing algorithm");
+        return Err(forbidden());
+    };
+    let mut validation = Validation::new(alg);
+    validation.set_audience(&[client_id]);
+
+    let decoded = decode::<Value>(token, &key, &validation).map_err(|e| {
+        tracing::debug!("Rejected OIDC token: {e}");
+        forbidden()
+    })?;
+    decoded
+        .claims
+        .get("preferred_username")
+        .and_then(Value::as_str)
+        .map(str::to_owned)
+        .ok_or_else(forbidden)
+}
+
+/// Extracts the token of an `Authorization: Bearer <token>` header.
+fn bearer_token(req: &Request) -> Result<&str, CustomError> {
+    let header = req
+        .headers()
+        .get(AUTHORIZATION)
+        .ok_or_else(|| CustomErrorInner::UnAuthorized("Unauthorized".to_owned(), Warning))?
+        .to_str()
+        .map_err(|_| forbidden())?;
+    Ok(header.strip_prefix("Bearer ").unwrap_or(header))
 }
 
 pub async fn handle_oidc_auth(
@@ -99,11 +174,14 @@ async fn handle_auth_internal(
             )
             .await
         }
-        AuthType::Proxy => AuthFilter::handle_proxy_auth_internal(
-            req,
-            &state.environment.reverse_proxy_config.clone().unwrap(),
-            state.user_auth_service.as_ref(),
-        ),
+        AuthType::Proxy => {
+            let config = state
+                .environment
+                .reverse_proxy_config
+                .as_ref()
+                .ok_or_else(|| unavailable("Reverse proxy auth is enabled but not configured"))?;
+            AuthFilter::handle_proxy_auth_internal(req, config, state.user_auth_service.as_ref())
+        }
         AuthType::None => state.user_auth_service.ensure_admin_user(),
     }
 }
@@ -126,7 +204,7 @@ impl AuthFilter {
     pub fn basic_auth_login(rq: &str) -> Result<(String, String), CustomError> {
         let (u, p) = Self::extract_basic_auth(rq)?;
 
-        Ok((u.to_string(), p.to_string()))
+        Ok((u.clone(), p.clone()))
     }
 
     fn handle_basic_auth_internal(
@@ -164,91 +242,31 @@ impl AuthFilter {
         user_auth_service: &UserAuthService,
         environment: &EnvironmentService,
     ) -> Result<User, CustomError> {
-        let token_res = match req.headers().get("Authorization") {
-            Some(token) => match token.to_str() {
-                Ok(token) => Ok(token),
-                Err(_) => Err(CustomError::from(CustomErrorInner::Forbidden(Warning))),
-            },
-            None => Err(CustomErrorInner::UnAuthorized("Unauthorized".to_string(), Warning).into()),
-        }?;
+        let oidc = environment
+            .oidc_config
+            .as_ref()
+            .ok_or_else(|| unavailable("OIDC is enabled but not configured"))?;
+        let token = bearer_token(req)?;
+        let kid = decode_header(token).map_err(|_| forbidden())?.kid;
 
-        let token = token_res.replace("Bearer ", "");
-
-        let jwk = match JWKS.get() {
-            Some(jwks) => Ok::<&JwkSet, String>(jwks),
-            None => {
-                let jwks = get_jwks(&environment.oidc_config.clone().unwrap().jwks_uri).await;
-                JWKS.get_or_init(|| jwks);
-                Ok::<&JwkSet, String>(JWKS.get().unwrap())
-            }
+        let mut keys = jwks(&oidc.jwks_uri, false).await?;
+        if select_jwk(&keys, kid.as_deref()).is_none() {
+            // The provider may have rotated its keys since we fetched them.
+            keys = jwks(&oidc.jwks_uri, true).await?;
         }
-        .unwrap();
+        let Some(jwk) = select_jwk(&keys, kid.as_deref()) else {
+            tracing::error!("No matching JWK found at {}", oidc.jwks_uri);
+            return Err(forbidden());
+        };
+        let username = verify_token(token, jwk, &oidc.client_id)?;
 
-        let first_jwk = match jwk.keys.first() {
-            Some(jwk) => Ok(jwk),
-            None => {
-                tracing::error!(
-                    "No JWK found for {}",
-                    environment.oidc_config.clone().unwrap().jwks_uri
-                );
-                Err(CustomError::from(CustomErrorInner::Forbidden(Warning)))
-            }
-        }?;
-
-        let key = DecodingKey::from_jwk(first_jwk).unwrap();
-        let alg = match first_jwk
-            .common
-            .key_algorithm
-            .and_then(|alg| Algorithm::try_from(alg).ok())
-        {
-            Some(alg) => Ok(alg),
-            None => {
-                tracing::error!("JWK has no supported signing algorithm");
-                Err(CustomError::from(CustomErrorInner::Forbidden(Warning)))
-            }
-        }?;
-        let mut validation = Validation::new(alg);
-        let mut aud_hashset = HashSet::new();
-        aud_hashset.insert(
-            environment
-                .oidc_config
-                .clone()
-                .unwrap()
-                .client_id
-                .to_string(),
-        );
-        validation.aud = Some(aud_hashset);
-
-        let decoded_token = match decode::<Value>(&token, &key, &validation) {
-            Ok(decoded) => Ok(decoded),
-            Err(e) => {
-                tracing::error!("Error is {e:?}");
-                Err(CustomError::from(CustomErrorInner::Forbidden(Warning)))
-            }
-        }?;
-        let username = match decoded_token.claims.get("preferred_username") {
-            Some(claim) => match claim.as_str() {
-                Some(content) => Ok(content),
-                None => Err(CustomError::from(CustomErrorInner::Forbidden(Warning))),
-            },
-            None => Err(CustomErrorInner::Forbidden(Warning).into()),
-        }?;
-        let found_user = user_auth_service.find_by_username(username);
-
-        match found_user {
-            Ok(user) => user_auth_service.ensure_api_key(user),
-            Err(_) => {
-                // User is authenticated so we can onboard him if he is new
-                let user = user_auth_service.create_user(
-                    username.to_string(),
-                    "user".to_string(),
-                    None,
-                    false,
-                )?;
-                // The UI needs an api key to open its socket.io connection
-                user_auth_service.ensure_api_key(user)
-            }
-        }
+        let user = match user_auth_service.find_by_username(&username) {
+            Ok(user) => user,
+            // The user is authenticated by the provider, so onboard them.
+            Err(_) => user_auth_service.create_user(username, "user".to_owned(), None, false)?,
+        };
+        // The UI needs an api key to open its socket.io connection.
+        user_auth_service.ensure_api_key(user)
     }
 
     fn handle_proxy_auth_internal(
@@ -256,34 +274,18 @@ impl AuthFilter {
         reverse_proxy_config: &ReverseProxyConfig,
         user_auth_service: &UserAuthService,
     ) -> Result<User, CustomError> {
-        let header_val = match req
-            .headers()
-            .get(reverse_proxy_config.header_name.to_string())
-        {
-            Some(header) => Ok::<&HeaderValue, CustomError>(header),
-            None => {
-                info!("Reverse proxy is enabled but no header is provided");
-                return Err(CustomError::from(CustomErrorInner::Forbidden(Warning)));
-            }
-        }?;
-        let token_res = match header_val.to_str() {
-            Ok(token) => Ok(token),
-            Err(_) => Err(CustomError::from(CustomErrorInner::Forbidden(Warning))),
-        }?;
-        let found_user = user_auth_service.find_by_username(token_res);
+        let Some(header) = req.headers().get(&reverse_proxy_config.header_name) else {
+            info!("Reverse proxy is enabled but no header is provided");
+            return Err(forbidden());
+        };
+        let username = header.to_str().map_err(|_| forbidden())?;
 
-        match found_user {
+        match user_auth_service.find_by_username(username) {
             Ok(user) => Ok(user),
-            Err(_) => {
-                if reverse_proxy_config.auto_sign_up {
-                    let user = user_auth_service
-                        .create_user(token_res.to_string(), "user".to_string(), None, false)
-                        .expect("Error inserting user");
-                    Ok(user)
-                } else {
-                    Err(CustomErrorInner::Forbidden(Warning).into())
-                }
+            Err(_) if reverse_proxy_config.auto_sign_up => {
+                user_auth_service.create_user(username.to_owned(), "user".to_owned(), None, false)
             }
+            Err(_) => Err(forbidden()),
         }
     }
 }
@@ -470,5 +472,83 @@ mod test {
 
         // then
         assert!(result.is_err());
+    }
+}
+
+#[cfg(test)]
+mod oidc_tests {
+    use super::*;
+    use base64::Engine;
+    use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+    use jsonwebtoken::{EncodingKey, Header, encode};
+    use serde_json::json;
+
+    const CLIENT_ID: &str = "podfetch";
+
+    fn key_set() -> JwkSet {
+        let jwk = |kid: &str, secret: &[u8]| json!({"kty": "oct", "kid": kid, "alg": "HS256", "k": URL_SAFE_NO_PAD.encode(secret)});
+        serde_json::from_value(
+            json!({"keys": [jwk("old", b"old-secret"), jwk("new", b"new-secret")]}),
+        )
+        .unwrap()
+    }
+
+    fn token(kid: Option<&str>, secret: &[u8], aud: &str) -> String {
+        let mut header = Header::new(Algorithm::HS256);
+        header.kid = kid.map(str::to_owned);
+        let claims = json!({
+            "preferred_username": "alice",
+            "aud": aud,
+            "exp": chrono::Utc::now().timestamp() + 600,
+        });
+        encode(&header, &claims, &EncodingKey::from_secret(secret)).unwrap()
+    }
+
+    #[test]
+    fn selects_the_key_named_by_kid() {
+        let keys = key_set();
+        assert_eq!(
+            select_jwk(&keys, Some("new"))
+                .unwrap()
+                .common
+                .key_id
+                .as_deref(),
+            Some("new")
+        );
+        assert!(select_jwk(&keys, Some("unknown")).is_none());
+        assert_eq!(
+            select_jwk(&keys, None).unwrap().common.key_id.as_deref(),
+            Some("old")
+        );
+    }
+
+    #[test]
+    fn accepts_a_token_signed_with_a_rotated_key() {
+        let keys = key_set();
+        let token = token(Some("new"), b"new-secret", CLIENT_ID);
+        let jwk = select_jwk(&keys, Some("new")).unwrap();
+        assert_eq!(verify_token(&token, jwk, CLIENT_ID).unwrap(), "alice");
+    }
+
+    #[test]
+    fn rejects_wrong_signature_and_audience() {
+        let keys = key_set();
+        let jwk = select_jwk(&keys, Some("new")).unwrap();
+        assert!(verify_token(&token(Some("new"), b"forged", CLIENT_ID), jwk, CLIENT_ID).is_err());
+        assert!(verify_token(&token(Some("new"), b"new-secret", "other"), jwk, CLIENT_ID).is_err());
+    }
+
+    #[test]
+    fn bearer_prefix_is_optional() {
+        let req = |value: &str| {
+            Request::builder()
+                .header(AUTHORIZATION, value)
+                .body(axum::body::Body::empty())
+                .unwrap()
+        };
+        assert_eq!(bearer_token(&req("Bearer abc")).unwrap(), "abc");
+        assert_eq!(bearer_token(&req("abc")).unwrap(), "abc");
+        let missing = Request::builder().body(axum::body::Body::empty()).unwrap();
+        assert!(bearer_token(&missing).is_err());
     }
 }

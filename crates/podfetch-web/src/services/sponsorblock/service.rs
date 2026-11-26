@@ -19,26 +19,12 @@ fn durations_mismatch(episode_secs: i64, sb_secs: f64) -> bool {
     diff > tolerance
 }
 
-/// Blocking bridge for sync callers (the downloader and rescan): runs
-/// `fetch_and_store` on a fresh thread with its own tokio runtime so it is safe
-/// regardless of the caller's async context. Returns Ok(n) segments, or Err.
+/// Blocking bridge for sync callers (the downloader and rescan), safe
+/// regardless of the caller's async context. Returns the number of segments.
 pub fn fetch_and_store_blocking(episode: &PodcastEpisode) -> Result<usize, CustomError> {
     let episode = episode.clone();
-    std::thread::spawn(move || match tokio::runtime::Runtime::new() {
-        Ok(rt) => rt.block_on(fetch_and_store(&episode)),
-        Err(e) => Err(common_infrastructure::error::CustomErrorInner::Conflict(
-            format!("Could not start runtime for SponsorBlock fetch: {e}"),
-            common_infrastructure::error::ErrorSeverity::Warning,
-        )
-        .into()),
-    })
-    .join()
-    .unwrap_or_else(|_| {
-        Err(common_infrastructure::error::CustomErrorInner::Conflict(
-            "SponsorBlock fetch thread panicked".to_string(),
-            common_infrastructure::error::ErrorSeverity::Warning,
-        )
-        .into())
+    crate::background::run_isolated("sponsorblock-fetch", move || async move {
+        fetch_and_store(&episode).await
     })
 }
 
@@ -47,7 +33,7 @@ pub fn fetch_and_store_blocking(episode: &PodcastEpisode) -> Result<usize, Custo
 pub async fn fetch_and_store(episode: &PodcastEpisode) -> Result<usize, CustomError> {
     // Guard 1: global toggle.
     let settings = crate::services::settings::service::SettingsService::shared().get_settings()?;
-    let enabled = settings.map(|s| s.sponsorblock_enabled).unwrap_or(true);
+    let enabled = settings.is_none_or(|s| s.sponsorblock_enabled);
     if !enabled {
         return Ok(0);
     }

@@ -154,18 +154,18 @@ pub fn build_opml(subscriptions: &[Subscription]) -> opml::OPML {
 
     for subscription in subscriptions {
         opml.body.outlines.push(opml::Outline {
-            text: subscription.podcast.to_string(),
+            text: subscription.podcast.clone(),
             r#type: Some("rss".to_string()),
             is_comment: None,
             is_breakpoint: None,
             created: Some(subscription.created.to_string()),
             category: None,
             outlines: vec![],
-            xml_url: Some(subscription.podcast.to_string()),
+            xml_url: Some(subscription.podcast.clone()),
             description: None,
             html_url: None,
             language: None,
-            title: Some(subscription.podcast.to_string()),
+            title: Some(subscription.podcast.clone()),
             version: None,
             url: None,
         });

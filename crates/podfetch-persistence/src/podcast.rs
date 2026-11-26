@@ -104,7 +104,7 @@ struct NewPodcastEntity {
 impl From<PodcastEntity> for Podcast {
     fn from(entity: PodcastEntity) -> Self {
         Self {
-            id: uuid::Uuid::parse_str(&entity.id).expect("valid uuid in db"),
+            id: Uuid::parse_str(&entity.id).expect("valid uuid in db"),
             legacy_id: entity.legacy_id,
             name: entity.name,
             directory_id: entity.directory_id,
@@ -124,7 +124,7 @@ impl From<PodcastEntity> for Podcast {
             added_by: entity
                 .added_by
                 .as_deref()
-                .map(|s| uuid::Uuid::parse_str(s).expect("valid uuid in db")),
+                .map(|s| Uuid::parse_str(s).expect("valid uuid in db")),
         }
     }
 }
@@ -180,8 +180,8 @@ struct FavoriteEntity {
 impl From<FavoriteEntity> for Favorite {
     fn from(entity: FavoriteEntity) -> Self {
         Self {
-            user_id: uuid::Uuid::parse_str(&entity.user_id).expect("valid uuid in db"),
-            podcast_id: uuid::Uuid::parse_str(&entity.podcast_id).expect("valid uuid in db"),
+            user_id: Uuid::parse_str(&entity.user_id).expect("valid uuid in db"),
+            podcast_id: Uuid::parse_str(&entity.podcast_id).expect("valid uuid in db"),
             favored: entity.favored,
         }
     }

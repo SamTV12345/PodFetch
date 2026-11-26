@@ -8,13 +8,13 @@ use podfetch_domain::user::User;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
-use std::thread;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use crate::filter::Filter;
 use crate::tags::Tag;
 use crate::url_rewriting::resolve_image_url;
+use podfetch_storage::file_handler::resolve_file_handler_type;
 
 #[derive(Debug, Serialize, Deserialize, Clone, IntoParams)]
 #[serde(rename_all = "camelCase")]
@@ -61,14 +61,11 @@ pub fn build_podcast_search_plan(
     user_id: Uuid,
     existing_filter: Option<Filter>,
 ) -> PodcastSearchPlan {
-    let order = query.order.map(|o| o.into()).unwrap_or(OrderCriteria::Asc);
+    let order = query.order.map_or(OrderCriteria::Asc, Into::into);
     let order_option = query
         .order_option
-        .map(OrderOption::from_string)
-        .unwrap_or(OrderOption::Title);
-    let only_favored = existing_filter
-        .map(|filter| filter.only_favored)
-        .unwrap_or(true);
+        .map_or(OrderOption::Title, OrderOption::from_string);
+    let only_favored = existing_filter.is_none_or(|filter| filter.only_favored);
     let filter = Filter::new(
         user_id,
         query.title.clone(),
@@ -217,13 +214,6 @@ pub fn map_podcast_with_context_to_dto(
         directory_name: value.directory_name.clone(),
         tags,
         favorites: favorite.unwrap_or(false),
-    }
-}
-
-fn resolve_file_handler_type(value: Option<String>) -> FileHandlerType {
-    match value {
-        Some(val) => FileHandlerType::from(val.as_str()),
-        None => ENVIRONMENT_SERVICE.default_file_handler.clone(),
     }
 }
 
@@ -455,18 +445,6 @@ pub fn map_proxy_podcast_error(error: ProxyPodcastError<CustomError>) -> CustomE
     }
 }
 
-pub fn spawn_podindex_download<Err, F>(track_id: i32, download: F)
-where
-    F: FnOnce(i32) -> Result<(), Err> + Send + 'static,
-    Err: Display + Send + 'static,
-{
-    thread::spawn(move || {
-        if let Err(error) = download(track_id) {
-            tracing::error!("Error downloading podindex podcast: {error}");
-        }
-    });
-}
-
 pub fn require_privileged<Err: Display>(
     is_privileged: bool,
 ) -> Result<(), PodcastControllerError<Err>> {
@@ -502,8 +480,7 @@ pub fn check_podcast_add_permission<Err: Display>(
     let new_total = current_count + adding_count as i64;
     if new_total > user_podcast_limit as i64 {
         return Err(PodcastControllerError::QuotaExceeded(format!(
-            "Adding {} podcast(s) would exceed your limit of {}. You currently have {}.",
-            adding_count, user_podcast_limit, current_count
+            "Adding {adding_count} podcast(s) would exceed your limit of {user_podcast_limit}. You currently have {current_count}."
         )));
     }
 

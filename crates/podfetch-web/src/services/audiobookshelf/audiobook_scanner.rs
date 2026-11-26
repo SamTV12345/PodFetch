@@ -137,10 +137,7 @@ impl AudiobookScanner {
         sort_smart_track(&mut probed);
 
         // Aggregate metadata from first file (audiobookshelf behavior)
-        let representative_tags = probed
-            .first()
-            .map(|(_, p)| p.tags.clone())
-            .unwrap_or_default();
+        let representative_tags = probed.first().map_or_default(|(_, p)| p.tags.clone());
         let resolved = metadata_resolver::resolve(folder, &representative_tags);
         let total_duration: f64 = probed.iter().map(|(_, p)| p.duration).sum();
 
@@ -149,11 +146,8 @@ impl AudiobookScanner {
         let folder_path_str = folder.to_string_lossy().to_string();
         let existing = self.book_repository.find_by_folder_path(&folder_path_str)?;
         let is_new = existing.is_none();
-        let book_id = existing
-            .as_ref()
-            .map(|b| b.id.clone())
-            .unwrap_or_else(new_book_id);
-        let added_at = existing.as_ref().map(|b| b.added_at).unwrap_or(now);
+        let book_id = existing.as_ref().map_or_else(new_book_id, |b| b.id.clone());
+        let added_at = existing.as_ref().map_or(now, |b| b.added_at);
         let book = Book {
             id: book_id.clone(),
             library_id: library_id.to_string(),
@@ -198,14 +192,13 @@ impl AudiobookScanner {
         // Audio files
         let mut audio_rows: Vec<BookAudioFile> = Vec::with_capacity(probed.len());
         for (idx, (path, probe)) in probed.iter().enumerate() {
-            let relative = path
-                .strip_prefix(folder)
-                .map(|p| p.to_string_lossy().to_string())
-                .unwrap_or_else(|_| {
+            let relative = path.strip_prefix(folder).map_or_else(
+                |_| {
                     path.file_name()
-                        .map(|s| s.to_string_lossy().to_string())
-                        .unwrap_or_default()
-                });
+                        .map_or_default(|s| s.to_string_lossy().to_string())
+                },
+                |p| p.to_string_lossy().to_string(),
+            );
             let ext = path
                 .extension()
                 .and_then(|e| e.to_str())
@@ -350,8 +343,7 @@ fn smart_track_key(path: &Path, tags: &ProbedTags) -> (i32, i32, String) {
         .unwrap_or(0);
     let name = path
         .file_name()
-        .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_default();
+        .map_or_default(|n| n.to_string_lossy().to_string());
     (disc, track, name)
 }
 

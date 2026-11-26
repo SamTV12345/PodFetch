@@ -42,26 +42,28 @@ fn version_from_git_info() -> Result<String, std::io::Error> {
 
     // The last available tag, equal to exact_tag when
     // the current commit is tagged
-    let last_tag = run(&["git", "describe", "--abbrev=0", "--tags"])
-        .map(|t| {
-            println!("cargo:rustc-env=GIT_LAST_TAG={t}");
-            t
-        })
-        .unwrap_or_else(|_| {
+    let last_tag = run(&["git", "describe", "--abbrev=0", "--tags"]).map_or_else(
+        |_| {
             println!("cargo:rustc-env=GIT_LAST_TAG=unknown");
             "unknown".to_string()
-        });
+        },
+        |t| {
+            println!("cargo:rustc-env=GIT_LAST_TAG={t}");
+            t
+        },
+    );
 
     // The current branch name
-    let branch = run(&["git", "rev-parse", "--abbrev-ref", "HEAD"])
-        .map(|b| {
-            println!("cargo:rustc-env=GIT_BRANCH={b}");
-            b
-        })
-        .unwrap_or_else(|_| {
+    let branch = run(&["git", "rev-parse", "--abbrev-ref", "HEAD"]).map_or_else(
+        |_| {
             println!("cargo:rustc-env=GIT_BRANCH=unknown");
             "unknown".to_string()
-        });
+        },
+        |b| {
+            println!("cargo:rustc-env=GIT_BRANCH={b}");
+            b
+        },
+    );
 
     // The current git commit hash
     let rev = run(&["git", "rev-parse", "HEAD"])

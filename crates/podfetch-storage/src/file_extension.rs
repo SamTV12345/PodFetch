@@ -15,40 +15,34 @@ pub fn determine_file_extension(
     client: &reqwest::blocking::Client,
     file_type: FileType,
 ) -> DetermineFileExtensionReturn {
-    get_suffix_by_url(url)
-        .ok()
-        .filter(|suffix| !suffix.is_empty())
-        .map(DetermineFileExtensionReturn::String)
-        .unwrap_or_else(|| {
-            let response = match client.get(url).send() {
-                Ok(response) => response,
-                Err(_) => {
-                    return DetermineFileExtensionReturn::String(file_type.to_string());
-                }
-            };
-            let extension_by_content_type = response
-                .headers()
-                .get(CONTENT_TYPE)
-                .and_then(|c| c.to_str().ok())
-                .and_then(map_content_type_to_extension);
+    if let Some(suffix) = get_suffix_by_url(url).ok().filter(|s| !s.is_empty()) {
+        return DetermineFileExtensionReturn::String(suffix);
+    }
 
-            let bytes = match response.bytes() {
-                Ok(bytes) => bytes,
-                Err(_) => {
-                    return DetermineFileExtensionReturn::String(
-                        extension_by_content_type.unwrap_or_else(|| file_type.to_string()),
-                    );
-                }
-            };
+    let fallback = |content_type_ext: Option<String>| {
+        content_type_ext.unwrap_or_else(|| file_type.to_string())
+    };
 
-            let file_extension = FileFormat::from(bytes.as_ref()).to_string().to_lowercase();
-            let final_extension = if is_valid_extension(&file_extension) {
-                file_extension
-            } else {
-                extension_by_content_type.unwrap_or_else(|| file_type.to_string())
-            };
-            DetermineFileExtensionReturn::FileExtension(final_extension, bytes.as_ref().to_vec())
-        })
+    let Ok(response) = client.get(url).send() else {
+        return DetermineFileExtensionReturn::String(fallback(None));
+    };
+    let extension_by_content_type = response
+        .headers()
+        .get(CONTENT_TYPE)
+        .and_then(|c| c.to_str().ok())
+        .and_then(map_content_type_to_extension);
+
+    let Ok(bytes) = response.bytes() else {
+        return DetermineFileExtensionReturn::String(fallback(extension_by_content_type));
+    };
+
+    let sniffed = FileFormat::from(bytes.as_ref()).to_string().to_lowercase();
+    let extension = if is_valid_extension(&sniffed) {
+        sniffed
+    } else {
+        fallback(extension_by_content_type)
+    };
+    DetermineFileExtensionReturn::FileExtension(extension, bytes.to_vec())
 }
 
 fn map_content_type_to_extension(content_type: &str) -> Option<String> {

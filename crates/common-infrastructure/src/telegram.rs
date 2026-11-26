@@ -8,14 +8,13 @@ pub fn send_new_episode_notification(podcast_episode_name: &str, podcast_name: &
     let api = Bot::new(&telegram_config.telegram_bot_token);
 
     let episode_text = format!(
-        "Episode {} of podcast {} \
-    was downloaded successfully and is ready to be listened to.",
-        podcast_episode_name, podcast_name
+        "Episode {podcast_episode_name} of podcast {podcast_name} \
+    was downloaded successfully and is ready to be listened to."
     );
     let message_to_send = format!(r"<strong>New episode available</strong>: {episode_text}");
 
     let message = SendMessageParams::builder()
-        .chat_id(telegram_config.telegram_chat_id.to_string())
+        .chat_id(telegram_config.telegram_chat_id.clone())
         .text(message_to_send)
         .parse_mode(ParseMode::Html)
         .build();

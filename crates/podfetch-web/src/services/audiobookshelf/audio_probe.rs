@@ -88,13 +88,12 @@ pub fn parse_ffprobe_json(json: &str) -> Result<ProbedAudioFile, ProbeError> {
     let duration = format
         .get("duration")
         .and_then(|v| v.as_str().and_then(|s| s.parse::<f64>().ok()))
-        .or_else(|| format.get("duration").and_then(|v| v.as_f64()))
+        .or_else(|| format.get("duration").and_then(serde_json::Value::as_f64))
         .unwrap_or(0.0);
     let bitrate = format
         .get("bit_rate")
         .and_then(|v| v.as_str().and_then(|s| s.parse::<i64>().ok()))
-        .map(|v| v as i32)
-        .unwrap_or(0);
+        .map_or(0, |v| v as i32);
 
     let streams = value
         .get("streams")
@@ -113,14 +112,12 @@ pub fn parse_ffprobe_json(json: &str) -> Result<ProbedAudioFile, ProbeError> {
         .to_string();
     let channels = audio_stream
         .get("channels")
-        .and_then(|v| v.as_i64())
-        .map(|v| v as i32)
-        .unwrap_or(0);
+        .and_then(serde_json::Value::as_i64)
+        .map_or(0, |v| v as i32);
     let sample_rate = audio_stream
         .get("sample_rate")
         .and_then(|v| v.as_str().and_then(|s| s.parse::<i64>().ok()))
-        .map(|v| v as i32)
-        .unwrap_or(0);
+        .map_or(0, |v| v as i32);
     let has_embedded_artwork = streams
         .iter()
         .any(|s| s.get("codec_type").and_then(|c| c.as_str()) == Some("video"));
@@ -220,8 +217,7 @@ pub fn is_supported_audio(path: &Path) -> bool {
     let ext = path
         .extension()
         .and_then(|e| e.to_str())
-        .map(|e| e.to_ascii_lowercase())
-        .unwrap_or_default();
+        .map_or_default(str::to_ascii_lowercase);
     SUPPORTED_AUDIO_EXTENSIONS.iter().any(|&s| s == ext)
 }
 
@@ -264,9 +260,9 @@ mod tests {
 
     #[test]
     fn detects_supported_extension() {
-        assert!(is_supported_audio(std::path::Path::new("/foo/bar.m4b")));
-        assert!(is_supported_audio(std::path::Path::new("/foo/bar.MP3")));
-        assert!(!is_supported_audio(std::path::Path::new("/foo/bar.txt")));
+        assert!(is_supported_audio(Path::new("/foo/bar.m4b")));
+        assert!(is_supported_audio(Path::new("/foo/bar.MP3")));
+        assert!(!is_supported_audio(Path::new("/foo/bar.txt")));
     }
 
     #[test]

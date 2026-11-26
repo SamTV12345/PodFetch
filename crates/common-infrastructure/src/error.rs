@@ -38,7 +38,7 @@ impl ApiError {
         ApiError {
             value: ApiErrorValue {
                 error_code: "UPDATE_OF_ADMIN_NOT_ALLOWED".into(),
-                arguments: args.clone(),
+                arguments: args,
             },
             status: StatusCode::BAD_REQUEST,
         }
@@ -102,6 +102,13 @@ impl From<PersistenceError> for CustomError {
     }
 }
 
+impl From<crate::config::UnknownFileHandlerType> for CustomError {
+    fn from(value: crate::config::UnknownFileHandlerType) -> Self {
+        tracing::error!("{value}");
+        CustomErrorInner::Unknown(ErrorSeverity::Error).into()
+    }
+}
+
 impl From<url::ParseError> for CustomError {
     fn from(val: url::ParseError) -> Self {
         match val {
@@ -141,32 +148,15 @@ impl Display for CustomError {
     }
 }
 
-impl From<CustomError> for Infallible {
-    fn from(val: CustomError) -> Self {
-        panic!("{}", val)
-    }
-}
-
 impl From<CustomErrorInner> for CustomError {
     fn from(inner: CustomErrorInner) -> Self {
-        let error_severity = match &inner {
-            CustomErrorInner::NotFound(sev)
-            | CustomErrorInner::Forbidden(sev)
-            | CustomErrorInner::Unknown(sev) => sev.clone(),
-            CustomErrorInner::DatabaseError(_, sev)
-            | CustomErrorInner::Conflict(_, sev)
-            | CustomErrorInner::SysInfoError(_, sev)
-            | CustomErrorInner::BadRequest(_, sev)
-            | CustomErrorInner::UnAuthorized(_, sev) => sev.clone(),
-        };
-        let span_trace = SpanTrace::capture();
-        let me = Self {
+        let error = Self {
+            error_severity: inner.severity(),
             inner,
-            span_trace,
-            error_severity: error_severity.clone(),
+            span_trace: SpanTrace::capture(),
         };
-        me.emit_log();
-        me
+        error.emit_log();
+        error
     }
 }
 
@@ -266,49 +256,13 @@ impl Error for CustomError {
 
 impl IntoResponse for CustomError {
     fn into_response(self) -> Response {
-        let status = match &self.inner {
-            CustomErrorInner::NotFound(_) => StatusCode::NOT_FOUND,
-            CustomErrorInner::Forbidden(_) => StatusCode::FORBIDDEN,
-            CustomErrorInner::Unknown(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            CustomErrorInner::DatabaseError(_, _) => StatusCode::INTERNAL_SERVER_ERROR,
-            CustomErrorInner::Conflict(_, _) => StatusCode::CONFLICT,
-            CustomErrorInner::BadRequest(_, _) => StatusCode::BAD_REQUEST,
-            CustomErrorInner::UnAuthorized(_, _) => StatusCode::UNAUTHORIZED,
-            CustomErrorInner::SysInfoError(_, _) => StatusCode::INTERNAL_SERVER_ERROR,
-        };
-
-        (status, self.error_response().message).into_response()
+        (self.inner.status(), self.inner.to_string()).into_response()
     }
 }
 
 impl CustomError {
-    fn error_response(&self) -> ErrorResponse {
-        let status_code = match &self.inner {
-            CustomErrorInner::NotFound(_) => 404,
-            CustomErrorInner::Forbidden(_) => 403,
-            CustomErrorInner::UnAuthorized(_, _) => 401,
-            CustomErrorInner::BadRequest(_, _) => 400,
-            CustomErrorInner::Conflict(_, _) => 409,
-            CustomErrorInner::Unknown(_) => 500,
-            CustomErrorInner::DatabaseError(_, _) => 500,
-            CustomErrorInner::SysInfoError(_, _) => 500,
-        };
-        ErrorResponse {
-            code: status_code as u16,
-            message: self.inner.to_string(),
-            error: self.inner.name(),
-        }
-    }
-
     fn is_client_error(&self) -> bool {
-        matches!(
-            self.inner,
-            CustomErrorInner::NotFound(_)
-                | CustomErrorInner::Forbidden(_)
-                | CustomErrorInner::UnAuthorized(_, _)
-                | CustomErrorInner::BadRequest(_, _)
-                | CustomErrorInner::Conflict(_, _)
-        )
+        self.inner.status().is_client_error()
     }
 
     fn emit_log(&self) {
@@ -333,7 +287,7 @@ impl CustomError {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ErrorSeverity {
     Info,
     Warning,
@@ -363,16 +317,38 @@ pub enum CustomErrorInner {
 }
 
 impl CustomErrorInner {
-    pub fn name(&self) -> String {
+    pub fn name(&self) -> &str {
         match self {
-            Self::NotFound(_) => "NotFound".to_string(),
-            Self::Forbidden(_) => "Forbidden".to_string(),
-            Self::Unknown(_) => "Unknown".to_string(),
-            Self::DatabaseError(_, _) => "DatabaseError".to_string(),
-            Self::Conflict(e, _) => e.to_string(),
-            Self::BadRequest(e, _) => e.to_string(),
-            Self::UnAuthorized(_, _) => "UnAuthorized".to_string(),
-            Self::SysInfoError(_, _) => "Unknown".to_string(),
+            Self::NotFound(_) => "NotFound",
+            Self::Forbidden(_) => "Forbidden",
+            Self::Unknown(_) | Self::SysInfoError(..) => "Unknown",
+            Self::DatabaseError(..) => "DatabaseError",
+            Self::Conflict(e, _) | Self::BadRequest(e, _) => e,
+            Self::UnAuthorized(..) => "UnAuthorized",
+        }
+    }
+
+    pub fn status(&self) -> StatusCode {
+        match self {
+            Self::NotFound(_) => StatusCode::NOT_FOUND,
+            Self::Forbidden(_) => StatusCode::FORBIDDEN,
+            Self::UnAuthorized(..) => StatusCode::UNAUTHORIZED,
+            Self::BadRequest(..) => StatusCode::BAD_REQUEST,
+            Self::Conflict(..) => StatusCode::CONFLICT,
+            Self::Unknown(_) | Self::DatabaseError(..) | Self::SysInfoError(..) => {
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
+        }
+    }
+
+    pub fn severity(&self) -> ErrorSeverity {
+        match self {
+            Self::NotFound(sev) | Self::Forbidden(sev) | Self::Unknown(sev) => *sev,
+            Self::DatabaseError(_, sev)
+            | Self::Conflict(_, sev)
+            | Self::SysInfoError(_, sev)
+            | Self::BadRequest(_, sev)
+            | Self::UnAuthorized(_, sev) => *sev,
         }
     }
 }
@@ -412,7 +388,7 @@ pub fn map_io_extra_error(
     error!(
         "IO extra error: {} for path {}",
         e,
-        path.unwrap_or("".to_string())
+        path.unwrap_or_default()
     );
     CustomError::from(CustomErrorInner::Unknown(severity))
 }
@@ -455,13 +431,6 @@ pub fn map_reqwest_error(e: reqwest::Error) -> CustomError {
         ErrorSeverity::Warning,
     )
     .into()
-}
-
-#[derive(Serialize)]
-struct ErrorResponse {
-    pub code: u16,
-    pub error: String,
-    pub message: String,
 }
 
 #[cfg(test)]

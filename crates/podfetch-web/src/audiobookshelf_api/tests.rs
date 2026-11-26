@@ -1509,7 +1509,7 @@ async fn podcast_episode_shape_matches_audiobookshelf() {
     }
     // podcastId is a uuid string
     assert!(ep["podcastId"].is_string());
-    assert_eq!(ep["podcastId"], json!(podcast.id.to_string()));
+    assert_eq!(ep["podcastId"], json!(podcast.id.clone()));
     // audioTrack.contentUrl matches upstream's /api/items/<id>/file/<ino>
     let url = ep["audioTrack"]["contentUrl"].as_str().unwrap();
     let expected = format!(
@@ -1538,7 +1538,7 @@ async fn patch_me_progress_creates_progress_row_and_reflects_in_me() {
     let ep_id = format!("ep_{}", episode.id);
     let resp = server
         .test_server
-        .patch(&format!("/api/me/progress/{}/{}", li_id, ep_id))
+        .patch(&format!("/api/me/progress/{li_id}/{ep_id}"))
         .json(&json!({
             "currentTime": 123.5,
             "duration": 300.0,
@@ -2508,7 +2508,7 @@ async fn search_podcast_without_term_returns_empty_array() {
         body.is_array(),
         "search must return a top-level JSON array (audiobookshelf-app reads results[0] without an envelope), got {body}"
     );
-    assert_eq!(body.as_array().map(|v| v.len()), Some(0));
+    assert_eq!(body.as_array().map(Vec::len), Some(0));
 }
 
 #[tokio::test]
@@ -2709,7 +2709,7 @@ async fn listening_stats_aggregates_play_close_cycle() {
         body["dayOfWeek"]
     );
     assert_eq!(
-        body["recentSessions"].as_array().map(|a| a.len()),
+        body["recentSessions"].as_array().map(Vec::len),
         Some(1),
         "exactly one closed session, recent={}",
         body["recentSessions"]
@@ -2830,7 +2830,7 @@ async fn batch_add_and_remove_round_trip() {
         .await;
     assert_eq!(add.status_code().as_u16(), 200);
     let body: Value = add.json();
-    assert_eq!(body["items"].as_array().map(|a| a.len()), Some(2));
+    assert_eq!(body["items"].as_array().map(Vec::len), Some(2));
 
     let remove = server
         .test_server
@@ -2844,7 +2844,7 @@ async fn batch_add_and_remove_round_trip() {
         .await;
     assert_eq!(remove.status_code().as_u16(), 200);
     let after_remove: Value = remove.json();
-    assert_eq!(after_remove["items"].as_array().map(|a| a.len()), Some(1));
+    assert_eq!(after_remove["items"].as_array().map(Vec::len), Some(1));
     assert_eq!(
         after_remove["items"][0]["episodeId"],
         json!(format!("ep_{}", ep2.id))
@@ -2877,9 +2877,7 @@ async fn delete_playlist_removes_it() {
 
     let list = server.test_server.get("/api/playlists").await;
     assert_eq!(
-        list.json::<Value>()["playlists"]
-            .as_array()
-            .map(|a| a.len()),
+        list.json::<Value>()["playlists"].as_array().map(Vec::len),
         Some(0)
     );
 }
@@ -2916,7 +2914,7 @@ async fn playlist_belongs_only_to_owner() {
     assert_eq!(
         bob_list.json::<Value>()["playlists"]
             .as_array()
-            .map(|a| a.len()),
+            .map(Vec::len),
         Some(0)
     );
 }
@@ -2942,7 +2940,7 @@ async fn library_playlists_endpoint_paginates() {
     assert_eq!(resp.status_code().as_u16(), 200);
     let body: Value = resp.json();
     assert_eq!(body["total"], json!(3));
-    assert_eq!(body["results"].as_array().map(|a| a.len()), Some(3));
+    assert_eq!(body["results"].as_array().map(Vec::len), Some(3));
 }
 
 fn write_temp_audio_file(bytes: &[u8], filename: &str) -> String {

@@ -863,7 +863,7 @@ mod tests {
 
         match result {
             Err(common_infrastructure::error::ErrorType::CustomErrorType(err)) => {
-                assert!(matches!(err.inner, CustomErrorInner::Forbidden(_)))
+                assert!(matches!(err.inner, CustomErrorInner::Forbidden(_)));
             }
             Err(_) => panic!("expected a CustomError-backed forbidden error"),
             Ok(_) => panic!("expected forbidden for a non-privileged user"),

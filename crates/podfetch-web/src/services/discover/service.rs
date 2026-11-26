@@ -116,8 +116,7 @@ impl DiscoverService {
             .filter(|f| {
                 f.url
                     .as_deref()
-                    .map(|u| !subscribed_urls.contains(u))
-                    .unwrap_or(true)
+                    .is_none_or(|u| !subscribed_urls.contains(u))
             })
             .take(max as usize)
             .collect();

@@ -1,5 +1,6 @@
 // Existing DTOs, traits, and types
 pub mod auth;
+pub mod background;
 pub mod cast;
 pub mod device;
 pub mod events;

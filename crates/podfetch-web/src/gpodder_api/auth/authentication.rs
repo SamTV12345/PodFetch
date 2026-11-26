@@ -41,27 +41,24 @@ pub async fn login(
         tracing::debug!("GPodder login: existing session invalid/expired for user '{username}'");
     }
 
-    match state.environment.reverse_proxy {
-        true => {
-            tracing::debug!("GPodder login: using reverse proxy auth for user '{username}'");
-            handle_proxy_auth(
-                req,
-                &username,
-                state.user_auth_service.as_ref(),
-                state.environment.as_ref(),
-                state.session_service.as_ref(),
-            )
-        }
-        false => {
-            tracing::debug!("GPodder login: using basic auth for user '{username}'");
-            handle_gpodder_basic_auth(
-                req,
-                &username,
-                state.user_auth_service.as_ref(),
-                state.environment.as_ref(),
-                state.session_service.as_ref(),
-            )
-        }
+    if state.environment.reverse_proxy {
+        tracing::debug!("GPodder login: using reverse proxy auth for user '{username}'");
+        handle_proxy_auth(
+            req,
+            &username,
+            state.user_auth_service.as_ref(),
+            state.environment.as_ref(),
+            state.session_service.as_ref(),
+        )
+    } else {
+        tracing::debug!("GPodder login: using basic auth for user '{username}'");
+        handle_gpodder_basic_auth(
+            req,
+            &username,
+            state.user_auth_service.as_ref(),
+            state.environment.as_ref(),
+            state.session_service.as_ref(),
+        )
     }
 }
 

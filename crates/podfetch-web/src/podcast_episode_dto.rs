@@ -69,17 +69,17 @@ impl PodcastEpisodeDto {
             id: episode.id.clone(),
             legacy_id: episode.legacy_id,
             podcast_id: episode.podcast_id.clone(),
-            episode_id: episode.episode_id.to_string(),
-            name: episode.name.to_string(),
+            episode_id: episode.episode_id.clone(),
+            name: episode.name.clone(),
             url: episode.url.clone(),
-            date_of_recording: episode.date_of_recording.to_string(),
+            date_of_recording: episode.date_of_recording.clone(),
             image_url: episode.image_url.clone(),
             total_time: episode.total_time,
             local_url,
             local_image_url,
-            description: episode.description.to_string(),
+            description: episode.description.clone(),
             download_time: episode.download_time,
-            guid: episode.guid.to_string(),
+            guid: episode.guid.clone(),
             deleted: episode.deleted,
             episode_numbering_processed: episode.episode_numbering_processed,
             favored: favorite.map(|f| f.favorite),
@@ -114,17 +114,17 @@ impl PodcastEpisodeDto {
             id: episode.id.clone(),
             legacy_id: episode.legacy_id,
             podcast_id: episode.podcast_id.clone(),
-            episode_id: episode.episode_id.to_string(),
-            name: episode.name.to_string(),
+            episode_id: episode.episode_id.clone(),
+            name: episode.name.clone(),
             url: episode.url.clone(),
-            date_of_recording: episode.date_of_recording.to_string(),
+            date_of_recording: episode.date_of_recording.clone(),
             image_url: episode.image_url.clone(),
             total_time: episode.total_time,
             local_url,
             local_image_url,
-            description: episode.description.to_string(),
+            description: episode.description.clone(),
             download_time: episode.download_time,
-            guid: episode.guid.to_string(),
+            guid: episode.guid.clone(),
             deleted: episode.deleted,
             episode_numbering_processed: episode.episode_numbering_processed,
             favored: favorite.map(|f| f.favorite),
@@ -142,7 +142,7 @@ fn map_file_url_with_api_key(
 ) -> String {
     match &podcast_episode.download_location {
         Some(location) => {
-            let handle = FileHandlerType::from(location.as_str());
+            let handle = FileHandlerType::from_stored(location);
             match handle {
                 FileHandlerType::Local => {
                     map_local_file_url_with_api_key(local_url, remote_url, api_key, server_url)
@@ -171,12 +171,13 @@ pub fn map_local_file_url_with_api_key(
             url_encoded = server_url.to_owned();
             url_encoded.push_str(&urlencoded);
 
-            match ENVIRONMENT_SERVICE.any_auth_enabled {
-                true => match &api_key {
+            if ENVIRONMENT_SERVICE.any_auth_enabled {
+                match &api_key {
                     None => url_encoded,
                     Some(api_key) => format!("{}{}{}", url_encoded, "?apiKey=", api_key),
-                },
-                false => url_encoded,
+                }
+            } else {
+                url_encoded
             }
         }
         None => remote_url.to_string(),
@@ -193,7 +194,7 @@ fn map_url(
 ) -> String {
     match &episode.download_location {
         Some(location) => {
-            let handle = FileHandlerType::from(location.as_str());
+            let handle = FileHandlerType::from_stored(location);
             match handle {
                 FileHandlerType::Local => map_file_url(local_url, remote_url, user, server_url),
                 FileHandlerType::S3 => map_s3_url(local_url, remote_url),
@@ -235,15 +236,16 @@ pub fn map_file_url(
                 .join("/");
             url_encoded = format!("{server_url}{url_encoded}");
 
-            match ENVIRONMENT_SERVICE.any_auth_enabled {
-                true => match &user {
+            if ENVIRONMENT_SERVICE.any_auth_enabled {
+                match &user {
                     None => url_encoded,
                     Some(user) => match &user.api_key {
                         None => url_encoded,
                         Some(key) => format!("{}{}{}", url_encoded, "?apiKey=", key),
                     },
-                },
-                false => url_encoded,
+                }
+            } else {
+                url_encoded
             }
         }
         None => remote_url.to_string(),

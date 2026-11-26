@@ -49,7 +49,7 @@ pub async fn rescan_episodes(
     if !requester.is_admin() {
         return Err(map_rescan_error(RescanError::<CustomError>::Forbidden));
     }
-    let opts = body.map(|Json(o)| o).unwrap_or_default();
+    let opts = body.map_or_default(|Json(o)| o);
 
     let scan_service = EpisodeScanServiceImpl::default_service();
     let chapter_stats =
@@ -209,7 +209,7 @@ pub async fn update_name(
 }
 
 use common_infrastructure::error::ErrorSeverity::{Critical, Debug, Error, Warning};
-use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
+use common_infrastructure::error::{CustomError, CustomErrorInner};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -225,8 +225,7 @@ fn map_rescan_error(error: RescanError<CustomError>) -> CustomError {
     match error {
         RescanError::Forbidden => CustomErrorInner::Forbidden(Warning).into(),
         RescanError::UnsupportedFormat => {
-            CustomErrorInner::Conflict("Unsupported file format".to_string(), ErrorSeverity::Error)
-                .into()
+            CustomErrorInner::Conflict("Unsupported file format".to_string(), Error).into()
         }
         RescanError::Service(error) => error,
     }

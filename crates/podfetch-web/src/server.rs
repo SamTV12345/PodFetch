@@ -17,8 +17,6 @@ use serde::Serialize;
 use socketioxide::SocketIo;
 use std::sync::OnceLock;
 
-type RoomId = String;
-
 pub static SOCKET_IO_LAYER: OnceLock<SocketIo> = OnceLock::new();
 
 /// Handle and command sender for chat server.
@@ -28,30 +26,24 @@ pub static SOCKET_IO_LAYER: OnceLock<SocketIo> = OnceLock::new();
 pub struct ChatServerHandle;
 
 impl ChatServerHandle {
-    fn send_broadcast_sync<T>(room_id: RoomId, msg: &T, event: impl AsRef<str>)
+    fn send_broadcast_sync<T>(room_id: &str, msg: &T, event: impl AsRef<str>)
     where
         T: ?Sized + Serialize,
     {
-        let room_id = "/".to_owned() + room_id.as_str();
-        let socket = match SOCKET_IO_LAYER.get() {
-            Some(socket) => socket,
-            None => {
-                tracing::warn!(
-                    "Skipping websocket broadcast for event '{}' because socket layer is not initialized",
-                    event.as_ref()
-                );
-                return;
-            }
+        let room_id = format!("/{room_id}");
+        let Some(socket) = SOCKET_IO_LAYER.get() else {
+            tracing::warn!(
+                "Skipping websocket broadcast for event '{}' because socket layer is not initialized",
+                event.as_ref()
+            );
+            return;
         };
-        let namespace = match socket.of(room_id) {
-            Some(namespace) => namespace,
-            None => {
-                tracing::warn!(
-                    "Skipping websocket broadcast for event '{}' because namespace is unavailable",
-                    event.as_ref()
-                );
-                return;
-            }
+        let Some(namespace) = socket.of(room_id) else {
+            tracing::warn!(
+                "Skipping websocket broadcast for event '{}' because namespace is unavailable",
+                event.as_ref()
+            );
+            return;
         };
         if let Err(err) = block_on(namespace.emit(event.as_ref(), msg)) {
             tracing::warn!(
@@ -74,7 +66,7 @@ impl ChatServerHandle {
         );
         let podcast: PodcastDto = map_podcast_to_dto(podcast.clone().into(), "");
         Self::send_broadcast_sync(
-            MAIN_ROOM.parse().unwrap(),
+            MAIN_ROOM,
             &PodcastEpisodeOfflineAvailableMessage::<PodcastDto, PodcastEpisodeDto> {
                 podcast,
                 type_of: PodcastType::AddPodcastEpisode,
@@ -87,7 +79,7 @@ impl ChatServerHandle {
     pub fn broadcast_podcast_refreshed(podcast: &Podcast) {
         let podcast: PodcastDto = map_podcast_to_dto(podcast.clone().into(), "");
         Self::send_broadcast_sync(
-            MAIN_ROOM.parse().unwrap(),
+            MAIN_ROOM,
             &PodcastRefreshedMessage::<PodcastDto> {
                 type_of: PodcastType::RefreshPodcast,
                 message: format!("Podcast {} has been refreshed", podcast.name),
@@ -99,19 +91,19 @@ impl ChatServerHandle {
 
     pub fn broadcast_opml_error(message: String) {
         Self::send_broadcast_sync(
-            MAIN_ROOM.parse().unwrap(),
+            MAIN_ROOM,
             &OpmlErrorMessage {
                 type_of: PodcastType::OpmlErrored,
                 message,
             },
             "opmlError",
-        )
+        );
     }
 
     pub fn broadcast_opml_added(podcast: &Podcast) {
         let podcast: PodcastDto = map_podcast_to_dto(podcast.clone().into(), "");
         Self::send_broadcast_sync(
-            MAIN_ROOM.parse().unwrap(),
+            MAIN_ROOM,
             &OpmlAddedMessage::<PodcastDto> {
                 type_of: PodcastType::OpmlAdded,
                 message: format!("Podcast {} has been added", podcast.name),
@@ -123,7 +115,7 @@ impl ChatServerHandle {
 
     pub fn broadcast_podcast_episode_deleted_locally(podcast_episode: &PodcastEpisode) {
         Self::send_broadcast_sync(
-            MAIN_ROOM.parse().unwrap(),
+            MAIN_ROOM,
             &PodcastEpisodeDeleteMessage {
                 podcast_episode: PodcastEpisodeDto::from_episode_with_user(
                     podcast_episode.clone(),
@@ -142,10 +134,10 @@ impl ChatServerHandle {
         let podcast_name = podcast.name.clone();
         let podcast: PodcastDto = map_podcast_to_dto(podcast.into(), "");
         Self::send_broadcast_sync(
-            MAIN_ROOM.parse().unwrap(),
+            MAIN_ROOM,
             &PodcastAddedMessage::<PodcastDto> {
                 type_of: PodcastType::AddPodcast,
-                message: format!("Podcast {} has been added", podcast_name),
+                message: format!("Podcast {podcast_name} has been added"),
                 podcast,
             },
             "addedPodcast",
@@ -157,16 +149,12 @@ impl ChatServerHandle {
     /// model does not split by user, so we broadcast to MAIN_ROOM and rely
     /// on the orchestrator to only emit for sessions it owns.
     pub fn broadcast_cast_status(status: CastStatus) {
-        Self::send_broadcast_sync(
-            MAIN_ROOM.parse().unwrap(),
-            &CastStatusMessage { status },
-            "cast:status",
-        );
+        Self::send_broadcast_sync(MAIN_ROOM, &CastStatusMessage { status }, "cast:status");
     }
 
     pub fn broadcast_cast_ended(session_id: CastSessionId, reason: CastEndedReason) {
         Self::send_broadcast_sync(
-            MAIN_ROOM.parse().unwrap(),
+            MAIN_ROOM,
             &CastEndedMessage { session_id, reason },
             "cast:ended",
         );
@@ -187,12 +175,12 @@ impl ChatServerHandle {
             })
             .collect();
         Self::send_broadcast_sync(
-            MAIN_ROOM.parse().unwrap(),
+            MAIN_ROOM,
             &PodcastEpisodesAdded::<PodcastDto, PodcastEpisodeDto> {
                 podcast_episodes,
                 podcast,
                 type_of: PodcastType::AddPodcastEpisodes,
-                message: format!("Added podcast episodes: {}", podcast_name),
+                message: format!("Added podcast episodes: {podcast_name}"),
             },
             "addedEpisodes",
         );
@@ -203,11 +191,11 @@ impl ChatServerHandle {
     /// live progress for an in-flight generated transcript.
     pub fn broadcast_transcription_status(episode_id: &str, status: &str, error: Option<&str>) {
         Self::send_broadcast_sync(
-            MAIN_ROOM.parse().unwrap(),
+            MAIN_ROOM,
             &TranscriptionStatusMessage {
                 episode_id: episode_id.to_string(),
                 status: status.to_string(),
-                error: error.map(|e| e.to_string()),
+                error: error.map(ToString::to_string),
             },
             "transcriptionStatus",
         );

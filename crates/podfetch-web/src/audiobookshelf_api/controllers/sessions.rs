@@ -173,16 +173,12 @@ async fn start_session(
     // Android-app Kotlin PodcastMetadata declares `title`, `explicit` and
     // `genres` non-null - omitting `genres` makes Jackson throw
     // MissingKotlinParameterException and playback dies silently.
-    let genres: Vec<String> = podcast
-        .keywords
-        .as_deref()
-        .map(|k| {
-            k.split(',')
-                .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty())
-                .collect()
-        })
-        .unwrap_or_default();
+    let genres: Vec<String> = podcast.keywords.as_deref().map_or_default(|k| {
+        k.split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect()
+    });
     let media_metadata = serde_json::json!({
         "title": podcast.name,
         "author": podcast.author,
@@ -192,7 +188,7 @@ async fn start_session(
         "imageUrl": podcast.image_url,
         "explicit": matches!(
             podcast.explicit.as_deref(),
-            Some("yes") | Some("true") | Some("1")
+            Some("yes" | "true" | "1")
         ),
         "language": podcast.language,
         "type": "episodic",
@@ -238,7 +234,7 @@ async fn start_session(
     } else {
         mime_type
     };
-    let now_ms = chrono::Utc::now().timestamp_millis();
+    let now_ms = Utc::now().timestamp_millis();
     let audio_tracks = vec![PlaybackAudioTrackDto {
         index: 1,
         ino: format!("ino_ep_{}", episode.id),
@@ -443,8 +439,7 @@ async fn start_book_session(
     let source_mime = aggregate
         .audio_files
         .first()
-        .map(|af| af.mime_type.clone())
-        .unwrap_or_else(|| "audio/mpeg".to_string());
+        .map_or_else(|| "audio/mpeg".to_string(), |af| af.mime_type.clone());
     let supported_mime_types = body
         .as_ref()
         .and_then(|b| b.supported_mime_types.clone())
@@ -508,16 +503,13 @@ async fn start_book_session(
     // covering the full duration; for direct streaming we expose one per
     // file with `/api/items/<itemId>/file/<ino>` content URLs (upstream
     // parity: `PodcastEpisode.getAudioTrack` / `Book.getTracklist`).
-    let now_ms = chrono::Utc::now().timestamp_millis();
+    let now_ms = Utc::now().timestamp_millis();
     let audio_tracks: Vec<PlaybackAudioTrackDto> = if use_hls {
         let title = aggregate.book.title.clone();
         let first_file = aggregate.audio_files.first().cloned();
         vec![PlaybackAudioTrackDto {
             index: 1,
-            ino: first_file
-                .as_ref()
-                .map(|af| af.id.clone())
-                .unwrap_or_default(),
+            ino: first_file.as_ref().map_or_default(|af| af.id.clone()),
             start_offset: 0.0,
             duration: aggregate.book.duration_seconds,
             title,
@@ -533,18 +525,11 @@ async fn start_book_session(
                             .and_then(|s| s.to_str().map(String::from))
                     })
                     .unwrap_or_default(),
-                ext: first_file
-                    .as_ref()
-                    .map(|af| af.ext.clone())
-                    .unwrap_or_default(),
-                path: first_file
-                    .as_ref()
-                    .map(|af| af.path.clone())
-                    .unwrap_or_default(),
+                ext: first_file.as_ref().map_or_default(|af| af.ext.clone()),
+                path: first_file.as_ref().map_or_default(|af| af.path.clone()),
                 rel_path: first_file
                     .as_ref()
-                    .map(|af| af.relative_path.clone())
-                    .unwrap_or_default(),
+                    .map_or_default(|af| af.relative_path.clone()),
                 size: 0,
                 mtime_ms: now_ms,
                 ctime_ms: now_ms,
@@ -553,7 +538,7 @@ async fn start_book_session(
             bit_rate: 0,
             language: None,
             time_base: "1/1000".to_string(),
-            channels: first_file.as_ref().map(|af| af.channels).unwrap_or(2),
+            channels: first_file.as_ref().map_or(2, |af| af.channels),
             channel_layout: "stereo".to_string(),
             chapters: Vec::new(),
             embedded_cover_art: None,
@@ -636,7 +621,7 @@ fn upsert_progress(
         &session.library_item_id,
         session.episode_id.as_deref(),
     )?;
-    let started_at = existing.as_ref().map(|p| p.started_at).unwrap_or(now);
+    let started_at = existing.as_ref().map_or(now, |p| p.started_at);
     let was_finished = existing.as_ref().is_some_and(|p| p.is_finished);
     let is_finished = force_finished
         || (session.duration > 0.0 && session.current_time / session.duration > 0.95);

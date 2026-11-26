@@ -131,7 +131,7 @@ impl SeriesRepository for DieselSeriesRepository {
                     .filter(book_id.eq(book_id_value))
                     .filter(series_id.eq(series_id_value)),
             )
-            .set(sequence.eq(sequence_value.map(|s| s.to_string())))
+            .set(sequence.eq(sequence_value.map(ToString::to_string)))
             .execute(&mut conn)
             .map_err(PersistenceError::from)?;
         } else {
@@ -139,7 +139,7 @@ impl SeriesRepository for DieselSeriesRepository {
                 .values(BookSeriesEntity {
                     book_id: book_id_value.to_string(),
                     series_id: series_id_value.to_string(),
-                    sequence: sequence_value.map(|s| s.to_string()),
+                    sequence: sequence_value.map(ToString::to_string),
                 })
                 .execute(&mut conn)
                 .map_err(PersistenceError::from)?;

@@ -109,9 +109,9 @@ where
     type Rejection = CustomError;
 
     fn from_request_parts(
-        parts: &mut axum::http::request::Parts,
+        parts: &mut http::request::Parts,
         _state: &S,
-    ) -> impl std::future::Future<Output = Result<Self, Self::Rejection>> + Send {
+    ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
         let user = parts
             .extensions
             .get::<podfetch_domain::user::User>()

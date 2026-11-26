@@ -25,8 +25,7 @@ pub fn resolve_nfo_format(podcast_id: Uuid) -> NfoFormat {
         .get_settings()
         .ok()
         .flatten()
-        .map(|s| s.nfo_format)
-        .unwrap_or_default();
+        .map_or_default(|s| s.nfo_format);
     let raw = match PodcastSettingsService::get_settings_for_podcast(podcast_id) {
         Ok(Some(ps)) if ps.activated => ps.nfo_format,
         _ => global,
@@ -40,8 +39,7 @@ pub fn resolve_cover_filename(podcast_id: Uuid) -> String {
         .get_settings()
         .ok()
         .flatten()
-        .map(|s| s.cover_filename)
-        .unwrap_or_default();
+        .map_or_default(|s| s.cover_filename);
     let raw = match PodcastSettingsService::get_settings_for_podcast(podcast_id) {
         Ok(Some(ps)) if ps.activated => ps.cover_filename,
         _ => global,
@@ -152,7 +150,7 @@ pub fn ensure_cover_filename(podcast_entity: &PodcastEntity) {
     let Some(ext) = std::path::Path::new(&podcast_entity.image_url)
         .extension()
         .and_then(|e| e.to_str())
-        .map(|e| e.to_ascii_lowercase())
+        .map(str::to_ascii_lowercase)
     else {
         return;
     };

@@ -32,8 +32,9 @@ use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeSer
 use axum::Router;
 use axum::body::Body;
 use axum::extract::Request;
+use axum::http::header;
 use axum::middleware::from_fn_with_state;
-use axum::response::{Redirect, Response};
+use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::get;
 use clokwerk::{Scheduler, TimeUnits};
 use common_infrastructure::error::{CustomError, CustomErrorInner};
@@ -62,9 +63,9 @@ use crate::services::user_auth::service::UserAuthService;
 use common_infrastructure::error::ErrorSeverity::Warning;
 use std::sync::Arc;
 
-static AUDIOBOOKSHELF_FILE_WATCHER: std::sync::OnceLock<
+static AUDIOBOOKSHELF_FILE_WATCHER: OnceLock<
     Arc<crate::services::audiobookshelf::file_watcher::AudiobookFileWatcher>,
-> = std::sync::OnceLock::new();
+> = OnceLock::new();
 
 fn start_audiobookshelf_file_watcher(state: &AppState) {
     if AUDIOBOOKSHELF_FILE_WATCHER.get().is_some() {
@@ -124,16 +125,22 @@ pub fn run_poll() -> Result<(), CustomError> {
                     &podcast.name,
                     e
                 );
-                continue;
             }
         }
     }
     Ok(())
 }
 
+/// The path prefix PodFetch is served under (empty when served at `/`).
+fn sub_directory() -> &'static str {
+    ENVIRONMENT_SERVICE
+        .sub_directory
+        .as_deref()
+        .unwrap_or_default()
+}
+
 fn fix_links(content: &str) -> String {
-    let dir = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/ui/";
-    content.replace("/ui/", &dir)
+    content.replace("/ui/", &format!("{}/ui/", sub_directory()))
 }
 
 /// Cached asset filenames (js + css). The files themselves don't change per
@@ -143,8 +150,9 @@ pub static INDEX_ASSETS: OnceLock<(String, String)> = OnceLock::new();
 fn resolve_index_assets() -> &'static (String, String) {
     INDEX_ASSETS.get_or_init(|| {
         let found_files = std::fs::read_dir("./static/assets/")
-            .expect("Could not read directory")
-            .map(|x| x.unwrap().file_name().into_string().unwrap())
+            .expect("the UI build must be present in ./static/assets/")
+            .filter_map(Result::ok)
+            .filter_map(|entry| entry.file_name().into_string().ok())
             .collect::<Vec<String>>();
         let js_file = found_files
             .iter()
@@ -161,15 +169,15 @@ fn resolve_index_assets() -> &'static (String, String) {
 }
 
 pub fn transform_index_files(headers: &http::HeaderMap) -> String {
-    let dir = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/ui/";
-    let manifest_json_location =
-        ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/manifest.json";
+    let dir = format!("{}/ui/", sub_directory());
+    let manifest_json_location = format!("{}/manifest.json", sub_directory());
     let (js_file, css_file) = resolve_index_assets();
 
     let resolved_server_url = crate::url_rewriting::resolve_server_url_from_headers(headers);
     let base_config = ENVIRONMENT_SERVICE.get_config(&resolved_server_url);
     let public_config = crate::sys::get_public_config(base_config, &resolved_server_url, None);
-    let config_string = serde_json::to_string(&public_config).unwrap();
+    let config_string = serde_json::to_string(&public_config)
+        .expect("the public config only contains JSON-serialisable values");
 
     let html: Markup = html! {
         html {
@@ -179,10 +187,8 @@ pub fn transform_index_files(headers: &http::HeaderMap) -> String {
                 title {"Podfetch"};
                 link rel="icon" type="image/png" href="/ui/favicon.ico";
                 link rel="manifest" href=(manifest_json_location);
-                script type="module" crossorigin src=(format!("{}{}{}", dir.clone(),
-                    "assets/", js_file))
-                {};
-                link rel="stylesheet" href=(format!("{}{}{}", dir.clone(), "assets/", css_file));
+                script type="module" crossorigin src=(format!("{dir}assets/{js_file}")) {};
+                link rel="stylesheet" href=(format!("{dir}assets/{css_file}"));
             }
             body {
                 div id="config" data-config=(config_string) {};
@@ -198,13 +204,8 @@ pub fn transform_index_files(headers: &http::HeaderMap) -> String {
 }
 
 #[utoipa::path(get, path = "/index.html")]
-async fn index(headers: http::HeaderMap) -> Result<Response<String>, CustomError> {
-    let response = Response::builder()
-        .header("Content-Type", "text/html")
-        .status(200)
-        .body(transform_index_files(&headers))
-        .unwrap();
-    Ok(response)
+async fn index(headers: http::HeaderMap) -> Html<String> {
+    Html(transform_index_files(&headers))
 }
 
 fn check_if_multiple_auth_is_configured() -> bool {
@@ -295,16 +296,12 @@ async fn handle_ui_access(req: Request) -> Result<Response<Body>, CustomError> {
     }?;
     let content_type = mime_guess::from_path(&file_path).first_or_octet_stream();
 
-    if content_type.to_string().contains(CSS) || content_type.to_string().contains(JS) {
-        let str_content = String::from_utf8(content).unwrap();
-        content = fix_links(&str_content).as_bytes().to_vec();
+    let content_type = content_type.to_string();
+    if content_type.contains(CSS) || content_type.contains(JS) {
+        content = fix_links(&String::from_utf8_lossy(&content)).into_bytes();
     }
 
-    let res = Response::builder()
-        .header("Content-Type", content_type.to_string())
-        .body(Body::from(content))
-        .unwrap();
-    Ok(res)
+    Ok(([(header::CONTENT_TYPE, content_type)], content).into_response())
 }
 
 pub fn get_api_config(state: AppState) -> OpenApiRouter {
@@ -549,10 +546,7 @@ fn redact_secrets(path_and_query: &str) -> String {
 /// Goes in front of `TraceLayer` so the message includes the path directly
 /// (TraceLayer puts the URI in a span; the default subscriber doesn't
 /// render span fields, so the message alone would be path-less).
-async fn http_request_logger(
-    req: axum::extract::Request,
-    next: axum::middleware::Next,
-) -> axum::response::Response {
+async fn http_request_logger(req: Request, next: axum::middleware::Next) -> Response {
     let method = req.method().clone();
     let uri = req.uri().clone();
     let started = std::time::Instant::now();
@@ -561,8 +555,7 @@ async fn http_request_logger(
     let status = response.status().as_u16();
     let path_and_query = redact_secrets(
         uri.path_and_query()
-            .map(|p| p.as_str())
-            .unwrap_or(uri.path()),
+            .map_or(uri.path(), http::uri::PathAndQuery::as_str),
     );
     if status >= 500 {
         tracing::error!("{method} {path_and_query} -> {status} in {elapsed_ms}ms");
@@ -579,49 +572,41 @@ pub fn handle_config_for_server_startup() -> Router {
     let router = build_server_router();
 
     // Background scheduler — not started during tests to avoid SQLite lock contention
-    let settings_service_for_polling = AppState::new().settings_service.clone();
-    let settings_service_for_cleanup = AppState::new().settings_service.clone();
-    let session_service_for_cleanup = AppState::new().session_service.clone();
+    let scheduler_state = AppState::new();
+    let settings_service_for_polling = scheduler_state.settings_service.clone();
+    let settings_service_for_cleanup = scheduler_state.settings_service;
+    let session_service_for_cleanup = scheduler_state.session_service;
     thread::spawn(move || {
         let mut scheduler = Scheduler::new();
 
         let polling_interval = ENVIRONMENT_SERVICE.get_polling_interval();
         scheduler.every(polling_interval.minutes()).run(move || {
-            let settings = settings_service_for_polling.get_settings().unwrap();
-            match settings {
-                Some(settings) => {
-                    if settings.auto_update {
-                        info!("Polling for new episodes");
-                        match run_poll() {
-                            Ok(_) => {
-                                info!("Polling for new episodes successful");
-                            }
-                            Err(e) => {
-                                tracing::error!("Error polling for new episodes: {e}");
-                            }
-                        }
+            // A panic here would silently stop polling until the next restart.
+            match settings_service_for_polling.get_settings() {
+                Ok(Some(settings)) if settings.auto_update => {
+                    info!("Polling for new episodes");
+                    match run_poll() {
+                        Ok(()) => info!("Polling for new episodes successful"),
+                        Err(e) => tracing::error!("Error polling for new episodes: {e}"),
                     }
                 }
-                None => {
-                    tracing::error!("Could not get settings from database");
-                }
+                Ok(Some(_)) => {}
+                Ok(None) => tracing::error!("Could not get settings from database"),
+                Err(e) => tracing::error!("Could not load settings for polling: {e}"),
             }
         });
 
         scheduler.every(1.day()).run(move || {
-            session_service_for_cleanup
-                .cleanup_expired()
-                .expect("Error clearing old sessions");
-            let settings = settings_service_for_cleanup.get_settings().unwrap();
-            match settings {
-                Some(settings) => {
-                    if settings.auto_cleanup {
-                        PodcastEpisodeService::cleanup_old_episodes(settings.auto_cleanup_days)
-                    }
+            if let Err(e) = session_service_for_cleanup.cleanup_expired() {
+                tracing::error!("Error clearing old sessions: {e}");
+            }
+            match settings_service_for_cleanup.get_settings() {
+                Ok(Some(settings)) if settings.auto_cleanup => {
+                    PodcastEpisodeService::cleanup_old_episodes(settings.auto_cleanup_days);
                 }
-                None => {
-                    tracing::error!("Could not get settings from database");
-                }
+                Ok(Some(_)) => {}
+                Ok(None) => tracing::error!("Could not get settings from database"),
+                Err(e) => tracing::error!("Could not load settings for cleanup: {e}"),
             }
         });
 

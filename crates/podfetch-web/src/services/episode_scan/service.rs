@@ -56,7 +56,7 @@ impl EpisodeScanService for EpisodeScanServiceImpl {
     fn detect_file_format(&self, path: &str) -> Result<MediaFileFormat, Self::Error> {
         let detected = FileFormat::from_file(path).map_err(|e| {
             CustomErrorInner::Conflict(
-                format!("Failed to detect file format: {}", e),
+                format!("Failed to detect file format: {e}"),
                 ErrorSeverity::Warning,
             )
         })?;
@@ -93,7 +93,7 @@ fn map_chapters(chapters: Vec<Chapter>) -> Vec<ParsedChapter> {
         .map(|c| ParsedChapter {
             title: c.title.unwrap_or_default(),
             start_time_seconds: c.start.num_seconds() as i32,
-            end_time_seconds: c.end.map(|d| d.num_seconds() as i32).unwrap_or(0),
+            end_time_seconds: c.end.map_or(0, |d| d.num_seconds() as i32),
             href: c.link.map(|l| l.url.to_string()),
             image: c.image.map(|i| i.to_string()),
         })

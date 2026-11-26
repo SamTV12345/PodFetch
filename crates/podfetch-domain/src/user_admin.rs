@@ -49,7 +49,7 @@ impl ManagedUser {
             id,
             username: username.into(),
             role: role.to_string(),
-            password: password.map(|password| password.into()),
+            password: password.map(Into::into),
             explicit_consent,
             created_at,
             api_key: None,

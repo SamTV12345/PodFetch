@@ -65,7 +65,7 @@ pub async fn get_sys_info(
         get_size(&ENVIRONMENT_SERVICE.default_podfetch_folder).map_err(|e| {
             common_infrastructure::error::map_io_error(
                 e,
-                Some(ENVIRONMENT_SERVICE.default_podfetch_folder.to_string()),
+                Some(ENVIRONMENT_SERVICE.default_podfetch_folder.clone()),
                 ErrorSeverity::Critical,
             )
         })?;
@@ -516,7 +516,7 @@ mod tests {
 
         match result {
             Err(ErrorType::CustomErrorType(err)) => {
-                assert!(matches!(err.inner, CustomErrorInner::Forbidden(_)))
+                assert!(matches!(err.inner, CustomErrorInner::Forbidden(_)));
             }
             _ => panic!("expected forbidden login result"),
         }

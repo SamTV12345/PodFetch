@@ -94,7 +94,7 @@ mod tests {
 
         // then
         assert!(response.status_code().is_success());
-        assert_eq!(response.json::<Vec<Notification>>().len(), 0)
+        assert_eq!(response.json::<Vec<Notification>>().len(), 0);
     }
 
     #[tokio::test]
@@ -113,7 +113,7 @@ mod tests {
 
         // then
         assert!(response.status_code().is_success());
-        assert_eq!(response.json::<Vec<Notification>>().len(), 1)
+        assert_eq!(response.json::<Vec<Notification>>().len(), 1);
     }
 
     #[tokio::test]

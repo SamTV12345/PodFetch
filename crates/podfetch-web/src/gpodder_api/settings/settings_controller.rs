@@ -118,9 +118,7 @@ pub async fn save_settings(
     let data_string = serde_json::to_string(&data).unwrap_or_else(|_| "{}".to_string());
 
     let setting = GpodderSetting {
-        id: existing
-            .map(|s| s.id)
-            .unwrap_or_else(podfetch_domain::ids::new_id),
+        id: existing.map_or_else(podfetch_domain::ids::new_id, |s| s.id),
         user_id: flag.user_id,
         scope: scope.0.to_string(),
         scope_id,

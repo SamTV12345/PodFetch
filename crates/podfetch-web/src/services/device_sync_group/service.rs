@@ -80,12 +80,12 @@ mod tests {
     use uuid::Uuid;
 
     fn known(ids: &[&str]) -> HashSet<String> {
-        ids.iter().map(|s| s.to_string()).collect()
+        ids.iter().map(ToString::to_string).collect()
     }
 
     fn groups(raw: &[&[&str]]) -> Vec<Vec<String>> {
         raw.iter()
-            .map(|g| g.iter().map(|s| s.to_string()).collect())
+            .map(|g| g.iter().map(ToString::to_string).collect())
             .collect()
     }
 

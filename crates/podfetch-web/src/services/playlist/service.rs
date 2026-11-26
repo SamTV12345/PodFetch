@@ -128,7 +128,7 @@ impl PlaylistService {
         }
 
         let inserted = self.repository.insert_playlist(Playlist {
-            id: uuid::Uuid::new_v4().to_string(),
+            id: Uuid::new_v4().to_string(),
             name: playlist.name.clone(),
             user_id: user.id,
         })?;

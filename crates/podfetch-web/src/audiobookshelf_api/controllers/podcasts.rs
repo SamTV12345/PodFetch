@@ -106,7 +106,7 @@ pub struct CreatePodcastMetadata {
 pub async fn create_podcast(
     State(state): State<AppState>,
     AuthenticatedUser(user): AuthenticatedUser,
-    headers: axum::http::HeaderMap,
+    headers: http::HeaderMap,
     Json(body): Json<CreatePodcastRequest>,
 ) -> Result<Json<Value>, CustomError> {
     // Same rules as POST /api/v1/podcasts/feed: admins and uploaders, other
@@ -140,8 +140,7 @@ pub async fn create_podcast(
         .media
         .metadata
         .itunes_id
-        .map(|v| v as i32)
-        .unwrap_or_else(|| rand::rng().random_range(100..10_000_000));
+        .map_or_else(|| rand::rng().random_range(100..10_000_000), |v| v as i32);
 
     let inserted = PodcastService::handle_insert_of_podcast(
         PodcastInsertModel {
@@ -204,14 +203,11 @@ async fn fetch_and_parse_feed(feed_url: &str) -> Result<Channel, CustomError> {
 fn shape_feed(channel: &Channel, feed_url: &str) -> Value {
     let itunes = channel.itunes_ext();
     let image = crate::podcast::channel_image_url(channel).unwrap_or_default();
-    let categories: Vec<Value> = itunes
-        .map(|i| i.categories.clone())
-        .map(|cats| {
-            cats.into_iter()
-                .map(|c| Value::from(c.text))
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_default();
+    let categories: Vec<Value> = itunes.map(|i| i.categories.clone()).map_or_default(|cats| {
+        cats.into_iter()
+            .map(|c| Value::from(c.text))
+            .collect::<Vec<_>>()
+    });
     let metadata = json!({
         "image": image,
         "categories": categories,

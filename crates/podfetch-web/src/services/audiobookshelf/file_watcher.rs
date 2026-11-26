@@ -155,8 +155,9 @@ async fn run_debounce_loop(
         let next_wake = pending
             .values()
             .min()
-            .map(|deadline| deadline.saturating_duration_since(Instant::now()))
-            .unwrap_or(Duration::from_secs(60));
+            .map_or(Duration::from_secs(60), |deadline| {
+                deadline.saturating_duration_since(Instant::now())
+            });
         tokio::select! {
             maybe_event = rx.recv() => {
                 match maybe_event {

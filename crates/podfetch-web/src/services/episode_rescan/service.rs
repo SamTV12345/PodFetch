@@ -82,8 +82,10 @@ impl EpisodeRescanService {
         let podcast_uuid = uuid::Uuid::parse_str(&episode.podcast_id)
             .map_err(|_| CustomError::from(CustomErrorInner::NotFound(ErrorSeverity::Warning)))?;
 
-        let download_location =
-            FileHandlerType::from(episode.download_location.as_deref().unwrap_or("Local"));
+        let download_location = episode
+            .download_location
+            .as_deref()
+            .map_or(Ok(FileHandlerType::Local), str::parse)?;
         if download_location == FileHandlerType::S3 {
             // The transcode + rename + tag-write helpers all assume local
             // filesystem; the existing downloader short-circuits on S3 too.
@@ -105,7 +107,7 @@ impl EpisodeRescanService {
             // pass. If it's truly empty, clean it up so the user doesn't
             // accumulate dead directories.
             if opts.apply_filenames && download_location == FileHandlerType::Local {
-                let podcast_root = PodcastService::get_podcast_by_id(podcast_uuid).directory_name;
+                let podcast_root = PodcastService::get_podcast(podcast_uuid)?.directory_name;
                 if let Some(parent) = Path::new(&current_audio_path).parent()
                     && let Some(parent_str) = parent.to_str()
                 {
@@ -115,7 +117,7 @@ impl EpisodeRescanService {
             return Ok(());
         }
 
-        let mut podcast = PodcastService::get_podcast_by_id(podcast_uuid);
+        let mut podcast = PodcastService::get_podcast(podcast_uuid)?;
         let settings =
             SettingsService::shared()
                 .get_settings()?
@@ -156,7 +158,7 @@ impl EpisodeRescanService {
         // the shared cover under its old name.
         if opts.apply_filenames || opts.regenerate_nfo {
             crate::services::nfo::service::ensure_cover_filename(&podcast);
-            podcast = PodcastService::get_podcast_by_id(podcast_uuid);
+            podcast = PodcastService::get_podcast(podcast_uuid)?;
             if let Some(new_cover) = shared_cover_fs_path(&podcast)
                 && Self::is_stale_shared_cover(
                     &working_image_path,
@@ -454,17 +456,19 @@ impl EpisodeRescanService {
         // resolver to find a free `<stem>-<n>` directory. If the episode
         // currently lives in a `<stem>-<n>` directory, prefer keeping that
         // one to avoid pointlessly spinning to `-2`, `-3`, ...
-        let preferred_dir = if !direct_paths {
+        let preferred_dir = if direct_paths {
+            None
+        } else {
             Path::new(current_audio_path)
                 .parent()
                 .and_then(|p| p.to_str())
-                .map(|s| s.to_string())
-        } else {
-            None
+                .map(ToString::to_string)
         };
 
-        let download_location =
-            FileHandlerType::from(episode.download_location.as_deref().unwrap_or("Local"));
+        let download_location = episode
+            .download_location
+            .as_deref()
+            .map_or(Ok(FileHandlerType::Local), str::parse)?;
 
         FilenameBuilder::default()
             .with_podcast_directory(&podcast.directory_name)
@@ -535,7 +539,7 @@ fn extension_lower(path: &str) -> Option<String> {
     Path::new(path)
         .extension()
         .and_then(|ext| ext.to_str())
-        .map(|ext| ext.to_ascii_lowercase())
+        .map(str::to_ascii_lowercase)
 }
 
 /// Derive the on-disk path of a podcast's shared cover. `podcast.image_url`
@@ -551,8 +555,7 @@ fn shared_cover_fs_path(podcast: &Podcast) -> Option<String> {
     extension_lower(&podcast.image_url)?;
     let last_segment = podcast.image_url.rsplit(['/', '\\']).next()?;
     let file_name = urlencoding::decode(last_segment)
-        .map(|decoded| decoded.into_owned())
-        .unwrap_or_else(|_| last_segment.to_string());
+        .map_or_else(|_| last_segment.to_string(), std::borrow::Cow::into_owned);
     if file_name.is_empty() {
         return None;
     }

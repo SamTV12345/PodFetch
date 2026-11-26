@@ -68,7 +68,7 @@ pub const TRANSCRIPTION_MODEL: &str = "TRANSCRIPTION_MODEL";
 pub const DEFAULT_TRANSCRIPTION_MODEL: &str = "whisper-1";
 
 pub fn is_env_var_present_and_true(env_var: &str) -> bool {
-    match env::var(env_var) {
+    match var(env_var) {
         Ok(val) => val == "true" || val == "1" || val == "yes",
         Err(_) => false,
     }
@@ -89,13 +89,32 @@ impl Display for FileHandlerType {
     }
 }
 
-impl From<&str> for FileHandlerType {
-    fn from(value: &str) -> Self {
+#[derive(Debug, thiserror::Error)]
+#[error("unknown file handler type '{0}' (expected 'Local' or 'S3')")]
+pub struct UnknownFileHandlerType(pub String);
+
+impl std::str::FromStr for FileHandlerType {
+    type Err = UnknownFileHandlerType;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value {
-            "Local" => FileHandlerType::Local,
-            "S3" => FileHandlerType::S3,
-            _ => panic!("Invalid FileHandlerType"),
+            "Local" => Ok(FileHandlerType::Local),
+            "S3" => Ok(FileHandlerType::S3),
+            other => Err(UnknownFileHandlerType(other.to_owned())),
         }
+    }
+}
+
+impl FileHandlerType {
+    /// Parses a `download_location` stored in the database.
+    ///
+    /// PodFetch only ever writes `Local` or `S3`; anything else is logged and
+    /// treated as `Local` so a single corrupt row cannot take a request down.
+    pub fn from_stored(value: &str) -> Self {
+        value.parse().unwrap_or_else(|e| {
+            tracing::error!("{e}; treating it as 'Local'");
+            FileHandlerType::Local
+        })
     }
 }
 
@@ -139,8 +158,7 @@ impl OidcConfig {
         let base = format!("{}/", authority.trim_end_matches('/'));
         let token_endpoint = url::Url::parse(&base)
             .and_then(|url| url.join("../token"))
-            .map(|url| url.to_string())
-            .unwrap_or_else(|_| format!("{base}../token"));
+            .map_or_else(|_| format!("{base}../token"), |url| url.to_string());
         OidcEndpoints {
             authorization_endpoint: authority.to_string(),
             token_endpoint,
@@ -569,7 +587,7 @@ impl EnvironmentService {
  |_|   \___/ \__,_|_|  \___|\__\___|_| |_|
 
         "
-        )
+        );
     }
 }
 

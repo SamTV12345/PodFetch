@@ -4,6 +4,7 @@ use podfetch_persistence::podcast::PodcastEntity as Podcast;
 
 use std::path::Path;
 use std::str::FromStr;
+use std::sync::LazyLock;
 
 use crate::podcast::PodcastInsertModel;
 use crate::podcast_settings::PodcastSetting;
@@ -13,7 +14,10 @@ use crate::services::podcast_settings::service::PodcastSettingsService;
 use crate::services::settings::service::SettingsService;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use common_infrastructure::config::FileHandlerType;
-use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
+use common_infrastructure::error::{
+    CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error,
+};
+use common_infrastructure::http::get_http_client;
 use common_infrastructure::rss::{PodcastParsed, RSSFeedParser};
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use podfetch_domain::settings::{ReplacementStrategy, Setting};
@@ -43,7 +47,10 @@ impl FileService {
         podcast_id: &str,
         _conn: &mut DbConnection,
     ) -> bool {
-        let podcast = PodcastService::get_podcast_by_directory_id(podcast_id).unwrap();
+        let podcast = PodcastService::get_podcast_by_directory_id(podcast_id).unwrap_or_else(|e| {
+            tracing::error!("Could not load podcast {podcast_id}: {e}");
+            None
+        });
         match podcast {
             Some(podcast) => {
                 if !podcast.image_url.contains("http") {
@@ -59,12 +66,12 @@ impl FileService {
 
     pub fn create_podcast_root_directory_exists() -> Result<(), CustomError> {
         if !FileHandleWrapper::path_exists(
-            &ENVIRONMENT_SERVICE.default_podfetch_folder.to_string(),
+            &ENVIRONMENT_SERVICE.default_podfetch_folder.clone(),
             FileRequest::Directory,
             &ENVIRONMENT_SERVICE.default_file_handler,
         ) {
             return FileHandleWrapper::create_dir(
-                &ENVIRONMENT_SERVICE.default_podfetch_folder.to_string(),
+                &ENVIRONMENT_SERVICE.default_podfetch_folder.clone(),
                 &ENVIRONMENT_SERVICE.default_file_handler,
             );
         }
@@ -80,17 +87,11 @@ impl FileService {
             prepare_podcast_title_to_directory(podcast_insert_model, channel).await?;
         let escaped_path = format!("podcasts/{escaped_title}");
 
-        if !FileHandleWrapper::path_exists(
+        if FileHandleWrapper::path_exists(
             &escaped_path,
             FileRequest::Directory,
             &ENVIRONMENT_SERVICE.default_file_handler,
         ) {
-            FileHandleWrapper::create_dir(
-                &escaped_path,
-                &ENVIRONMENT_SERVICE.default_file_handler,
-            )?;
-            Ok(escaped_path)
-        } else {
             // Check if this is a new podcast with the same name as an old one
 
             let podcast =
@@ -114,6 +115,12 @@ impl FileService {
                     Ok(format!("podcasts/{escaped_title}-{i}"))
                 }
             }
+        } else {
+            FileHandleWrapper::create_dir(
+                &escaped_path,
+                &ENVIRONMENT_SERVICE.default_file_handler,
+            )?;
+            Ok(escaped_path)
         }
     }
 
@@ -137,7 +144,10 @@ impl FileService {
                     determine_file_extension(&image_url_cloned, &client, FileType::Image)
                 })
                 .await
-                .unwrap(),
+                .map_err(|e| {
+                    tracing::error!("Determining the image type panicked: {e}");
+                    CustomError::from(CustomErrorInner::Unknown(ErrorSeverity::Error))
+                })?,
                 &image_url,
             )
             .await?
@@ -165,18 +175,17 @@ impl FileService {
         fn check_if_file_exists(file_path: &str, file_type: &FileHandlerType) -> bool {
             FileHandleWrapper::path_exists(file_path, FileRequest::File, file_type)
         }
-        if let Some(episode_path) = episode.file_episode_path.clone() {
-            let download_location =
-                FileHandlerType::from(episode.download_location.clone().unwrap().as_str());
-            if check_if_file_exists(&episode_path, &download_location) {
-                FileHandleWrapper::remove_file(&episode_path, &download_location)?;
-            }
-        }
-        if let Some(image_path) = episode.file_image_path.clone() {
-            let file_type =
-                FileHandlerType::from(episode.download_location.clone().unwrap().as_str());
-            if check_if_file_exists(&image_path, &file_type) {
-                FileHandleWrapper::remove_file(&image_path, &file_type)?;
+        let Some(location) = episode.download_location.as_deref() else {
+            // Never downloaded, so there is nothing on disk to clean up.
+            return Ok(());
+        };
+        let file_type = FileHandlerType::from_stored(location);
+        for path in [&episode.file_episode_path, &episode.file_image_path]
+            .into_iter()
+            .flatten()
+        {
+            if check_if_file_exists(path, &file_type) {
+                FileHandleWrapper::remove_file(path, &file_type)?;
             }
         }
         Ok(())
@@ -233,7 +242,7 @@ pub async fn prepare_podcast_title_to_directory(
     podcast: &PodcastInsertModel,
     channel: Option<Channel>,
 ) -> Result<String, CustomError> {
-    let retrieved_settings = SettingsService::shared().get_settings()?.unwrap();
+    let retrieved_settings = required_settings()?;
     // The podcast row does not exist yet at this point (this runs during
     // initial insert), so there can be no per-podcast settings override.
     let opt_podcast_settings = PodcastSettingsService::get_settings_for_podcast(uuid::Uuid::nil())?;
@@ -241,13 +250,21 @@ pub async fn prepare_podcast_title_to_directory(
     let podcast = match channel {
         Some(channel) => RSSFeedParser::parse_rss_feed(channel),
         None => {
-            let client = reqwest::Client::new();
-            let rss_feed = podcast.feed_url.clone();
-            let feed_response = client.get(rss_feed).send().await.unwrap();
-            let content = feed_response.bytes().await.unwrap();
-
-            let channel = Channel::read_from(&content[..]);
-            RSSFeedParser::parse_rss_feed(channel.unwrap())
+            let content = get_http_client(&ENVIRONMENT_SERVICE)
+                .get(&podcast.feed_url)
+                .send()
+                .await
+                .map_err(map_reqwest_error)?
+                .bytes()
+                .await
+                .map_err(map_reqwest_error)?;
+            let channel = Channel::read_from(&content[..]).map_err(|e| {
+                CustomErrorInner::BadRequest(
+                    format!("Invalid podcast feed: {e}"),
+                    ErrorSeverity::Info,
+                )
+            })?;
+            RSSFeedParser::parse_rss_feed(channel)
         }
     };
 
@@ -259,12 +276,11 @@ pub async fn prepare_podcast_title_to_directory(
 }
 
 fn replace_date_of_str(date: &str) -> String {
-    match date.contains('T') {
-        true => {
-            let splitted_date = date.split('T').collect::<Vec<&str>>();
-            splitted_date[0].to_string()
-        }
-        false => date.to_string(),
+    if date.contains('T') {
+        let splitted_date = date.split('T').collect::<Vec<&str>>();
+        splitted_date[0].to_string()
+    } else {
+        date.to_string()
     }
 }
 
@@ -337,7 +353,7 @@ pub fn perform_podcast_variable_replacement(
 pub fn prepare_podcast_episode_title_to_directory(
     podcast_episode: PodcastEpisode,
 ) -> Result<String, CustomError> {
-    let retrieved_settings = SettingsService::shared().get_settings()?.unwrap();
+    let retrieved_settings = required_settings()?;
     if retrieved_settings.use_existing_filename {
         let res_of_filename = get_filename_of_url(&podcast_episode.url);
         if let Ok(res_unwrapped) = res_of_filename {
@@ -401,7 +417,7 @@ pub fn perform_episode_variable_replacement(
     let episode_number_str = match total_episode_count {
         Some(total) if total > 0 => {
             let digits = (total as f64).log10().floor() as usize + 1;
-            format!("{:0>width$}", episode_number, width = digits)
+            format!("{episode_number:0>digits$}")
         }
         _ => episode_number.to_string(),
     };
@@ -432,7 +448,7 @@ pub fn perform_episode_variable_replacement(
     let result = strfmt::strfmt(fixed_string.trim(), &vars);
 
     match result {
-        Ok(res) => Ok(res.to_string()),
+        Ok(res) => Ok(res.clone()),
         Err(err) => {
             tracing::error!("Error formatting episode title: {err}");
             Err(CustomErrorInner::Conflict(err.to_string(), ErrorSeverity::Error).into())
@@ -460,7 +476,11 @@ fn perform_replacement(
     }
 
     // Colon replacement strategy
-    match ReplacementStrategy::from_str(&replacement_strategy).unwrap() {
+    let strategy = ReplacementStrategy::from_str(&replacement_strategy).unwrap_or_else(|()| {
+        tracing::warn!("Unknown replacement strategy '{replacement_strategy}', using the default");
+        ReplacementStrategy::ReplaceWithDashAndUnderscore
+    });
+    match strategy {
         ReplacementStrategy::ReplaceWithDashAndUnderscore => {
             let sanitizer = Sanitizer::new(Some(Options::default_with_replacement("-_")));
             final_string = sanitizer.sanitize(&final_string);
@@ -478,14 +498,21 @@ fn perform_replacement(
 }
 
 fn get_filename_of_url(url: &str) -> Result<String, String> {
-    let re = Regex::new(r"/([^/?]+)\.\w+(?:\?.*)?$").unwrap();
+    static FILENAME: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"/([^/?]+)\.\w+(?:\?.*)?$").expect("static regex is valid"));
+    FILENAME
+        .captures(url)
+        .and_then(|captures| captures.get(1))
+        .map(|name| remove_extension(name.as_str()).to_owned())
+        .ok_or_else(|| "Could not get filename".to_owned())
+}
 
-    if let Some(captures) = re.captures(url) {
-        let dir_name = remove_extension(captures.get(1).unwrap().as_str()).to_string();
-
-        return Ok(dir_name);
-    }
-    Err("Could not get filename".to_string())
+/// The global settings row is created at startup, so a missing one is a bug.
+fn required_settings() -> Result<crate::settings::Setting, CustomError> {
+    SettingsService::shared().get_settings()?.ok_or_else(|| {
+        tracing::error!("Global settings are missing");
+        CustomErrorInner::Unknown(ErrorSeverity::Error).into()
+    })
 }
 
 fn remove_extension(filename: &str) -> &str {
@@ -672,8 +699,8 @@ mod tests {
             podcast_id: uuid::Uuid::nil().to_string(),
             file_episode_path: None,
             file_image_path: None,
-            episode_id: "".to_string(),
-            image_url: "".to_string(),
+            episode_id: String::new(),
+            image_url: String::new(),
             download_time: None,
             deleted: false,
             episode_numbering_processed: false,
@@ -722,8 +749,8 @@ mod tests {
             podcast_id: uuid::Uuid::nil().to_string(),
             file_episode_path: None,
             file_image_path: None,
-            episode_id: "".to_string(),
-            image_url: "".to_string(),
+            episode_id: String::new(),
+            image_url: String::new(),
             download_time: None,
             deleted: false,
             episode_numbering_processed: false,
@@ -772,8 +799,8 @@ mod tests {
             podcast_id: uuid::Uuid::nil().to_string(),
             file_episode_path: None,
             file_image_path: None,
-            episode_id: "".to_string(),
-            image_url: "".to_string(),
+            episode_id: String::new(),
+            image_url: String::new(),
             download_time: None,
             deleted: false,
             episode_numbering_processed: false,
@@ -822,8 +849,8 @@ mod tests {
             podcast_id: uuid::Uuid::nil().to_string(),
             file_episode_path: None,
             file_image_path: None,
-            episode_id: "".to_string(),
-            image_url: "".to_string(),
+            episode_id: String::new(),
+            image_url: String::new(),
             download_time: None,
             deleted: false,
             episode_numbering_processed: false,
@@ -862,7 +889,7 @@ mod tests {
 
         let podcast_episode = PodcastParsed {
             title: "Test".to_string(),
-            language: "".to_string(),
+            language: String::new(),
             explicit: "false".to_string(),
             keywords: "test,test2".to_string(),
             summary: "test123".to_string(),

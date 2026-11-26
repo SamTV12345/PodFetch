@@ -199,18 +199,18 @@ pub async fn patch_progress_batch(
             .and_then(|v| v.as_str())
             .map(str::to_string);
         let payload = ProgressUpdatePayload {
-            duration: entry.get("duration").and_then(|v| v.as_f64()),
-            progress: entry.get("progress").and_then(|v| v.as_f64()),
-            current_time: entry.get("currentTime").and_then(|v| v.as_f64()),
-            is_finished: entry.get("isFinished").and_then(|v| v.as_bool()),
+            duration: entry.get("duration").and_then(Value::as_f64),
+            progress: entry.get("progress").and_then(Value::as_f64),
+            current_time: entry.get("currentTime").and_then(Value::as_f64),
+            is_finished: entry.get("isFinished").and_then(Value::as_bool),
             hide_from_continue_listening: entry
                 .get("hideFromContinueListening")
-                .and_then(|v| v.as_bool()),
+                .and_then(Value::as_bool),
             ebook_location: entry
                 .get("ebookLocation")
                 .and_then(|v| v.as_str())
                 .map(str::to_string),
-            ebook_progress: entry.get("ebookProgress").and_then(|v| v.as_f64()),
+            ebook_progress: entry.get("ebookProgress").and_then(Value::as_f64),
         };
         let _ = upsert_progress_from_payload(&state, &user, item_id, episode_id, payload);
     }
@@ -258,10 +258,10 @@ fn upsert_progress_from_payload(
         library_item_id,
         episode_id.as_deref(),
     )?;
-    let started_at = existing.as_ref().map(|p| p.started_at).unwrap_or(now);
+    let started_at = existing.as_ref().map_or(now, |p| p.started_at);
     let was_finished = existing.as_ref().is_some_and(|p| p.is_finished);
-    let prev_current = existing.as_ref().map(|p| p.current_time).unwrap_or(0.0);
-    let prev_duration = existing.as_ref().map(|p| p.duration).unwrap_or(0.0);
+    let prev_current = existing.as_ref().map_or(0.0, |p| p.current_time);
+    let prev_duration = existing.as_ref().map_or(0.0, |p| p.duration);
     let duration = payload.duration.unwrap_or(prev_duration);
     let current_time = payload.current_time.unwrap_or(prev_current);
     let progress = payload.progress.unwrap_or_else(|| {
@@ -282,8 +282,7 @@ fn upsert_progress_from_payload(
     let hide = payload.hide_from_continue_listening.unwrap_or(
         existing
             .as_ref()
-            .map(|p| p.hide_from_continue_listening)
-            .unwrap_or(false),
+            .is_some_and(|p| p.hide_from_continue_listening),
     );
     let progress_id = MediaProgress::compose_id(library_item_id, episode_id.as_deref());
     let updated = state
@@ -359,7 +358,7 @@ pub async fn get_listening_stats(
         let last_update_ms = s.updated_at.and_utc().timestamp_millis();
 
         if listening > 0.0 {
-            let day = days.get(&date_str).and_then(|v| v.as_f64()).unwrap_or(0.0) + listening;
+            let day = days.get(&date_str).and_then(Value::as_f64).unwrap_or(0.0) + listening;
             days.insert(date_str.clone(), json!(day));
             if date_str == today {
                 today_time += listening;
@@ -367,7 +366,7 @@ pub async fn get_listening_stats(
         }
         let dow = day_of_week
             .get(weekday)
-            .and_then(|v| v.as_f64())
+            .and_then(Value::as_f64)
             .unwrap_or(0.0)
             + listening;
         day_of_week.insert(weekday.to_string(), json!(dow));
@@ -387,10 +386,10 @@ pub async fn get_listening_stats(
         if let Some(obj) = entry.as_object_mut() {
             let prev = obj
                 .get("timeListening")
-                .and_then(|v| v.as_f64())
+                .and_then(Value::as_f64)
                 .unwrap_or(0.0);
             obj.insert("timeListening".to_string(), json!(prev + listening));
-            let prev_update = obj.get("lastUpdate").and_then(|v| v.as_i64()).unwrap_or(0);
+            let prev_update = obj.get("lastUpdate").and_then(Value::as_i64).unwrap_or(0);
             if last_update_ms > prev_update {
                 obj.insert("lastUpdate".to_string(), json!(last_update_ms));
             }

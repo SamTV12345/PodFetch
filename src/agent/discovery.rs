@@ -122,7 +122,7 @@ fn resolved_to_device(service: &ResolvedService) -> Option<DiscoveredCastDevice>
         .addresses
         .iter()
         .next()
-        .map(|scoped| scoped.to_ip_addr());
+        .map(mdns_sd::ScopedIp::to_ip_addr);
     parse_cast_record(uuid, friendly_name, model, service.port, ip)
 }
 

@@ -161,14 +161,12 @@ pub async fn update_gpodder_sync_groups(
 
     let previous = state.device_sync_group_service.get_by_user_id(user.id)?;
     let web_members = |rows: &[podfetch_domain::device_sync_group::DeviceSyncGroup]| {
-        DeviceSyncGroupService::group_of(rows, DEFAULT_DEVICE)
-            .map(|group_id| {
-                rows.iter()
-                    .filter(|r| r.group_id == group_id)
-                    .map(|r| r.device_id.clone())
-                    .collect::<HashSet<_>>()
-            })
-            .unwrap_or_default()
+        DeviceSyncGroupService::group_of(rows, DEFAULT_DEVICE).map_or_default(|group_id| {
+            rows.iter()
+                .filter(|r| r.group_id == group_id)
+                .map(|r| r.device_id.clone())
+                .collect::<HashSet<_>>()
+        })
     };
     let previous_web_members = web_members(&previous);
     let joined_web = web_members(&rows)

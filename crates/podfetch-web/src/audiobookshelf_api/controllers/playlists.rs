@@ -122,7 +122,7 @@ pub async fn create_playlist(
     }
     let library_id = library_id(&state)?;
     let playlist = repo().insert_playlist(Playlist {
-        id: uuid::Uuid::new_v4().to_string(),
+        id: Uuid::new_v4().to_string(),
         name: name.to_string(),
         user_id: user.id,
     })?;
@@ -239,9 +239,8 @@ pub async fn remove_item_by_library_item(
 ) -> Result<Json<Value>, CustomError> {
     remove_items_in(&id, user.id, |items| {
         // Accept legacy `li_pod_{int}` as well as `li_pod_{uuid}`.
-        let podcast_id = match resolve_podcast_library_item(&library_item_id) {
-            Ok(p) => p,
-            Err(_) => return Vec::new(),
+        let Ok(podcast_id) = resolve_podcast_library_item(&library_item_id) else {
+            return Vec::new();
         };
         items
             .iter()
@@ -249,8 +248,7 @@ pub async fn remove_item_by_library_item(
                 PodcastEpisodeService::get_podcast_episode_by_internal_id(i.episode)
                     .ok()
                     .flatten()
-                    .map(|e| e.podcast_id == podcast_id.to_string())
-                    .unwrap_or(false)
+                    .is_some_and(|e| e.podcast_id == podcast_id.to_string())
             })
             .map(|i| i.episode)
             .collect()

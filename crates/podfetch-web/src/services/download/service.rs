@@ -27,7 +27,7 @@ use podfetch_storage::{
 };
 use reqwest::header::{ACCEPT_ENCODING, HeaderMap, HeaderValue, USER_AGENT};
 use std::io::Read;
-use std::path::PathBuf;
+use std::path::Path;
 use std::thread::sleep;
 use std::time::Duration as StdDuration;
 
@@ -208,9 +208,9 @@ impl DownloadService {
             );
             podcast_data = Self::download_hls_episode(&podcast_episode.url)?;
         }
-        let settings_in_db = crate::services::settings::service::SettingsService::shared()
+        let settings_in_db = SettingsService::shared()
             .get_settings()?
-            .unwrap();
+            .ok_or_else(|| CustomError::from(CustomErrorInner::Unknown(ErrorSeverity::Error)))?;
         let podcast_settings_override =
             PodcastSettingsService::get_settings_for_podcast(parse_id(&podcast.id)?)?;
         let use_one_cover_for_all_episodes = Self::use_one_cover_from(
@@ -268,8 +268,7 @@ impl DownloadService {
             .with_image_suffix(
                 &image_data
                     .as_ref()
-                    .map(|data| data.0.clone())
-                    .unwrap_or_else(|| "jpg".to_string()),
+                    .map_or_else(|| "jpg".to_string(), |data| data.0.clone()),
             )
             .with_image_filename(&cover_filename)
             .with_filename(PODCAST_FILENAME)
@@ -289,17 +288,15 @@ impl DownloadService {
             )?;
         }
 
-        if let Some(p) = PathBuf::from(&paths.filename).parent()
+        // `paths.filename` is a `String`, so its parent is valid UTF-8 too.
+        if let Some(parent) = Path::new(&paths.filename).parent().and_then(Path::to_str)
             && !FileHandleWrapper::path_exists(
-                p.to_str().unwrap(),
+                parent,
                 FileRequest::Directory,
                 &ENVIRONMENT_SERVICE.default_file_handler,
             )
         {
-            FileHandleWrapper::create_dir(
-                p.to_str().unwrap(),
-                &ENVIRONMENT_SERVICE.default_file_handler,
-            )?;
+            FileHandleWrapper::create_dir(parent, &ENVIRONMENT_SERVICE.default_file_handler)?;
         }
 
         let image_written =
@@ -361,8 +358,7 @@ impl DownloadService {
         // flight. Non-fatal — must never fail the download.
         let auto_transcribe = podcast_settings_override
             .as_ref()
-            .map(|settings| settings.auto_transcribe)
-            .unwrap_or(false);
+            .is_some_and(|settings| settings.auto_transcribe);
         if ENVIRONMENT_SERVICE.transcription_config.is_some()
             && auto_transcribe
             && let Ok(episode_uuid) = parse_id(&podcast_episode.id)
@@ -702,7 +698,9 @@ impl DownloadService {
 
         tag.set_album(&podcast.name);
 
-        tag.set_date_recorded(podcast_episode.date_of_recording.parse().unwrap());
+        if let Some(recorded) = id3_timestamp(&podcast_episode.date_of_recording) {
+            tag.set_date_recorded(recorded);
+        }
 
         if tag.genres().is_none()
             && let Some(keywords) = &podcast.keywords
@@ -729,18 +727,10 @@ impl DownloadService {
             tag.set_track(track_number as u32);
         }
 
-        let write_succesful: Result<(), CustomError> = tag
-            // Always write ID3v2.4 because otherwise there are compatibility issues with
-            // embedded tags
-            .write_to_path(&paths.filename, id3::Version::Id3v24)
-            .map(|_| ())
-            .map_err(|e| CustomErrorInner::Conflict(e.to_string(), ErrorSeverity::Error).into());
-
-        if write_succesful.is_err() {
-            tracing::error!(
-                "Error writing metadata: {:?}",
-                write_succesful.err().unwrap()
-            );
+        // Always write ID3v2.4 because otherwise there are compatibility issues with
+        // embedded tags. A failed tag write must not fail the download.
+        if let Err(e) = tag.write_to_path(&paths.filename, id3::Version::Id3v24) {
+            tracing::error!("Error writing metadata to {}: {e}", paths.filename);
         }
         Ok(())
     }
@@ -880,7 +870,7 @@ impl DownloadService {
 
     pub fn read_chapters_from_mp3(path: &String) -> Result<Vec<Chapter>, CustomError> {
         let tag = Tag::read_from_path(path)
-            .map_err(|e| format!("Error reading ID3 tag from `{}`: {}", path, e));
+            .map_err(|e| format!("Error reading ID3 tag from `{path}`: {e}"));
 
         let tag = match tag {
             Ok(tag) => tag,
@@ -933,10 +923,10 @@ impl DownloadService {
             }
 
             chapters.push(Chapter {
-                title,
-                link,
                 start,
                 end,
+                title,
+                link,
                 ..Default::default()
             });
         }
@@ -987,8 +977,28 @@ impl DownloadService {
     }
 }
 
+/// Converts a stored RFC 3339 recording date into an ID3 timestamp.
+///
+/// ID3 timestamps carry no time zone, so the date is taken in UTC. Episodes
+/// without a (parseable) date get no recording date tag.
+fn id3_timestamp(date_of_recording: &str) -> Option<id3::Timestamp> {
+    let date = chrono::DateTime::parse_from_rfc3339(date_of_recording)
+        .ok()?
+        .with_timezone(&chrono::Utc);
+    date.format("%Y-%m-%dT%H:%M:%S").to_string().parse().ok()
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn id3_timestamp_from_stored_dates() {
+        let ts = super::id3_timestamp("2025-01-02T10:30:00+01:00").unwrap();
+        assert_eq!(ts.to_string(), "2025-01-02T09:30:00");
+        // Episodes without a pubDate store an empty string.
+        assert!(super::id3_timestamp("").is_none());
+        assert!(super::id3_timestamp("garbage").is_none());
+    }
+
     use super::{DownloadService, FilenameBuilderReturn, Podcast, PodcastEpisode};
 
     #[test]
@@ -1009,21 +1019,21 @@ mod tests {
     fn resolve_episode_title_handles_all_numbering_states() {
         // numbering on, not yet processed -> prefix + mark processed
         assert_eq!(
-            super::DownloadService::resolve_episode_title("Ep", false, true, 5),
+            DownloadService::resolve_episode_title("Ep", false, true, 5),
             Some(("5 - Ep".to_string(), true))
         );
         // numbering on, already processed -> leave as-is
         assert_eq!(
-            super::DownloadService::resolve_episode_title("Ep", true, true, 5),
+            DownloadService::resolve_episode_title("Ep", true, true, 5),
             None
         );
         // numbering off -> plain title, mark not-processed
         assert_eq!(
-            super::DownloadService::resolve_episode_title("Ep", false, false, 5),
+            DownloadService::resolve_episode_title("Ep", false, false, 5),
             Some(("Ep".to_string(), false))
         );
         assert_eq!(
-            super::DownloadService::resolve_episode_title("Ep", true, false, 5),
+            DownloadService::resolve_episode_title("Ep", true, false, 5),
             Some(("Ep".to_string(), false))
         );
     }
@@ -1211,7 +1221,7 @@ mod tests {
             },
         ];
         for c in &cases {
-            let got = super::DownloadService::should_download_image(
+            let got = DownloadService::should_download_image(
                 c.use_one_cover,
                 c.episode_own,
                 c.main_downloaded,
@@ -1242,7 +1252,7 @@ mod tests {
             directory_id: directory_id.to_string(),
             rssfeed: "https://example.com/feed.xml".into(),
             image_url: image_url.to_string(),
-            directory_name: format!("podcasts/{}", directory_id),
+            directory_name: format!("podcasts/{directory_id}"),
             added_by: None,
         };
         repo.create(podcast).expect("seed podcast");
@@ -1253,8 +1263,7 @@ mod tests {
         use diesel::RunQueryDsl;
         use podfetch_persistence::db::get_connection;
         let _ = diesel::sql_query(format!(
-            "DELETE FROM podcasts WHERE directory_id = '{}'",
-            directory_id
+            "DELETE FROM podcasts WHERE directory_id = '{directory_id}'"
         ))
         .execute(&mut get_connection());
     }

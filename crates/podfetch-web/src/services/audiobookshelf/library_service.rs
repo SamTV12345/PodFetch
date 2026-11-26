@@ -73,7 +73,7 @@ impl AudiobookshelfLibraryService {
                 folder_paths: Vec::new(),
                 metadata_precedence: DEFAULT_METADATA_PRECEDENCE
                     .iter()
-                    .map(|s| s.to_string())
+                    .map(ToString::to_string)
                     .collect(),
                 created_at: now,
                 updated_at: now,

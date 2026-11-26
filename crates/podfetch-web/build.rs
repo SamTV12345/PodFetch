@@ -9,26 +9,28 @@ fn main() {
     }
 
     // Most recent tag
-    let last_tag = run(&["git", "describe", "--abbrev=0", "--tags"])
-        .map(|t| {
-            println!("cargo:rustc-env=GIT_LAST_TAG={t}");
-            t
-        })
-        .unwrap_or_else(|_| {
+    let last_tag = run(&["git", "describe", "--abbrev=0", "--tags"]).map_or_else(
+        |_| {
             println!("cargo:rustc-env=GIT_LAST_TAG=unknown");
             "unknown".to_string()
-        });
+        },
+        |t| {
+            println!("cargo:rustc-env=GIT_LAST_TAG={t}");
+            t
+        },
+    );
 
     // Branch name
-    let branch = run(&["git", "rev-parse", "--abbrev-ref", "HEAD"])
-        .map(|b| {
-            println!("cargo:rustc-env=GIT_BRANCH={b}");
-            b
-        })
-        .unwrap_or_else(|_| {
+    let branch = run(&["git", "rev-parse", "--abbrev-ref", "HEAD"]).map_or_else(
+        |_| {
             println!("cargo:rustc-env=GIT_BRANCH=unknown");
             "unknown".to_string()
-        });
+        },
+        |b| {
+            println!("cargo:rustc-env=GIT_BRANCH={b}");
+            b
+        },
+    );
 
     // Commit hash
     let rev = run(&["git", "rev-parse", "HEAD"])

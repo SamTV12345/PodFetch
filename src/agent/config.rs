@@ -121,7 +121,7 @@ mod tests {
     use super::*;
 
     fn parse(args: &[&str]) -> Result<AgentConfig, ConfigError> {
-        parse_from_iter(args.iter().map(|s| s.to_string()))
+        parse_from_iter(args.iter().map(ToString::to_string))
     }
 
     #[test]

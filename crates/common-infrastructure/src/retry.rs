@@ -16,7 +16,7 @@ where
                 if tries >= 10 {
                     return err;
                 }
-                sleep(Duration::from_millis(500))
+                sleep(Duration::from_millis(500));
             }
         }
     }

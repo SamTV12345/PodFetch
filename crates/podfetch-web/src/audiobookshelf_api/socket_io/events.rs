@@ -143,7 +143,7 @@ fn media_progress_to_json(progress: &MediaProgress) -> Value {
         "ebookProgress": Value::Null,
         "lastUpdate": ms(progress.last_update),
         "startedAt": ms(progress.started_at),
-        "finishedAt": progress.finished_at.map(ms).map(Value::from).unwrap_or(Value::Null),
+        "finishedAt": progress.finished_at.map(ms).map_or(Value::Null, Value::from),
     })
 }
 
@@ -186,7 +186,7 @@ mod tests {
     use chrono::TimeZone;
 
     fn fixture_user() -> User {
-        let created = chrono::Utc
+        let created = Utc
             .with_ymd_and_hms(2026, 5, 13, 12, 0, 0)
             .unwrap()
             .naive_utc();
@@ -204,7 +204,7 @@ mod tests {
     }
 
     fn fixture_progress() -> MediaProgress {
-        let now = chrono::Utc
+        let now = Utc
             .with_ymd_and_hms(2026, 5, 13, 13, 0, 0)
             .unwrap()
             .naive_utc();
@@ -290,7 +290,7 @@ mod tests {
 
     #[test]
     fn library_payload_contains_required_fields() {
-        let now = chrono::Utc::now().naive_utc();
+        let now = Utc::now().naive_utc();
         let library = Library {
             id: "lib_xyz".to_string(),
             name: "Audiobooks".to_string(),

@@ -69,8 +69,7 @@ pub fn map_book(aggregate: &BookAggregate) -> Value {
     let cover_url = format!("/api/items/{}/cover", book.id);
     let last_scan_ms = book
         .last_scan
-        .map(|t| t.and_utc().timestamp_millis())
-        .unwrap_or(updated_ms);
+        .map_or(updated_ms, |t| t.and_utc().timestamp_millis());
 
     json!({
         "id": book.id,

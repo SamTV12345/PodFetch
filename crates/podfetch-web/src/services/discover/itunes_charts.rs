@@ -77,7 +77,7 @@ impl ItunesChartsService {
 
 fn sanitize_country(code: &str) -> String {
     code.chars()
-        .filter(|c| c.is_ascii_alphabetic())
+        .filter(char::is_ascii_alphabetic)
         .take(2)
         .collect::<String>()
         .to_ascii_lowercase()
@@ -139,8 +139,7 @@ impl From<RawEntry> for ItunesChartEntry {
         let id = value
             .id
             .attributes
-            .map(|a| a.id)
-            .unwrap_or_else(|| value.id.label.clone());
+            .map_or_else(|| value.id.label.clone(), |a| a.id);
         let image = value
             .image
             .and_then(|imgs| imgs.into_iter().last().map(|l| l.label));

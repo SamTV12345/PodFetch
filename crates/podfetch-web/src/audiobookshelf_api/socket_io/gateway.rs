@@ -46,13 +46,10 @@ async fn handle_auth(
         emit_auth_failed(socket, "Missing token");
         return;
     };
-    let user = match login_service.user_from_token(&token) {
-        Ok(Some(user)) => user,
-        Ok(None) | Err(_) => {
-            tracing::warn!("audiobookshelf socket {}: invalid auth token", socket.id);
-            emit_auth_failed(socket, "Invalid token");
-            return;
-        }
+    let Ok(Some(user)) = login_service.user_from_token(&token) else {
+        tracing::warn!("audiobookshelf socket {}: invalid auth token", socket.id);
+        emit_auth_failed(socket, "Invalid token");
+        return;
     };
     socket.join(user.id.to_string());
     let init_payload = events::build_init_payload(&user);

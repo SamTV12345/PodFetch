@@ -134,17 +134,13 @@ pub fn map_podcast(podcast: &Podcast, episodes: &[PodcastEpisode], library_id: &
 }
 
 fn metadata_json(podcast: &Podcast) -> Value {
-    let genres: Vec<Value> = podcast
-        .keywords
-        .as_deref()
-        .map(|k| {
-            k.split(',')
-                .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty())
-                .map(Value::from)
-                .collect()
-        })
-        .unwrap_or_default();
+    let genres: Vec<Value> = podcast.keywords.as_deref().map_or_default(|k| {
+        k.split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .map(Value::from)
+            .collect()
+    });
     let title_ignore_prefix = title_ignore_prefix(&podcast.name);
     json!({
         "title": podcast.name,
@@ -160,7 +156,7 @@ fn metadata_json(podcast: &Podcast) -> Value {
         "itunesArtistId": Value::Null,
         "explicit": matches!(
             podcast.explicit.as_deref(),
-            Some("yes") | Some("true") | Some("1")
+            Some("yes" | "true" | "1")
         ),
         "language": podcast.language,
         "type": "episodic",
@@ -276,7 +272,7 @@ pub fn map_episode(
         "subtitle": Value::Null,
         "description": episode.description,
         "enclosure": enclosure,
-        "guid": Some(episode.guid.clone()).filter(|s| !s.is_empty()).map(Value::from).unwrap_or(Value::Null),
+        "guid": Some(episode.guid.clone()).filter(|s| !s.is_empty()).map_or(Value::Null, Value::from),
         "pubDate": episode.date_of_recording,
         "chapters": Value::Array(vec![]),
         "audioFile": audio_file,

@@ -127,8 +127,7 @@ impl PlaybackSessionDto {
                 .device_info_json
                 .as_deref()
                 .and_then(|s| serde_json::from_str::<serde_json::Value>(s).ok())
-                .map(merge_device_info_defaults)
-                .unwrap_or_else(default_device_info),
+                .map_or_else(default_device_info, merge_device_info_defaults),
             server_version: env!("CARGO_PKG_VERSION").to_string(),
             date,
             day_of_week,
