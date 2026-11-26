@@ -77,3 +77,20 @@ test('notifications popover opens and reports its state', async ({ page }) => {
     // header or the empty state.
     await expect(page.getByText(/unread notifications|No notifications/).first()).toBeVisible()
 })
+
+test('events tab shows delivery counts per status and filters the list', async ({ page }) => {
+    await page.goto('/ui/settings')
+    await page.getByRole('link', { name: 'Events', exact: true }).click()
+    await expect(page).toHaveURL(/\/ui\/settings\/events$/)
+
+    const stats = page.getByTestId('event-stats')
+    for (const status of ['Dead', 'Failed', 'Pending', 'Processing', 'Done']) {
+        await expect(stats.getByText(status, { exact: true })).toBeVisible()
+    }
+
+    // Dead deliveries are shown first; nothing has failed in the e2e setup.
+    await expect(page.getByText('No events with this status.')).toBeVisible()
+
+    await stats.getByRole('button', { name: /Done/ }).click()
+    await expect(page.locator('#event-status')).toContainText('Done')
+})

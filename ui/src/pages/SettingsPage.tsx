@@ -49,6 +49,11 @@ export const SettingsPage = () => {
                             {t('manage-gpodder-podcasts')}
                         </NavLink>
                     </li>
+                    <li className={`cursor-pointer inline-block px-2 py-4`}>
+                        <NavLink to="events">
+                            {t('events')}
+                        </NavLink>
+                    </li>
                     {config?.mopidyIntegrationEnabled && (
                         <li className={`cursor-pointer inline-block px-2 py-4`}>
                             <NavLink to="mopidy">
