@@ -14,6 +14,7 @@ use uuid::Uuid;
 use crate::filter::Filter;
 use crate::tags::Tag;
 use crate::url_rewriting::resolve_image_url;
+use podfetch_storage::file_handler::resolve_file_handler_type;
 
 #[derive(Debug, Serialize, Deserialize, Clone, IntoParams)]
 #[serde(rename_all = "camelCase")]
@@ -213,13 +214,6 @@ pub fn map_podcast_with_context_to_dto(
         directory_name: value.directory_name.clone(),
         tags,
         favorites: favorite.unwrap_or(false),
-    }
-}
-
-fn resolve_file_handler_type(value: Option<String>) -> FileHandlerType {
-    match value {
-        Some(val) => FileHandlerType::from(val.as_str()),
-        None => ENVIRONMENT_SERVICE.default_file_handler.clone(),
     }
 }
 

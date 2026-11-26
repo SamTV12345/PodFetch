@@ -89,13 +89,32 @@ impl Display for FileHandlerType {
     }
 }
 
-impl From<&str> for FileHandlerType {
-    fn from(value: &str) -> Self {
+#[derive(Debug, thiserror::Error)]
+#[error("unknown file handler type '{0}' (expected 'Local' or 'S3')")]
+pub struct UnknownFileHandlerType(pub String);
+
+impl std::str::FromStr for FileHandlerType {
+    type Err = UnknownFileHandlerType;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value {
-            "Local" => FileHandlerType::Local,
-            "S3" => FileHandlerType::S3,
-            _ => panic!("Invalid FileHandlerType"),
+            "Local" => Ok(FileHandlerType::Local),
+            "S3" => Ok(FileHandlerType::S3),
+            other => Err(UnknownFileHandlerType(other.to_owned())),
         }
+    }
+}
+
+impl FileHandlerType {
+    /// Parses a `download_location` stored in the database.
+    ///
+    /// PodFetch only ever writes `Local` or `S3`; anything else is logged and
+    /// treated as `Local` so a single corrupt row cannot take a request down.
+    pub fn from_stored(value: &str) -> Self {
+        value.parse().unwrap_or_else(|e| {
+            tracing::error!("{e}; treating it as 'Local'");
+            FileHandlerType::Local
+        })
     }
 }
 

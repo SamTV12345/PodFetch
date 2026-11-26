@@ -4,6 +4,7 @@ use common_infrastructure::config::FileHandlerType;
 use common_infrastructure::error::ErrorSeverity::Critical;
 use common_infrastructure::error::{CustomError, CustomErrorInner, map_io_error};
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
+use std::borrow::Cow;
 use std::future::Future;
 use std::pin::Pin;
 
@@ -115,69 +116,45 @@ impl FileHandleWrapper {
                     }
                     Err(err) => return Err(Self::map_storage_error(err)),
                 }
-                episodes.iter().for_each(|episode| {
-                    if let Some(download_type) = &episode.download_location {
-                        let file_type = FileHandlerType::from(download_type.as_str());
-                        if FileHandlerType::S3 == file_type {
-                            if let Some(file_path) = &episode.file_image_path
-                                && let Err(e) = Self::s3_backend()
-                                    .remove_file(file_path)
-                                    .map_err(Self::map_storage_error)
-                            {
-                                tracing::error!("Error removing file: {file_path} with reason {e}");
-                            }
-                            if let Some(file_path) = &episode.file_episode_path
-                                && let Err(e) = Self::s3_backend()
-                                    .remove_file(file_path)
-                                    .map_err(Self::map_storage_error)
-                            {
-                                tracing::error!("Error removing file: {file_path} with reason {e}");
-                            }
-                        }
-                    }
-                });
-                Ok(())
+                // Local episode files went away with the directory.
+                Self::remove_episode_files(episodes, false);
             }
             FileHandlerType::S3 => {
-                let image_url = urlencoding::decode(&podcast.image_url).unwrap().to_string();
+                // Not percent-encoded UTF-8? Then the stored value is the key.
+                let image_url = urlencoding::decode(&podcast.image_url)
+                    .map_or_else(|_| podcast.image_url.clone(), Cow::into_owned);
                 Self::s3_backend()
                     .remove_file(&image_url)
                     .map_err(Self::map_storage_error)?;
-                episodes.iter().for_each(|episode| {
-                    if let Some(download_type) = &episode.download_location {
-                        let file_type = FileHandlerType::from(download_type.as_str());
-                        if FileHandlerType::S3 == file_type {
-                            if let Some(file_path) = &episode.file_image_path
-                                && let Err(e) = Self::s3_backend()
-                                    .remove_file(file_path)
-                                    .map_err(Self::map_storage_error)
-                            {
-                                tracing::error!("Error removing file: {file_path} with reason {e}");
-                            }
-                            if let Some(file_path) = &episode.file_episode_path
-                                && let Err(e) = Self::s3_backend()
-                                    .remove_file(file_path)
-                                    .map_err(Self::map_storage_error)
-                            {
-                                tracing::error!("Error removing file: {file_path} {e}");
-                            }
-                        } else {
-                            if let Some(file_path) = &episode.file_image_path
-                                && let Err(e) = LocalStorageBackend::remove_file(file_path)
-                                    .map_err(Self::map_storage_error)
-                            {
-                                tracing::error!("Error removing file: {file_path} with reason {e}");
-                            }
-                            if let Some(file_path) = &episode.file_episode_path
-                                && let Err(e) = LocalStorageBackend::remove_file(file_path)
-                                    .map_err(Self::map_storage_error)
-                            {
-                                tracing::error!("Error removing file: {file_path} {e}");
-                            }
-                        }
-                    }
-                });
-                Ok(())
+                Self::remove_episode_files(episodes, true);
+            }
+        }
+        Ok(())
+    }
+
+    /// Best-effort removal of episode files and images; failures are logged.
+    /// S3 files are always removed, local ones only if `include_local`.
+    fn remove_episode_files(episodes: &[EpisodeFileInfo], include_local: bool) {
+        for episode in episodes {
+            let Some(location) = episode.download_location.as_deref() else {
+                continue;
+            };
+            let is_s3 = FileHandlerType::from_stored(location) == FileHandlerType::S3;
+            if !is_s3 && !include_local {
+                continue;
+            }
+            for path in [&episode.file_image_path, &episode.file_episode_path]
+                .into_iter()
+                .flatten()
+            {
+                let result = if is_s3 {
+                    Self::s3_backend().remove_file(path)
+                } else {
+                    LocalStorageBackend::remove_file(path)
+                };
+                if let Err(e) = result {
+                    tracing::error!("Error removing file {path}: {e}");
+                }
             }
         }
     }

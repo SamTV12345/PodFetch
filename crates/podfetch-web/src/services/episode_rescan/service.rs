@@ -82,8 +82,10 @@ impl EpisodeRescanService {
         let podcast_uuid = uuid::Uuid::parse_str(&episode.podcast_id)
             .map_err(|_| CustomError::from(CustomErrorInner::NotFound(ErrorSeverity::Warning)))?;
 
-        let download_location =
-            FileHandlerType::from(episode.download_location.as_deref().unwrap_or("Local"));
+        let download_location = episode
+            .download_location
+            .as_deref()
+            .map_or(Ok(FileHandlerType::Local), str::parse)?;
         if download_location == FileHandlerType::S3 {
             // The transcode + rename + tag-write helpers all assume local
             // filesystem; the existing downloader short-circuits on S3 too.
@@ -463,8 +465,10 @@ impl EpisodeRescanService {
                 .map(ToString::to_string)
         };
 
-        let download_location =
-            FileHandlerType::from(episode.download_location.as_deref().unwrap_or("Local"));
+        let download_location = episode
+            .download_location
+            .as_deref()
+            .map_or(Ok(FileHandlerType::Local), str::parse)?;
 
         FilenameBuilder::default()
             .with_podcast_directory(&podcast.directory_name)

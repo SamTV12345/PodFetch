@@ -142,7 +142,7 @@ fn map_file_url_with_api_key(
 ) -> String {
     match &podcast_episode.download_location {
         Some(location) => {
-            let handle = FileHandlerType::from(location.as_str());
+            let handle = FileHandlerType::from_stored(location);
             match handle {
                 FileHandlerType::Local => {
                     map_local_file_url_with_api_key(local_url, remote_url, api_key, server_url)
@@ -194,7 +194,7 @@ fn map_url(
 ) -> String {
     match &episode.download_location {
         Some(location) => {
-            let handle = FileHandlerType::from(location.as_str());
+            let handle = FileHandlerType::from_stored(location);
             match handle {
                 FileHandlerType::Local => map_file_url(local_url, remote_url, user, server_url),
                 FileHandlerType::S3 => map_s3_url(local_url, remote_url),

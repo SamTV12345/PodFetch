@@ -1174,7 +1174,7 @@ impl PodcastEpisodeUseCase {
         ) else {
             return true;
         };
-        let handler = FileHandlerType::from(location);
+        let handler = FileHandlerType::from_stored(location);
         !FileHandleWrapper::path_exists(path, FileRequest::File, &handler)
     }
 

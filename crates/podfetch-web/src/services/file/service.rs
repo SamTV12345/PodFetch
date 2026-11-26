@@ -179,7 +179,7 @@ impl FileService {
             // Never downloaded, so there is nothing on disk to clean up.
             return Ok(());
         };
-        let file_type = FileHandlerType::from(location);
+        let file_type = FileHandlerType::from_stored(location);
         for path in [&episode.file_episode_path, &episode.file_image_path]
             .into_iter()
             .flatten()
