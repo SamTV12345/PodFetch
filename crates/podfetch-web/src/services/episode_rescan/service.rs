@@ -105,7 +105,7 @@ impl EpisodeRescanService {
             // pass. If it's truly empty, clean it up so the user doesn't
             // accumulate dead directories.
             if opts.apply_filenames && download_location == FileHandlerType::Local {
-                let podcast_root = PodcastService::get_podcast_by_id(podcast_uuid).directory_name;
+                let podcast_root = PodcastService::get_podcast(podcast_uuid)?.directory_name;
                 if let Some(parent) = Path::new(&current_audio_path).parent()
                     && let Some(parent_str) = parent.to_str()
                 {
@@ -115,7 +115,7 @@ impl EpisodeRescanService {
             return Ok(());
         }
 
-        let mut podcast = PodcastService::get_podcast_by_id(podcast_uuid);
+        let mut podcast = PodcastService::get_podcast(podcast_uuid)?;
         let settings =
             SettingsService::shared()
                 .get_settings()?
@@ -156,7 +156,7 @@ impl EpisodeRescanService {
         // the shared cover under its old name.
         if opts.apply_filenames || opts.regenerate_nfo {
             crate::services::nfo::service::ensure_cover_filename(&podcast);
-            podcast = PodcastService::get_podcast_by_id(podcast_uuid);
+            podcast = PodcastService::get_podcast(podcast_uuid)?;
             if let Some(new_cover) = shared_cover_fs_path(&podcast)
                 && Self::is_stale_shared_cover(
                     &working_image_path,

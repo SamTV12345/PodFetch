@@ -454,8 +454,8 @@ pub async fn download_all_missing_episodes(
         .map_err(map_podcast_episode_controller_error)?;
     let podcast_id = resolve_podcast_uuid(&id)?;
 
+    let podcast = PodcastService::get_podcast(podcast_id)?;
     tokio::task::spawn_blocking(move || {
-        let podcast = PodcastService::get_podcast_by_id(podcast_id);
         if let Err(err) = PodcastEpisodeService::download_missing_episodes_for_podcast(&podcast) {
             tracing::error!("download-all failed for podcast {podcast_id}: {err}");
         }
@@ -488,8 +488,8 @@ pub async fn download_episode_range(
         .map_err(map_podcast_episode_controller_error)?;
     let podcast_id = resolve_podcast_uuid(&id)?;
 
+    let podcast = PodcastService::get_podcast(podcast_id)?;
     tokio::task::spawn_blocking(move || {
-        let podcast = PodcastService::get_podcast_by_id(podcast_id);
         if let Err(err) = PodcastEpisodeService::download_episode_range_for_podcast(
             &podcast,
             range.from as usize,
@@ -517,8 +517,8 @@ pub async fn resync_files_for_podcast(
         .map_err(map_podcast_episode_controller_error)?;
     let podcast_id = resolve_podcast_uuid(&id)?;
 
+    let podcast = PodcastService::get_podcast(podcast_id)?;
     tokio::task::spawn_blocking(move || {
-        let podcast = PodcastService::get_podcast_by_id(podcast_id);
         if let Err(err) = PodcastEpisodeService::redownload_missing_files_for_podcast(&podcast) {
             tracing::error!("resync-files failed for podcast {podcast_id}: {err}");
         }

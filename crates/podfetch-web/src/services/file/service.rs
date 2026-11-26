@@ -4,6 +4,7 @@ use podfetch_persistence::podcast::PodcastEntity as Podcast;
 
 use std::path::Path;
 use std::str::FromStr;
+use std::sync::LazyLock;
 
 use crate::podcast::PodcastInsertModel;
 use crate::podcast_settings::PodcastSetting;
@@ -13,7 +14,10 @@ use crate::services::podcast_settings::service::PodcastSettingsService;
 use crate::services::settings::service::SettingsService;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use common_infrastructure::config::FileHandlerType;
-use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
+use common_infrastructure::error::{
+    CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error,
+};
+use common_infrastructure::http::get_http_client;
 use common_infrastructure::rss::{PodcastParsed, RSSFeedParser};
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use podfetch_domain::settings::{ReplacementStrategy, Setting};
@@ -43,7 +47,10 @@ impl FileService {
         podcast_id: &str,
         _conn: &mut DbConnection,
     ) -> bool {
-        let podcast = PodcastService::get_podcast_by_directory_id(podcast_id).unwrap();
+        let podcast = PodcastService::get_podcast_by_directory_id(podcast_id).unwrap_or_else(|e| {
+            tracing::error!("Could not load podcast {podcast_id}: {e}");
+            None
+        });
         match podcast {
             Some(podcast) => {
                 if !podcast.image_url.contains("http") {
@@ -137,7 +144,10 @@ impl FileService {
                     determine_file_extension(&image_url_cloned, &client, FileType::Image)
                 })
                 .await
-                .unwrap(),
+                .map_err(|e| {
+                    tracing::error!("Determining the image type panicked: {e}");
+                    CustomError::from(CustomErrorInner::Unknown(ErrorSeverity::Error))
+                })?,
                 &image_url,
             )
             .await?
@@ -165,18 +175,17 @@ impl FileService {
         fn check_if_file_exists(file_path: &str, file_type: &FileHandlerType) -> bool {
             FileHandleWrapper::path_exists(file_path, FileRequest::File, file_type)
         }
-        if let Some(episode_path) = episode.file_episode_path.clone() {
-            let download_location =
-                FileHandlerType::from(episode.download_location.clone().unwrap().as_str());
-            if check_if_file_exists(&episode_path, &download_location) {
-                FileHandleWrapper::remove_file(&episode_path, &download_location)?;
-            }
-        }
-        if let Some(image_path) = episode.file_image_path.clone() {
-            let file_type =
-                FileHandlerType::from(episode.download_location.clone().unwrap().as_str());
-            if check_if_file_exists(&image_path, &file_type) {
-                FileHandleWrapper::remove_file(&image_path, &file_type)?;
+        let Some(location) = episode.download_location.as_deref() else {
+            // Never downloaded, so there is nothing on disk to clean up.
+            return Ok(());
+        };
+        let file_type = FileHandlerType::from(location);
+        for path in [&episode.file_episode_path, &episode.file_image_path]
+            .into_iter()
+            .flatten()
+        {
+            if check_if_file_exists(path, &file_type) {
+                FileHandleWrapper::remove_file(path, &file_type)?;
             }
         }
         Ok(())
@@ -233,7 +242,7 @@ pub async fn prepare_podcast_title_to_directory(
     podcast: &PodcastInsertModel,
     channel: Option<Channel>,
 ) -> Result<String, CustomError> {
-    let retrieved_settings = SettingsService::shared().get_settings()?.unwrap();
+    let retrieved_settings = required_settings()?;
     // The podcast row does not exist yet at this point (this runs during
     // initial insert), so there can be no per-podcast settings override.
     let opt_podcast_settings = PodcastSettingsService::get_settings_for_podcast(uuid::Uuid::nil())?;
@@ -241,13 +250,21 @@ pub async fn prepare_podcast_title_to_directory(
     let podcast = match channel {
         Some(channel) => RSSFeedParser::parse_rss_feed(channel),
         None => {
-            let client = reqwest::Client::new();
-            let rss_feed = podcast.feed_url.clone();
-            let feed_response = client.get(rss_feed).send().await.unwrap();
-            let content = feed_response.bytes().await.unwrap();
-
-            let channel = Channel::read_from(&content[..]);
-            RSSFeedParser::parse_rss_feed(channel.unwrap())
+            let content = get_http_client(&ENVIRONMENT_SERVICE)
+                .get(&podcast.feed_url)
+                .send()
+                .await
+                .map_err(map_reqwest_error)?
+                .bytes()
+                .await
+                .map_err(map_reqwest_error)?;
+            let channel = Channel::read_from(&content[..]).map_err(|e| {
+                CustomErrorInner::BadRequest(
+                    format!("Invalid podcast feed: {e}"),
+                    ErrorSeverity::Info,
+                )
+            })?;
+            RSSFeedParser::parse_rss_feed(channel)
         }
     };
 
@@ -336,7 +353,7 @@ pub fn perform_podcast_variable_replacement(
 pub fn prepare_podcast_episode_title_to_directory(
     podcast_episode: PodcastEpisode,
 ) -> Result<String, CustomError> {
-    let retrieved_settings = SettingsService::shared().get_settings()?.unwrap();
+    let retrieved_settings = required_settings()?;
     if retrieved_settings.use_existing_filename {
         let res_of_filename = get_filename_of_url(&podcast_episode.url);
         if let Ok(res_unwrapped) = res_of_filename {
@@ -459,7 +476,11 @@ fn perform_replacement(
     }
 
     // Colon replacement strategy
-    match ReplacementStrategy::from_str(&replacement_strategy).unwrap() {
+    let strategy = ReplacementStrategy::from_str(&replacement_strategy).unwrap_or_else(|()| {
+        tracing::warn!("Unknown replacement strategy '{replacement_strategy}', using the default");
+        ReplacementStrategy::ReplaceWithDashAndUnderscore
+    });
+    match strategy {
         ReplacementStrategy::ReplaceWithDashAndUnderscore => {
             let sanitizer = Sanitizer::new(Some(Options::default_with_replacement("-_")));
             final_string = sanitizer.sanitize(&final_string);
@@ -477,14 +498,21 @@ fn perform_replacement(
 }
 
 fn get_filename_of_url(url: &str) -> Result<String, String> {
-    let re = Regex::new(r"/([^/?]+)\.\w+(?:\?.*)?$").unwrap();
+    static FILENAME: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"/([^/?]+)\.\w+(?:\?.*)?$").expect("static regex is valid"));
+    FILENAME
+        .captures(url)
+        .and_then(|captures| captures.get(1))
+        .map(|name| remove_extension(name.as_str()).to_owned())
+        .ok_or_else(|| "Could not get filename".to_owned())
+}
 
-    if let Some(captures) = re.captures(url) {
-        let dir_name = remove_extension(captures.get(1).unwrap().as_str()).to_string();
-
-        return Ok(dir_name);
-    }
-    Err("Could not get filename".to_string())
+/// The global settings row is created at startup, so a missing one is a bug.
+fn required_settings() -> Result<crate::settings::Setting, CustomError> {
+    SettingsService::shared().get_settings()?.ok_or_else(|| {
+        tracing::error!("Global settings are missing");
+        CustomErrorInner::Unknown(ErrorSeverity::Error).into()
+    })
 }
 
 fn remove_extension(filename: &str) -> &str {

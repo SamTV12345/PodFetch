@@ -27,12 +27,11 @@ use podfetch_persistence::db::PersistenceError;
 use podfetch_persistence::db::database;
 use podfetch_persistence::favorite::DieselFavoriteRepository;
 use podfetch_persistence::podcast::DieselPodcastRepository;
-use reqwest::header::{HeaderMap, HeaderValue};
+use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue, USER_AGENT};
 use rss::Channel;
 use serde_json::Value;
 use sha1::{Digest, Sha1};
 use std::thread;
-use std::time::SystemTime;
 use tokio::task::spawn_blocking;
 use uuid::Uuid;
 
@@ -58,25 +57,21 @@ fn favorite_repo() -> DieselFavoriteRepository {
 impl PodcastService {
     pub async fn find_podcast(podcast: &str) -> ItunesWrapper {
         let query = vec![("term", podcast), ("entity", "podcast")];
-        let result = get_http_client(&ENVIRONMENT_SERVICE)
-            .get(ITUNES_URL)
-            .query(&query)
-            .send()
-            .await
-            .unwrap();
-        tracing::info!("Found podcast: {}", result.url());
-        let res_of_search = result.json().await;
-
-        match res_of_search {
-            Ok(res) => res,
-            _ => {
-                tracing::error!(
-                    "Error searching for podcast: {}",
-                    res_of_search.err().unwrap()
-                );
-                ItunesWrapper::default()
-            }
+        let result = async {
+            get_http_client(&ENVIRONMENT_SERVICE)
+                .get(ITUNES_URL)
+                .query(&query)
+                .send()
+                .await?
+                .json::<ItunesWrapper>()
+                .await
         }
+        .await;
+
+        result.unwrap_or_else(|e| {
+            tracing::error!("Error searching for podcast on iTunes: {e}");
+            ItunesWrapper::default()
+        })
     }
 
     pub async fn find_podcast_on_podindex(podcast: &str) -> Result<PodindexResponse, CustomError> {
@@ -101,17 +96,11 @@ impl PodcastService {
             tracing::error!("Error searching for podcast: {possible_json}");
             Err(CustomErrorInner::BadRequest(possible_json, Error).into())
         } else {
-            let res_of_search = serde_json::from_str(&possible_json);
-
-            if let Ok(res) = res_of_search {
-                Ok(res)
-            } else {
-                tracing::error!(
-                    "Error searching for podcast: {}",
-                    res_of_search.err().unwrap()
-                );
-                Ok(serde_json::from_str("{}").unwrap())
-            }
+            serde_json::from_str(&possible_json).map_err(|e| {
+                tracing::error!("Unexpected podindex search response: {e}");
+                CustomErrorInner::BadRequest("Unexpected response from podindex".to_owned(), Error)
+                    .into()
+            })
         }
     }
 
@@ -179,11 +168,8 @@ impl PodcastService {
             .headers(Self::compute_podindex_header())
             .send()
             .await
-            .unwrap();
-
-        println!("Result: {resp:?}");
-
-        let podcast = resp.json::<Value>().await.unwrap();
+            .map_err(map_reqwest_error)?;
+        let podcast = resp.json::<Value>().await.map_err(map_reqwest_error)?;
 
         Self::handle_insert_of_podcast(
             PodcastInsertModel {
@@ -303,9 +289,7 @@ impl PodcastService {
             PodcastSettingsService::get_settings_for_podcast(parse_id(&podcast.id)?)?;
         match settings {
             Some(settings) => {
-                if (podcast_settings.is_some() && podcast_settings.unwrap().auto_download)
-                    || settings.auto_download
-                {
+                if podcast_settings.is_some_and(|s| s.auto_download) || settings.auto_download {
                     let result =
                         PodcastEpisodeService::get_last_n_podcast_episodes(podcast.clone())?;
                     // Bound parallel downloads (and therefore inline Opus
@@ -493,10 +477,13 @@ impl PodcastService {
             .map_err(CustomError::from)
     }
 
-    pub fn update_podcast_urls_on_redirect(podcast_id_to_update: Uuid, new_url: &str) {
+    pub fn update_podcast_urls_on_redirect(
+        podcast_id_to_update: Uuid,
+        new_url: &str,
+    ) -> Result<(), CustomError> {
         podcast_repo()
             .update_rss_feed(podcast_id_to_update, new_url)
-            .expect("Error updating podcast episode");
+            .map_err(CustomError::from)
     }
 
     pub fn query_for_podcast(query: &str) -> Result<Vec<PodcastEpisode>, CustomError> {
@@ -590,15 +577,6 @@ impl PodcastService {
         Ok(())
     }
 
-    pub fn get_podcast_by_id(id: Uuid) -> Podcast {
-        podcast_repo()
-            .find_by_id(id)
-            .ok()
-            .flatten()
-            .map(Into::into)
-            .unwrap()
-    }
-
     /// Resolve a podcast by its pre-migration integer id (backwards-compat).
     pub fn get_podcast_by_legacy_id(legacy_id: i64) -> Result<Podcast, CustomError> {
         podcast_repo()
@@ -629,17 +607,16 @@ impl PodcastService {
             .iter()
             .map(|podcast| {
                 let tags = TagService::default_service()
-                    .get_tags_of_podcast(podcast.podcast.id, requester.id)
-                    .unwrap();
-                map_podcast_with_context_to_dto(
+                    .get_tags_of_podcast(podcast.podcast.id, requester.id)?;
+                Ok(map_podcast_with_context_to_dto(
                     podcast.podcast.clone(),
                     Some(podcast.favorite.favored),
                     tags,
                     &requester,
                     server_url,
-                )
+                ))
             })
-            .collect::<Vec<PodcastDto>>();
+            .collect::<Result<Vec<PodcastDto>, CustomError>>()?;
         Ok(mapped_result)
     }
 
@@ -654,44 +631,26 @@ impl PodcastService {
     }
 
     fn compute_podindex_header() -> HeaderMap {
-        let seconds = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
+        let seconds = chrono::Utc::now().timestamp();
+        let api_key = &ENVIRONMENT_SERVICE.podindex_api_key;
+        let api_secret = &ENVIRONMENT_SERVICE.podindex_api_secret;
+        let digest = Sha1::digest(format!("{api_key}{api_secret}{seconds}"));
+        let hashed_auth_key: String = digest.iter().map(|b| format!("{b:02x}")).collect();
+
         let mut headers = HeaderMap::new();
-        let non_hashed_string = format!(
-            "{}{}{}",
-            ENVIRONMENT_SERVICE.podindex_api_key.clone(),
-            &*ENVIRONMENT_SERVICE.podindex_api_secret.clone(),
-            seconds
-        );
-        let mut hasher = Sha1::new();
-
-        hasher.update(non_hashed_string);
-
-        let result = hasher.finalize();
-        let hashed_auth_key = result
-            .iter()
-            .map(|b| format!("{b:02x}"))
-            .collect::<String>();
-
-        headers.insert(
-            "User-Agent",
-            HeaderValue::from_str(COMMON_USER_AGENT).unwrap(),
-        );
-        headers.insert(
-            "X-Auth-Key",
-            HeaderValue::from_str(&ENVIRONMENT_SERVICE.podindex_api_key).unwrap(),
-        );
-        headers.insert(
-            "X-Auth-Date",
-            HeaderValue::from_str(&seconds.to_string()).unwrap(),
-        );
-        headers.insert(
-            "Authorization",
-            HeaderValue::from_str(&hashed_auth_key).unwrap(),
-        );
-
+        headers.insert(USER_AGENT, HeaderValue::from_static(COMMON_USER_AGENT));
+        headers.insert("X-Auth-Date", HeaderValue::from(seconds));
+        // Hex digest and digits are always valid header values; only a
+        // misconfigured API key can be rejected.
+        if let Ok(hashed) = HeaderValue::from_str(&hashed_auth_key) {
+            headers.insert(AUTHORIZATION, hashed);
+        }
+        match HeaderValue::from_str(api_key) {
+            Ok(key) => {
+                headers.insert("X-Auth-Key", key);
+            }
+            Err(_) => tracing::error!("PODINDEX_API_KEY contains characters invalid in headers"),
+        }
         headers
     }
 
@@ -710,18 +669,17 @@ impl PodcastService {
         let mapped_result = result
             .iter()
             .map(|podcast| {
-                let tags = TagService::default_service()
-                    .get_tags_of_podcast(podcast.podcast.id, u.id)
-                    .unwrap();
-                map_podcast_with_context_to_dto(
+                let tags =
+                    TagService::default_service().get_tags_of_podcast(podcast.podcast.id, u.id)?;
+                Ok(map_podcast_with_context_to_dto(
                     podcast.podcast.clone(),
                     podcast.favorite.clone().map(|f| f.favored),
                     tags,
                     u,
                     server_url,
-                )
+                ))
             })
-            .collect::<Vec<PodcastDto>>();
+            .collect::<Result<Vec<PodcastDto>, CustomError>>()?;
         Ok(mapped_result)
     }
 

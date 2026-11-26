@@ -555,7 +555,7 @@ impl PodcastEpisodeUseCase {
                     crate::services::podcast::service::PodcastService::update_podcast_urls_on_redirect(
                         Self::parse_id(&podcast.id)?,
                         &returned_data_from_podcast_insert.url,
-                    );
+                    )?;
                     Self::update_episodes_on_redirect(channel.items())?;
                 }
 
@@ -738,7 +738,7 @@ impl PodcastEpisodeUseCase {
             crate::services::podcast::service::PodcastService::update_podcast_urls_on_redirect(
                 Self::parse_id(&podcast.id)?,
                 new_url,
-            );
+            )?;
 
             let returned_data_from_server = Self::do_request_to_podcast_server(podcast.clone())?;
 
