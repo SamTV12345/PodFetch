@@ -1,4 +1,4 @@
-use crate::services::agent::registry::AgentRegistry;
+use crate::agent::registry::AgentRegistry;
 use podfetch_agent_protocol::{AgentMsg, ErrorCode, PlayMedia, RequestId, ServerMsg};
 use podfetch_cast::{
     CastDeviceUuid, CastError, CastMedia, CastSessionId, CastTarget, ControlCmd,
@@ -224,7 +224,7 @@ fn map_agent_error(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::services::agent::registry::AgentSessionHandle;
+    use crate::agent::registry::AgentSessionHandle;
     use podfetch_agent_protocol::AgentCapabilities;
     use std::net::Ipv4Addr;
     use tokio::sync::mpsc;
@@ -234,7 +234,7 @@ mod tests {
         let (tx, rx) = mpsc::channel(16);
         registry.register(AgentSessionHandle::new(
             agent_id.into(),
-            podfetch_domain::ids::new_id(),
+            uuid::Uuid::now_v7(),
             "0.1.0".into(),
             tx,
         ));

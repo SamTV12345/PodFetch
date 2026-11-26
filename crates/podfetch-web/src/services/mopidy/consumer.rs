@@ -4,9 +4,9 @@
 
 use crate::app_state::AppState;
 use crate::server::ChatServerHandle;
-use crate::services::cast::service::ActiveSession;
-use crate::services::mopidy::driver::MopidyEvent;
 use crate::usecases::watchtime::WatchtimeUseCase;
+use podfetch_casting::mopidy::driver::MopidyEvent;
+use podfetch_casting::orchestrator::ActiveSession;
 use tokio::sync::mpsc;
 use tracing::warn;
 

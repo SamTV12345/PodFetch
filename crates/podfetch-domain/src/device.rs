@@ -62,39 +62,6 @@ pub trait DeviceRepository: Send + Sync {
     fn create(&self, device: Device) -> Result<Device, Self::Error>;
     fn get_devices_of_user(&self, user_id: Uuid) -> Result<Vec<Device>, Self::Error>;
     fn delete_by_user_id(&self, user_id: Uuid) -> Result<(), Self::Error>;
-
-    /// Castable devices (Chromecast or Mopidy) the given user is allowed to
-    /// see — their own personal devices plus any shared/household device on
-    /// the instance.
-    fn list_castable_for_user(&self, user_id: Uuid) -> Result<Vec<Device>, Self::Error>;
-
-    fn find_by_chromecast_uuid(&self, chromecast_uuid: &str)
-    -> Result<Option<Device>, Self::Error>;
-
-    /// Look up a single device row by its primary id. Real implementors override this.
-    fn find_by_id(&self, _id: Uuid) -> Result<Option<Device>, Self::Error> {
-        Ok(None)
-    }
-
-    /// Delete a single device row by primary id; returns rows removed.
-    /// Real implementors override this.
-    fn delete_by_id(&self, _id: Uuid) -> Result<usize, Self::Error> {
-        Ok(0)
-    }
-
-    /// Insert or update a Chromecast row reported by an agent. Lookup is
-    /// keyed by `chromecast_uuid`. New rows default to `chromecast_personal`
-    /// owned by the agent's user; an admin can later promote `kind` to
-    /// `chromecast_shared` from the UI.
-    fn upsert_chromecast_from_agent(
-        &self,
-        chromecast_uuid: &str,
-        agent_id: &str,
-        owner_user_id: Uuid,
-        name: &str,
-        ip: Option<&str>,
-        last_seen_at: NaiveDateTime,
-    ) -> Result<Device, Self::Error>;
 }
 
 #[cfg(test)]

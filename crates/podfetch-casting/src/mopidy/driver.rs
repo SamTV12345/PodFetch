@@ -4,8 +4,8 @@
 //! server. It reuses the shared cast value types and emits status over a
 //! channel that the startup-wired consumer drains into the orchestrator.
 
-use crate::events::CastEndedReason;
-use crate::services::mopidy::rpc::{
+use crate::dto::CastEndedReason;
+use crate::mopidy::rpc::{
     self, MopidyRpcClient, control_to_call, ms_to_secs, state_from_str, volume_from_mopidy,
 };
 use chrono::Utc;

@@ -61,15 +61,7 @@ pub struct PodcastAddedMessage<P> {
     pub podcast: P,
 }
 
-/// Reason a cast session terminated, for the `cast:ended` event.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum CastEndedReason {
-    Stopped,
-    Finished,
-    DeviceGone,
-    Error,
-}
+pub use podfetch_casting::dto::CastEndedReason;
 
 /// Live status update for an in-flight cast session.
 #[derive(Serialize)]

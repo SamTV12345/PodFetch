@@ -1,8 +1,5 @@
 use crate::app_state::AppState;
-use crate::events::CastEndedReason;
 use crate::server::ChatServerHandle;
-use crate::services::agent::registry::AgentSessionHandle;
-use crate::services::cast::service::ActiveSession;
 use crate::usecases::watchtime::WatchtimeUseCase;
 use axum::Router;
 use axum::extract::State;
@@ -14,6 +11,9 @@ use axum::routing::get;
 use chrono::Utc;
 use futures::{SinkExt, StreamExt};
 use podfetch_agent_protocol::{AgentMsg, ErrorCode, PROTOCOL_VERSION, ServerMsg};
+use podfetch_casting::agent::registry::AgentSessionHandle;
+use podfetch_casting::dto::CastEndedReason;
+use podfetch_casting::orchestrator::ActiveSession;
 use podfetch_identity::domain::user::User;
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -177,14 +177,18 @@ async fn handle_agent_message(
         } => {
             for device in devices {
                 let ip = device.ip.map(|ip| ip.to_string());
-                if let Err(err) = state.device_service.upsert_chromecast_from_agent(
-                    device.uuid.as_ref(),
-                    agent_id,
-                    user_id,
-                    &device.friendly_name,
-                    ip.as_deref(),
-                    Utc::now().naive_utc(),
-                ) {
+                if let Err(err) = state
+                    .cast_orchestrator
+                    .devices()
+                    .upsert_chromecast_from_agent(
+                        device.uuid.as_ref(),
+                        agent_id,
+                        user_id,
+                        &device.friendly_name,
+                        ip.as_deref(),
+                        Utc::now().naive_utc(),
+                    )
+                {
                     warn!(
                         agent_id,
                         "failed to upsert device {}: {err}",

@@ -1,13 +1,13 @@
 //! Management API for Mopidy servers (gated behind MOPIDY_INTEGRATION_ENABLED
-//! at the router-mount level). A server is stored as a `mopidy_*` Device with
+//! at the router-mount level). A server is stored as a `mopidy_*` device with
 //! a generated `chromecast_uuid` public handle and a `base_url`.
 
 use crate::app_state::AppState;
-use crate::services::mopidy::driver::MopidyDriver;
 use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
-use podfetch_domain::device::{Device, kind as device_kind};
+use podfetch_casting::devices::{CastDevice, kind as device_kind};
+use podfetch_casting::mopidy::driver::MopidyDriver;
 use podfetch_identity::api::Principal;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -37,7 +37,7 @@ pub struct MopidyServerResponse {
 }
 
 impl MopidyServerResponse {
-    fn from_device(device: &Device) -> Option<Self> {
+    fn from_device(device: &CastDevice) -> Option<Self> {
         Some(Self {
             id: device.id?.to_string(),
             name: device.name.clone(),
@@ -85,8 +85,9 @@ pub async fn list_mopidy_servers(
     Extension(user): Extension<Principal>,
 ) -> Result<Json<Vec<MopidyServerResponse>>, CustomError> {
     let devices = state
-        .device_service
-        .list_castable_for_user(user.id.into())?;
+        .cast_orchestrator
+        .devices()
+        .list_visible_to(user.id.into())?;
     Ok(Json(
         devices
             .iter()
@@ -126,7 +127,7 @@ pub async fn add_mopidy_server(
     } else {
         device_kind::MOPIDY_PERSONAL
     };
-    let device = Device {
+    let device = CastDevice {
         id: None,
         deviceid: url.clone(),
         kind: kind.to_string(),
@@ -138,7 +139,7 @@ pub async fn add_mopidy_server(
         ip: None,
         base_url: Some(url),
     };
-    let created = state.device_service.create(device)?;
+    let created = state.cast_orchestrator.devices().register(device)?;
     MopidyServerResponse::from_device(&created)
         .map(Json)
         .ok_or_else(|| {
@@ -199,7 +200,8 @@ pub async fn delete_mopidy_server(
         ))
     })?;
     let device = state
-        .device_service
+        .cast_orchestrator
+        .devices()
         .find_by_id(uuid)?
         .filter(|d| device_kind::is_mopidy(&d.kind))
         .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(ErrorSeverity::Warning)))?;
@@ -209,7 +211,7 @@ pub async fn delete_mopidy_server(
     if !user.is_admin() && !owns {
         return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
     }
-    state.device_service.delete_by_id(uuid)?;
+    state.cast_orchestrator.devices().delete_by_id(uuid)?;
     Ok(())
 }
 

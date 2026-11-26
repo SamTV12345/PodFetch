@@ -3217,6 +3217,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "podfetch-casting"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "chrono",
+ "common-infrastructure",
+ "diesel",
+ "podfetch-agent-protocol",
+ "podfetch-cast",
+ "podfetch-events",
+ "podfetch-identity",
+ "reqwest 0.13.5",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
 name = "podfetch-domain"
 version = "0.1.0"
 dependencies = [
@@ -3349,6 +3371,7 @@ dependencies = [
  "opml",
  "podfetch-agent-protocol",
  "podfetch-cast",
+ "podfetch-casting",
  "podfetch-domain",
  "podfetch-events",
  "podfetch-identity",
