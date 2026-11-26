@@ -1,7 +1,6 @@
 // Existing DTOs, traits, and types
 pub mod auth;
 pub mod background;
-pub mod cast;
 pub mod device;
 pub mod events;
 pub mod file_access;
@@ -58,6 +57,7 @@ pub mod startup;
 // Application state
 pub mod app_state;
 pub mod application;
+mod casting_tests;
 mod identity_tests;
 
 // File access API adapter

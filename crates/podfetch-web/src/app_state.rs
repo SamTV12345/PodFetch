@@ -1,6 +1,3 @@
-use crate::cast::ServerCastOrchestrator;
-use crate::services::agent::dispatcher::AgentDispatcher;
-use crate::services::agent::registry::AgentRegistry;
 use crate::services::audiobookshelf::audiobook_scanner::AudiobookScanner;
 use crate::services::audiobookshelf::book_service::AudiobookshelfBookService;
 use crate::services::audiobookshelf::hls_transcoder::HlsTranscoder;
@@ -9,14 +6,12 @@ use crate::services::audiobookshelf::listening_session_service::AudiobookshelfLi
 use crate::services::audiobookshelf::login_service::AudiobookshelfLoginService;
 use crate::services::audiobookshelf::media_progress_service::AudiobookshelfMediaProgressService;
 use crate::services::audiobookshelf::playback_session_service::AudiobookshelfPlaybackSessionService;
-use crate::services::cast::service::CastOrchestrator;
 use crate::services::device::service::DeviceService;
 use crate::services::device_sync_group::service::DeviceSyncGroupService;
 use crate::services::episode_triage::service::EpisodeTriageService;
 use crate::services::favorite_podcast_episode::service::FavoritePodcastEpisodeService;
 use crate::services::filter::service::FilterService;
 use crate::services::gpodder_setting::service::GpodderSettingService;
-use crate::services::mopidy::driver::{MopidyDriver, MopidyEvent};
 use crate::services::playlist::service::PlaylistService;
 use crate::services::podcast_episode_chapter::service::PodcastEpisodeChapterService;
 use crate::services::podcast_settings::service::PodcastSettingsService;
@@ -28,6 +23,11 @@ use crate::services::transcript::service::TranscriptService;
 use crate::usecases::watchtime::WatchtimeUseCase;
 use common_infrastructure::config::EnvironmentService;
 use podfetch_cast::StubCastDriver;
+use podfetch_casting::agent::dispatcher::AgentDispatcher;
+use podfetch_casting::agent::registry::AgentRegistry;
+use podfetch_casting::dto::ServerCastOrchestrator;
+use podfetch_casting::mopidy::driver::{MopidyDriver, MopidyEvent};
+use podfetch_casting::orchestrator::CastOrchestrator;
 use podfetch_identity::persistence::adapters::{
     InviteRepositoryImpl, SessionRepositoryImpl, UserAdminRepositoryImpl,
 };
@@ -124,7 +124,9 @@ impl AppState {
         let (mopidy_tx, mopidy_rx) = mpsc::channel::<MopidyEvent>(64);
         let mopidy_driver = Arc::new(MopidyDriver::new(mopidy_tx));
         let cast_orchestrator = Arc::new(CastOrchestrator::new(
-            device_service.clone(),
+            Arc::new(
+                podfetch_casting::persistence::CastDeviceRepositoryImpl::new(database.clone()),
+            ),
             Arc::new(StubCastDriver),
             agent_dispatcher.clone(),
             mopidy_driver,
@@ -208,6 +210,7 @@ impl AppState {
                 .clone()
                 .map(podfetch_notifications::telegram::TelegramNotifier::new),
         );
+        podfetch_casting::handlers::subscribe(&event_bus, cast_orchestrator.clone());
         crate::podcast_events::install(event_bus.clone());
         let user_admin_service = Arc::new(UserAdminService::new(
             Arc::new(UserAdminRepositoryImpl::new(database.clone())),

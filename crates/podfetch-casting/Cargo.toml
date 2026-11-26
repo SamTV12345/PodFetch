@@ -1,0 +1,33 @@
+[package]
+name = "podfetch-casting"
+version = "0.1.0"
+edition = "2024"
+description = "Casting bounded context: Chromecast and Mopidy playback, cast targets, remote agents"
+
+[lints]
+workspace = true
+
+[features]
+default = []
+sqlite = ["common-infrastructure/sqlite", "podfetch-events/sqlite", "podfetch-identity/sqlite"]
+postgresql = ["common-infrastructure/postgresql", "podfetch-events/postgresql", "podfetch-identity/postgresql"]
+
+[dev-dependencies]
+axum = { workspace = true }
+
+[dependencies]
+common-infrastructure = { workspace = true }
+podfetch-agent-protocol = { workspace = true }
+podfetch-cast = { workspace = true }
+podfetch-events = { workspace = true }
+podfetch-identity = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+diesel = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+utoipa = { workspace = true }
+uuid = { workspace = true }

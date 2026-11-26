@@ -1,13 +1,12 @@
-use crate::services::agent::dispatcher::AgentDispatcher;
-use crate::services::device::service::DeviceService;
-use crate::services::mopidy::driver::{MopidyDriveError, MopidyDriver, MopidyTarget};
+use crate::agent::dispatcher::AgentDispatcher;
+use crate::devices::{CastDevice, CastDeviceRepository, kind as device_kind};
+use crate::mopidy::driver::{MopidyDriveError, MopidyDriver, MopidyTarget};
 use chrono::Utc;
 use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use podfetch_cast::{
     CastDeviceUuid, CastDriver, CastError, CastMedia, CastSessionId, CastState, CastStatus,
     CastTarget, ControlCmd, DiscoveredCastDevice,
 };
-use podfetch_domain::device::{Device, kind as device_kind};
 use podfetch_identity::api::Principal;
 use std::collections::HashMap;
 use std::net::IpAddr;
@@ -33,7 +32,7 @@ pub struct ActiveSession {
     /// Set when the session is being driven through a remote agent;
     /// `None` means the session is on the server's own LAN.
     pub agent_id: Option<String>,
-    /// Device kind string — used at control time to route Mopidy vs Chromecast.
+    /// CastDevice kind string — used at control time to route Mopidy vs Chromecast.
     pub device_kind: String,
     pub last_status: CastStatus,
 }
@@ -45,7 +44,7 @@ pub struct ActiveSession {
 /// LAN. Devices contributed by a connected agent are routed through the
 /// [`AgentDispatcher`] instead, picked per-device via `device.agent_id`.
 pub struct CastOrchestrator<L: CastDriver> {
-    device_service: Arc<DeviceService>,
+    devices: Arc<dyn CastDeviceRepository<Error = CustomError>>,
     local_driver: Arc<L>,
     agent_dispatcher: Arc<AgentDispatcher>,
     mopidy_driver: Arc<MopidyDriver>,
@@ -100,13 +99,13 @@ impl From<OrchestratorError> for CustomError {
 
 impl<L: CastDriver> CastOrchestrator<L> {
     pub fn new(
-        device_service: Arc<DeviceService>,
+        devices: Arc<dyn CastDeviceRepository<Error = CustomError>>,
         local_driver: Arc<L>,
         agent_dispatcher: Arc<AgentDispatcher>,
         mopidy_driver: Arc<MopidyDriver>,
     ) -> Self {
         Self {
-            device_service,
+            devices,
             local_driver,
             agent_dispatcher,
             mopidy_driver,
@@ -116,17 +115,17 @@ impl<L: CastDriver> CastOrchestrator<L> {
 
     /// All Chromecast devices the user is allowed to see — owned personal
     /// devices plus any shared/household device on the instance.
-    pub fn list_castable(&self, user: &Principal) -> Result<Vec<Device>, OrchestratorError> {
-        Ok(self.device_service.list_castable_for_user(user.id.into())?)
+    pub fn list_castable(&self, user: &Principal) -> Result<Vec<CastDevice>, OrchestratorError> {
+        Ok(self.devices.list_visible_to(user.id.into())?)
     }
 
     /// Resolve a device by chromecast UUID and check the user is allowed to
-    /// use it. Returns the persisted Device row.
+    /// use it. Returns the persisted device row.
     pub fn resolve_castable(
         &self,
         user: &Principal,
         chromecast_uuid: &str,
-    ) -> Result<Device, OrchestratorError> {
+    ) -> Result<CastDevice, OrchestratorError> {
         let visible = self.list_castable(user)?;
         visible
             .into_iter()
@@ -282,6 +281,57 @@ impl<L: CastDriver> CastOrchestrator<L> {
             .remove(session_id)
     }
 
+    /// The cast targets this context owns.
+    pub fn devices(&self) -> &Arc<dyn CastDeviceRepository<Error = CustomError>> {
+        &self.devices
+    }
+
+    /// Stops and forgets every session of `user_id`, e.g. because the user
+    /// was deleted. Stop failures are logged: the device may already be
+    /// gone, and the session is dropped either way.
+    pub async fn end_sessions_of(&self, user_id: Uuid) -> Vec<ActiveSession> {
+        let ended: Vec<ActiveSession> = {
+            let mut guard = self
+                .sessions
+                .write()
+                .expect("orchestrator session lock poisoned");
+            let ids: Vec<CastSessionId> = guard
+                .values()
+                .filter(|s| s.user_id == user_id)
+                .map(|s| s.session_id.clone())
+                .collect();
+            ids.iter().filter_map(|id| guard.remove(id)).collect()
+        };
+        for session in &ended {
+            let result = if device_kind::is_mopidy(&session.device_kind) {
+                self.mopidy_driver
+                    .control(&session.session_id, &ControlCmd::Stop)
+                    .await
+                    .map_err(OrchestratorError::from)
+            } else {
+                match &session.agent_id {
+                    Some(id) => self
+                        .agent_dispatcher
+                        .control(id, &session.session_id, &ControlCmd::Stop)
+                        .await
+                        .map_err(OrchestratorError::from),
+                    None => self
+                        .local_driver
+                        .control(&session.session_id, &ControlCmd::Stop)
+                        .await
+                        .map_err(OrchestratorError::from),
+                }
+            };
+            if let Err(err) = result {
+                warn!(
+                    "could not stop cast session {:?}: {err}",
+                    session.session_id
+                );
+            }
+        }
+        ended
+    }
+
     fn lookup_session(
         &self,
         user: &Principal,
@@ -310,7 +360,7 @@ fn episode_string_id_position(_episode_string_id: &Option<String>) -> Option<f64
     None
 }
 
-fn build_target(device: &Device) -> Result<CastTarget, OrchestratorError> {
+fn build_target(device: &CastDevice) -> Result<CastTarget, OrchestratorError> {
     let uuid = device
         .chromecast_uuid
         .as_ref()
@@ -343,47 +393,38 @@ pub fn is_chromecast_kind(kind: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::services::agent::registry::AgentRegistry;
+    use crate::agent::registry::AgentRegistry;
     use chrono::NaiveDate;
     use podfetch_cast::StubCastDriver;
-    use podfetch_domain::device::DeviceRepository;
 
     struct FakeDeviceRepo {
-        devices: std::sync::Mutex<Vec<Device>>,
+        devices: std::sync::Mutex<Vec<CastDevice>>,
     }
 
     impl FakeDeviceRepo {
-        fn new(devices: Vec<Device>) -> Self {
+        fn new(devices: Vec<CastDevice>) -> Self {
             Self {
                 devices: std::sync::Mutex::new(devices),
             }
         }
     }
 
-    impl DeviceRepository for FakeDeviceRepo {
+    impl CastDeviceRepository for FakeDeviceRepo {
         type Error = CustomError;
 
-        fn create(&self, device: Device) -> Result<Device, Self::Error> {
+        fn register(&self, device: CastDevice) -> Result<CastDevice, Self::Error> {
             self.devices.lock().unwrap().push(device.clone());
             Ok(device)
         }
 
-        fn get_devices_of_user(&self, user_id: Uuid) -> Result<Vec<Device>, Self::Error> {
-            Ok(self
-                .devices
-                .lock()
-                .unwrap()
-                .iter()
-                .filter(|d| d.user_id == user_id)
-                .cloned()
-                .collect())
+        fn delete_owned_by(&self, owner: Uuid) -> Result<usize, Self::Error> {
+            let mut devices = self.devices.lock().unwrap();
+            let before = devices.len();
+            devices.retain(|d| d.user_id != owner);
+            Ok(before - devices.len())
         }
 
-        fn delete_by_user_id(&self, _user_id: Uuid) -> Result<(), Self::Error> {
-            Ok(())
-        }
-
-        fn list_castable_for_user(&self, viewer_user_id: Uuid) -> Result<Vec<Device>, Self::Error> {
+        fn list_visible_to(&self, viewer_user_id: Uuid) -> Result<Vec<CastDevice>, Self::Error> {
             Ok(self
                 .devices
                 .lock()
@@ -403,7 +444,7 @@ mod tests {
         fn find_by_chromecast_uuid(
             &self,
             chromecast_uuid: &str,
-        ) -> Result<Option<Device>, Self::Error> {
+        ) -> Result<Option<CastDevice>, Self::Error> {
             Ok(self
                 .devices
                 .lock()
@@ -411,6 +452,23 @@ mod tests {
                 .iter()
                 .find(|d| d.chromecast_uuid.as_deref() == Some(chromecast_uuid))
                 .cloned())
+        }
+
+        fn find_by_id(&self, id: Uuid) -> Result<Option<CastDevice>, Self::Error> {
+            Ok(self
+                .devices
+                .lock()
+                .unwrap()
+                .iter()
+                .find(|d| d.id == Some(id))
+                .cloned())
+        }
+
+        fn delete_by_id(&self, id: Uuid) -> Result<usize, Self::Error> {
+            let mut devices = self.devices.lock().unwrap();
+            let before = devices.len();
+            devices.retain(|d| d.id != Some(id));
+            Ok(before - devices.len())
         }
 
         fn upsert_chromecast_from_agent(
@@ -421,7 +479,7 @@ mod tests {
             _name: &str,
             _ip: Option<&str>,
             _last_seen_at: chrono::NaiveDateTime,
-        ) -> Result<Device, Self::Error> {
+        ) -> Result<CastDevice, Self::Error> {
             unimplemented!("not exercised by these tests")
         }
     }
@@ -440,12 +498,12 @@ mod tests {
         ))
     }
 
-    fn make_device(id: u128, owner: Uuid, kind: &str, uuid: &str) -> Device {
-        Device {
+    fn make_device(id: u128, owner: Uuid, kind: &str, uuid: &str) -> CastDevice {
+        CastDevice {
             id: Some(Uuid::from_u128(id)),
             deviceid: format!("dev-{id}"),
             kind: kind.to_string(),
-            name: format!("Device {id}"),
+            name: format!("CastDevice {id}"),
             user_id: owner,
             chromecast_uuid: Some(uuid.to_string()),
             agent_id: None,
@@ -455,7 +513,7 @@ mod tests {
         }
     }
 
-    fn orchestrator(devices: Vec<Device>) -> CastOrchestrator<StubCastDriver> {
+    fn orchestrator(devices: Vec<CastDevice>) -> CastOrchestrator<StubCastDriver> {
         orchestrator_with_dispatcher(
             devices,
             Arc::new(AgentDispatcher::new(Arc::new(AgentRegistry::new()))),
@@ -464,22 +522,16 @@ mod tests {
     }
 
     fn orchestrator_with_dispatcher(
-        devices: Vec<Device>,
+        devices: Vec<CastDevice>,
         dispatcher: Arc<AgentDispatcher>,
     ) -> (CastOrchestrator<StubCastDriver>, Arc<AgentRegistry>) {
         let repo = Arc::new(FakeDeviceRepo::new(devices));
-        let device_service = Arc::new(DeviceService::new(repo));
         // Tests that need the registry construct the dispatcher from a
         // shared registry; tests that don't can use the simple helper.
         let registry = Arc::new(AgentRegistry::new());
         let (mopidy_tx, _mopidy_rx) = tokio::sync::mpsc::channel(8);
         let mopidy_driver = Arc::new(MopidyDriver::new(mopidy_tx));
-        let orch = CastOrchestrator::new(
-            device_service,
-            Arc::new(StubCastDriver),
-            dispatcher,
-            mopidy_driver,
-        );
+        let orch = CastOrchestrator::new(repo, Arc::new(StubCastDriver), dispatcher, mopidy_driver);
         (orch, registry)
     }
 
@@ -560,7 +612,7 @@ mod tests {
 
     #[tokio::test]
     async fn start_routes_to_agent_when_device_has_agent_id() {
-        use crate::services::agent::registry::{AgentRegistry, AgentSessionHandle};
+        use crate::agent::registry::{AgentRegistry, AgentSessionHandle};
         use podfetch_agent_protocol::{AgentMsg, ServerMsg};
         use tokio::sync::mpsc;
 
@@ -587,11 +639,10 @@ mod tests {
         device.agent_id = Some("agent-1".into());
 
         let repo = Arc::new(FakeDeviceRepo::new(vec![device]));
-        let device_service = Arc::new(DeviceService::new(repo));
         let (mopidy_tx2, _mopidy_rx2) = mpsc::channel(8);
         let mopidy_driver2 = Arc::new(MopidyDriver::new(mopidy_tx2));
         let orch = CastOrchestrator::new(
-            device_service,
+            repo,
             Arc::new(StubCastDriver),
             dispatcher.clone(),
             mopidy_driver2,
@@ -744,5 +795,50 @@ mod tests {
             at: Utc::now(),
         };
         assert!(orch.record_status(unknown).is_none());
+    }
+
+    fn session_of(user: u128) -> ActiveSession {
+        let session_id = CastSessionId::new();
+        ActiveSession {
+            session_id: session_id.clone(),
+            device_uuid: CastDeviceUuid("u".into()),
+            user_id: Uuid::from_u128(user),
+            username: format!("u{user}"),
+            episode_id: None,
+            episode_string_id: None,
+            agent_id: None,
+            device_kind: device_kind::CHROMECAST_PERSONAL.to_string(),
+            last_status: CastStatus {
+                session_id,
+                state: CastState::Playing,
+                position_secs: 0.0,
+                volume: 1.0,
+                at: Utc::now(),
+            },
+        }
+    }
+
+    /// Ending a deleted user's sessions drops them even when the device
+    /// can no longer be reached (the stub driver fails every stop), and
+    /// leaves other users' sessions alone.
+    #[tokio::test]
+    async fn end_sessions_of_drops_only_that_users_sessions() {
+        let orch = orchestrator(vec![]);
+        let mine = [session_of(1), session_of(1)];
+        let other = session_of(2);
+        {
+            let mut sessions = orch.sessions.write().unwrap();
+            for session in mine.iter().chain(std::iter::once(&other)) {
+                sessions.insert(session.session_id.clone(), session.clone());
+            }
+        }
+
+        let ended = orch.end_sessions_of(Uuid::from_u128(1)).await;
+
+        assert_eq!(ended.len(), 2);
+        assert!(ended.iter().all(|s| s.user_id == Uuid::from_u128(1)));
+        let remaining = orch.sessions.read().unwrap();
+        assert_eq!(remaining.len(), 1);
+        assert!(remaining.contains_key(&other.session_id));
     }
 }

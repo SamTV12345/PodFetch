@@ -102,12 +102,7 @@ mod tests {
     fn make_handle(agent_id: &str) -> (AgentSessionHandle, mpsc::Receiver<ServerMsg>) {
         let (tx, rx) = mpsc::channel(8);
         (
-            AgentSessionHandle::new(
-                agent_id.into(),
-                podfetch_domain::ids::new_id(),
-                "0.1.0".into(),
-                tx,
-            ),
+            AgentSessionHandle::new(agent_id.into(), uuid::Uuid::now_v7(), "0.1.0".into(), tx),
             rx,
         )
     }

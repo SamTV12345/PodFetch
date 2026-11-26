@@ -5,12 +5,12 @@
 //! protocol implementation lands. The type alias keeps the rest of the code
 //! (controllers, AppState) agnostic to that swap.
 
-use crate::services::cast::service::{ActiveSession, CastOrchestrator};
+use crate::devices::CastDevice;
+use crate::orchestrator::{ActiveSession, CastOrchestrator};
 use podfetch_cast::{
     CastDeviceUuid, CastSessionId, CastState, CastStatus, ControlCmd, DiscoveredCastDevice,
     StubCastDriver,
 };
-use podfetch_domain::device::Device;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -34,7 +34,7 @@ pub struct CastDeviceResponse {
 }
 
 impl CastDeviceResponse {
-    pub fn from_device(device: &Device) -> Option<Self> {
+    pub fn from_device(device: &CastDevice) -> Option<Self> {
         let chromecast_uuid = device.chromecast_uuid.clone()?;
         Some(Self {
             chromecast_uuid,
@@ -181,4 +181,14 @@ pub fn parse_session_id(raw: &str) -> CastSessionId {
 
 pub fn parse_device_uuid(raw: &str) -> CastDeviceUuid {
     CastDeviceUuid(raw.to_string())
+}
+
+/// Why a cast session ended, sent with the `cast:ended` event.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum CastEndedReason {
+    Stopped,
+    Finished,
+    DeviceGone,
+    Error,
 }

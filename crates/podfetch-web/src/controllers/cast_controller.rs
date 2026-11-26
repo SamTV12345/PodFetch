@@ -1,13 +1,13 @@
 use crate::app_state::AppState;
-use crate::cast::{
-    CastControlRequest, CastDeviceResponse, CastSessionResponse, CastStartRequest,
-    CastStatusResponse, DiscoveredCastDeviceResponse, parse_device_uuid, parse_session_id,
-};
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase;
 use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use common_infrastructure::error::CustomError;
 use podfetch_cast::CastMedia;
+use podfetch_casting::dto::{
+    CastControlRequest, CastDeviceResponse, CastSessionResponse, CastStartRequest,
+    CastStatusResponse, DiscoveredCastDeviceResponse, parse_device_uuid, parse_session_id,
+};
 use podfetch_identity::api::Principal;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
