@@ -293,7 +293,7 @@ mod tests {
     use serial_test::serial;
 
     fn app_state() -> AppState {
-        AppState::new()
+        crate::test_support::tests::app_state()
     }
 
     #[tokio::test]

@@ -303,7 +303,7 @@ mod test {
     use serial_test::serial;
 
     fn app_state() -> AppState {
-        AppState::new()
+        crate::test_support::tests::app_state()
     }
 
     #[test]

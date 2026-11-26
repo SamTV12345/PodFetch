@@ -18,9 +18,8 @@ use std::process::exit;
 use std::sync::Arc;
 use tracing::error;
 
-pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
+pub async fn start_command_line(state: &AppState, mut args: Args) -> Result<(), CustomError> {
     println!("Starting from command line");
-    let state = AppState::new();
     let device_service = DeviceService::new(Arc::new(DeviceRepositoryImpl::new(database())));
     // Skip first argument
     args.next();
@@ -120,7 +119,7 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
             };
             match user_args.as_str() {
                 "add" => {
-                    let mut user = read_user_account(&state);
+                    let mut user = read_user_account(state);
 
                     println!("Should a user with the following settings be applied {user:?}");
 
@@ -173,7 +172,7 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                 }
                 "remove" => {
                     let mut username = String::new();
-                    let available_users = list_users(&state)?;
+                    let available_users = list_users(state)?;
                     retry_read(
                         "Please enter the username of the user you want to delete",
                         &mut username,
@@ -213,7 +212,7 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                     }
                 }
                 "update" => {
-                    list_users(&state)?;
+                    list_users(state)?;
                     let mut username = String::new();
 
                     retry_read(
@@ -225,11 +224,11 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                         .user_auth_service
                         .find_by_username(username.as_str())?;
 
-                    do_user_update(&state, user);
+                    do_user_update(state, user);
                     Ok(())
                 }
                 "list" => {
-                    list_users(&state)?;
+                    list_users(state)?;
                     Ok(())
                 }
                 "help" | "--help" => {

@@ -516,7 +516,6 @@ pub fn get_websocket_router() -> OpenApiRouter<AppState> {
 
 #[cfg(test)]
 mod tests {
-    use crate::app_state::AppState;
     use crate::test_support::tests::handle_test_startup;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use podfetch_persistence::db::get_connection;
@@ -534,7 +533,7 @@ mod tests {
     }
 
     fn create_api_key_user() -> String {
-        let state = AppState::new();
+        let state = crate::test_support::tests::app_state();
         let mut user = UserTestDataBuilder::new().build();
         user.username = format!("rss-test-user-{}", Uuid::new_v4());
         let api_key = format!("rss-test-key-{}", Uuid::new_v4());

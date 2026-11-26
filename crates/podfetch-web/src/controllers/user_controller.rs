@@ -372,7 +372,7 @@ mod tests {
     }
 
     fn app_state() -> AppState {
-        AppState::new()
+        crate::test_support::tests::app_state()
     }
 
     fn assert_client_error_status(status: u16) {

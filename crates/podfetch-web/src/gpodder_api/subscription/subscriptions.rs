@@ -304,7 +304,7 @@ mod tests {
     use serial_test::serial;
 
     fn app_state() -> AppState {
-        AppState::new()
+        crate::test_support::tests::app_state()
     }
 
     /// Sets up Basic Auth headers directly on the test server (no login/cookie).

@@ -61,6 +61,7 @@ pub mod startup;
 
 // Application state
 pub mod app_state;
+pub mod application;
 
 // File access API adapter
 pub mod api_file_access;

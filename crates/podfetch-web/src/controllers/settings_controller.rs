@@ -279,7 +279,7 @@ mod tests {
     }
 
     fn app_state() -> AppState {
-        AppState::new()
+        crate::test_support::tests::app_state()
     }
 
     #[tokio::test]

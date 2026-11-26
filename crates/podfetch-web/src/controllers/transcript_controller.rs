@@ -505,7 +505,7 @@ mod tests {
     }
 
     fn app_state() -> crate::app_state::AppState {
-        crate::app_state::AppState::new()
+        crate::test_support::tests::app_state()
     }
 
     /// Creates a podcast + episode pair and returns the episode's uuid.
