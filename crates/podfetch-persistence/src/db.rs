@@ -11,12 +11,12 @@ pub const POSTGRES_MIGRATIONS: EmbeddedMigrations = embed_migrations!("../../mig
 
 pub fn database() -> Database {
     common_infrastructure::db::shared_database(&ENVIRONMENT_SERVICE)
-        .expect("Failed to connect to database")
+        .unwrap_or_else(|e| panic!("Failed to connect to database: {e}"))
 }
 
 pub fn get_connection() -> r2d2::PooledConnection<diesel::r2d2::ConnectionManager<DBType>> {
     common_infrastructure::db::shared_connection(&ENVIRONMENT_SERVICE)
-        .expect("Failed to connect to database")
+        .unwrap_or_else(|e| panic!("Failed to connect to database: {e}"))
 }
 
 pub fn run_migrations() {
