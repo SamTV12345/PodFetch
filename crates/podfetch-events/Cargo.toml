@@ -1,0 +1,30 @@
+[package]
+name = "podfetch-events"
+version = "0.1.0"
+edition = "2024"
+description = "Database-backed event bus: event store, per-handler delivery, retries"
+
+[lints]
+workspace = true
+
+[features]
+default = []
+sqlite = ["common-infrastructure/sqlite", "podfetch-persistence/sqlite"]
+postgresql = ["common-infrastructure/postgresql", "podfetch-persistence/postgresql"]
+
+[dependencies]
+common-infrastructure = { workspace = true }
+chrono = { workspace = true }
+diesel = { workspace = true }
+futures = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+podfetch-persistence = { workspace = true }
+testcontainers = { workspace = true }
+testcontainers-modules = { workspace = true }

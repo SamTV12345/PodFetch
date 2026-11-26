@@ -20,10 +20,18 @@ pub fn get_connection() -> r2d2::PooledConnection<diesel::r2d2::ConnectionManage
 }
 
 pub fn run_migrations() {
-    let mut conn = get_connection();
-    let conn = conn.deref_mut();
+    migrate(&database());
+}
 
-    match conn {
+/// Runs all pending migrations on `database`.
+///
+/// # Panics
+/// When a migration fails: PodFetch cannot run on a half-migrated schema.
+pub fn migrate(database: &Database) {
+    let mut conn = database
+        .connection()
+        .unwrap_or_else(|e| panic!("Failed to connect to database: {e}"));
+    match conn.deref_mut() {
         #[cfg(feature = "postgresql")]
         DBType::Postgresql(conn) => {
             conn.run_pending_migrations(POSTGRES_MIGRATIONS)

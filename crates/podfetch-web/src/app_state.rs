@@ -70,6 +70,7 @@ use tokio::sync::mpsc;
 
 #[derive(Clone)]
 pub struct AppState {
+    pub event_bus: Arc<podfetch_events::EventBus>,
     pub agent_dispatcher: Arc<AgentDispatcher>,
     pub agent_registry: Arc<AgentRegistry>,
     pub audiobookshelf_book_service: Arc<AudiobookshelfBookService>,
@@ -114,6 +115,7 @@ impl AppState {
         database: podfetch_persistence::db::Database,
         environment: Arc<EnvironmentService>,
     ) -> Self {
+        let event_bus_database = database.clone();
         let device_service = Arc::new(DeviceService::new(Arc::new(DeviceRepositoryImpl::new(
             database.clone(),
         ))));
@@ -250,6 +252,10 @@ impl AppState {
         let audiobookshelf_hls_transcoder = Arc::new(HlsTranscoder::new(environment.clone()));
 
         Self {
+            event_bus: podfetch_events::EventBus::new(
+                event_bus_database,
+                podfetch_events::EventBusConfig::default(),
+            ),
             agent_dispatcher,
             agent_registry,
             audiobookshelf_book_service,

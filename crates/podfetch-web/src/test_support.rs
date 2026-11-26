@@ -100,6 +100,8 @@ END $$;
 
         // Order matters: delete children before parents (foreign keys)
         let tables: &[&str] = &[
+            "event_deliveries",
+            "events",
             "audiobookshelf_book_chapters",
             "audiobookshelf_book_audio_files",
             "audiobookshelf_book_series",
@@ -215,6 +217,8 @@ END $$;
             use diesel::RunQueryDsl;
             use podfetch_persistence::db::get_connection;
             for table in [
+                "event_deliveries",
+                "events",
                 "audiobookshelf_book_chapters",
                 "audiobookshelf_book_audio_files",
                 "audiobookshelf_book_series",

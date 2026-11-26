@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "crates/common-infrastructure", "crates/podfetch-agent-protocol", "crates/podfetch-cast", "crates/podfetch-domain", "crates/podfetch-web", "crates/podfetch-persistence", "crates/podfetch-storage"]
+members = [".", "crates/common-infrastructure", "crates/podfetch-agent-protocol", "crates/podfetch-cast", "crates/podfetch-domain", "crates/podfetch-events", "crates/podfetch-web", "crates/podfetch-persistence", "crates/podfetch-storage"]
 resolver = "2"
 
 [package]
@@ -114,6 +114,7 @@ common-infrastructure = { path = "crates/common-infrastructure", default-feature
 podfetch-agent-protocol = { path = "crates/podfetch-agent-protocol" }
 podfetch-cast = { path = "crates/podfetch-cast" }
 podfetch-domain = { path = "crates/podfetch-domain" }
+podfetch-events = { path = "crates/podfetch-events" }
 podfetch-persistence = { path = "crates/podfetch-persistence", default-features = false }
 podfetch-storage = { path = "crates/podfetch-storage" }
 podfetch-web = { path = "crates/podfetch-web", default-features = false }
@@ -184,7 +185,7 @@ utoipa-rapidoc = { version = "7.0.0", features = ["axum"] }
 utoipa-redoc = { version = "7.0.0", features = ["axum"] }
 utoipa-scalar = { version = "0.4.0", features = ["axum"] }
 utoipa-swagger-ui = { version = "10.0.1", features = ["axum"] }
-uuid = { version = "1.23.2", features = ["v4", "serde"] }
+uuid = { version = "1.23.2", features = ["v4", "v7", "serde"] }
 xml-builder = "0.6.0"
 quick-xml = "0.42"
 notify = "8.2"

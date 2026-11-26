@@ -6,6 +6,7 @@ use crate::controllers::agent_ws_controller::get_agent_ws_router;
 use crate::controllers::cast_controller::get_cast_router;
 use crate::controllers::discover_controller::get_discover_router;
 use crate::controllers::episode_triage_controller::get_episode_triage_router;
+use crate::controllers::event_controller::get_event_router;
 use crate::controllers::file_hosting::podcast_serving;
 use crate::controllers::gpodder_device_controller::get_gpodder_device_router;
 use crate::controllers::manifest_controller::get_manifest_router;
@@ -307,6 +308,7 @@ fn get_private_api(state: AppState) -> OpenApiRouter {
         .merge(get_watchtime_router().with_state(state.clone()))
         .merge(get_stats_router().with_state(state.clone()))
         .merge(get_notification_router().with_state(state.clone()))
+        .merge(get_event_router().with_state(state.clone()))
         .merge(get_podcast_episode_router().with_state(state.clone()))
         .merge(get_episode_triage_router().with_state(state.clone()))
         .merge(get_settings_router().with_state(state.clone()))
