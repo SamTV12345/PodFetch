@@ -17,6 +17,7 @@ use crate::usecases::podcast_episode::PodcastEpisodeUseCase;
 pub(super) struct BackgroundJobs {
     scheduler_running: Arc<AtomicBool>,
     transcription_worker: Option<tokio::task::JoinHandle<()>>,
+    event_processor: podfetch_events::ProcessorHandle,
 }
 
 impl BackgroundJobs {
@@ -38,16 +39,19 @@ impl BackgroundJobs {
         Self {
             scheduler_running,
             transcription_worker,
+            event_processor: state.event_bus.spawn_processor(),
         }
     }
 
-    /// Signals all jobs to stop. A scheduler job that is running right now
-    /// finishes its current run; nothing new is started afterwards.
-    pub(super) fn stop(self) {
+    /// Stops all jobs. A scheduler job that is running right now finishes
+    /// its current run; event handlers get up to `grace` to finish, then
+    /// their leases expire and they are retried after the next start.
+    pub(super) async fn stop(self, grace: Duration) {
         self.scheduler_running.store(false, Ordering::Relaxed);
         if let Some(worker) = self.transcription_worker {
             worker.abort();
         }
+        self.event_processor.stop(grace).await;
         info!("Background jobs stopped");
     }
 }

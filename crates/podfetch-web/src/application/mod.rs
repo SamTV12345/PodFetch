@@ -107,15 +107,19 @@ impl Application {
 
         tokio::select! {
             result = &mut server => {
-                jobs.stop();
+                jobs.stop(SHUTDOWN_GRACE).await;
                 return result.map_err(std::io::Error::other)?;
             }
             () = shutdown_signal() => info!("Shutdown signal received, stopping PodFetch"),
         }
 
-        jobs.stop();
         let _ = stop_tx.send(());
-        match tokio::time::timeout(SHUTDOWN_GRACE, server).await {
+        // Both within the same grace period: `docker stop` kills after 10 s.
+        let ((), server) = tokio::join!(
+            jobs.stop(SHUTDOWN_GRACE),
+            tokio::time::timeout(SHUTDOWN_GRACE, server)
+        );
+        match server {
             Ok(result) => result.map_err(std::io::Error::other)?,
             Err(_) => {
                 warn!(

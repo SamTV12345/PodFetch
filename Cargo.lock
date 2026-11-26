@@ -3225,6 +3225,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "podfetch-events"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "common-infrastructure",
+ "diesel",
+ "futures",
+ "podfetch-persistence",
+ "serde",
+ "serde_json",
+ "testcontainers",
+ "testcontainers-modules",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "podfetch-persistence"
 version = "0.1.0"
 dependencies = [
@@ -3287,6 +3306,7 @@ dependencies = [
  "podfetch-agent-protocol",
  "podfetch-cast",
  "podfetch-domain",
+ "podfetch-events",
  "podfetch-persistence",
  "podfetch-storage",
  "quick-xml 0.42.0",

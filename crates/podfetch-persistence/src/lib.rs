@@ -1,7 +1,7 @@
 pub mod db;
 pub mod schema;
 
-pub use db::{database, get_connection, run_migrations};
+pub use db::{database, get_connection, migrate, run_migrations};
 
 pub mod adapters;
 pub mod audiobookshelf;

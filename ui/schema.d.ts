@@ -278,6 +278,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/events/deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_event_deliveries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/events/deliveries/{event_seq}/{handler}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["retry_event_delivery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/events/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_event_stats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/gpodder/sync-groups": {
         parameters: {
             query?: never;
@@ -1732,6 +1780,36 @@ export interface components {
         EpisodeFormatDto: {
             content: string;
         };
+        EventDeliveryDto: {
+            aggregateId: string;
+            /** Format: int32 */
+            attempts: number;
+            eventId: string;
+            /** Format: int64 */
+            eventSeq: number;
+            eventType: string;
+            /** Format: int32 */
+            eventVersion: number;
+            handler: string;
+            lastError?: string | null;
+            nextAttemptAt: string;
+            occurredAt: string;
+            payload: Record<string, never>;
+            status: string;
+            updatedAt: string;
+        };
+        EventStatsDto: {
+            /** Format: int64 */
+            dead: number;
+            /** Format: int64 */
+            done: number;
+            /** Format: int64 */
+            failed: number;
+            /** Format: int64 */
+            pending: number;
+            /** Format: int64 */
+            processing: number;
+        };
         FavoritePut: {
             favored: boolean;
         };
@@ -2375,6 +2453,109 @@ export interface operations {
         responses: {
             /** @description Dismisses all unread notifications at once */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_event_deliveries: {
+        parameters: {
+            query?: {
+                /** @description pending, processing, done, failed or dead; all when omitted */
+                status?: string;
+                /** @description at most 1000, default 100 */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Event deliveries, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventDeliveryDto"][];
+                };
+            };
+            /** @description Unknown status */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin only */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    retry_event_delivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Sequence number of the event */
+                event_seq: number;
+                /** @description Name of the handler */
+                handler: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Delivery re-queued */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin only */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Delivery is not failed or dead */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_event_stats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Number of deliveries per status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventStatsDto"];
+                };
+            };
+            /** @description Admin only */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
