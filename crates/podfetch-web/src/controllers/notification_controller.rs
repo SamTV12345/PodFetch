@@ -1,8 +1,8 @@
 use crate::app_state::AppState;
-use crate::notification::{self, Notification, NotificationId};
 use axum::Json;
 use axum::extract::State;
 use common_infrastructure::error::CustomError;
+use podfetch_notifications::dto::{self as notification, Notification, NotificationId};
 use reqwest::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -51,7 +51,7 @@ tag="notifications"
 pub async fn dismiss_all_notifications(
     State(state): State<AppState>,
 ) -> Result<StatusCode, CustomError> {
-    use crate::notification::NotificationApplicationService;
+    use podfetch_notifications::dto::NotificationApplicationService;
     let dismissed = state.notification_service.dismiss_all_notifications()?;
     tracing::info!("Dismissed {dismissed} notifications");
     Ok(StatusCode::OK)
@@ -66,12 +66,24 @@ pub fn get_notification_router() -> OpenApiRouter<AppState> {
 
 #[cfg(test)]
 mod tests {
-    use crate::notification::Notification;
-    use crate::services::notification::service::NotificationService;
     use crate::test_support::tests::handle_test_startup;
     use crate::test_utils::test_builder::notification_test_builder::tests::NotificationTestDataBuilder;
+    use podfetch_notifications::domain::NotificationRepository;
+    use podfetch_notifications::dto::Notification;
+    use podfetch_notifications::persistence::NotificationRepositoryImpl;
     use serde_json::json;
     use serial_test::serial;
+
+    /// Stores a notification as it is, bypassing the event handlers.
+    fn insert_notification(
+        notification: Notification,
+    ) -> Result<
+        podfetch_notifications::domain::Notification,
+        common_infrastructure::error::CustomError,
+    > {
+        NotificationRepositoryImpl::new(podfetch_persistence::db::database())
+            .create(notification.into())
+    }
 
     fn assert_client_error_status(status: u16) {
         assert!(
@@ -103,7 +115,7 @@ mod tests {
         let test_server = handle_test_startup().await;
         // given
         let notification = NotificationTestDataBuilder::new().build();
-        NotificationService::create_notification(notification.into()).unwrap();
+        insert_notification(notification.into()).unwrap();
 
         // when
         let response = test_server
@@ -122,7 +134,7 @@ mod tests {
         let test_server = handle_test_startup().await;
 
         let notification = NotificationTestDataBuilder::new().build();
-        NotificationService::create_notification(notification.into()).unwrap();
+        insert_notification(notification.into()).unwrap();
 
         let before = test_server
             .test_server
@@ -154,7 +166,7 @@ mod tests {
         let test_server = handle_test_startup().await;
 
         let notification = NotificationTestDataBuilder::new().build();
-        NotificationService::create_notification(notification.into()).unwrap();
+        insert_notification(notification.into()).unwrap();
 
         let dismiss_response = test_server
             .test_server
@@ -210,7 +222,7 @@ mod tests {
     async fn test_get_unread_notifications_filters_out_dismissed_items() {
         let test_server = handle_test_startup().await;
 
-        NotificationService::create_notification(Notification {
+        insert_notification(Notification {
             id: String::new(),
             type_of_message: "Download".to_string(),
             message: "should-be-returned".to_string(),
@@ -218,7 +230,7 @@ mod tests {
             status: "unread".to_string(),
         })
         .unwrap();
-        NotificationService::create_notification(Notification {
+        insert_notification(Notification {
             id: String::new(),
             type_of_message: "Download".to_string(),
             message: "should-be-filtered".to_string(),
@@ -243,7 +255,7 @@ mod tests {
     async fn test_get_unread_notifications_orders_by_created_at_desc() {
         let test_server = handle_test_startup().await;
 
-        NotificationService::create_notification(Notification {
+        insert_notification(Notification {
             id: String::new(),
             type_of_message: "Download".to_string(),
             message: "older-message".to_string(),
@@ -251,7 +263,7 @@ mod tests {
             status: "unread".to_string(),
         })
         .unwrap();
-        NotificationService::create_notification(Notification {
+        insert_notification(Notification {
             id: String::new(),
             type_of_message: "Download".to_string(),
             message: "newer-message".to_string(),
@@ -277,8 +289,7 @@ mod tests {
     async fn test_dismiss_notification_endpoint_is_idempotent() {
         let test_server = handle_test_startup().await;
 
-        NotificationService::create_notification(NotificationTestDataBuilder::new().build().into())
-            .unwrap();
+        insert_notification(NotificationTestDataBuilder::new().build().into()).unwrap();
 
         let unread_before = test_server
             .test_server
@@ -387,8 +398,7 @@ mod tests {
     async fn test_dismiss_notification_with_unknown_uuids_is_noop() {
         let test_server = handle_test_startup().await;
 
-        NotificationService::create_notification(NotificationTestDataBuilder::new().build().into())
-            .unwrap();
+        insert_notification(NotificationTestDataBuilder::new().build().into()).unwrap();
 
         // Notification ids are pure uuids now; dismissing a valid but unknown uuid is a noop.
         let dismiss_first = test_server
@@ -418,10 +428,7 @@ mod tests {
     async fn test_dismiss_all_notifications_with_many_notifications() {
         let test_server = handle_test_startup().await;
         for _ in 0..1500 {
-            NotificationService::create_notification(
-                NotificationTestDataBuilder::new().build().into(),
-            )
-            .unwrap();
+            insert_notification(NotificationTestDataBuilder::new().build().into()).unwrap();
         }
 
         let response = test_server

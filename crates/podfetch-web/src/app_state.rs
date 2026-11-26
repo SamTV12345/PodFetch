@@ -17,7 +17,6 @@ use crate::services::favorite_podcast_episode::service::FavoritePodcastEpisodeSe
 use crate::services::filter::service::FilterService;
 use crate::services::gpodder_setting::service::GpodderSettingService;
 use crate::services::mopidy::driver::{MopidyDriver, MopidyEvent};
-use crate::services::notification::service::NotificationService;
 use crate::services::playlist::service::PlaylistService;
 use crate::services::podcast_episode_chapter::service::PodcastEpisodeChapterService;
 use crate::services::podcast_settings::service::PodcastSettingsService;
@@ -38,6 +37,8 @@ use podfetch_identity::services::session::service::SessionService;
 use podfetch_identity::services::user_admin::service::UserAdminService;
 use podfetch_identity::services::user_auth::service::UserAuthService;
 use podfetch_identity::services::user_onboarding::service::UserOnboardingService;
+use podfetch_notifications::persistence::NotificationRepositoryImpl;
+use podfetch_notifications::service::NotificationService;
 use podfetch_persistence::adapters::AuthorRepositoryImpl;
 use podfetch_persistence::adapters::BookAudioFileRepositoryImpl;
 use podfetch_persistence::adapters::BookChapterRepositoryImpl;
@@ -53,7 +54,6 @@ use podfetch_persistence::adapters::ListeningEventRepositoryImpl;
 use podfetch_persistence::adapters::ListeningSessionRepositoryImpl;
 use podfetch_persistence::adapters::MediaProgressRepositoryImpl;
 use podfetch_persistence::adapters::NarratorRepositoryImpl;
-use podfetch_persistence::adapters::NotificationRepositoryImpl;
 use podfetch_persistence::adapters::PlaybackSessionRepositoryImpl;
 use podfetch_persistence::adapters::PlaylistRepositoryImpl;
 use podfetch_persistence::adapters::PodcastEpisodeChapterRepositoryImpl;
@@ -200,6 +200,15 @@ impl AppState {
             database.clone(),
             podfetch_events::EventBusConfig::default(),
         );
+        podfetch_notifications::handlers::subscribe(
+            &event_bus,
+            notification_service.clone(),
+            environment
+                .telegram_api
+                .clone()
+                .map(podfetch_notifications::telegram::TelegramNotifier::new),
+        );
+        crate::podcast_events::install(event_bus.clone());
         let user_admin_service = Arc::new(UserAdminService::new(
             Arc::new(UserAdminRepositoryImpl::new(database.clone())),
             environment.clone(),

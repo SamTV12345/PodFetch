@@ -9,5 +9,4 @@ pub mod request;
 pub mod retry;
 pub mod rss;
 pub mod runtime;
-pub mod telegram;
 pub mod time;
