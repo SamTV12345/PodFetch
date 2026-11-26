@@ -2,6 +2,7 @@ use chrono::{DateTime, NaiveDate, NaiveDateTime};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use utoipa::{IntoParams, ToSchema};
+use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -47,7 +48,7 @@ pub trait StatsApplicationService {
 
     fn get_stats_overview(
         &self,
-        username: &str,
+        user_id: Uuid,
         from: Option<NaiveDateTime>,
         to: Option<NaiveDateTime>,
         top_limit: usize,
@@ -64,7 +65,7 @@ pub enum StatsControllerError<E: Display> {
 
 pub fn get_stats_overview<S>(
     service: &S,
-    username: &str,
+    user_id: Uuid,
     params: StatsOverviewQueryParams,
 ) -> Result<S::StatsOverview, StatsControllerError<S::Error>>
 where
@@ -99,7 +100,7 @@ where
 
     let top_limit = params.top_limit.unwrap_or(5).clamp(1, 20);
     service
-        .get_stats_overview(username, from, to, top_limit)
+        .get_stats_overview(user_id, from, to, top_limit)
         .map_err(StatsControllerError::Service)
 }
 

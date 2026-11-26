@@ -614,7 +614,20 @@ impl PodcastService {
         Self::with_library_context(podcasts, requester.id.into(), api_key, server_url)
     }
 
-    fn favored_podcast_ids(user_id: Uuid) -> Result<Vec<Uuid>, CustomError> {
+    /// The user's favorite flags for the given podcasts.
+    pub fn favorites_of_podcasts(
+        user_id: Uuid,
+        podcast_ids: &[Uuid],
+    ) -> Result<HashMap<Uuid, bool>, CustomError> {
+        Ok(favorite_repo()
+            .find_by_user_and_podcasts(user_id, podcast_ids)
+            .map_err(CustomError::from)?
+            .into_iter()
+            .map(|favorite| (favorite.podcast_id, favorite.favored))
+            .collect())
+    }
+
+    pub fn favored_podcast_ids(user_id: Uuid) -> Result<Vec<Uuid>, CustomError> {
         Ok(favorite_repo()
             .find_favored_by_user_id(user_id)
             .map_err(CustomError::from)?
@@ -687,6 +700,18 @@ impl PodcastService {
             Err(_) => tracing::error!("PODINDEX_API_KEY contains characters invalid in headers"),
         }
         headers
+    }
+
+    pub fn get_podcasts_by_ids(ids: &[Uuid]) -> Result<Vec<Podcast>, CustomError> {
+        podcast_repo()
+            .search(PodcastQuery {
+                order: OrderCriteria::Asc,
+                order_option: OrderOption::Title,
+                title: None,
+                only_ids: Some(ids.to_vec()),
+            })
+            .map(|podcasts| podcasts.into_iter().map(Into::into).collect())
+            .map_err(CustomError::from)
     }
 
     pub fn get_podcast(podcast_id_to_be_searched: Uuid) -> Result<Podcast, CustomError> {

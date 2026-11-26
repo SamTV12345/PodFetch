@@ -1,15 +1,13 @@
 use crate::db::{Database, PersistenceError};
 use chrono::{Duration, NaiveDateTime, Utc};
-use diesel::dsl::max;
 use diesel::prelude::*;
 use diesel::query_source::Alias;
 use diesel::{
-    BoolExpressionMethods, ExpressionMethods, NullableExpressionMethods, OptionalExtension,
-    QueryDsl, RunQueryDsl, TextExpressionMethods,
+    BoolExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl,
+    TextExpressionMethods,
 };
-use podfetch_domain::episode::Episode;
 use podfetch_domain::podcast_episode::{
-    NewPodcastEpisode, PodcastEpisode, PodcastEpisodeRepository, PodcastEpisodeWithHistory,
+    EpisodeFilter, NewPodcastEpisode, PodcastEpisode, PodcastEpisodeRepository,
 };
 use uuid::Uuid;
 
@@ -37,28 +35,6 @@ diesel::table! {
 }
 
 // Re-declare episode and favorite tables here for joins
-diesel::table! {
-    episodes (id) {
-        id -> Text,
-        user_id -> Text,
-        device -> Text,
-        podcast -> Text,
-        episode -> Text,
-        timestamp -> Timestamp,
-        guid -> Nullable<Text>,
-        action -> Text,
-        started -> Nullable<Integer>,
-        position -> Nullable<Integer>,
-        total -> Nullable<Integer>,
-    }
-}
-
-diesel::table! {
-    users (id) {
-        id -> Text,
-        username -> Text,
-    }
-}
 
 diesel::table! {
     podcasts (id) {
@@ -80,7 +56,7 @@ diesel::table! {
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(podcast_episodes, episodes, podcasts,);
+diesel::allow_tables_to_appear_in_same_query!(podcast_episodes, podcasts);
 
 #[derive(
     Queryable, Identifiable, Selectable, AsChangeset, Debug, Clone, PartialEq, Eq, Default,
@@ -122,23 +98,6 @@ struct NewPodcastEpisodeEntity {
     description: String,
     guid: String,
     youtube_video_id: Option<String>,
-}
-
-// Entity for reading from episodes table in joins
-#[derive(Queryable, Selectable, Debug, Clone)]
-#[diesel(table_name = episodes)]
-struct EpisodeEntity {
-    id: String,
-    user_id: String,
-    device: String,
-    podcast: String,
-    episode: String,
-    timestamp: NaiveDateTime,
-    guid: Option<String>,
-    action: String,
-    started: Option<i32>,
-    position: Option<i32>,
-    total: Option<i32>,
 }
 
 impl From<PodcastEpisodeEntity> for PodcastEpisode {
@@ -318,6 +277,77 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
             .map_err(Into::into)
     }
 
+    fn find_newest(
+        &self,
+        filter: &EpisodeFilter,
+        before: Option<&str>,
+        limit: i64,
+    ) -> Result<Vec<PodcastEpisode>, Self::Error> {
+        if filter.podcast_ids.as_ref().is_some_and(Vec::is_empty)
+            || filter.episode_ids.as_ref().is_some_and(Vec::is_empty)
+        {
+            return Ok(Vec::new());
+        }
+        let mut query = podcast_episodes::table
+            .order(podcast_episodes::date_of_recording.desc())
+            .limit(limit)
+            .into_boxed();
+        if let Some(ids) = &filter.podcast_ids {
+            query =
+                query.filter(podcast_episodes::podcast_id.eq_any(ids.iter().map(Uuid::to_string)));
+        }
+        if let Some(ids) = &filter.episode_ids {
+            query = query.filter(podcast_episodes::id.eq_any(ids.iter().map(Uuid::to_string)));
+        }
+        if let Some(before) = before {
+            query = query.filter(podcast_episodes::date_of_recording.lt(before.to_owned()));
+        }
+        query
+            .load::<PodcastEpisodeEntity>(&mut self.database.connection()?)
+            .map(|rows| rows.into_iter().map(Into::into).collect())
+            .map_err(Into::into)
+    }
+
+    fn count_matching(
+        &self,
+        filter: &EpisodeFilter,
+        guids: Option<&[String]>,
+    ) -> Result<i64, Self::Error> {
+        if filter.podcast_ids.as_ref().is_some_and(Vec::is_empty)
+            || filter.episode_ids.as_ref().is_some_and(Vec::is_empty)
+            || guids.is_some_and(<[String]>::is_empty)
+        {
+            return Ok(0);
+        }
+        let mut query = podcast_episodes::table.count().into_boxed();
+        if let Some(ids) = &filter.podcast_ids {
+            query =
+                query.filter(podcast_episodes::podcast_id.eq_any(ids.iter().map(Uuid::to_string)));
+        }
+        if let Some(ids) = &filter.episode_ids {
+            query = query.filter(podcast_episodes::id.eq_any(ids.iter().map(Uuid::to_string)));
+        }
+        if let Some(guids) = guids {
+            query = query.filter(podcast_episodes::guid.eq_any(guids));
+        }
+        query
+            .get_result::<i64>(&mut self.database.connection()?)
+            .map_err(Into::into)
+    }
+
+    fn find_by_guids(&self, guids: &[String]) -> Result<Vec<PodcastEpisode>, Self::Error> {
+        let conn = &mut self.database.connection()?;
+        let mut found = Vec::new();
+        // Chunked to stay below the bind parameter limit.
+        for chunk in guids.chunks(500) {
+            let rows = podcast_episodes::table
+                .filter(podcast_episodes::guid.eq_any(chunk))
+                .load::<PodcastEpisodeEntity>(conn)?;
+            found.extend(rows.into_iter().map(Into::into));
+        }
+        Ok(found)
+    }
+
     fn find_by_podcast_id(&self, podcast_id: Uuid) -> Result<Vec<PodcastEpisode>, Self::Error> {
         podcast_episodes::table
             .filter(podcast_episodes::podcast_id.eq(podcast_id.to_string()))
@@ -387,89 +417,23 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
             .map_err(Into::into)
     }
 
-    fn get_episodes_with_history(
+    fn get_episodes_page(
         &self,
         podcast_id: Uuid,
-        username: &str,
         last_date: Option<&str>,
-        only_unlistened: bool,
         limit: i64,
-    ) -> Result<PodcastEpisodeWithHistory, Self::Error> {
-        // Empty string is used as a "no such user" sentinel; it can never match
-        // a stored UUID, so unmatched users yield no history rows.
-        let user_id = users::table
-            .filter(users::username.eq(username))
-            .select(users::id)
-            .first::<String>(&mut self.database.connection()?)
-            .optional()?
-            .unwrap_or_default();
-
-        let (ep1, ep2) = diesel::alias!(episodes as ep1, episodes as ep2);
-
-        // Subquery to get the latest timestamp per episode guid for this user
-        let subquery = ep2
-            .select(max(ep2.field(episodes::timestamp)))
-            .filter(ep2.field(episodes::user_id).eq(user_id.clone()))
-            .filter(ep2.field(episodes::guid).eq(ep1.field(episodes::guid)))
-            .group_by(ep2.field(episodes::guid));
-
+    ) -> Result<Vec<PodcastEpisode>, Self::Error> {
         let mut query = podcast_episodes::table
             .filter(podcast_episodes::podcast_id.eq(podcast_id.to_string()))
-            .left_join(
-                ep1.on(ep1
-                    .field(episodes::guid)
-                    .eq(podcast_episodes::guid.nullable())
-                    .and(ep1.field(episodes::user_id).eq(user_id.clone()))),
-            )
-            .filter(
-                ep1.field(episodes::timestamp)
-                    .nullable()
-                    .eq_any(subquery)
-                    .or(ep1.field(episodes::timestamp).is_null()),
-            )
             .order(podcast_episodes::date_of_recording.desc())
             .limit(limit)
             .into_boxed();
-
-        if let Some(last_date_str) = last_date {
-            query = query.filter(podcast_episodes::date_of_recording.lt(last_date_str));
+        if let Some(last_date) = last_date {
+            query = query.filter(podcast_episodes::date_of_recording.lt(last_date.to_owned()));
         }
-
-        if only_unlistened {
-            query = query.filter(
-                ep1.field(episodes::position)
-                    .is_null()
-                    .or(ep1.field(episodes::total).ne(ep1.field(episodes::position))),
-            );
-        }
-
         query
-            .load::<(PodcastEpisodeEntity, Option<EpisodeEntity>)>(&mut self.database.connection()?)
-            .map(|rows| {
-                rows.into_iter()
-                    .map(|(pe, ep)| {
-                        (
-                            pe.into(),
-                            ep.map(|entity| {
-                                let _user_id = entity.user_id;
-                                Episode {
-                                    id: Uuid::parse_str(&entity.id).expect("valid uuid in db"),
-                                    username: username.to_string(),
-                                    device: entity.device,
-                                    podcast: entity.podcast,
-                                    episode: entity.episode,
-                                    timestamp: entity.timestamp,
-                                    guid: entity.guid,
-                                    action: entity.action,
-                                    started: entity.started,
-                                    position: entity.position,
-                                    total: entity.total,
-                                }
-                            }),
-                        )
-                    })
-                    .collect()
-            })
+            .load::<PodcastEpisodeEntity>(&mut self.database.connection()?)
+            .map(|rows| rows.into_iter().map(Into::into).collect())
             .map_err(Into::into)
     }
 

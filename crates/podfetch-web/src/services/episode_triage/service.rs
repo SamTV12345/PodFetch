@@ -51,7 +51,7 @@ impl EpisodeTriageService {
             podcast_episode: PodcastEpisodeDto::from_episode_with_user(
                 episode, api_key, None, server_url,
             ),
-            podcast_history_item: history.map(Into::into).as_ref().map(map_episode_to_dto),
+            podcast_history_item: history.as_ref().map(map_episode_to_dto),
         }
     }
 

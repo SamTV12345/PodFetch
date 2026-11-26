@@ -1,5 +1,5 @@
 use chrono::NaiveDateTime;
-use podfetch_domain::episode::Episode;
+use podfetch_listening::domain::episode::Episode;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::fmt;
 use url::Url;
@@ -80,13 +80,17 @@ pub fn map_episode_to_dto(episode: &Episode) -> EpisodeDto {
     }
 }
 
-pub fn map_episode_dto_to_episode(episode_dto: &EpisodeDto, username: String) -> Episode {
+pub fn map_episode_dto_to_episode(
+    episode_dto: &EpisodeDto,
+    listener: &podfetch_listening::domain::episode::Listener,
+) -> Episode {
     let mut episode = Url::parse(&episode_dto.episode).unwrap();
     episode.set_query(None);
 
     Episode {
         id: uuid::Uuid::nil(),
-        username,
+        user_id: listener.id,
+        username: listener.username.clone(),
         device: episode_dto.device.clone(),
         podcast: episode_dto.podcast.clone(),
         episode: episode_dto.episode.clone(),

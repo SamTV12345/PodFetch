@@ -49,7 +49,7 @@ pub async fn get_episode_actions(
     Ok(Json(EpisodeActionResponse {
         actions: actions
             .iter()
-            .map(|episode| map_episode_to_dto(&episode.clone().into()))
+            .map(|episode| map_episode_to_dto(&episode.clone()))
             .collect(),
         timestamp: get_current_timestamp(),
     }))
@@ -73,9 +73,10 @@ pub async fn upload_episode_actions(
 ) -> Result<Json<EpisodeActionPostResponse>, CustomError> {
     let username = trim_from_path(&username);
     ensure_session_user::<CustomError>(&flag.username, username.0).map_err(map_gpodder_error)?;
+    let listener = WatchtimeService::listener(username.0)?;
     let mut inserted_episodes = vec![];
     podcast_episode.iter().for_each(|episode| {
-        let episode = map_episode_dto_to_episode(episode, username.0.to_string());
+        let episode = map_episode_dto_to_episode(episode, &listener);
         inserted_episodes.push(WatchtimeService::upsert_episode_by_guid(episode).unwrap());
     });
     Ok(Json(EpisodeActionPostResponse {
@@ -300,8 +301,6 @@ pub mod tests {
     #[serial]
     #[tokio::test]
     async fn test_play_actions_create_listening_events() {
-        use crate::services::listening_event::service::ListeningEventService;
-
         let mut test_server = handle_test_startup().await;
         let state = app_state();
         let user = state
@@ -369,7 +368,7 @@ pub mod tests {
             .await;
         assert_eq!(resp.status_code(), 200);
 
-        let events = ListeningEventService::default_service()
+        let events = crate::listening::listening_events()
             .get_by_user_and_range(user.id, None, None)
             .unwrap();
         assert_eq!(events.len(), 2, "one listening event per new play action");

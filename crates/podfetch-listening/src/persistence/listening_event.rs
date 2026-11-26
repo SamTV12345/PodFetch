@@ -1,10 +1,8 @@
-use crate::db::{Database, PersistenceError};
+use crate::domain::listening_event::{ListeningEvent, ListeningEventRepository, NewListeningEvent};
 use chrono::NaiveDateTime;
+use common_infrastructure::db::{Database, PersistenceError};
 use diesel::prelude::{Insertable, Queryable, Selectable};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use podfetch_domain::listening_event::{
-    ListeningEvent, ListeningEventRepository, NewListeningEvent,
-};
 use uuid::Uuid;
 
 diesel::table! {
@@ -73,7 +71,7 @@ impl From<ListeningEventEntity> for ListeningEvent {
 impl From<NewListeningEvent> for NewListeningEventEntity {
     fn from(value: NewListeningEvent) -> Self {
         Self {
-            id: podfetch_domain::ids::new_id().to_string(),
+            id: Uuid::now_v7().to_string(),
             user_id: value.user_id.to_string(),
             device: value.device,
             podcast_episode_id: value.podcast_episode_id,

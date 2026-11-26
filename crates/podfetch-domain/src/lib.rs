@@ -1,10 +1,8 @@
 pub mod audiobookshelf;
 pub mod device;
 pub mod device_sync_group;
-pub mod episode;
 pub mod gpodder_setting;
 pub mod ids;
-pub mod listening_event;
 pub mod ordering;
 pub mod podcast;
 pub mod podcast_episode;

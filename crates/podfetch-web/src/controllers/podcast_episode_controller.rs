@@ -115,7 +115,7 @@ pub async fn get_podcast_episode_by_id(
         },
         |episode_id, username| {
             WatchtimeService::get_watchtime(episode_id, username)
-                .map(|episode| episode.map(Into::into).as_ref().map(map_episode_to_dto))
+                .map(|episode| episode.as_ref().map(map_episode_to_dto))
         },
     )
     .map_err(map_podcast_episode_controller_error)?;
@@ -165,11 +165,7 @@ pub async fn find_all_podcast_episodes_of_podcast(
                         );
                         (
                             mapped_podcast_episode,
-                            podcast_inner
-                                .1
-                                .map(Into::into)
-                                .as_ref()
-                                .map(map_episode_to_dto),
+                            podcast_inner.1.as_ref().map(map_episode_to_dto),
                         )
                     })
                     .collect()
@@ -1480,10 +1476,9 @@ mod tests {
         );
 
         // Marking does not count as listening time.
-        let events =
-            crate::services::listening_event::service::ListeningEventService::default_service()
-                .get_by_user_and_range(admin_user_id(), None, None)
-                .unwrap();
+        let events = crate::listening::listening_events()
+            .get_by_user_and_range(admin_user_id(), None, None)
+            .unwrap();
         assert!(events.is_empty());
 
         // Repeating is a no-op.

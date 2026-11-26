@@ -131,7 +131,7 @@ pub async fn get_device_updates(
     let updates: Vec<serde_json::Value> = actions
         .iter()
         .map(|episode| {
-            let dto = map_episode_to_dto(&episode.clone().into());
+            let dto = map_episode_to_dto(&episode.clone());
             let mut obj = serde_json::json!({
                 "podcast_url": dto.podcast,
                 "episode": dto.episode,

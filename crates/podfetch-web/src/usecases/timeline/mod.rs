@@ -1,23 +1,27 @@
+//! The timeline: the newest episodes across all podcasts.
+//!
+//! API composition over three contexts: the catalog lists the episodes,
+//! the library restricts them to favorites and adds favorite marks, and
+//! listening adds the user's latest action and filters out heard episodes.
+
 use crate::history::EpisodeDto;
 use crate::history::map_episode_to_dto;
 use crate::podcast::PodcastDto;
 use crate::podcast::map_podcast_to_dto;
 use crate::podcast_episode::{TimelineFavorite, TimelineQueryParams};
 use crate::podcast_episode_dto::PodcastEpisodeDto;
-use common_infrastructure::error::ErrorSeverity::Critical;
-use common_infrastructure::error::{CustomError, map_db_error};
-use diesel::RunQueryDsl;
-use diesel::dsl::max;
-use diesel::prelude::*;
-use podfetch_domain::episode::Episode;
+use crate::services::podcast::service::PodcastService;
+use common_infrastructure::error::CustomError;
+use podfetch_domain::podcast_episode::{EpisodeFilter, PodcastEpisode, PodcastEpisodeRepository};
 use podfetch_identity::api::Principal;
-use podfetch_library::domain::favorite_podcast_episode::FavoritePodcastEpisode;
-use podfetch_library::persistence::favorite::FavoriteEntity as Favorite;
-use podfetch_persistence::db::get_connection;
-use podfetch_persistence::podcast::PodcastEntity as Podcast;
-use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
-use podfetch_persistence::schema::favorite_podcast_episodes::dsl::favorite_podcast_episodes;
+use podfetch_listening::domain::episode::{Episode, EpisodeRepository, Listener};
+use podfetch_persistence::db::database;
+use podfetch_persistence::podcast_episode::DieselPodcastEpisodeRepository;
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
+use uuid::Uuid;
+
+const PAGE: usize = 20;
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -31,180 +35,130 @@ pub struct TimelineItem {
     pub total_elements: i64,
 }
 
-#[derive(Queryable, Clone)]
-#[diesel(table_name = podfetch_persistence::schema::favorite_podcast_episodes)]
-struct JoinedFavoritePodcastEpisode {
-    user_id: String,
-    episode_id: String,
-    favorite: bool,
-}
-
-#[derive(Queryable, Clone)]
-#[diesel(table_name = podfetch_persistence::schema::episodes)]
-struct JoinedEpisode {
-    id: String,
-    _user_id: String,
-    device: String,
-    podcast: String,
-    episode: String,
-    timestamp: chrono::NaiveDateTime,
-    guid: Option<String>,
-    action: String,
-    started: Option<i32>,
-    position: Option<i32>,
-    total: Option<i32>,
-}
-
-impl From<JoinedFavoritePodcastEpisode> for FavoritePodcastEpisode {
-    fn from(value: JoinedFavoritePodcastEpisode) -> Self {
-        Self {
-            user_id: uuid::Uuid::parse_str(&value.user_id).unwrap_or_else(|_| uuid::Uuid::nil()),
-            episode_id: uuid::Uuid::parse_str(&value.episode_id)
-                .unwrap_or_else(|_| uuid::Uuid::nil()),
-            favorite: value.favorite,
-        }
-    }
-}
-
 impl TimelineItem {
     pub fn get_timeline(
         user: Principal,
         api_key: Option<&str>,
-        favored_only: TimelineQueryParams,
+        params: TimelineQueryParams,
         server_url: &str,
     ) -> Result<TimelineItem, CustomError> {
-        use podfetch_persistence::schema::podcast_episodes::dsl::*;
-        use podfetch_persistence::schema::podcasts::dsl::*;
-        use podfetch_persistence::schema::podcasts::id as pid;
+        let user_id: Uuid = user.id.into();
+        let favored_only = params.favored_only.unwrap_or(false);
+        let _ = crate::library::filters().save_timeline_decision(user_id, favored_only);
 
-        use podfetch_persistence::schema::episodes as phi_struct;
-        use podfetch_persistence::schema::episodes::episode as ehid;
-        use podfetch_persistence::schema::episodes::guid as eguid;
-        use podfetch_persistence::schema::episodes::timestamp as phistory_date;
-        use podfetch_persistence::schema::episodes::user_id as phi_user_id;
-        use podfetch_persistence::schema::favorite_podcast_episodes::episode_id as fpe_fav;
-        use podfetch_persistence::schema::favorite_podcast_episodes::favorite as idpe_fav_liked;
-        use podfetch_persistence::schema::favorite_podcast_episodes::user_id as idpe_fav;
-        use podfetch_persistence::schema::favorites::dsl::*;
-        use podfetch_persistence::schema::favorites::podcast_id as f_podcast_id;
-        use podfetch_persistence::schema::favorites::user_id as f_user_id;
-        use podfetch_persistence::schema::podcast_episodes::guid as pguid;
-        use podfetch_persistence::schema::podcast_episodes::id as e_p_id;
-        use podfetch_persistence::schema::podcast_episodes::podcast_id as e_podcast_id;
+        let catalog = DieselPodcastEpisodeRepository::new(database());
+        let actions = crate::listening::episode_actions();
+        let listener = Listener::new(user.id.as_uuid(), user.username.clone());
 
-        let user_id_to_search = user.id.to_string();
+        // Library: which podcasts / episodes the listing is restricted to.
+        let favorite_episodes = crate::library::favorite_episodes();
+        let filter = EpisodeFilter {
+            podcast_ids: favored_only
+                .then(|| PodcastService::favored_podcast_ids(user_id))
+                .transpose()?,
+            episode_ids: params
+                .favored_episodes
+                .then(|| -> Result<Vec<Uuid>, CustomError> {
+                    Ok(favorite_episodes
+                        .get_favorites_by_user_id(user_id)?
+                        .into_iter()
+                        .filter(|favorite| favorite.favorite)
+                        .map(|favorite| favorite.episode_id)
+                        .collect())
+                })
+                .transpose()?,
+        };
 
-        let _ = crate::library::filters()
-            .save_timeline_decision(user.id.into(), favored_only.favored_only.unwrap_or(false));
-
-        let (ph1, ph2) = diesel::alias!(phi_struct as ph1, phi_struct as ph2);
-
-        let subquery = ph2
-            .select(max(ph2.field(phistory_date)))
-            .filter(ph2.field(phi_user_id).eq(user_id_to_search.clone()))
-            .group_by(ph2.field(ehid));
-
-        let part_query = podcast_episodes
-            .inner_join(podcasts.on(e_podcast_id.eq(pid)))
-            .left_join(
-                favorite_podcast_episodes.on(e_p_id
-                    .eq(fpe_fav)
-                    .and(idpe_fav.eq(user_id_to_search.clone()))),
-            )
-            .left_join(ph1.on(ph1.field(eguid).eq(pguid.nullable())))
-            .filter(
-                ph1.field(phistory_date)
-                    .nullable()
-                    .eq_any(subquery)
-                    .or(ph1.field(phistory_date).is_null()),
-            )
-            .left_join(
-                favorites.on(f_user_id
-                    .eq(user_id_to_search.clone())
-                    .and(f_podcast_id.eq(pid))),
-            );
-
-        let mut query = part_query
-            .clone()
-            .order(date_of_recording.desc())
-            .limit(20)
-            .into_boxed();
-
-        let mut total_count = part_query.count().into_boxed();
-
-        if favored_only.favored_only.unwrap_or(false) {
-            if let Some(last_id) = favored_only.last_timestamp {
-                query = query.filter(date_of_recording.lt(last_id.clone()));
-            }
-
-            query = query.filter(f_user_id.eq(user_id_to_search.clone()));
-            query = query.filter(favored.eq(true));
-            total_count = total_count.filter(f_user_id.eq(user_id_to_search.clone()));
+        // Listening: episodes the user already has any action for.
+        let heard: Vec<String> = if params.not_listened {
+            actions
+                .guids_with_actions(&listener)
+                .map_err(CustomError::from)?
         } else {
-            if let Some(last_id) = favored_only.last_timestamp {
-                query = query.filter(date_of_recording.lt(last_id));
+            Vec::new()
+        };
+        let heard_set: HashSet<&str> = heard.iter().map(String::as_str).collect();
+
+        let mut total_elements = catalog
+            .count_matching(&filter, None)
+            .map_err(CustomError::from)?;
+        for chunk in heard.chunks(500) {
+            total_elements -= catalog
+                .count_matching(&filter, Some(chunk))
+                .map_err(CustomError::from)?;
+        }
+
+        // Catalog: read pages until PAGE episodes passed the listening filter.
+        let mut cursor = params.last_timestamp;
+        let mut page: Vec<PodcastEpisode> = Vec::new();
+        loop {
+            let batch = catalog
+                .find_newest(&filter, cursor.as_deref(), PAGE as i64)
+                .map_err(CustomError::from)?;
+            let exhausted = batch.len() < PAGE;
+            cursor = batch.last().map(|e| e.date_of_recording.clone());
+            for episode in batch {
+                if heard_set.contains(episode.guid.as_str()) {
+                    continue;
+                }
+                page.push(episode);
+                if page.len() == PAGE {
+                    break;
+                }
+            }
+            if exhausted || page.len() == PAGE {
+                break;
             }
         }
 
-        if favored_only.favored_episodes {
-            query = query.filter(idpe_fav_liked.eq(true));
-            total_count = total_count.filter(idpe_fav_liked.eq(true));
-        }
-
-        if favored_only.not_listened {
-            query = query.filter(ph1.field(phistory_date).is_null());
-            total_count = total_count.filter(ph1.field(phistory_date).is_null());
-        }
-
-        let results = total_count
-            .get_result::<i64>(&mut get_connection())
-            .map_err(|e| map_db_error(e, Critical))?;
-        let result = query
-            .load::<(
-                PodcastEpisode,
-                Podcast,
-                Option<JoinedFavoritePodcastEpisode>,
-                Option<JoinedEpisode>,
-                Option<Favorite>,
-            )>(&mut get_connection())
-            .map_err(|e| map_db_error(e, Critical))?
+        // Details for the page, each from its own context, in bulk.
+        let guids: Vec<String> = page.iter().map(|e| e.guid.clone()).collect();
+        let mut latest_actions: HashMap<String, Episode> = actions
+            .find_latest_by_guids(&listener, &guids)
+            .map_err(CustomError::from)?
             .into_iter()
-            .map(
-                |(podcast_episode, podcast, fav_episode, history, favorite)| {
-                    let history_dto = history.as_ref().map(|episode| {
-                        map_episode_to_dto(&Episode {
-                            id: uuid::Uuid::parse_str(&episode.id)
-                                .unwrap_or_else(|_| uuid::Uuid::nil()),
-                            username: user.username.clone(),
-                            device: episode.device.clone(),
-                            podcast: episode.podcast.clone(),
-                            episode: episode.episode.clone(),
-                            timestamp: episode.timestamp,
-                            guid: episode.guid.clone(),
-                            action: episode.action.clone(),
-                            started: episode.started,
-                            position: episode.position,
-                            total: episode.total,
-                        })
-                    });
-                    (
-                        PodcastEpisodeDto::from_episode_with_user(
-                            podcast_episode,
-                            api_key,
-                            fav_episode.map(Into::into),
-                            server_url,
-                        ),
-                        map_podcast_to_dto(podcast.into(), server_url),
-                        history_dto,
-                        favorite.map(|f| TimelineFavorite { favored: f.favored }),
-                    )
-                },
-            )
+            .filter_map(|action| Some((action.guid.clone()?, action)))
+            .collect();
+        let episode_ids: Vec<Uuid> = page.iter().map(|e| e.id).collect();
+        let mut episode_favorites = favorite_episodes.favorites_of(user_id, &episode_ids)?;
+        let podcast_ids: Vec<Uuid> = page
+            .iter()
+            .map(|e| e.podcast_id)
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect();
+        let podcasts: HashMap<String, _> = PodcastService::get_podcasts_by_ids(&podcast_ids)?
+            .into_iter()
+            .map(|podcast| (podcast.id.clone(), podcast))
+            .collect();
+        let podcast_favorites = PodcastService::favorites_of_podcasts(user_id, &podcast_ids)?;
+
+        let data = page
+            .into_iter()
+            .filter_map(|episode| {
+                let podcast = podcasts.get(&episode.podcast_id.to_string())?.clone();
+                let history = latest_actions.remove(&episode.guid);
+                let favorite_episode = episode_favorites.remove(&episode.id);
+                let podcast_favorite = podcast_favorites
+                    .get(&episode.podcast_id)
+                    .map(|&favored| TimelineFavorite { favored });
+                Some((
+                    PodcastEpisodeDto::from_episode_with_user(
+                        episode.into(),
+                        api_key,
+                        favorite_episode,
+                        server_url,
+                    ),
+                    map_podcast_to_dto(podcast.into(), server_url),
+                    history.as_ref().map(map_episode_to_dto),
+                    podcast_favorite,
+                ))
+            })
             .collect();
 
         Ok(TimelineItem {
-            total_elements: results,
-            data: result,
+            data,
+            total_elements,
         })
     }
 }

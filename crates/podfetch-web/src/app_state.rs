@@ -14,7 +14,6 @@ use crate::services::playlist::service::PlaylistService;
 use crate::services::podcast_episode_chapter::service::PodcastEpisodeChapterService;
 use crate::services::podcast_settings::service::PodcastSettingsService;
 use crate::services::settings::service::SettingsService;
-use crate::services::stats::service::StatsService;
 use crate::services::subscription::service::SubscriptionService;
 use crate::services::transcript::service::TranscriptService;
 use crate::usecases::watchtime::WatchtimeUseCase;
@@ -42,6 +41,8 @@ use podfetch_library::persistence::TagRepositoryImpl;
 use podfetch_library::services::favorite_podcast_episode::FavoritePodcastEpisodeService;
 use podfetch_library::services::filter::FilterService;
 use podfetch_library::services::tag::TagService;
+use podfetch_listening::persistence::ListeningEventRepositoryImpl;
+use podfetch_listening::services::stats::StatsService;
 use podfetch_notifications::persistence::NotificationRepositoryImpl;
 use podfetch_notifications::service::NotificationService;
 use podfetch_persistence::adapters::AuthorRepositoryImpl;
@@ -52,7 +53,6 @@ use podfetch_persistence::adapters::DeviceRepositoryImpl;
 use podfetch_persistence::adapters::DeviceSyncGroupRepositoryImpl;
 use podfetch_persistence::adapters::GpodderSettingRepositoryImpl;
 use podfetch_persistence::adapters::LibraryRepositoryImpl;
-use podfetch_persistence::adapters::ListeningEventRepositoryImpl;
 use podfetch_persistence::adapters::ListeningSessionRepositoryImpl;
 use podfetch_persistence::adapters::MediaProgressRepositoryImpl;
 use podfetch_persistence::adapters::NarratorRepositoryImpl;
@@ -175,11 +175,15 @@ impl AppState {
         let settings_service = Arc::new(SettingsService::new(Arc::new(
             SettingsRepositoryImpl::new(database.clone()),
         )));
-        let stats_service = Arc::new(StatsService::new(Arc::new(
-            crate::services::listening_event::service::ListeningEventService::new(Arc::new(
+        let listening_events = Arc::new(
+            podfetch_listening::services::listening_event::ListeningEventService::new(Arc::new(
                 ListeningEventRepositoryImpl::new(database.clone()),
             )),
-        )));
+        );
+        let stats_service = Arc::new(StatsService::new(
+            listening_events.clone(),
+            Arc::new(crate::listening::CatalogPodcasts),
+        ));
         let subscription_service = Arc::new(SubscriptionService::new(
             Arc::new(SubscriptionRepositoryImpl::new(database.clone())),
             Arc::new(DeviceSyncGroupRepositoryImpl::new(database.clone())),
@@ -211,6 +215,15 @@ impl AppState {
                 .map(podfetch_notifications::telegram::TelegramNotifier::new),
         );
         podfetch_casting::handlers::subscribe(&event_bus, cast_orchestrator.clone());
+        podfetch_listening::handlers::subscribe(
+            &event_bus,
+            Arc::new(
+                podfetch_listening::persistence::episode::DieselEpisodeRepository::new(
+                    database.clone(),
+                ),
+            ),
+            listening_events.clone(),
+        );
         crate::podcast_events::install(event_bus.clone());
         let user_admin_service = Arc::new(UserAdminService::new(
             Arc::new(UserAdminRepositoryImpl::new(database.clone())),

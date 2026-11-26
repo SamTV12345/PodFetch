@@ -1,5 +1,4 @@
 use crate::app_state::AppState;
-use crate::stats::{self, StatsControllerError, StatsOverview, StatsOverviewQueryParams};
 use crate::url_rewriting::{resolve_image_url, resolve_server_url_from_headers};
 use axum::extract::{Query, State};
 use axum::http::HeaderMap;
@@ -7,6 +6,9 @@ use axum::{Extension, Json};
 use common_infrastructure::error::ErrorSeverity::Info;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use podfetch_identity::api::Principal;
+use podfetch_listening::dto::stats::{
+    self, StatsControllerError, StatsOverview, StatsOverviewQueryParams,
+};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -26,7 +28,7 @@ pub async fn get_stats_overview(
 ) -> Result<Json<StatsOverview>, CustomError> {
     let server_url = resolve_server_url_from_headers(&headers);
     let mut stats =
-        stats::get_stats_overview(state.stats_service.as_ref(), &requester.username, params)
+        stats::get_stats_overview(state.stats_service.as_ref(), requester.id.as_uuid(), params)
             .map_err(map_stats_error)?;
     stats.top_podcasts.iter_mut().for_each(|podcast| {
         podcast.image_url = resolve_image_url(&podcast.image_url, &server_url);
@@ -49,13 +51,13 @@ pub fn get_stats_router() -> OpenApiRouter<AppState> {
 
 #[cfg(test)]
 mod tests {
-    use crate::services::listening_event::service::ListeningEventService;
+
     use crate::test_support::tests::handle_test_startup;
     use chrono::{NaiveDate, NaiveDateTime};
     use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
     use diesel::ExpressionMethods;
     use diesel::RunQueryDsl;
-    use podfetch_domain::listening_event::NewListeningEvent;
+    use podfetch_listening::domain::listening_event::NewListeningEvent;
     use podfetch_persistence::db::get_connection;
     use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
     use podfetch_persistence::schema::podcast_episodes::dsl as pe_dsl;
@@ -176,42 +178,45 @@ mod tests {
         let episode_b1 = insert_episode(&podcast_b.id, "stats-ep-b1", "stats-guid-b1", "B1");
         let user_id = admin_user_id();
 
-        ListeningEventService::create_event(NewListeningEvent {
-            user_id,
-            device: "webview".to_string(),
-            podcast_episode_id: episode_a1.episode_id.clone(),
-            podcast_id: Uuid::parse_str(&podcast_a.id).unwrap(),
-            podcast_episode_db_id: Uuid::parse_str(&episode_a1.id).unwrap(),
-            delta_seconds: 120,
-            start_position: 10,
-            end_position: 130,
-            listened_at: dt(23, 10, 0, 0),
-        })
-        .unwrap();
-        ListeningEventService::create_event(NewListeningEvent {
-            user_id,
-            device: "webview".to_string(),
-            podcast_episode_id: episode_a2.episode_id.clone(),
-            podcast_id: Uuid::parse_str(&podcast_a.id).unwrap(),
-            podcast_episode_db_id: Uuid::parse_str(&episode_a2.id).unwrap(),
-            delta_seconds: 240,
-            start_position: 0,
-            end_position: 240,
-            listened_at: dt(24, 11, 0, 0),
-        })
-        .unwrap();
-        ListeningEventService::create_event(NewListeningEvent {
-            user_id,
-            device: "webview".to_string(),
-            podcast_episode_id: episode_b1.episode_id.clone(),
-            podcast_id: Uuid::parse_str(&podcast_b.id).unwrap(),
-            podcast_episode_db_id: Uuid::parse_str(&episode_b1.id).unwrap(),
-            delta_seconds: 180,
-            start_position: 100,
-            end_position: 280,
-            listened_at: dt(25, 12, 0, 0),
-        })
-        .unwrap();
+        crate::listening::listening_events()
+            .create(NewListeningEvent {
+                user_id,
+                device: "webview".to_string(),
+                podcast_episode_id: episode_a1.episode_id.clone(),
+                podcast_id: Uuid::parse_str(&podcast_a.id).unwrap(),
+                podcast_episode_db_id: Uuid::parse_str(&episode_a1.id).unwrap(),
+                delta_seconds: 120,
+                start_position: 10,
+                end_position: 130,
+                listened_at: dt(23, 10, 0, 0),
+            })
+            .unwrap();
+        crate::listening::listening_events()
+            .create(NewListeningEvent {
+                user_id,
+                device: "webview".to_string(),
+                podcast_episode_id: episode_a2.episode_id.clone(),
+                podcast_id: Uuid::parse_str(&podcast_a.id).unwrap(),
+                podcast_episode_db_id: Uuid::parse_str(&episode_a2.id).unwrap(),
+                delta_seconds: 240,
+                start_position: 0,
+                end_position: 240,
+                listened_at: dt(24, 11, 0, 0),
+            })
+            .unwrap();
+        crate::listening::listening_events()
+            .create(NewListeningEvent {
+                user_id,
+                device: "webview".to_string(),
+                podcast_episode_id: episode_b1.episode_id.clone(),
+                podcast_id: Uuid::parse_str(&podcast_b.id).unwrap(),
+                podcast_episode_db_id: Uuid::parse_str(&episode_b1.id).unwrap(),
+                delta_seconds: 180,
+                start_position: 100,
+                end_position: 280,
+                listened_at: dt(25, 12, 0, 0),
+            })
+            .unwrap();
 
         let response = server.test_server.get("/api/v1/stats/overview").await;
         assert_eq!(response.status_code(), 200);
@@ -254,30 +259,32 @@ mod tests {
         let episode = insert_episode(&podcast.id, "stats-ep-range", "stats-guid-range", "Range");
         let user_id = admin_user_id();
 
-        ListeningEventService::create_event(NewListeningEvent {
-            user_id,
-            device: "webview".to_string(),
-            podcast_episode_id: episode.episode_id.clone(),
-            podcast_id: Uuid::parse_str(&podcast.id).unwrap(),
-            podcast_episode_db_id: Uuid::parse_str(&episode.id).unwrap(),
-            delta_seconds: 300,
-            start_position: 0,
-            end_position: 300,
-            listened_at: dt(24, 10, 0, 0),
-        })
-        .unwrap();
-        ListeningEventService::create_event(NewListeningEvent {
-            user_id,
-            device: "webview".to_string(),
-            podcast_episode_id: episode.episode_id,
-            podcast_id: Uuid::parse_str(&podcast.id).unwrap(),
-            podcast_episode_db_id: Uuid::parse_str(&episode.id).unwrap(),
-            delta_seconds: 60,
-            start_position: 300,
-            end_position: 360,
-            listened_at: dt(25, 10, 0, 0),
-        })
-        .unwrap();
+        crate::listening::listening_events()
+            .create(NewListeningEvent {
+                user_id,
+                device: "webview".to_string(),
+                podcast_episode_id: episode.episode_id.clone(),
+                podcast_id: Uuid::parse_str(&podcast.id).unwrap(),
+                podcast_episode_db_id: Uuid::parse_str(&episode.id).unwrap(),
+                delta_seconds: 300,
+                start_position: 0,
+                end_position: 300,
+                listened_at: dt(24, 10, 0, 0),
+            })
+            .unwrap();
+        crate::listening::listening_events()
+            .create(NewListeningEvent {
+                user_id,
+                device: "webview".to_string(),
+                podcast_episode_id: episode.episode_id,
+                podcast_id: Uuid::parse_str(&podcast.id).unwrap(),
+                podcast_episode_db_id: Uuid::parse_str(&episode.id).unwrap(),
+                delta_seconds: 60,
+                start_position: 300,
+                end_position: 360,
+                listened_at: dt(25, 10, 0, 0),
+            })
+            .unwrap();
 
         let response = server
             .test_server
@@ -346,18 +353,19 @@ mod tests {
                 "Top Limit Episode",
             );
 
-            ListeningEventService::create_event(NewListeningEvent {
-                user_id,
-                device: "webview".to_string(),
-                podcast_episode_id: episode.episode_id,
-                podcast_id: Uuid::parse_str(&podcast.id).unwrap(),
-                podcast_episode_db_id: Uuid::parse_str(&episode.id).unwrap(),
-                delta_seconds: 30,
-                start_position: 0,
-                end_position: 30,
-                listened_at: dt(24, 8 + i, 0, 0),
-            })
-            .unwrap();
+            crate::listening::listening_events()
+                .create(NewListeningEvent {
+                    user_id,
+                    device: "webview".to_string(),
+                    podcast_episode_id: episode.episode_id,
+                    podcast_id: Uuid::parse_str(&podcast.id).unwrap(),
+                    podcast_episode_db_id: Uuid::parse_str(&episode.id).unwrap(),
+                    delta_seconds: 30,
+                    start_position: 0,
+                    end_position: 30,
+                    listened_at: dt(24, 8 + i, 0, 0),
+                })
+                .unwrap();
         }
 
         let response = server
@@ -411,18 +419,19 @@ mod tests {
         );
         let user_id = admin_user_id();
 
-        ListeningEventService::create_event(NewListeningEvent {
-            user_id,
-            device: "webview".to_string(),
-            podcast_episode_id: episode.episode_id,
-            podcast_id: Uuid::parse_str(&podcast.id).unwrap(),
-            podcast_episode_db_id: Uuid::parse_str(&episode.id).unwrap(),
-            delta_seconds: 90,
-            start_position: 0,
-            end_position: 90,
-            listened_at: dt(24, 10, 0, 0),
-        })
-        .unwrap();
+        crate::listening::listening_events()
+            .create(NewListeningEvent {
+                user_id,
+                device: "webview".to_string(),
+                podcast_episode_id: episode.episode_id,
+                podcast_id: Uuid::parse_str(&podcast.id).unwrap(),
+                podcast_episode_db_id: Uuid::parse_str(&episode.id).unwrap(),
+                delta_seconds: 90,
+                start_position: 0,
+                end_position: 90,
+                listened_at: dt(24, 10, 0, 0),
+            })
+            .unwrap();
 
         let response = server
             .test_server
@@ -465,18 +474,19 @@ mod tests {
                 "Stats Min Top Limit Episode",
             );
 
-            ListeningEventService::create_event(NewListeningEvent {
-                user_id,
-                device: "webview".to_string(),
-                podcast_episode_id: episode.episode_id,
-                podcast_id: Uuid::parse_str(&podcast.id).unwrap(),
-                podcast_episode_db_id: Uuid::parse_str(&episode.id).unwrap(),
-                delta_seconds: 30 + (i * 10),
-                start_position: 0,
-                end_position: 40,
-                listened_at: dt(24 + i as u32, 9, 0, 0),
-            })
-            .unwrap();
+            crate::listening::listening_events()
+                .create(NewListeningEvent {
+                    user_id,
+                    device: "webview".to_string(),
+                    podcast_episode_id: episode.episode_id,
+                    podcast_id: Uuid::parse_str(&podcast.id).unwrap(),
+                    podcast_episode_db_id: Uuid::parse_str(&episode.id).unwrap(),
+                    delta_seconds: 30 + (i * 10),
+                    start_position: 0,
+                    end_position: 40,
+                    listened_at: dt(24 + i as u32, 9, 0, 0),
+                })
+                .unwrap();
         }
 
         let response = server
@@ -517,18 +527,19 @@ mod tests {
         );
         let user_id = admin_user_id();
 
-        ListeningEventService::create_event(NewListeningEvent {
-            user_id,
-            device: "webview".to_string(),
-            podcast_episode_id: episode.episode_id,
-            podcast_id: Uuid::parse_str(&podcast.id).unwrap(),
-            podcast_episode_db_id: Uuid::parse_str(&episode.id).unwrap(),
-            delta_seconds: 42,
-            start_position: 0,
-            end_position: 42,
-            listened_at: dt(24, 8, 0, 0),
-        })
-        .unwrap();
+        crate::listening::listening_events()
+            .create(NewListeningEvent {
+                user_id,
+                device: "webview".to_string(),
+                podcast_episode_id: episode.episode_id,
+                podcast_id: Uuid::parse_str(&podcast.id).unwrap(),
+                podcast_episode_db_id: Uuid::parse_str(&episode.id).unwrap(),
+                delta_seconds: 42,
+                start_position: 0,
+                end_position: 42,
+                listened_at: dt(24, 8, 0, 0),
+            })
+            .unwrap();
 
         server
             .test_server

@@ -23,6 +23,7 @@ use common_infrastructure::time::opt_or_empty_string;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use podfetch_domain::podcast_episode::{NewPodcastEpisode, PodcastEpisodeRepository};
 use podfetch_identity::api::Principal;
+use podfetch_listening::domain::episode::{Episode, EpisodeRepository};
 use podfetch_persistence::db::database;
 use podfetch_persistence::db::get_connection;
 use podfetch_persistence::podcast::PodcastEntity as Podcast;
@@ -49,7 +50,7 @@ static IN_PROGRESS_DOWNLOADS: LazyLock<Mutex<HashSet<String>>> =
 type PodcastEpisodeWithFavorited = Result<
     Vec<(
         PodcastEpisode,
-        Option<podfetch_persistence::episode::EpisodeEntity>,
+        Option<podfetch_listening::domain::episode::Episode>,
         Option<podfetch_library::domain::favorite_podcast_episode::FavoritePodcastEpisode>,
     )>,
     CustomError,
@@ -288,34 +289,69 @@ impl PodcastEpisodeUseCase {
         }
     }
 
+    /// One page (75) of a podcast's episodes with the user's latest action
+    /// and favorite mark. API composition: episodes from the catalog,
+    /// actions from listening, favorites from the library.
+    ///
+    /// With `only_unlistened`, heard episodes are skipped; the catalog is
+    /// read in further pages until the page is full, so no exclusion list
+    /// of every heard episode has to be sent to the database.
     pub fn get_podcast_episodes_of_podcast(
         podcast_id: Uuid,
         last_id: Option<String>,
         only_unlistened: Option<bool>,
         user: &Principal,
     ) -> PodcastEpisodeWithFavorited {
-        Self::repo()
-            .get_episodes_with_history(
-                podcast_id,
-                &user.username,
-                last_id.as_deref(),
-                only_unlistened.unwrap_or(false),
-                75,
-            )
-            .map_err(CustomError::from)
-            .and_then(|rows| {
-                // API composition: favorites come from the library.
-                let episode_ids: Vec<Uuid> = rows.iter().map(|(episode, _)| episode.id).collect();
-                let mut favorites = crate::library::favorite_episodes()
-                    .favorites_of(user.id.into(), &episode_ids)?;
-                Ok(rows
-                    .into_iter()
-                    .map(|(episode, history)| {
-                        let favorite = favorites.remove(&episode.id);
-                        (episode.into(), history.map(Into::into), favorite)
-                    })
-                    .collect())
+        const PAGE: i64 = 75;
+        let only_unlistened = only_unlistened.unwrap_or(false);
+        let listener = podfetch_listening::domain::episode::Listener::new(
+            user.id.as_uuid(),
+            user.username.clone(),
+        );
+        let actions = crate::listening::episode_actions();
+        let mut cursor = last_id;
+        let mut page: Vec<(
+            podfetch_domain::podcast_episode::PodcastEpisode,
+            Option<Episode>,
+        )> = Vec::new();
+        loop {
+            let batch = Self::repo()
+                .get_episodes_page(podcast_id, cursor.as_deref(), PAGE)
+                .map_err(CustomError::from)?;
+            let exhausted = (batch.len() as i64) < PAGE;
+            cursor = batch.last().map(|e| e.date_of_recording.clone());
+            let guids: Vec<String> = batch.iter().map(|e| e.guid.clone()).collect();
+            let mut latest: std::collections::HashMap<String, Episode> = actions
+                .find_latest_by_guids(&listener, &guids)
+                .map_err(CustomError::from)?
+                .into_iter()
+                .filter_map(|action| Some((action.guid.clone()?, action)))
+                .collect();
+            for episode in batch {
+                let action = latest.remove(&episode.guid);
+                if only_unlistened && action.as_ref().is_some_and(Episode::counts_as_heard) {
+                    continue;
+                }
+                page.push((episode, action));
+                if page.len() as i64 == PAGE {
+                    break;
+                }
+            }
+            if exhausted || page.len() as i64 == PAGE || !only_unlistened {
+                break;
+            }
+        }
+
+        let episode_ids: Vec<Uuid> = page.iter().map(|(episode, _)| episode.id).collect();
+        let mut favorites =
+            crate::library::favorite_episodes().favorites_of(user.id.into(), &episode_ids)?;
+        Ok(page
+            .into_iter()
+            .map(|(episode, action)| {
+                let favorite = favorites.remove(&episode.id);
+                (episode.into(), action, favorite)
             })
+            .collect())
     }
 
     pub fn get_last_n_podcast_episodes_by_count(
@@ -759,6 +795,15 @@ impl PodcastEpisodeUseCase {
             }
         }
         Ok(())
+    }
+
+    pub fn get_podcast_episodes_by_guids(
+        guids: &[String],
+    ) -> Result<Vec<PodcastEpisode>, CustomError> {
+        Self::repo()
+            .find_by_guids(guids)
+            .map(|episodes| episodes.into_iter().map(Into::into).collect())
+            .map_err(Into::into)
     }
 
     pub fn get_podcast_episode_by_guid(
