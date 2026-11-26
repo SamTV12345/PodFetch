@@ -5,7 +5,6 @@
 mod tests {
     use crate::test_support::tests::handle_test_startup;
     use common_infrastructure::config::EnvironmentService;
-    use podfetch_domain::filter::{Filter, FilterRepository};
     use podfetch_events::{Event, EventBus, EventBusConfig};
     use podfetch_identity::domain::user_admin::UserAdminRepository;
     use podfetch_identity::events::UserDeleted;
@@ -13,7 +12,8 @@ mod tests {
     use podfetch_identity::role::{STANDARD_USER, STANDARD_USER_ID};
     use podfetch_identity::services::user_admin::service::UserAdminService;
     use podfetch_identity::services::user_auth::service::UserAuthService;
-    use podfetch_persistence::adapters::FilterRepositoryImpl;
+    use podfetch_library::domain::filter::{Filter, FilterRepository};
+    use podfetch_library::persistence::FilterRepositoryImpl;
     use podfetch_persistence::db::database;
     use serial_test::serial;
     use std::sync::Arc;

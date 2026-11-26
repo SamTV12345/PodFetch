@@ -1,13 +1,13 @@
 use crate::app_state::AppState;
 use crate::controllers::id_resolver::{ResolvedId, parse_resolved_id};
 use crate::services::podcast::service::PodcastService;
-use crate::tags;
-pub use crate::tags::{Tag, TagCreate, TagsPodcast};
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
 use common_infrastructure::error::CustomError;
 use podfetch_identity::api::Principal;
+use podfetch_library::dto::tags;
+pub use podfetch_library::dto::tags::{Tag, TagCreate, TagsPodcast};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -156,7 +156,6 @@ pub fn get_tags_router() -> OpenApiRouter<AppState> {
 #[cfg(test)]
 mod tests {
     use crate::app_state::AppState;
-    use crate::tags::{Color, Tag};
     use crate::test_support::tests::handle_test_startup;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::extract::{Path, State};
@@ -164,6 +163,7 @@ mod tests {
     use common_infrastructure::error::CustomErrorInner;
     use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
     use podfetch_identity::api::Principal;
+    use podfetch_library::dto::tags::{Color, Tag};
     use serde_json::json;
     use serial_test::serial;
     use uuid::Uuid;

@@ -1,7 +1,7 @@
-use crate::db::{Database, PersistenceError};
+use crate::domain::filter::{Filter, FilterRepository};
+use common_infrastructure::db::{Database, PersistenceError};
 use diesel::prelude::{AsChangeset, Insertable, Queryable};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
-use podfetch_domain::filter::{Filter, FilterRepository};
 use uuid::Uuid;
 
 diesel::table! {

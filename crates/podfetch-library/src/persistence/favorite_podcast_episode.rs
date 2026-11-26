@@ -1,9 +1,9 @@
-use crate::db::{Database, PersistenceError};
-use diesel::prelude::{Insertable, Queryable, Selectable};
-use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
-use podfetch_domain::favorite_podcast_episode::{
+use crate::domain::favorite_podcast_episode::{
     FavoritePodcastEpisode, FavoritePodcastEpisodeRepository,
 };
+use common_infrastructure::db::{Database, PersistenceError};
+use diesel::prelude::{Insertable, Queryable, Selectable};
+use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
 diesel::table! {
@@ -139,21 +139,39 @@ impl FavoritePodcastEpisodeRepository for DieselFavoritePodcastEpisodeRepository
             .map_err(Into::into)
     }
 
-    fn delete_by_podcast_id(&self, podcast_id_to_delete: Uuid) -> Result<usize, Self::Error> {
+    fn get_by_user_id_and_episode_ids(
+        &self,
+        user_id_to_search: Uuid,
+        episode_ids: &[Uuid],
+    ) -> Result<Vec<FavoritePodcastEpisode>, Self::Error> {
         use self::favorite_podcast_episodes::dsl as fpe_dsl;
         use self::favorite_podcast_episodes::table as fpe_table;
-        use crate::schema::podcast_episodes::dsl as pe_dsl;
 
         let conn = &mut self.database.connection()?;
-        let episode_ids: Vec<String> = pe_dsl::podcast_episodes
-            .filter(pe_dsl::podcast_id.eq(podcast_id_to_delete.to_string()))
-            .select(pe_dsl::id)
-            .load(conn)?;
+        let mut found = Vec::new();
+        // Chunked to stay below the bind parameter limit.
+        for chunk in episode_ids.chunks(500) {
+            let rows = fpe_table
+                .filter(fpe_dsl::user_id.eq(user_id_to_search.to_string()))
+                .filter(fpe_dsl::episode_id.eq_any(chunk.iter().map(Uuid::to_string)))
+                .load::<FavoritePodcastEpisodeEntity>(conn)?;
+            found.extend(rows.into_iter().map(Into::into));
+        }
+        Ok(found)
+    }
+
+    fn delete_by_episode_ids(&self, episode_ids: &[Uuid]) -> Result<usize, Self::Error> {
+        use self::favorite_podcast_episodes::dsl as fpe_dsl;
+        use self::favorite_podcast_episodes::table as fpe_table;
+
+        let conn = &mut self.database.connection()?;
         // Chunked to stay below the bind parameter limit for large podcasts.
         let mut deleted = 0;
         for chunk in episode_ids.chunks(500) {
-            deleted += diesel::delete(fpe_table.filter(fpe_dsl::episode_id.eq_any(chunk)))
-                .execute(conn)?;
+            deleted += diesel::delete(
+                fpe_table.filter(fpe_dsl::episode_id.eq_any(chunk.iter().map(Uuid::to_string))),
+            )
+            .execute(conn)?;
         }
         Ok(deleted)
     }

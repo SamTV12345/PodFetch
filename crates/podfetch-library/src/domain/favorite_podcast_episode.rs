@@ -35,8 +35,15 @@ pub trait FavoritePodcastEpisodeRepository: Send + Sync {
         user_id: Uuid,
     ) -> Result<Vec<FavoritePodcastEpisode>, Self::Error>;
 
-    /// Remove every user's favorite marks on the episodes of a podcast.
+    /// The user's favorite marks on the given episodes.
+    fn get_by_user_id_and_episode_ids(
+        &self,
+        user_id: Uuid,
+        episode_ids: &[Uuid],
+    ) -> Result<Vec<FavoritePodcastEpisode>, Self::Error>;
+
+    /// Remove every user's favorite marks on the given episodes.
     /// `favorite_podcast_episodes.episode_id` has no `ON DELETE` action, so
     /// this has to run before the episodes are deleted.
-    fn delete_by_podcast_id(&self, podcast_id: Uuid) -> Result<usize, Self::Error>;
+    fn delete_by_episode_ids(&self, episode_ids: &[Uuid]) -> Result<usize, Self::Error>;
 }

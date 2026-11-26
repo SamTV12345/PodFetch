@@ -10,9 +10,9 @@ use std::fmt::Display;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-use crate::filter::Filter;
-use crate::tags::Tag;
 use crate::url_rewriting::resolve_image_url;
+use podfetch_library::dto::filter::Filter;
+use podfetch_library::dto::tags::Tag;
 use podfetch_storage::file_handler::resolve_file_handler_type;
 
 #[derive(Debug, Serialize, Deserialize, Clone, IntoParams)]

@@ -58,8 +58,8 @@ pub struct TimelineFavorite {
     pub favored: bool,
 }
 
-impl From<podfetch_domain::favorite::Favorite> for TimelineFavorite {
-    fn from(value: podfetch_domain::favorite::Favorite) -> Self {
+impl From<podfetch_library::domain::favorite::Favorite> for TimelineFavorite {
+    fn from(value: podfetch_library::domain::favorite::Favorite) -> Self {
         Self {
             favored: value.favored,
         }

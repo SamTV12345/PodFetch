@@ -1,9 +1,7 @@
-use common_infrastructure::error::CustomError;
-use podfetch_domain::favorite_podcast_episode::{
+use crate::domain::favorite_podcast_episode::{
     FavoritePodcastEpisode, FavoritePodcastEpisodeRepository,
 };
-use podfetch_persistence::adapters::FavoritePodcastEpisodeRepositoryImpl;
-use podfetch_persistence::db::database;
+use common_infrastructure::error::CustomError;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -15,12 +13,6 @@ pub struct FavoritePodcastEpisodeService {
 impl FavoritePodcastEpisodeService {
     pub fn new(repository: Arc<dyn FavoritePodcastEpisodeRepository<Error = CustomError>>) -> Self {
         Self { repository }
-    }
-
-    pub fn default_service() -> Self {
-        Self::new(Arc::new(FavoritePodcastEpisodeRepositoryImpl::new(
-            database(),
-        )))
     }
 
     pub fn get_by_user_id_and_episode_id(
@@ -53,7 +45,20 @@ impl FavoritePodcastEpisodeService {
         self.repository.get_favorites_by_user_id(user_id)
     }
 
-    pub fn delete_by_podcast_id(&self, podcast_id: Uuid) -> Result<usize, CustomError> {
-        self.repository.delete_by_podcast_id(podcast_id)
+    pub fn favorites_of(
+        &self,
+        user_id: Uuid,
+        episode_ids: &[Uuid],
+    ) -> Result<std::collections::HashMap<Uuid, FavoritePodcastEpisode>, CustomError> {
+        Ok(self
+            .repository
+            .get_by_user_id_and_episode_ids(user_id, episode_ids)?
+            .into_iter()
+            .map(|favorite| (favorite.episode_id, favorite))
+            .collect())
+    }
+
+    pub fn delete_by_episode_ids(&self, episode_ids: &[Uuid]) -> Result<usize, CustomError> {
+        self.repository.delete_by_episode_ids(episode_ids)
     }
 }

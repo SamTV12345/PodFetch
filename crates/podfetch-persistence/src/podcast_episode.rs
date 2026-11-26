@@ -8,7 +8,6 @@ use diesel::{
     QueryDsl, RunQueryDsl, TextExpressionMethods,
 };
 use podfetch_domain::episode::Episode;
-use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::podcast_episode::{
     NewPodcastEpisode, PodcastEpisode, PodcastEpisodeRepository, PodcastEpisodeWithHistory,
 };
@@ -55,14 +54,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    favorite_podcast_episodes (user_id, episode_id) {
-        user_id -> Text,
-        episode_id -> Text,
-        favorite -> Bool,
-    }
-}
-
-diesel::table! {
     users (id) {
         id -> Text,
         username -> Text,
@@ -89,12 +80,7 @@ diesel::table! {
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(
-    podcast_episodes,
-    episodes,
-    favorite_podcast_episodes,
-    podcasts,
-);
+diesel::allow_tables_to_appear_in_same_query!(podcast_episodes, episodes, podcasts,);
 
 #[derive(
     Queryable, Identifiable, Selectable, AsChangeset, Debug, Clone, PartialEq, Eq, Default,
@@ -153,15 +139,6 @@ struct EpisodeEntity {
     started: Option<i32>,
     position: Option<i32>,
     total: Option<i32>,
-}
-
-// Entity for reading favorites in joins
-#[derive(Queryable, Selectable, Debug, Clone)]
-#[diesel(table_name = favorite_podcast_episodes)]
-struct FavoritePodcastEpisodeEntity {
-    user_id: String,
-    episode_id: String,
-    favorite: bool,
 }
 
 impl From<PodcastEpisodeEntity> for PodcastEpisode {
@@ -229,16 +206,6 @@ impl From<NewPodcastEpisode> for NewPodcastEpisodeEntity {
             description: episode.description,
             guid: episode.guid,
             youtube_video_id: episode.youtube_video_id,
-        }
-    }
-}
-
-impl From<FavoritePodcastEpisodeEntity> for FavoritePodcastEpisode {
-    fn from(entity: FavoritePodcastEpisodeEntity) -> Self {
-        Self {
-            user_id: Uuid::parse_str(&entity.user_id).expect("valid uuid in db"),
-            episode_id: Uuid::parse_str(&entity.episode_id).expect("valid uuid in db"),
-            favorite: entity.favorite,
         }
     }
 }
@@ -454,11 +421,6 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
                     .eq(podcast_episodes::guid.nullable())
                     .and(ep1.field(episodes::user_id).eq(user_id.clone()))),
             )
-            .left_join(
-                favorite_podcast_episodes::table.on(favorite_podcast_episodes::episode_id
-                    .eq(podcast_episodes::id)
-                    .and(favorite_podcast_episodes::user_id.eq(user_id.clone()))),
-            )
             .filter(
                 ep1.field(episodes::timestamp)
                     .nullable()
@@ -482,14 +444,10 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
         }
 
         query
-            .load::<(
-                PodcastEpisodeEntity,
-                Option<EpisodeEntity>,
-                Option<FavoritePodcastEpisodeEntity>,
-            )>(&mut self.database.connection()?)
+            .load::<(PodcastEpisodeEntity, Option<EpisodeEntity>)>(&mut self.database.connection()?)
             .map(|rows| {
                 rows.into_iter()
-                    .map(|(pe, ep, fav)| {
+                    .map(|(pe, ep)| {
                         (
                             pe.into(),
                             ep.map(|entity| {
@@ -508,7 +466,6 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
                                     total: entity.total,
                                 }
                             }),
-                            fav.map(Into::into),
                         )
                     })
                     .collect()

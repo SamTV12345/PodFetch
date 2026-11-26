@@ -39,8 +39,8 @@ pub fn default_podcast_filter() -> Filter {
     }
 }
 
-impl From<podfetch_domain::filter::Filter> for Filter {
-    fn from(value: podfetch_domain::filter::Filter) -> Self {
+impl From<crate::domain::filter::Filter> for Filter {
+    fn from(value: crate::domain::filter::Filter) -> Self {
         Self {
             user_id: value.user_id.to_string(),
             title: value.title,
@@ -51,7 +51,7 @@ impl From<podfetch_domain::filter::Filter> for Filter {
     }
 }
 
-impl From<Filter> for podfetch_domain::filter::Filter {
+impl From<Filter> for crate::domain::filter::Filter {
     fn from(value: Filter) -> Self {
         Self {
             user_id: Uuid::parse_str(&value.user_id).unwrap_or_else(|_| Uuid::nil()),

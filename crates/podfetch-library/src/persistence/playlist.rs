@@ -1,7 +1,7 @@
-use crate::db::{Database, PersistenceError};
+use crate::domain::playlist::{Playlist, PlaylistItem, PlaylistRepository};
+use common_infrastructure::db::{Database, PersistenceError};
 use diesel::prelude::{Insertable, Queryable, Selectable};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
-use podfetch_domain::playlist::{Playlist, PlaylistItem, PlaylistRepository};
 use uuid::Uuid;
 
 diesel::table! {

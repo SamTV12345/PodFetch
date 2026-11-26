@@ -1,9 +1,7 @@
-use crate::tags::{Tag, TagCreate, TagsApplicationService, TagsPodcast};
+use crate::domain::tag::{TagRepository, TagUpdate};
+use crate::dto::tags::{Tag, TagCreate, TagsApplicationService, TagsPodcast};
 use common_infrastructure::error::ErrorSeverity::Debug;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
-use podfetch_domain::tag::{TagRepository, TagUpdate};
-use podfetch_persistence::adapters::TagRepositoryImpl;
-use podfetch_persistence::db::database;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -16,10 +14,6 @@ impl TagService {
         Self { repository }
     }
 
-    pub fn default_service() -> Self {
-        Self::new(Arc::new(TagRepositoryImpl::new(database())))
-    }
-
     pub fn create_tag(
         &self,
         user_id: Uuid,
@@ -27,7 +21,7 @@ impl TagService {
         description: Option<String>,
         color: String,
     ) -> Result<Tag, CustomError> {
-        let tag = podfetch_domain::tag::Tag::new(name, description, color, user_id);
+        let tag = crate::domain::tag::Tag::new(name, description, color, user_id);
         self.repository.create(tag).map(Into::into)
     }
 
@@ -35,6 +29,20 @@ impl TagService {
         self.repository
             .get_tags(user_id)
             .map(|tags| tags.into_iter().map(Into::into).collect())
+    }
+
+    /// The user's tags of each given podcast, in one query.
+    pub fn get_tags_of_podcasts(
+        &self,
+        podcast_ids: &[Uuid],
+        user_id: Uuid,
+    ) -> Result<std::collections::HashMap<Uuid, Vec<Tag>>, CustomError> {
+        let mut by_podcast: std::collections::HashMap<Uuid, Vec<Tag>> =
+            std::collections::HashMap::new();
+        for (podcast_id, tag) in self.repository.get_tags_of_podcasts(podcast_ids, user_id)? {
+            by_podcast.entry(podcast_id).or_default().push(tag.into());
+        }
+        Ok(by_podcast)
     }
 
     pub fn get_tags_of_podcast(
@@ -95,7 +103,7 @@ impl TagService {
         &self,
         tag_id: &str,
         user_id: Uuid,
-    ) -> Result<podfetch_domain::tag::Tag, CustomError> {
+    ) -> Result<crate::domain::tag::Tag, CustomError> {
         self.repository
             .get_tag_by_id_and_user_id(tag_id, user_id)?
             .ok_or_else(|| CustomErrorInner::NotFound(Debug).into())

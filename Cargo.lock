@@ -3293,6 +3293,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "podfetch-library"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "common-infrastructure",
+ "diesel",
+ "serde",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
 name = "podfetch-notifications"
 version = "0.1.0"
 dependencies = [
@@ -3376,6 +3388,7 @@ dependencies = [
  "podfetch-events",
  "podfetch-identity",
  "podfetch-kernel",
+ "podfetch-library",
  "podfetch-notifications",
  "podfetch-persistence",
  "podfetch-storage",

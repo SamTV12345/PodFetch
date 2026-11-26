@@ -2,7 +2,6 @@ use crate::podcast_events::{self, EpisodeDownloadFailed, EpisodeDownloaded};
 use crate::server::ChatServerHandle;
 use crate::services::download::service::DownloadService;
 use crate::services::episode_triage::service::EpisodeTriageService;
-use crate::services::favorite_podcast_episode::service::FavoritePodcastEpisodeService;
 use crate::services::file::service::FileService;
 use crate::services::playlist::service::PlaylistService;
 use crate::services::podcast::metadata::PodcastBuilder;
@@ -51,7 +50,7 @@ type PodcastEpisodeWithFavorited = Result<
     Vec<(
         PodcastEpisode,
         Option<podfetch_persistence::episode::EpisodeEntity>,
-        Option<podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode>,
+        Option<podfetch_library::domain::favorite_podcast_episode::FavoritePodcastEpisode>,
     )>,
     CustomError,
 >;
@@ -303,14 +302,20 @@ impl PodcastEpisodeUseCase {
                 only_unlistened.unwrap_or(false),
                 75,
             )
-            .map(|rows| {
-                rows.into_iter()
-                    .map(|(episode, history, favorite)| {
+            .map_err(CustomError::from)
+            .and_then(|rows| {
+                // API composition: favorites come from the library.
+                let episode_ids: Vec<Uuid> = rows.iter().map(|(episode, _)| episode.id).collect();
+                let mut favorites = crate::library::favorite_episodes()
+                    .favorites_of(user.id.into(), &episode_ids)?;
+                Ok(rows
+                    .into_iter()
+                    .map(|(episode, history)| {
+                        let favorite = favorites.remove(&episode.id);
                         (episode.into(), history.map(Into::into), favorite)
                     })
-                    .collect()
+                    .collect())
             })
-            .map_err(Into::into)
     }
 
     pub fn get_last_n_podcast_episodes_by_count(
@@ -342,16 +347,16 @@ impl PodcastEpisodeUseCase {
     pub fn delete_episodes_of_podcast(podcast_id: Uuid) -> Result<(), CustomError> {
         // Rows that reference the episodes without `ON DELETE CASCADE` have to
         // go first, otherwise the bulk delete fails with a foreign key error.
-        FavoritePodcastEpisodeService::default_service().delete_by_podcast_id(podcast_id)?;
-        let triage_service = EpisodeTriageService::default_service();
-        Self::get_episodes_by_podcast_id(podcast_id)?
+        let episode_ids = Self::get_episodes_by_podcast_id(podcast_id)?
             .iter()
-            .try_for_each(|episode| {
-                let episode_uuid = Self::parse_id(&episode.id)?;
-                PlaylistService::default_service()
-                    .delete_playlist_items_by_episode_id(episode_uuid)?;
-                triage_service.delete_triage_for_episode(episode_uuid)
-            })?;
+            .map(|episode| Self::parse_id(&episode.id))
+            .collect::<Result<Vec<Uuid>, CustomError>>()?;
+        crate::library::favorite_episodes().delete_by_episode_ids(&episode_ids)?;
+        let triage_service = EpisodeTriageService::default_service();
+        episode_ids.iter().try_for_each(|&episode_uuid| {
+            PlaylistService::default_service().delete_playlist_items_by_episode_id(episode_uuid)?;
+            triage_service.delete_triage_for_episode(episode_uuid)
+        })?;
 
         Self::repo()
             .delete_by_podcast_id(podcast_id)
@@ -901,9 +906,7 @@ impl PodcastEpisodeUseCase {
                         continue;
                     }
                 };
-                match FavoritePodcastEpisodeService::default_service()
-                    .is_liked_by_someone(episode_id)
-                {
+                match crate::library::favorite_episodes().is_liked_by_someone(episode_id) {
                     Ok(true) => {
                         continue;
                     }
@@ -1128,7 +1131,7 @@ impl PodcastEpisodeUseCase {
     /// path (see `cleanup_old_episodes`). Returns the number of episodes
     /// whose files were removed.
     pub fn delete_all_downloaded_files_for_podcast(podcast_id: Uuid) -> Result<usize, CustomError> {
-        let favorite_service = FavoritePodcastEpisodeService::default_service();
+        let favorite_service = crate::library::favorite_episodes();
         let episodes = Self::get_episodes_by_podcast_id(podcast_id)?;
         let mut affected = 0usize;
         for episode in episodes {

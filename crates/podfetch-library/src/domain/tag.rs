@@ -62,6 +62,12 @@ pub trait TagRepository: Send + Sync {
     fn get_tags(&self, user_id: Uuid) -> Result<Vec<Tag>, Self::Error>;
     fn get_tags_of_podcast(&self, podcast_id: Uuid, user_id: Uuid)
     -> Result<Vec<Tag>, Self::Error>;
+    /// The user's tags of each given podcast, as `(podcast_id, tag)` pairs.
+    fn get_tags_of_podcasts(
+        &self,
+        podcast_ids: &[Uuid],
+        user_id: Uuid,
+    ) -> Result<Vec<(Uuid, Tag)>, Self::Error>;
     fn get_tag_by_id_and_user_id(
         &self,
         tag_id: &str,

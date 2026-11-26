@@ -1,4 +1,4 @@
-use crate::favorite::Favorite;
+use crate::ordering::{OrderCriteria, OrderOption};
 use uuid::Uuid;
 
 /// A podcast in the system - technology-agnostic domain entity.
@@ -24,11 +24,15 @@ pub struct Podcast {
     pub added_by: Option<Uuid>,
 }
 
-/// A podcast with its optional favorite status for a specific user.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PodcastWithFavorite {
-    pub podcast: Podcast,
-    pub favorite: Option<Favorite>,
+/// Which podcasts to list and in which order.
+#[derive(Debug, Clone)]
+pub struct PodcastQuery {
+    pub order: OrderCriteria,
+    pub order_option: OrderOption,
+    /// Case-insensitive substring of the podcast name.
+    pub title: Option<String>,
+    /// Restrict the result to these podcasts (e.g. a user's favorites).
+    pub only_ids: Option<Vec<Uuid>>,
 }
 
 /// Data for creating a new podcast.
@@ -71,10 +75,8 @@ pub trait PodcastRepository: Send + Sync {
     fn find_by_image_path(&self, path: &str) -> Result<Option<Podcast>, Self::Error>;
     fn find_by_episode_id(&self, episode_id: Uuid) -> Result<Option<Podcast>, Self::Error>;
     fn find_all(&self) -> Result<Vec<Podcast>, Self::Error>;
-    fn find_all_with_favorites(
-        &self,
-        user_id: Uuid,
-    ) -> Result<Vec<PodcastWithFavorite>, Self::Error>;
+    /// Podcasts matching `query`, in the requested order.
+    fn search(&self, query: PodcastQuery) -> Result<Vec<Podcast>, Self::Error>;
     fn update_metadata(&self, update: PodcastMetadataUpdate) -> Result<(), Self::Error>;
     fn update_active(&self, id: Uuid, active: bool) -> Result<(), Self::Error>;
     fn update_name(&self, id: Uuid, name: &str) -> Result<(), Self::Error>;
