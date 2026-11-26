@@ -16,7 +16,7 @@ use common_infrastructure::error::CustomErrorInner;
 use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::runtime::DEFAULT_DEVICE;
 use podfetch_domain::device::kind::is_castable;
-use podfetch_identity::domain::user::User;
+use podfetch_identity::api::Principal;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
 use utoipa::ToSchema;
@@ -62,10 +62,13 @@ pub struct GPodderSyncGroupsUpdateRequest {
 
 /// All devices that can take part in sync groups: the user's GPodder devices,
 /// the web interface and any id that is already part of a group.
-fn known_devices(state: &AppState, user: &User) -> Result<Vec<GPodderDeviceResponse>, CustomError> {
+fn known_devices(
+    state: &AppState,
+    user: &Principal,
+) -> Result<Vec<GPodderDeviceResponse>, CustomError> {
     let mut devices: Vec<GPodderDeviceResponse> = state
         .device_service
-        .query_by_user_id(user.id)?
+        .query_by_user_id(user.id.into())?
         .into_iter()
         .filter(|d| !is_castable(&d.kind) && d.deviceid != DEFAULT_DEVICE)
         .map(|d| GPodderDeviceResponse {
@@ -83,7 +86,10 @@ fn known_devices(state: &AppState, user: &User) -> Result<Vec<GPodderDeviceRespo
         name: "PodFetch Web".to_string(),
         kind: WEB_DEVICE_KIND.to_string(),
     });
-    for group in state.device_sync_group_service.get_by_user_id(user.id)? {
+    for group in state
+        .device_sync_group_service
+        .get_by_user_id(user.id.into())?
+    {
         if !devices.iter().any(|d| d.device_id == group.device_id) {
             devices.push(GPodderDeviceResponse {
                 name: group.device_id.clone(),
@@ -99,10 +105,12 @@ fn known_devices(state: &AppState, user: &User) -> Result<Vec<GPodderDeviceRespo
 
 fn sync_groups_response(
     state: &AppState,
-    user: &User,
+    user: &Principal,
 ) -> Result<GPodderSyncGroupsResponse, CustomError> {
     let devices = known_devices(state, user)?;
-    let rows = state.device_sync_group_service.get_by_user_id(user.id)?;
+    let rows = state
+        .device_sync_group_service
+        .get_by_user_id(user.id.into())?;
 
     let mut groups: BTreeMap<i32, Vec<GPodderDeviceResponse>> = BTreeMap::new();
     let mut not_synchronized = vec![];
@@ -132,7 +140,7 @@ fn sync_groups_response(
 )]
 pub async fn get_gpodder_sync_groups(
     State(state): State<AppState>,
-    Extension(user): Extension<User>,
+    Extension(user): Extension<Principal>,
 ) -> Result<Json<GPodderSyncGroupsResponse>, CustomError> {
     sync_groups_response(&state, &user).map(Json)
 }
@@ -149,17 +157,19 @@ pub async fn get_gpodder_sync_groups(
 )]
 pub async fn update_gpodder_sync_groups(
     State(state): State<AppState>,
-    Extension(user): Extension<User>,
+    Extension(user): Extension<Principal>,
     Json(request): Json<GPodderSyncGroupsUpdateRequest>,
 ) -> Result<Json<GPodderSyncGroupsResponse>, CustomError> {
     let known: HashSet<String> = known_devices(&state, &user)?
         .into_iter()
         .map(|d| d.device_id)
         .collect();
-    let rows = DeviceSyncGroupService::build_groups(user.id, &request.groups, &known)
+    let rows = DeviceSyncGroupService::build_groups(user.id.into(), &request.groups, &known)
         .map_err(|message| CustomError::from(CustomErrorInner::BadRequest(message, Warning)))?;
 
-    let previous = state.device_sync_group_service.get_by_user_id(user.id)?;
+    let previous = state
+        .device_sync_group_service
+        .get_by_user_id(user.id.into())?;
     let web_members = |rows: &[podfetch_domain::device_sync_group::DeviceSyncGroup]| {
         DeviceSyncGroupService::group_of(rows, DEFAULT_DEVICE).map_or_default(|group_id| {
             rows.iter()
@@ -173,14 +183,16 @@ pub async fn update_gpodder_sync_groups(
         .into_iter()
         .any(|device| device != DEFAULT_DEVICE && !previous_web_members.contains(&device));
 
-    state.device_sync_group_service.replace_all(user.id, rows)?;
+    state
+        .device_sync_group_service
+        .replace_all(user.id.into(), rows)?;
 
     if joined_web {
         // Podcasts the newly joined devices subscribed to become web favorites.
         let urls = state
             .subscription_service
-            .get_active_device_podcast_urls(DEFAULT_DEVICE, user.id)?;
-        SubscriptionService::sync_favorites(user.id, &urls, &[]);
+            .get_active_device_podcast_urls(DEFAULT_DEVICE, user.id.into())?;
+        SubscriptionService::sync_favorites(user.id.into(), &urls, &[]);
     }
 
     sync_groups_response(&state, &user).map(Json)

@@ -6,7 +6,7 @@ use axum::http::HeaderMap;
 use axum::{Extension, Json};
 use common_infrastructure::error::ErrorSeverity::Info;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
-use podfetch_identity::domain::user::User;
+use podfetch_identity::api::Principal;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -20,7 +20,7 @@ tag="stats"
 )]
 pub async fn get_stats_overview(
     State(state): State<AppState>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     Query(params): Query<StatsOverviewQueryParams>,
     headers: HeaderMap,
 ) -> Result<Json<StatsOverview>, CustomError> {

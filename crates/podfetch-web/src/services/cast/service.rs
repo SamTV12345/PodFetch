@@ -8,7 +8,7 @@ use podfetch_cast::{
     CastTarget, ControlCmd, DiscoveredCastDevice,
 };
 use podfetch_domain::device::{Device, kind as device_kind};
-use podfetch_identity::domain::user::User;
+use podfetch_identity::api::Principal;
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::str::FromStr;
@@ -116,15 +116,15 @@ impl<L: CastDriver> CastOrchestrator<L> {
 
     /// All Chromecast devices the user is allowed to see — owned personal
     /// devices plus any shared/household device on the instance.
-    pub fn list_castable(&self, user: &User) -> Result<Vec<Device>, OrchestratorError> {
-        Ok(self.device_service.list_castable_for_user(user.id)?)
+    pub fn list_castable(&self, user: &Principal) -> Result<Vec<Device>, OrchestratorError> {
+        Ok(self.device_service.list_castable_for_user(user.id.into())?)
     }
 
     /// Resolve a device by chromecast UUID and check the user is allowed to
     /// use it. Returns the persisted Device row.
     pub fn resolve_castable(
         &self,
-        user: &User,
+        user: &Principal,
         chromecast_uuid: &str,
     ) -> Result<Device, OrchestratorError> {
         let visible = self.list_castable(user)?;
@@ -139,7 +139,7 @@ impl<L: CastDriver> CastOrchestrator<L> {
     /// over the agent websocket and therefore aren't included here.
     pub async fn discover(
         &self,
-        user: &User,
+        user: &Principal,
     ) -> Result<Vec<DiscoveredCastDevice>, OrchestratorError> {
         if !user.is_admin() {
             return Err(OrchestratorError::Forbidden);
@@ -155,7 +155,7 @@ impl<L: CastDriver> CastOrchestrator<L> {
     /// invoking us (see the cast controller).
     pub async fn start(
         &self,
-        user: &User,
+        user: &Principal,
         chromecast_uuid: &str,
         media: CastMedia,
         episode_id: Option<Uuid>,
@@ -205,7 +205,7 @@ impl<L: CastDriver> CastOrchestrator<L> {
         let active = ActiveSession {
             session_id: session_id.clone(),
             device_uuid,
-            user_id: user.id,
+            user_id: user.id.into(),
             username: user.username.clone(),
             episode_id,
             episode_string_id,
@@ -224,7 +224,7 @@ impl<L: CastDriver> CastOrchestrator<L> {
     /// whichever backend originally started the session.
     pub async fn control(
         &self,
-        user: &User,
+        user: &Principal,
         session_id: &CastSessionId,
         cmd: ControlCmd,
     ) -> Result<(), OrchestratorError> {
@@ -250,7 +250,7 @@ impl<L: CastDriver> CastOrchestrator<L> {
     /// Socket.io independently of this call.
     pub fn status(
         &self,
-        user: &User,
+        user: &Principal,
         session_id: &CastSessionId,
     ) -> Result<CastStatus, OrchestratorError> {
         let session = self.lookup_session(user, session_id)?;
@@ -284,7 +284,7 @@ impl<L: CastDriver> CastOrchestrator<L> {
 
     fn lookup_session(
         &self,
-        user: &User,
+        user: &Principal,
         session_id: &CastSessionId,
     ) -> Result<ActiveSession, OrchestratorError> {
         let guard = self
@@ -426,8 +426,8 @@ mod tests {
         }
     }
 
-    fn user(id: u128, role: &str) -> User {
-        User::new(
+    fn user(id: u128, role: &str) -> Principal {
+        Principal::from(&podfetch_identity::domain::user::User::new(
             Uuid::from_u128(id),
             format!("user{id}"),
             role,
@@ -437,7 +437,7 @@ mod tests {
                 .and_hms_opt(0, 0, 0)
                 .unwrap(),
             true,
-        )
+        ))
     }
 
     fn make_device(id: u128, owner: Uuid, kind: &str, uuid: &str) -> Device {
@@ -488,8 +488,18 @@ mod tests {
         let alice = user(1, "user");
         let bob = user(2, "user");
         let devices = vec![
-            make_device(10, alice.id, device_kind::CHROMECAST_PERSONAL, "uuid-alice"),
-            make_device(11, bob.id, device_kind::CHROMECAST_PERSONAL, "uuid-bob"),
+            make_device(
+                10,
+                alice.id.into(),
+                device_kind::CHROMECAST_PERSONAL,
+                "uuid-alice",
+            ),
+            make_device(
+                11,
+                bob.id.into(),
+                device_kind::CHROMECAST_PERSONAL,
+                "uuid-bob",
+            ),
             make_device(
                 12,
                 Uuid::from_u128(99),
@@ -570,7 +580,7 @@ mod tests {
         let alice = user(5, "user");
         let mut device = make_device(
             21,
-            alice.id,
+            alice.id.into(),
             device_kind::CHROMECAST_PERSONAL,
             "uuid-remote",
         );
@@ -630,7 +640,12 @@ mod tests {
     #[tokio::test]
     async fn start_against_local_device_uses_local_driver() {
         let alice = user(1, "user");
-        let device = make_device(10, alice.id, device_kind::CHROMECAST_PERSONAL, "uuid-local");
+        let device = make_device(
+            10,
+            alice.id.into(),
+            device_kind::CHROMECAST_PERSONAL,
+            "uuid-local",
+        );
         let orch = orchestrator(vec![device]);
 
         // Local driver is the stub which returns NotImplemented; so we
@@ -660,7 +675,12 @@ mod tests {
     #[tokio::test]
     async fn start_against_mopidy_device_routes_to_mopidy_driver() {
         let alice = user(1, "user");
-        let mut device = make_device(20, alice.id, device_kind::MOPIDY_SHARED, "mopidy-uuid");
+        let mut device = make_device(
+            20,
+            alice.id.into(),
+            device_kind::MOPIDY_SHARED,
+            "mopidy-uuid",
+        );
         device.base_url = Some("http://127.0.0.1:1/".to_string()); // unreachable on purpose
         let orch = orchestrator(vec![device]);
 

@@ -101,6 +101,7 @@ pub trait UserAdminRepository: Send + Sync {
     /// no-auth standard user) can be seeded deterministically.
     fn ensure_with_id(&self, user: ManagedUser) -> Result<ManagedUser, Self::Error>;
     fn find_by_api_key(&self, api_key: &str) -> Result<Option<ManagedUser>, Self::Error>;
+    fn find_by_id(&self, id: Uuid) -> Result<Option<ManagedUser>, Self::Error>;
     fn find_by_username(&self, username: &str) -> Result<Option<ManagedUser>, Self::Error>;
     fn find_all(&self) -> Result<Vec<ManagedUser>, Self::Error>;
     fn update(&self, user: ManagedUser) -> Result<ManagedUser, Self::Error>;

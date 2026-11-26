@@ -3,9 +3,10 @@ use crate::podcast::{Feed, PodindexResponse};
 use crate::services::discover::itunes_charts::ItunesChartEntry;
 use crate::services::discover::service::{CategoryDto, DiscoverService};
 use axum::extract::Query;
+use axum::extract::State;
 use axum::{Extension, Json};
 use common_infrastructure::error::CustomError;
-use podfetch_identity::domain::user::User;
+use podfetch_identity::api::Principal;
 use serde::Deserialize;
 use utoipa::IntoParams;
 use utoipa_axum::router::OpenApiRouter;
@@ -90,11 +91,13 @@ pub async fn get_categories() -> Json<Vec<CategoryDto>> {
     tag = "discover"
 )]
 pub async fn get_for_you(
-    Extension(requester): Extension<User>,
+    State(state): State<AppState>,
+    Extension(requester): Extension<Principal>,
     Query(query): Query<ForYouQuery>,
 ) -> Result<Json<Vec<Feed>>, CustomError> {
     let limit = query.limit.unwrap_or(50);
-    let feeds = DiscoverService::for_you(&requester, limit).await?;
+    let language = state.identity.language(requester.id)?;
+    let feeds = DiscoverService::for_you(&requester, language.as_deref(), limit).await?;
     Ok(Json(feeds))
 }
 

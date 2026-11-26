@@ -8,7 +8,7 @@ use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use common_infrastructure::error::CustomError;
 use podfetch_cast::CastMedia;
-use podfetch_identity::domain::user::User;
+use podfetch_identity::api::Principal;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -22,7 +22,7 @@ use utoipa_axum::routes;
 )]
 pub async fn list_cast_devices(
     State(state): State<AppState>,
-    Extension(user): Extension<User>,
+    Extension(user): Extension<Principal>,
 ) -> Result<Json<Vec<CastDeviceResponse>>, CustomError> {
     let devices = state
         .cast_orchestrator
@@ -47,7 +47,7 @@ pub async fn list_cast_devices(
 )]
 pub async fn discover_cast_devices(
     State(state): State<AppState>,
-    Extension(user): Extension<User>,
+    Extension(user): Extension<Principal>,
 ) -> Result<Json<Vec<DiscoveredCastDeviceResponse>>, CustomError> {
     let found = state
         .cast_orchestrator
@@ -69,7 +69,7 @@ pub async fn discover_cast_devices(
 )]
 pub async fn start_cast_session(
     State(state): State<AppState>,
-    Extension(user): Extension<User>,
+    Extension(user): Extension<Principal>,
     Json(req): Json<CastStartRequest>,
 ) -> Result<Json<CastSessionResponse>, CustomError> {
     // Resolve the GUID-like string id used by the watchtime store. If
@@ -120,7 +120,7 @@ pub async fn start_cast_session(
 )]
 pub async fn control_cast_session(
     State(state): State<AppState>,
-    Extension(user): Extension<User>,
+    Extension(user): Extension<Principal>,
     Path(session_id): Path<String>,
     Json(req): Json<CastControlRequest>,
 ) -> Result<(), CustomError> {
@@ -145,7 +145,7 @@ pub async fn control_cast_session(
 )]
 pub async fn get_cast_session_status(
     State(state): State<AppState>,
-    Extension(user): Extension<User>,
+    Extension(user): Extension<Principal>,
     Path(session_id): Path<String>,
 ) -> Result<Json<CastStatusResponse>, CustomError> {
     let id = parse_session_id(&session_id);

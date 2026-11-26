@@ -7,7 +7,7 @@ use crate::services::podcast::service::PodcastService;
 use common_infrastructure::error::CustomError;
 use podfetch_domain::favorite::FavoriteRepository;
 use podfetch_domain::podcast::PodcastRepository;
-use podfetch_identity::domain::user::User;
+use podfetch_identity::api::Principal;
 use podfetch_persistence::db::database;
 use podfetch_persistence::favorite::DieselFavoriteRepository;
 use podfetch_persistence::podcast::DieselPodcastRepository;
@@ -76,12 +76,16 @@ impl DiscoverService {
     /// common, hit Podcastindex trending with those categories and the user's
     /// preferred language, then filter out feeds whose URL matches one the
     /// user is already subscribed to.
-    pub async fn for_you(user: &User, limit: u32) -> Result<Vec<Feed>, CustomError> {
+    pub async fn for_you(
+        user: &Principal,
+        language: Option<&str>,
+        limit: u32,
+    ) -> Result<Vec<Feed>, CustomError> {
         let favorite_repo = DieselFavoriteRepository::new(database());
         let podcast_repo = DieselPodcastRepository::new(database());
 
         let favored = favorite_repo
-            .find_favored_by_user_id(user.id)
+            .find_favored_by_user_id(user.id.into())
             .map_err(CustomError::from)?;
 
         let mut subscribed_urls: HashSet<String> = HashSet::new();
@@ -104,7 +108,6 @@ impl DiscoverService {
         sorted.sort_by_key(|b| std::cmp::Reverse(b.1));
         let top_cats: Vec<u32> = sorted.into_iter().take(3).map(|(id, _)| id).collect();
 
-        let language = user.language.as_deref();
         let max = limit.clamp(1, 100);
         let over_fetch = (max * 2).min(200);
         let trending =

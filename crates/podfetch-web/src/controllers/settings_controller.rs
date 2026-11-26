@@ -1,4 +1,5 @@
 use crate::app_state::AppState;
+use crate::auth_middleware::FeedApiKey;
 use crate::services::episode_rescan::service::{
     EpisodeRescanService, RescanApplyStats, RescanOptions,
 };
@@ -14,7 +15,7 @@ use axum::extract::{Path, State};
 use axum::http::HeaderMap;
 use axum::http::Response;
 use axum::{Extension, Json};
-use podfetch_identity::domain::user::User;
+use podfetch_identity::api::Principal;
 use reqwest::StatusCode;
 
 #[utoipa::path(
@@ -27,7 +28,7 @@ tag="podcast_episodes"
 )]
 pub async fn get_settings(
     State(state): State<AppState>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
 ) -> Result<Json<Setting>, CustomError> {
     settings::get_settings(state.settings_service.as_ref(), requester.is_admin())
         .map(Json)
@@ -43,7 +44,7 @@ pub async fn get_settings(
     tag="podcast_episodes"
 )]
 pub async fn rescan_episodes(
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     body: Option<Json<RescanOptions>>,
 ) -> Result<(), CustomError> {
     if !requester.is_admin() {
@@ -118,7 +119,7 @@ tag="settings"
 )]
 pub async fn update_settings(
     State(state): State<AppState>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     Json(settings): Json<Setting>,
 ) -> Result<Json<Setting>, CustomError> {
     settings::update_settings(
@@ -139,7 +140,7 @@ tag="settings"
 )]
 pub async fn run_cleanup(
     State(state): State<AppState>,
-    requester: Extension<User>,
+    requester: Extension<Principal>,
 ) -> Result<StatusCode, CustomError> {
     let settings =
         settings::cleanup_settings(state.settings_service.as_ref(), requester.is_admin())
@@ -157,7 +158,8 @@ tag="settings"
 )]
 pub async fn get_opml(
     State(state): State<AppState>,
-    Extension(requester): Extension<User>,
+    Extension(_requester): Extension<Principal>,
+    Extension(api_key): Extension<FeedApiKey>,
     Path(type_of): Path<String>,
     headers: HeaderMap,
 ) -> Result<Response<String>, CustomError> {
@@ -174,7 +176,7 @@ pub async fn get_opml(
     let xml = settings::build_opml(
         podcasts_found,
         Mode::from(type_of),
-        requester.api_key.as_deref(),
+        api_key.as_deref(),
         state.environment.any_auth_enabled,
         &server_url,
     )
@@ -196,7 +198,7 @@ request_body=UpdateNameSettings
 )]
 pub async fn update_name(
     State(state): State<AppState>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     Json(update_information): Json<UpdateNameSettings>,
 ) -> Result<Json<Setting>, CustomError> {
     settings::update_name(
@@ -262,6 +264,7 @@ mod tests {
     use axum::extract::State;
     use common_infrastructure::error::CustomErrorInner;
     use diesel::RunQueryDsl;
+    use podfetch_identity::api::Principal;
     use podfetch_persistence::db::get_connection;
     use podfetch_persistence::schema::settings::dsl as s_dsl;
     use serde_json::json;
@@ -585,14 +588,21 @@ mod tests {
     async fn test_admin_settings_handlers_return_forbidden_for_non_admin_user() {
         let user = non_admin_user();
 
-        let get_result = super::get_settings(State(app_state()), Extension(user.clone())).await;
+        let get_result = super::get_settings(
+            State(app_state()),
+            Extension(Principal::from(&user.clone())),
+        )
+        .await;
         match get_result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
             Ok(_) => panic!("expected forbidden error for get_settings"),
         }
 
-        let run_cleanup_result =
-            super::run_cleanup(State(app_state()), Extension(user.clone())).await;
+        let run_cleanup_result = super::run_cleanup(
+            State(app_state()),
+            Extension(Principal::from(&user.clone())),
+        )
+        .await;
         match run_cleanup_result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
             Ok(_) => panic!("expected forbidden error for run_cleanup"),
@@ -600,7 +610,7 @@ mod tests {
 
         let update_result = super::update_settings(
             State(app_state()),
-            Extension(user.clone()),
+            Extension(Principal::from(&user.clone())),
             Json(Setting {
                 id: uuid::Uuid::new_v4().to_string(),
                 episode_numbering: false,
@@ -631,7 +641,7 @@ mod tests {
 
         let update_name_result = super::update_name(
             State(app_state()),
-            Extension(user.clone()),
+            Extension(Principal::from(&user.clone())),
             Json(super::UpdateNameSettings {
                 use_existing_filename: true,
                 replace_invalid_characters: true,
@@ -647,7 +657,7 @@ mod tests {
             Ok(_) => panic!("expected forbidden error for update_name"),
         }
 
-        let rescan_result = super::rescan_episodes(Extension(user), None).await;
+        let rescan_result = super::rescan_episodes(Extension(Principal::from(&user)), None).await;
         match rescan_result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
             Ok(_) => panic!("expected forbidden error for rescan_episodes"),

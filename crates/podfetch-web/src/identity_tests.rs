@@ -6,9 +6,12 @@ mod tests {
     use crate::test_support::tests::handle_test_startup;
     use common_infrastructure::config::EnvironmentService;
     use podfetch_domain::filter::{Filter, FilterRepository};
+    use podfetch_events::{Event, EventBus, EventBusConfig};
     use podfetch_identity::domain::user_admin::UserAdminRepository;
+    use podfetch_identity::events::UserDeleted;
     use podfetch_identity::persistence::adapters::UserAdminRepositoryImpl;
     use podfetch_identity::role::{STANDARD_USER, STANDARD_USER_ID};
+    use podfetch_identity::services::user_admin::service::UserAdminService;
     use podfetch_identity::services::user_auth::service::UserAuthService;
     use podfetch_persistence::adapters::FilterRepositoryImpl;
     use podfetch_persistence::db::database;
@@ -130,5 +133,46 @@ mod tests {
         assert_eq!(stored.api_key.as_deref(), Some(api_key.as_str()));
         let again = service.ensure_api_key(stored).unwrap();
         assert_eq!(again.api_key.as_deref(), Some(api_key.as_str()));
+    }
+
+    /// Deleting a user stores `UserDeleted` together with the deletion, so
+    /// the other contexts can clean up their data for that user.
+    #[tokio::test]
+    #[serial]
+    async fn deleting_a_user_publishes_user_deleted() {
+        let _ts = handle_test_startup().await;
+
+        let environment = Arc::new(EnvironmentService::for_tests());
+        let auth = UserAuthService::new(
+            Arc::new(UserAdminRepositoryImpl::new(database())),
+            environment.clone(),
+        );
+        let bus = EventBus::new(database(), EventBusConfig::default());
+        bus.subscribe::<UserDeleted, _, _>("test.user_deleted", |_, _| async { Ok(()) });
+        let admin = UserAdminService::new(
+            Arc::new(UserAdminRepositoryImpl::new(database())),
+            environment,
+            bus.clone(),
+        );
+
+        let created = auth
+            .create_user("leaving_user".to_string(), "user".to_string(), None, false)
+            .unwrap();
+        admin.delete_user_by_username("leaving_user").unwrap();
+        // Unknown users are not an error and publish nothing.
+        admin.delete_user_by_username("never_existed").unwrap();
+
+        assert!(users().find_by_username("leaving_user").unwrap().is_none());
+        let published: Vec<_> = bus
+            .deliveries(None, 100)
+            .unwrap()
+            .into_iter()
+            .filter(|d| d.event_type == UserDeleted::TYPE)
+            .collect();
+        assert_eq!(published.len(), 1, "exactly one UserDeleted per deletion");
+        assert_eq!(published[0].aggregate_id, created.id.to_string());
+        let payload: serde_json::Value = serde_json::from_str(&published[0].payload).unwrap();
+        assert_eq!(payload["username"], "leaving_user");
+        assert_eq!(payload["user_id"], created.id.to_string());
     }
 }

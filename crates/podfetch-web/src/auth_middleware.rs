@@ -11,6 +11,7 @@ use common_infrastructure::http::get_async_sync_client;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use jsonwebtoken::jwk::{Jwk, JwkSet};
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
+use podfetch_identity::api::Principal;
 use podfetch_identity::domain::user::User;
 use podfetch_identity::services::user_auth::service::UserAuthService;
 use serde_json::Value;
@@ -28,13 +29,36 @@ enum AuthType {
 
 pub struct AuthFilter;
 
+/// Makes the authenticated user available to handlers: every context gets
+/// the [`Principal`]; the full user (credentials, profile) stays for the
+/// identity context's own handlers.
+fn attach_user(request: &mut Request, user: User) {
+    request.extensions_mut().insert(Principal::from(&user));
+    request
+        .extensions_mut()
+        .insert(FeedApiKey(user.api_key.clone()));
+    request.extensions_mut().insert(user);
+}
+
+/// The caller's own API key, for building personal feed and file URLs
+/// (`?apiKey=…`) only. Kept apart from [`Principal`] so that other contexts
+/// never see credentials.
+#[derive(Debug, Clone, Default)]
+pub struct FeedApiKey(pub Option<String>);
+
+impl FeedApiKey {
+    pub fn as_deref(&self) -> Option<&str> {
+        self.0.as_deref()
+    }
+}
+
 pub async fn handle_basic_auth(
     State(state): State<AppState>,
     mut request: Request,
     next: Next,
 ) -> Result<Response, CustomError> {
     let user = handle_auth_internal(&mut request, AuthType::Basic, &state).await?;
-    request.extensions_mut().insert(user);
+    attach_user(&mut request, user);
     Ok(next.run(request).await)
 }
 
@@ -133,7 +157,7 @@ pub async fn handle_oidc_auth(
     next: Next,
 ) -> Result<Response, CustomError> {
     let user = handle_auth_internal(&mut request, AuthType::Oidc, &state).await?;
-    request.extensions_mut().insert(user);
+    attach_user(&mut request, user);
     Ok(next.run(request).await)
 }
 
@@ -143,7 +167,7 @@ pub async fn handle_proxy_auth(
     next: Next,
 ) -> Result<Response, CustomError> {
     let user = handle_auth_internal(&mut request, AuthType::Proxy, &state).await?;
-    request.extensions_mut().insert(user);
+    attach_user(&mut request, user);
     Ok(next.run(request).await)
 }
 
@@ -153,7 +177,7 @@ pub async fn handle_no_auth(
     next: Next,
 ) -> Result<Response, CustomError> {
     let user = handle_auth_internal(&mut request, AuthType::None, &state).await?;
-    request.extensions_mut().insert(user);
+    attach_user(&mut request, user);
     Ok(next.run(request).await)
 }
 

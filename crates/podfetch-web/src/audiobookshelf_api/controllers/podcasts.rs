@@ -22,6 +22,7 @@ use common_infrastructure::error::{CustomError, CustomErrorInner, map_reqwest_er
 use common_infrastructure::http::{COMMON_USER_AGENT, get_http_client};
 use common_infrastructure::request::add_basic_auth_headers_conditionally;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
+use podfetch_identity::api::Principal;
 use rand::RngExt;
 use reqwest::header::HeaderMap as ReqwestHeaderMap;
 use rss::Channel;
@@ -50,7 +51,7 @@ pub async fn get_podcast_feed(
 ) -> Result<Json<Value>, CustomError> {
     // The preview makes the server fetch an arbitrary URL; only users who
     // may add podcasts at all get to do that.
-    PodcastService::ensure_can_add_podcasts(&user, 0)?;
+    PodcastService::ensure_can_add_podcasts(&Principal::from(&user), 0)?;
     let feed_url = body.rss_feed.trim().to_string();
     if feed_url.is_empty()
         || (!feed_url.starts_with("http://") && !feed_url.starts_with("https://"))
@@ -111,7 +112,7 @@ pub async fn create_podcast(
 ) -> Result<Json<Value>, CustomError> {
     // Same rules as POST /api/v1/podcasts/feed: admins and uploaders, other
     // users only within USER_PODCAST_LIMIT.
-    PodcastService::ensure_can_add_podcasts(&user, 1)?;
+    PodcastService::ensure_can_add_podcasts(&Principal::from(&user), 1)?;
     let feed_url = body.media.metadata.feed_url.trim().to_string();
     if feed_url.is_empty() {
         return Err(CustomErrorInner::BadRequest(

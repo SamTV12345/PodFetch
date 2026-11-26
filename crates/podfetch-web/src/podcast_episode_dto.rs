@@ -3,7 +3,6 @@ use chrono::NaiveDateTime;
 use common_infrastructure::config::FileHandlerType;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
-use podfetch_identity::domain::user::User;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -40,9 +39,11 @@ pub enum FileType {
 }
 
 impl PodcastEpisodeDto {
+    /// `api_key` is the caller's own key; local file and proxy URLs carry it
+    /// when authentication is enabled so players can fetch them directly.
     pub fn from_episode_with_user(
         episode: PodcastEpisode,
-        user: Option<User>,
+        api_key: Option<&str>,
         favorite: Option<FavoritePodcastEpisode>,
         server_url: &str,
     ) -> Self {
@@ -50,7 +51,7 @@ impl PodcastEpisodeDto {
             &episode,
             &episode.file_episode_path,
             &episode.url,
-            &user,
+            api_key,
             FileType::Episode,
             server_url,
         );
@@ -59,7 +60,7 @@ impl PodcastEpisodeDto {
                 &episode,
                 &episode.file_image_path,
                 &episode.image_url,
-                &user,
+                api_key,
                 FileType::Image,
                 server_url,
             ),
@@ -188,7 +189,7 @@ fn map_url(
     episode: &PodcastEpisode,
     local_url: &Option<String>,
     remote_url: &str,
-    user: &Option<User>,
+    api_key: Option<&str>,
     r#type: FileType,
     server_url: &str,
 ) -> String {
@@ -196,7 +197,7 @@ fn map_url(
         Some(location) => {
             let handle = FileHandlerType::from_stored(location);
             match handle {
-                FileHandlerType::Local => map_file_url(local_url, remote_url, user, server_url),
+                FileHandlerType::Local => map_file_url(local_url, remote_url, api_key, server_url),
                 FileHandlerType::S3 => map_s3_url(local_url, remote_url),
             }
         }
@@ -208,8 +209,7 @@ fn map_url(
                 }
                 let mut url = url::Url::from_str(&format!("{server_url}proxy/podcast")).unwrap();
                 if ENVIRONMENT_SERVICE.any_auth_enabled
-                    && let Some(user) = user
-                    && let Some(key) = &user.api_key
+                    && let Some(key) = api_key
                 {
                     url.query_pairs_mut().append_pair("apiKey", key);
                 }
@@ -224,7 +224,7 @@ fn map_url(
 pub fn map_file_url(
     url: &Option<String>,
     remote_url: &str,
-    user: &Option<User>,
+    api_key: Option<&str>,
     server_url: &str,
 ) -> String {
     match url {
@@ -236,16 +236,11 @@ pub fn map_file_url(
                 .join("/");
             url_encoded = format!("{server_url}{url_encoded}");
 
-            if ENVIRONMENT_SERVICE.any_auth_enabled {
-                match &user {
-                    None => url_encoded,
-                    Some(user) => match &user.api_key {
-                        None => url_encoded,
-                        Some(key) => format!("{}{}{}", url_encoded, "?apiKey=", key),
-                    },
+            match api_key {
+                Some(key) if ENVIRONMENT_SERVICE.any_auth_enabled => {
+                    format!("{url_encoded}?apiKey={key}")
                 }
-            } else {
-                url_encoded
+                _ => url_encoded,
             }
         }
         None => remote_url.to_string(),

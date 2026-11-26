@@ -1,4 +1,5 @@
 use crate::app_state::AppState;
+use crate::auth_middleware::FeedApiKey;
 use crate::controllers::podcast_episode_controller::PodcastEpisodeWithHistory;
 use crate::controllers::podcast_episode_controller::resolve_episode_uuid;
 use crate::playlist;
@@ -7,7 +8,7 @@ pub use crate::playlist::PlaylistDtoPost;
 use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use common_infrastructure::error::CustomError;
-use podfetch_identity::domain::user::User;
+use podfetch_identity::api::Principal;
 use reqwest::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -23,10 +24,17 @@ tag="playlist"
 )]
 pub async fn add_playlist(
     State(state): State<AppState>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
+    Extension(api_key): Extension<FeedApiKey>,
     Json(playlist): Json<PlaylistDtoPost>,
 ) -> Result<Json<PlaylistDto>, CustomError> {
-    playlist::add_playlist(state.playlist_service.as_ref(), requester, playlist).map(Json)
+    playlist::add_playlist(
+        state.playlist_service.as_ref(),
+        requester,
+        api_key.as_deref(),
+        playlist,
+    )
+    .map(Json)
 }
 
 #[utoipa::path(
@@ -38,13 +46,15 @@ tag="playlist"
 )]
 pub async fn update_playlist(
     State(state): State<AppState>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
+    Extension(api_key): Extension<FeedApiKey>,
     Path(playlist_id): Path<String>,
     Json(playlist): Json<PlaylistDtoPost>,
 ) -> Result<Json<PlaylistDto>, CustomError> {
     playlist::update_playlist(
         state.playlist_service.as_ref(),
         requester,
+        api_key.as_deref(),
         playlist_id,
         playlist,
     )
@@ -60,9 +70,15 @@ tag="playlist"
 )]
 pub async fn get_all_playlists(
     State(state): State<AppState>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
+    Extension(api_key): Extension<FeedApiKey>,
 ) -> Result<Json<Vec<PlaylistDto>>, CustomError> {
-    playlist::get_all_playlists(state.playlist_service.as_ref(), requester).map(Json)
+    playlist::get_all_playlists(
+        state.playlist_service.as_ref(),
+        requester,
+        api_key.as_deref(),
+    )
+    .map(Json)
 }
 
 #[utoipa::path(
@@ -74,10 +90,17 @@ tag="playlist"
 )]
 pub async fn get_playlist_by_id(
     State(state): State<AppState>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
+    Extension(api_key): Extension<FeedApiKey>,
     Path(playlist_id): Path<String>,
 ) -> Result<Json<PlaylistDto>, CustomError> {
-    playlist::get_playlist_by_id(state.playlist_service.as_ref(), requester, playlist_id).map(Json)
+    playlist::get_playlist_by_id(
+        state.playlist_service.as_ref(),
+        requester,
+        api_key.as_deref(),
+        playlist_id,
+    )
+    .map(Json)
 }
 
 #[utoipa::path(
@@ -89,10 +112,14 @@ tag="playlist"
 )]
 pub async fn delete_playlist_by_id(
     State(state): State<AppState>,
-    requester: Extension<User>,
+    requester: Extension<Principal>,
     Path(playlist_id): Path<String>,
 ) -> Result<StatusCode, CustomError> {
-    playlist::delete_playlist_by_id(state.playlist_service.as_ref(), requester.id, playlist_id)?;
+    playlist::delete_playlist_by_id(
+        state.playlist_service.as_ref(),
+        requester.id.into(),
+        playlist_id,
+    )?;
     Ok(StatusCode::OK)
 }
 
@@ -105,13 +132,13 @@ tag="playlist"
 )]
 pub async fn delete_playlist_item(
     State(state): State<AppState>,
-    requester: Extension<User>,
+    requester: Extension<Principal>,
     Path(path): Path<(String, String)>,
 ) -> Result<StatusCode, CustomError> {
     let episode_uuid = resolve_episode_uuid(&path.1)?;
     playlist::delete_playlist_item(
         state.playlist_service.as_ref(),
-        requester.id,
+        requester.id.into(),
         path.0,
         episode_uuid,
     )?;
@@ -131,6 +158,7 @@ pub fn get_playlist_router() -> OpenApiRouter<AppState> {
 #[cfg(test)]
 mod tests {
     use crate::app_state::AppState;
+    use crate::auth_middleware::FeedApiKey;
     use crate::controllers::playlist_controller::PlaylistDtoPost;
     use crate::test_support::tests::handle_test_startup;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
@@ -141,6 +169,7 @@ mod tests {
     use diesel::QueryDsl;
     use diesel::RunQueryDsl;
     use diesel::dsl::count_star;
+    use podfetch_identity::api::Principal;
     use podfetch_identity::domain::user::User;
     use podfetch_persistence::db::get_connection;
     use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
@@ -322,7 +351,8 @@ mod tests {
 
         let result = super::update_playlist(
             State(app_state()),
-            Extension(build_other_user()),
+            Extension(Principal::from(&build_other_user())),
+            Extension(FeedApiKey(None)),
             Path(playlist_id),
             Json(PlaylistDtoPost {
                 name: "Hacker Rename".to_string(),
@@ -359,7 +389,7 @@ mod tests {
 
         let result = super::delete_playlist_by_id(
             State(app_state()),
-            Extension(build_other_user()),
+            Extension(Principal::from(&build_other_user())),
             Path(playlist_id),
         )
         .await;
@@ -409,7 +439,7 @@ mod tests {
 
         let result = super::delete_playlist_item(
             State(app_state()),
-            Extension(build_other_user()),
+            Extension(Principal::from(&build_other_user())),
             Path((playlist_id, episode.id)),
         )
         .await;
@@ -718,7 +748,8 @@ mod tests {
 
         let result = super::get_playlist_by_id(
             State(app_state()),
-            Extension(build_other_user()),
+            Extension(Principal::from(&build_other_user())),
+            Extension(FeedApiKey(None)),
             Path(playlist_id),
         )
         .await;
@@ -735,8 +766,12 @@ mod tests {
         let server = handle_test_startup().await;
         let _guard = &server.mutex;
 
-        let result =
-            super::get_all_playlists(State(app_state()), Extension(build_other_user())).await;
+        let result = super::get_all_playlists(
+            State(app_state()),
+            Extension(Principal::from(&build_other_user())),
+            Extension(FeedApiKey(None)),
+        )
+        .await;
         match result {
             Ok(Json(playlists)) => assert!(playlists.is_empty()),
             Err(err) => panic!("expected empty result, got error: {err}"),

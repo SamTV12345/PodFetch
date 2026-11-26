@@ -1,4 +1,5 @@
 use crate::app_state::AppState;
+use crate::auth_middleware::FeedApiKey;
 use crate::background::spawn_detached;
 use crate::controllers::controller_utils::{get_default_image, unwrap_string};
 use crate::controllers::id_resolver::{ResolvedId, parse_resolved_id};
@@ -15,6 +16,7 @@ use common_infrastructure::config::{BASIC_AUTH, OIDC_AUTH};
 use common_infrastructure::http::COMMON_USER_AGENT;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use opml::{OPML, Outline};
+use podfetch_identity::api::Principal;
 use rand::RngExt;
 use reqwest::header::HeaderValue;
 use rss::Channel;
@@ -40,7 +42,6 @@ use common_infrastructure::config::is_env_var_present_and_true;
 use common_infrastructure::http::get_http_client;
 use common_infrastructure::request::add_basic_auth_headers_conditionally;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
-use podfetch_identity::domain::user::User;
 use reqwest::header::HeaderMap as ReqwestHeaderMap;
 
 /// Client for streaming remote episodes through PodFetch.
@@ -74,11 +75,11 @@ tag="podcasts"
 )]
 pub async fn get_filter(
     State(state): State<AppState>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
 ) -> Result<Json<Filter>, CustomError> {
     let filter = state
         .filter_service
-        .get_filter_by_user_id(requester.id)?
+        .get_filter_by_user_id(requester.id.into())?
         .unwrap_or(crate::filter::default_podcast_filter());
     Ok(Json(filter))
 }
@@ -123,11 +124,14 @@ tag="podcasts"
 pub async fn search_podcasts(
     State(state): State<AppState>,
     Query(query): Query<PodcastSearchModelUtoipa>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
+    Extension(api_key): Extension<FeedApiKey>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastDto>>, CustomError> {
-    let existing_filter = state.filter_service.get_filter_by_user_id(requester.id)?;
-    let search_plan = build_podcast_search_plan(query, requester.id, existing_filter);
+    let existing_filter = state
+        .filter_service
+        .get_filter_by_user_id(requester.id.into())?;
+    let search_plan = build_podcast_search_plan(query, requester.id.into(), existing_filter);
     state.filter_service.save_filter(search_plan.filter)?;
     let server_url = resolve_server_url_from_headers(&headers);
 
@@ -138,7 +142,7 @@ pub async fn search_podcasts(
             search_plan.order_option,
             search_plan.user_id,
             search_plan.tag,
-            &requester,
+            api_key.as_deref(),
             &server_url,
         )?;
         Ok(Json(podcasts))
@@ -149,6 +153,7 @@ pub async fn search_podcasts(
             search_plan.order_option,
             search_plan.tag,
             &requester,
+            api_key.as_deref(),
             &server_url,
         )?;
         Ok(Json(podcasts))
@@ -166,7 +171,8 @@ tag="podcasts"
 pub async fn find_podcast_by_id(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Extension(user): Extension<User>,
+    Extension(user): Extension<Principal>,
+    Extension(api_key): Extension<FeedApiKey>,
     headers: HeaderMap,
 ) -> Result<Json<PodcastDto>, CustomError> {
     let server_url = resolve_server_url_from_headers(&headers);
@@ -174,10 +180,15 @@ pub async fn find_podcast_by_id(
     let (podcast_uuid, podcast) = resolve_podcast(&id)?;
     let tags = state
         .tag_service
-        .get_tags_of_podcast(podcast_uuid, user.id)?;
-    let favorite = PodcastService::get_favorite_state(user.id, podcast_uuid)?;
-    let podcast_dto =
-        map_podcast_with_context_to_dto(podcast.into(), favorite, tags, &user, &server_url);
+        .get_tags_of_podcast(podcast_uuid, user.id.into())?;
+    let favorite = PodcastService::get_favorite_state(user.id.into(), podcast_uuid)?;
+    let podcast_dto = map_podcast_with_context_to_dto(
+        podcast.into(),
+        favorite,
+        tags,
+        api_key.as_deref(),
+        &server_url,
+    );
     Ok(Json(podcast_dto))
 }
 
@@ -190,11 +201,12 @@ responses(
 tag="podcasts"
 )]
 pub async fn find_all_podcasts(
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
+    Extension(api_key): Extension<FeedApiKey>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastDto>>, CustomError> {
     let server_url = resolve_server_url_from_headers(&headers);
-    let podcasts = PodcastService::get_podcasts(&requester, &server_url)?;
+    let podcasts = PodcastService::get_podcasts(&requester, api_key.as_deref(), &server_url)?;
 
     Ok(Json(podcasts))
 }
@@ -209,7 +221,7 @@ tag="podcasts"
 )]
 pub async fn find_podcast(
     Path(podcast_col): Path<(i32, String)>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
 ) -> Result<Json<PodcastSearchReturn>, CustomError> {
     require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
 
@@ -247,7 +259,7 @@ tag="podcasts"
 )]
 #[debug_handler]
 pub async fn add_podcast(
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     headers: HeaderMap,
     Json(track_id): Json<PodcastAddModel>,
 ) -> Result<Json<PodcastDto>, CustomError> {
@@ -288,7 +300,7 @@ pub async fn add_podcast(
             image_url: unwrap_string(&result["artworkUrl600"]),
         },
         None,
-        Some(requester.id),
+        Some(requester.id.into()),
     )
     .await?;
     Ok(Json(map_podcast_to_dto(inserted.into(), &server_url)))
@@ -303,7 +315,7 @@ responses(
 tag="podcasts"
 )]
 pub async fn add_podcast_by_feed(
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     headers: HeaderMap,
     Json(rss_feed): Json<PodcastRSSAddModel>,
 ) -> Result<Json<PodcastDto>, CustomError> {
@@ -338,7 +350,7 @@ pub async fn add_podcast_by_feed(
                 .unwrap_or_else(|| get_default_image(&server_url)),
         },
         Some(channel),
-        Some(requester.id),
+        Some(requester.id.into()),
     )
     .await?;
     let res: PodcastDto = map_podcast_to_dto(inserted.into(), &server_url);
@@ -355,7 +367,7 @@ responses(
 tag="podcasts"
 )]
 pub async fn import_podcasts_from_opml(
-    requester: Extension<User>,
+    requester: Extension<Principal>,
     Json(opml): Json<OpmlModel>,
 ) -> Result<StatusCode, CustomError> {
     let document = OPML::from_str(&opml.content).map_err(|e| {
@@ -370,7 +382,7 @@ pub async fn import_podcasts_from_opml(
         futures::future::join_all(
             feed_urls
                 .into_iter()
-                .map(|feed_url| import_opml_feed(feed_url, added_by)),
+                .map(|feed_url| import_opml_feed(feed_url, added_by.map(Into::into))),
         )
         .await;
         Ok::<_, CustomError>(())
@@ -402,7 +414,7 @@ responses(
 tag="podcasts"
 )]
 pub async fn add_podcast_from_podindex(
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     Json(id): Json<PodcastAddModel>,
 ) -> Result<StatusCode, CustomError> {
     PodcastService::ensure_can_add_podcasts(&requester, 1)?;
@@ -415,7 +427,7 @@ pub async fn add_podcast_from_podindex(
     let added_by = Some(requester.id);
     let track_id = id.track_id;
     spawn_detached("podindex-import", move || async move {
-        PodcastService::insert_podcast_from_podindex(track_id, added_by)
+        PodcastService::insert_podcast_from_podindex(track_id, added_by.map(Into::into))
             .await
             .map(|_| ())
     });
@@ -439,7 +451,7 @@ pub async fn query_for_podcast(
         .map(|p| {
             PodcastEpisodeDto::from_episode_with_user(
                 p,
-                None::<User>,
+                None,
                 None::<FavoritePodcastEpisode>,
                 &server_url,
             )
@@ -457,7 +469,7 @@ responses(
 tag="podcasts"
 )]
 pub async fn refresh_all_podcasts(
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
 ) -> Result<StatusCode, CustomError> {
     require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
 
@@ -482,7 +494,7 @@ responses(
 tag="podcasts"
 )]
 pub async fn download_podcast(
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, CustomError> {
     require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
@@ -510,11 +522,11 @@ responses(
 tag="podcasts"
 )]
 pub async fn favorite_podcast(
-    requester: Extension<User>,
+    requester: Extension<Principal>,
     update_model: Json<PodcastFavorUpdateModel>,
 ) -> Result<StatusCode, CustomError> {
     let (podcast_uuid, _) = resolve_podcast(&update_model.id)?;
-    PodcastService::update_favor_podcast(podcast_uuid, update_model.favored, requester.id)?;
+    PodcastService::update_favor_podcast(podcast_uuid, update_model.favored, requester.id.into())?;
     Ok(StatusCode::OK)
 }
 
@@ -528,7 +540,7 @@ tag="podcasts"
 )]
 pub async fn update_name_of_podcast(
     Path(id): Path<String>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     req: Json<PodcastUpdateNameRequest>,
 ) -> Result<StatusCode, CustomError> {
     require_admin::<CustomError>(requester.is_admin()).map_err(map_podcast_error)?;
@@ -550,11 +562,13 @@ responses(
 tag="podcasts"
 )]
 pub async fn get_favored_podcasts(
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
+    Extension(api_key): Extension<FeedApiKey>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastDto>>, CustomError> {
     let server_url = resolve_server_url_from_headers(&headers);
-    let podcasts = PodcastService::get_favored_podcasts(requester, &server_url)?;
+    let podcasts =
+        PodcastService::get_favored_podcasts(requester, api_key.as_deref(), &server_url)?;
     Ok(Json(podcasts))
 }
 
@@ -568,7 +582,7 @@ tag="podcasts"
 )]
 pub async fn update_active_podcast(
     Path(id): Path<String>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
 ) -> Result<StatusCode, CustomError> {
     require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
 
@@ -649,7 +663,7 @@ tag="podcasts"
 pub async fn delete_podcast(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     Json(data): Json<DeletePodcast>,
 ) -> Result<StatusCode, CustomError> {
     require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
@@ -792,7 +806,7 @@ pub(crate) async fn proxy_podcast_with_path_api_key(
 pub async fn update_podcast_settings(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     Json(mut settings): Json<PodcastSetting>,
 ) -> Result<Json<PodcastSetting>, CustomError> {
     require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
@@ -813,7 +827,7 @@ pub async fn update_podcast_settings(
 pub async fn get_podcast_settings(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
 ) -> Result<Json<PodcastSetting>, CustomError> {
     require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
     let (podcast_uuid, _) = resolve_podcast(&id)?;
@@ -911,6 +925,7 @@ pub mod tests {
     use axum::http::HeaderMap;
     use axum::{Extension, Json};
     use common_infrastructure::error::CustomErrorInner;
+    use podfetch_identity::api::Principal;
     use podfetch_identity::domain::user::User;
     use serde_json::json;
     use serial_test::serial;
@@ -1132,7 +1147,7 @@ pub mod tests {
 
         let result = super::update_name_of_podcast(
             Path(saved_podcast.id),
-            Extension(non_admin),
+            Extension(Principal::from(&non_admin)),
             Json(PodcastUpdateNameRequest {
                 name: unique_name("Should Not Update"),
             }),
@@ -1293,7 +1308,7 @@ pub mod tests {
         let non_privileged = non_privileged_user();
 
         let add_itunes_result = super::add_podcast(
-            Extension(non_privileged.clone()),
+            Extension(Principal::from(&non_privileged.clone())),
             HeaderMap::new(),
             Json(PodcastAddModel {
                 track_id: 12345,
@@ -1307,7 +1322,7 @@ pub mod tests {
         }
 
         let add_feed_result = super::add_podcast_by_feed(
-            Extension(non_privileged.clone()),
+            Extension(Principal::from(&non_privileged.clone())),
             HeaderMap::new(),
             Json(PodcastRSSAddModel {
                 rss_feed_url: "https://example.com/feed.xml".to_string(),
@@ -1320,7 +1335,7 @@ pub mod tests {
         }
 
         let import_result = super::import_podcasts_from_opml(
-            Extension(non_privileged.clone()),
+            Extension(Principal::from(&non_privileged.clone())),
             Json(OpmlModel {
                 content: "<opml version=\"2.0\"><head><title>Test</title></head><body><outline text=\"feed\" xmlUrl=\"https://example.com/feed.xml\" /></body></opml>".to_string(),
             }),
@@ -1333,7 +1348,7 @@ pub mod tests {
 
         let find_result = find_podcast(
             Path((SearchType::ITunes as i32, "rust".to_string())),
-            Extension(non_privileged.clone()),
+            Extension(Principal::from(&non_privileged.clone())),
         )
         .await;
         match find_result {
@@ -1342,7 +1357,7 @@ pub mod tests {
         }
 
         let add_podindex_result = super::add_podcast_from_podindex(
-            Extension(non_privileged.clone()),
+            Extension(Principal::from(&non_privileged.clone())),
             Json(PodcastAddModel {
                 track_id: 321,
                 user_id: 0,
@@ -1355,22 +1370,27 @@ pub mod tests {
         }
 
         let refresh_all_result =
-            super::refresh_all_podcasts(Extension(non_privileged.clone())).await;
+            super::refresh_all_podcasts(Extension(Principal::from(&non_privileged.clone()))).await;
         match refresh_all_result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
             Ok(_) => panic!("expected forbidden for refresh_all_podcasts"),
         }
 
-        let download_result =
-            super::download_podcast(Extension(non_privileged.clone()), Path("1".to_string())).await;
+        let download_result = super::download_podcast(
+            Extension(Principal::from(&non_privileged.clone())),
+            Path("1".to_string()),
+        )
+        .await;
         match download_result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
             Ok(_) => panic!("expected forbidden for download_podcast"),
         }
 
-        let update_active_result =
-            super::update_active_podcast(Path("1".to_string()), Extension(non_privileged.clone()))
-                .await;
+        let update_active_result = super::update_active_podcast(
+            Path("1".to_string()),
+            Extension(Principal::from(&non_privileged.clone())),
+        )
+        .await;
         match update_active_result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
             Ok(_) => panic!("expected forbidden for update_active_podcast"),
@@ -1379,7 +1399,7 @@ pub mod tests {
         let delete_podcast_result = super::delete_podcast(
             State(app_state()),
             Path("1".to_string()),
-            Extension(non_privileged.clone()),
+            Extension(Principal::from(&non_privileged.clone())),
             Json(super::DeletePodcast {
                 delete_files: false,
             }),
@@ -1393,7 +1413,7 @@ pub mod tests {
         let update_settings_result = super::update_podcast_settings(
             State(app_state()),
             Path("1".to_string()),
-            Extension(non_privileged.clone()),
+            Extension(Principal::from(&non_privileged.clone())),
             Json(PodcastSetting::default()),
         )
         .await;
@@ -1405,7 +1425,7 @@ pub mod tests {
         let get_settings_result = super::get_podcast_settings(
             State(app_state()),
             Path("1".to_string()),
-            Extension(non_privileged),
+            Extension(Principal::from(&non_privileged)),
         )
         .await;
         match get_settings_result {

@@ -4,7 +4,6 @@ use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use http::HeaderMap;
 use podfetch_domain::ordering::{OrderCriteria, OrderOption};
 use podfetch_domain::podcast::Podcast;
-use podfetch_identity::domain::user::User;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
@@ -181,7 +180,7 @@ pub fn map_podcast_with_context_to_dto(
     value: Podcast,
     favorite: Option<bool>,
     tags: Vec<Tag>,
-    user: &User,
+    api_key: Option<&str>,
     server_url: &str,
 ) -> PodcastDto {
     let image_url = match resolve_file_handler_type(value.download_location.clone()) {
@@ -202,7 +201,7 @@ pub fn map_podcast_with_context_to_dto(
         directory_id: value.directory_id.clone(),
         rssfeed: value.rssfeed.clone(),
         image_url,
-        podfetch_feed: build_podfetch_feed(value.id, user.api_key.as_deref(), server_url),
+        podfetch_feed: build_podfetch_feed(value.id, api_key, server_url),
         language: value.language.clone(),
         keywords: dedupe_keywords(value.keywords.clone()),
         summary: value.summary.clone(),

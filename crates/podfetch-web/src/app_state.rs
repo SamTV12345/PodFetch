@@ -71,6 +71,7 @@ use tokio::sync::mpsc;
 #[derive(Clone)]
 pub struct AppState {
     pub event_bus: Arc<podfetch_events::EventBus>,
+    pub identity: Arc<dyn podfetch_identity::api::IdentityApi>,
     pub agent_dispatcher: Arc<AgentDispatcher>,
     pub agent_registry: Arc<AgentRegistry>,
     pub audiobookshelf_book_service: Arc<AudiobookshelfBookService>,
@@ -115,7 +116,6 @@ impl AppState {
         database: podfetch_persistence::db::Database,
         environment: Arc<EnvironmentService>,
     ) -> Self {
-        let event_bus_database = database.clone();
         let device_service = Arc::new(DeviceService::new(Arc::new(DeviceRepositoryImpl::new(
             database.clone(),
         ))));
@@ -192,9 +192,18 @@ impl AppState {
             Arc::new(TranscriptionJobRepositoryImpl::new(database.clone())),
         ));
         let watchtime_service = Arc::new(WatchtimeUseCase::new());
+        let identity: Arc<dyn podfetch_identity::api::IdentityApi> =
+            Arc::new(podfetch_identity::api::Identity::new(Arc::new(
+                UserAdminRepositoryImpl::new(database.clone()),
+            )));
+        let event_bus = podfetch_events::EventBus::new(
+            database.clone(),
+            podfetch_events::EventBusConfig::default(),
+        );
         let user_admin_service = Arc::new(UserAdminService::new(
             Arc::new(UserAdminRepositoryImpl::new(database.clone())),
             environment.clone(),
+            event_bus.clone(),
         ));
         let user_onboarding_service = Arc::new(UserOnboardingService::new(
             invite_service.clone(),
@@ -252,10 +261,8 @@ impl AppState {
         let audiobookshelf_hls_transcoder = Arc::new(HlsTranscoder::new(environment.clone()));
 
         Self {
-            event_bus: podfetch_events::EventBus::new(
-                event_bus_database,
-                podfetch_events::EventBusConfig::default(),
-            ),
+            event_bus,
+            identity,
             agent_dispatcher,
             agent_registry,
             audiobookshelf_book_service,

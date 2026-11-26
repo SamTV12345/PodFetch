@@ -1,4 +1,5 @@
 use crate::app_state::AppState;
+use crate::auth_middleware::FeedApiKey;
 use crate::controllers::id_resolver::{ResolvedId, parse_resolved_id};
 use crate::history::EpisodeDto;
 use crate::history::map_episode_to_dto;
@@ -30,7 +31,7 @@ use axum::http::StatusCode;
 use axum::{Extension, Json};
 use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
-use podfetch_identity::domain::user::User;
+use podfetch_identity::api::Principal;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -91,7 +92,8 @@ pub async fn find_all_chapters_of_podcast_episode(
 )]
 pub async fn get_podcast_episode_by_id(
     Path(id): Path<String>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
+    Extension(api_key): Extension<FeedApiKey>,
     headers: HeaderMap,
 ) -> Result<Json<PodcastEpisodeWithHistory>, CustomError> {
     let server_url = resolve_server_url_from_headers(&headers);
@@ -104,7 +106,7 @@ pub async fn get_podcast_episode_by_id(
                 opt.map(|podcast_inner| {
                     PodcastEpisodeDto::from_episode_with_user(
                         podcast_inner,
-                        Some(requester),
+                        api_key.as_deref(),
                         None,
                         &server_url,
                     )
@@ -132,7 +134,8 @@ tag = "podcast_episodes"
 )]
 pub async fn find_all_podcast_episodes_of_podcast(
     Path(id): Path<String>,
-    Extension(user): Extension<User>,
+    Extension(user): Extension<Principal>,
+    Extension(api_key): Extension<FeedApiKey>,
     last_podcast_episode: Query<OptionalId>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastEpisodeWithHistory>>, CustomError> {
@@ -156,7 +159,7 @@ pub async fn find_all_podcast_episodes_of_podcast(
                     .map(|podcast_inner| {
                         let mapped_podcast_episode = PodcastEpisodeDto::from_episode_with_user(
                             podcast_inner.0,
-                            Some(user.clone()),
+                            api_key.as_deref(),
                             podcast_inner.2,
                             &server_url,
                         );
@@ -187,7 +190,7 @@ pub async fn find_all_podcast_episodes_of_podcast(
 )]
 pub async fn get_available_podcasts_not_in_webview(
     State(state): State<AppState>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
 ) -> Result<Json<Vec<GPodderAvailablePodcast>>, CustomError> {
     web_require_privileged::<CustomError>(requester.is_privileged_user())
         .map_err(map_podcast_episode_controller_error)?;
@@ -207,12 +210,13 @@ responses(
 tag = "podcasts"
 )]
 pub async fn get_timeline(
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
+    Extension(api_key): Extension<FeedApiKey>,
     Query(favored_only): Query<TimelineQueryParams>,
     headers: HeaderMap,
 ) -> Result<Json<TimeLinePodcastItem>, CustomError> {
     let server_url = resolve_server_url_from_headers(&headers);
-    let res = TimelineItem::get_timeline(requester, favored_only, &server_url)?;
+    let res = TimelineItem::get_timeline(requester, api_key.as_deref(), favored_only, &server_url)?;
 
     let mapped_timeline = res
         .data
@@ -247,14 +251,16 @@ path="/podcasts/{id}/episodes/favor",
 pub async fn like_podcast_episode(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     Json(fav): Json<FavoritePut>,
 ) -> Result<StatusCode, CustomError> {
     let episode_id = resolve_episode_uuid(&id)?;
     println!("User id is {}, Episode id is {}", requester.id, episode_id);
-    state
-        .favorite_podcast_episode_service
-        .set_favorite(requester.id, episode_id, fav.favored)?;
+    state.favorite_podcast_episode_service.set_favorite(
+        requester.id.into(),
+        episode_id,
+        fav.favored,
+    )?;
 
     Ok(StatusCode::OK)
 }
@@ -270,7 +276,7 @@ responses(
 tag = "podcast_episodes"
 )]
 pub async fn download_podcast_episodes_of_podcast(
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, CustomError> {
     web_require_privileged::<CustomError>(requester.is_privileged_user())
@@ -357,7 +363,7 @@ tag = "podcast_episodes"
 )]
 pub async fn delete_podcast_episode_locally(
     id: Path<String>,
-    requester: Extension<User>,
+    requester: Extension<Principal>,
 ) -> Result<StatusCode, CustomError> {
     web_require_privileged::<CustomError>(requester.is_privileged_user())
         .map_err(map_podcast_episode_controller_error)?;
@@ -425,7 +431,7 @@ responses(
 tag = "podcast_episodes"
 )]
 pub async fn set_all_podcast_episodes_played(
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     Path(id): Path<String>,
     Json(request): Json<PodcastEpisodesPlayedRequest>,
 ) -> Result<Json<PodcastEpisodesPlayedResponse>, CustomError> {
@@ -447,7 +453,7 @@ responses(
 tag = "podcast_episodes"
 )]
 pub async fn download_all_missing_episodes(
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, CustomError> {
     web_require_privileged::<CustomError>(requester.is_admin())
@@ -480,7 +486,7 @@ responses(
 tag = "podcast_episodes"
 )]
 pub async fn download_episode_range(
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     Path(id): Path<String>,
     Json(range): Json<DownloadRange>,
 ) -> Result<StatusCode, CustomError> {
@@ -510,7 +516,7 @@ responses(
 tag = "podcast_episodes"
 )]
 pub async fn resync_files_for_podcast(
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, CustomError> {
     web_require_privileged::<CustomError>(requester.is_admin())
@@ -535,7 +541,7 @@ responses(
 tag = "podcast_episodes"
 )]
 pub async fn resync_db_for_podcast(
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     Path(id): Path<String>,
 ) -> Result<Json<BatchActionResponse>, CustomError> {
     web_require_privileged::<CustomError>(requester.is_admin())
@@ -559,7 +565,7 @@ responses(
 tag = "podcast_episodes"
 )]
 pub async fn delete_all_downloaded_files(
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     Path(id): Path<String>,
 ) -> Result<Json<BatchActionResponse>, CustomError> {
     web_require_privileged::<CustomError>(requester.is_admin())
@@ -665,6 +671,7 @@ mod tests {
     use diesel::ExpressionMethods;
     use diesel::QueryDsl;
     use diesel::RunQueryDsl;
+    use podfetch_identity::api::Principal;
     use podfetch_identity::domain::user::User;
     use podfetch_persistence::db::get_connection;
     use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
@@ -1020,7 +1027,7 @@ mod tests {
 
         let available_result = super::get_available_podcasts_not_in_webview(
             State(app_state()),
-            Extension(non_admin.clone()),
+            Extension(Principal::from(&non_admin.clone())),
         )
         .await;
         match available_result {
@@ -1029,7 +1036,7 @@ mod tests {
         }
 
         let download_result = super::download_podcast_episodes_of_podcast(
-            Extension(non_admin.clone()),
+            Extension(Principal::from(&non_admin.clone())),
             Path("episode-id".to_string()),
         )
         .await;
@@ -1040,7 +1047,7 @@ mod tests {
 
         let delete_result = super::delete_podcast_episode_locally(
             Path("episode-id".to_string()),
-            Extension(non_admin),
+            Extension(Principal::from(&non_admin)),
         )
         .await;
         match delete_result {
@@ -1264,7 +1271,7 @@ mod tests {
 
         for caller in [regular_user, uploader] {
             let download_all = super::download_all_missing_episodes(
-                Extension(caller.clone()),
+                Extension(Principal::from(&caller.clone())),
                 Path("1".to_string()),
             )
             .await;
@@ -1273,24 +1280,28 @@ mod tests {
                 Ok(_) => panic!("expected forbidden for download_all_missing_episodes"),
             }
 
-            let resync_files =
-                super::resync_files_for_podcast(Extension(caller.clone()), Path("1".to_string()))
-                    .await;
+            let resync_files = super::resync_files_for_podcast(
+                Extension(Principal::from(&caller.clone())),
+                Path("1".to_string()),
+            )
+            .await;
             match resync_files {
                 Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
                 Ok(_) => panic!("expected forbidden for resync_files_for_podcast"),
             }
 
-            let resync_db =
-                super::resync_db_for_podcast(Extension(caller.clone()), Path("1".to_string()))
-                    .await;
+            let resync_db = super::resync_db_for_podcast(
+                Extension(Principal::from(&caller.clone())),
+                Path("1".to_string()),
+            )
+            .await;
             match resync_db {
                 Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
                 Ok(_) => panic!("expected forbidden for resync_db_for_podcast"),
             }
 
             let download_range = super::download_episode_range(
-                Extension(caller.clone()),
+                Extension(Principal::from(&caller.clone())),
                 Path("1".to_string()),
                 axum::Json(super::DownloadRange { from: 1, to: 5 }),
             )
@@ -1300,8 +1311,11 @@ mod tests {
                 Ok(_) => panic!("expected forbidden for download_episode_range"),
             }
 
-            let delete_all =
-                super::delete_all_downloaded_files(Extension(caller), Path("1".to_string())).await;
+            let delete_all = super::delete_all_downloaded_files(
+                Extension(Principal::from(&caller)),
+                Path("1".to_string()),
+            )
+            .await;
             match delete_all {
                 Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
                 Ok(_) => panic!("expected forbidden for delete_all_downloaded_files"),

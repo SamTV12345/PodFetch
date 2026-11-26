@@ -6,7 +6,7 @@ use crate::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
 use chrono::Utc;
 use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use podfetch_domain::episode_triage::{EpisodeTriage, EpisodeTriageRepository, TriageStatus};
-use podfetch_identity::domain::user::User;
+use podfetch_identity::api::Principal;
 use podfetch_persistence::adapters::EpisodeTriageRepositoryImpl;
 use podfetch_persistence::db::database;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
@@ -37,7 +37,8 @@ impl EpisodeTriageService {
     /// the requesting user's listen history so the UI can render progress.
     fn to_item(
         episode: PodcastEpisode,
-        user: &User,
+        user: &Principal,
+        api_key: Option<&str>,
         server_url: &str,
     ) -> PodcastEpisodeWithHistory {
         let history = WatchtimeService::get_watchtime(&episode.episode_id, &user.username)
@@ -46,10 +47,7 @@ impl EpisodeTriageService {
 
         PodcastEpisodeWithHistory {
             podcast_episode: PodcastEpisodeDto::from_episode_with_user(
-                episode,
-                Some(user.clone()),
-                None,
-                server_url,
+                episode, api_key, None, server_url,
             ),
             podcast_history_item: history.map(Into::into).as_ref().map(map_episode_to_dto),
         }
@@ -59,17 +57,18 @@ impl EpisodeTriageService {
     /// download state.
     pub fn get_inbox(
         &self,
-        user: &User,
+        user: &Principal,
+        api_key: Option<&str>,
         last_date: Option<String>,
         limit: i64,
         server_url: &str,
     ) -> Result<Vec<PodcastEpisodeWithHistory>, CustomError> {
-        let triaged = self.repository.list_triaged_episode_ids(user.id)?;
+        let triaged = self.repository.list_triaged_episode_ids(user.id.into())?;
         let episodes =
             PodcastEpisodeService::get_inbox_episodes(&triaged, last_date.as_deref(), limit)?;
         Ok(episodes
             .into_iter()
-            .map(|episode| Self::to_item(episode, user, server_url))
+            .map(|episode| Self::to_item(episode, user, api_key, server_url))
             .collect())
     }
 
@@ -77,12 +76,13 @@ impl EpisodeTriageService {
     /// not-yet-finished downloads so the user sees what they selected.
     pub fn get_waiting_list(
         &self,
-        user: &User,
+        user: &Principal,
+        api_key: Option<&str>,
         server_url: &str,
     ) -> Result<Vec<PodcastEpisodeWithHistory>, CustomError> {
         let ids = self
             .repository
-            .list_episode_ids_by_status(user.id, TriageStatus::Queued)?;
+            .list_episode_ids_by_status(user.id.into(), TriageStatus::Queued)?;
 
         let mut episodes: Vec<PodcastEpisode> = ids
             .into_iter()
@@ -96,14 +96,15 @@ impl EpisodeTriageService {
 
         Ok(episodes
             .into_iter()
-            .map(|episode| Self::to_item(episode, user, server_url))
+            .map(|episode| Self::to_item(episode, user, api_key, server_url))
             .collect())
     }
 
     /// Archive: every downloaded, non-deleted episode, newest first.
     pub fn get_archive(
         &self,
-        user: &User,
+        user: &Principal,
+        api_key: Option<&str>,
         last_date: Option<String>,
         limit: i64,
         server_url: &str,
@@ -112,7 +113,7 @@ impl EpisodeTriageService {
             PodcastEpisodeService::get_downloaded_episodes_paginated(last_date.as_deref(), limit)?;
         Ok(episodes
             .into_iter()
-            .map(|episode| Self::to_item(episode, user, server_url))
+            .map(|episode| Self::to_item(episode, user, api_key, server_url))
             .collect())
     }
 
@@ -133,8 +134,8 @@ impl EpisodeTriageService {
     }
 
     /// Dismiss every episode currently in the user's inbox.
-    pub fn clear_inbox(&self, user: &User) -> Result<usize, CustomError> {
-        let triaged = self.repository.list_triaged_episode_ids(user.id)?;
+    pub fn clear_inbox(&self, user: &Principal) -> Result<usize, CustomError> {
+        let triaged = self.repository.list_triaged_episode_ids(user.id.into())?;
         let inbox = PodcastEpisodeService::get_inbox_episodes(&triaged, None, CLEAR_INBOX_LIMIT)?;
         let now = Utc::now().naive_utc();
 
@@ -148,7 +149,7 @@ impl EpisodeTriageService {
                 .into()
             })?;
             self.repository.upsert(EpisodeTriage {
-                user_id: user.id,
+                user_id: user.id.into(),
                 episode_id,
                 status: TriageStatus::Dismissed,
                 updated_at: now,

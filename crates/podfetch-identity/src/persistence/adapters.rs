@@ -35,6 +35,10 @@ impl UserAdminRepository for UserAdminRepositoryImpl {
         self.inner.find_by_api_key(api_key).map_err(Into::into)
     }
 
+    fn find_by_id(&self, id: Uuid) -> Result<Option<ManagedUser>, Self::Error> {
+        self.inner.find_by_id(id).map_err(Into::into)
+    }
+
     fn find_by_username(&self, username: &str) -> Result<Option<ManagedUser>, Self::Error> {
         self.inner.find_by_username(username).map_err(Into::into)
     }

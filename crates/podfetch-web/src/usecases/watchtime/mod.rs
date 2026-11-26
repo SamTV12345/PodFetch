@@ -13,7 +13,7 @@ use common_infrastructure::error::CustomError;
 use podfetch_domain::episode::{EpisodeRepository, NewEpisode};
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::listening_event::NewListeningEvent;
-use podfetch_identity::domain::user::User;
+use podfetch_identity::api::Principal;
 use podfetch_identity::domain::user_admin::UserAdminRepository;
 use podfetch_identity::persistence::user_admin::DieselUserAdminRepository;
 use podfetch_persistence::db::database;
@@ -225,7 +225,7 @@ impl WatchtimeUseCase {
     }
 
     pub fn get_last_watched_episodes(
-        user: &User,
+        user: &Principal,
     ) -> Result<Vec<(PodcastEpisode, Episode, Podcast)>, CustomError> {
         Self::repo()
             .find_last_watched_episodes(&user.username)
@@ -459,7 +459,8 @@ impl WatchtimeApplicationService for WatchtimeUseCase {
 
     fn get_last_watched(
         &self,
-        user: &User,
+        user: &Principal,
+        api_key: Option<&str>,
         server_url: &str,
     ) -> Result<Vec<Self::LastWatchedItem>, Self::Error> {
         Self::get_last_watched_episodes(user).map(|items| {
@@ -469,7 +470,7 @@ impl WatchtimeApplicationService for WatchtimeUseCase {
                     PodcastWatchedEpisodeModelWithPodcastEpisode {
                         podcast_episode: PodcastEpisodeDto::from_episode_with_user(
                             podcast_episode,
-                            Some(user.clone()),
+                            api_key,
                             None::<FavoritePodcastEpisode>,
                             server_url,
                         ),

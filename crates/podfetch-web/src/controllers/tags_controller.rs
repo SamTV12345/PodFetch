@@ -7,7 +7,7 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
 use common_infrastructure::error::CustomError;
-use podfetch_identity::domain::user::User;
+use podfetch_identity::api::Principal;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -38,10 +38,10 @@ tag="tags"
 )]
 pub async fn insert_tag(
     State(state): State<AppState>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     Json(tag_create): Json<TagCreate>,
 ) -> Result<Json<Tag>, CustomError> {
-    tags::create_tag(state.tag_service.as_ref(), requester.id, tag_create).map(Json)
+    tags::create_tag(state.tag_service.as_ref(), requester.id.into(), tag_create).map(Json)
 }
 
 #[utoipa::path(
@@ -53,9 +53,9 @@ tag="tags"
 )]
 pub async fn get_tags(
     State(state): State<AppState>,
-    requester: Extension<User>,
+    requester: Extension<Principal>,
 ) -> Result<Json<Vec<Tag>>, CustomError> {
-    tags::get_tags(state.tag_service.as_ref(), requester.id).map(Json)
+    tags::get_tags(state.tag_service.as_ref(), requester.id.into()).map(Json)
 }
 
 #[utoipa::path(
@@ -68,9 +68,10 @@ tag="tags"
 pub async fn delete_tag(
     State(state): State<AppState>,
     Path(tag_id): Path<String>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
 ) -> Result<StatusCode, CustomError> {
-    tags::delete_tag(state.tag_service.as_ref(), requester.id, &tag_id).map(|_| StatusCode::OK)
+    tags::delete_tag(state.tag_service.as_ref(), requester.id.into(), &tag_id)
+        .map(|_| StatusCode::OK)
 }
 
 #[utoipa::path(
@@ -83,12 +84,12 @@ tag="tags"
 pub async fn update_tag(
     State(state): State<AppState>,
     Path(tag_id): Path<String>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     Json(tag_create): Json<TagCreate>,
 ) -> Result<Json<Tag>, CustomError> {
     tags::update_tag(
         state.tag_service.as_ref(),
-        requester.id,
+        requester.id.into(),
         &tag_id,
         tag_create,
     )
@@ -105,13 +106,13 @@ tag="tags"
 pub async fn add_podcast_to_tag(
     State(state): State<AppState>,
     Path(tag_id_to_convert): Path<(String, String)>,
-    requester: Extension<User>,
+    requester: Extension<Principal>,
 ) -> Result<Json<TagsPodcast>, CustomError> {
     let (tag_id, podcast_id) = tag_id_to_convert;
     let podcast_uuid = resolve_podcast_uuid(&podcast_id)?;
     tags::add_podcast_to_tag(
         state.tag_service.as_ref(),
-        requester.id,
+        requester.id.into(),
         &tag_id,
         podcast_uuid,
     )
@@ -128,14 +129,14 @@ tag="tags"
 pub async fn delete_podcast_from_tag(
     State(state): State<AppState>,
     Path(tag_id): Path<(String, String)>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
 ) -> Result<StatusCode, CustomError> {
     let (tag_id, podcast_id) = tag_id;
     let podcast_uuid = resolve_podcast_uuid(&podcast_id)?;
 
     tags::delete_podcast_from_tag(
         state.tag_service.as_ref(),
-        requester.id,
+        requester.id.into(),
         &tag_id,
         podcast_uuid,
     )
@@ -162,6 +163,7 @@ mod tests {
     use axum::{Extension, Json};
     use common_infrastructure::error::CustomErrorInner;
     use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
+    use podfetch_identity::api::Principal;
     use serde_json::json;
     use serial_test::serial;
     use uuid::Uuid;
@@ -411,7 +413,7 @@ mod tests {
         let update_result = super::update_tag(
             State(app_state()),
             Path(created_tag.id.clone()),
-            Extension(other_user()),
+            Extension(Principal::from(&other_user())),
             Json(super::TagCreate {
                 name: unique_name("Hacker Rename"),
                 description: Some("forbidden".to_string()),
@@ -427,7 +429,7 @@ mod tests {
         let delete_result = super::delete_tag(
             State(app_state()),
             Path(created_tag.id),
-            Extension(other_user()),
+            Extension(Principal::from(&other_user())),
         )
         .await;
         match delete_result {

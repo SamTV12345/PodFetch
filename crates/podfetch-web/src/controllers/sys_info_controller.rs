@@ -8,6 +8,7 @@ use common_infrastructure::error::ErrorType::CustomErrorType;
 use common_infrastructure::error::{
     ApiError, CustomError, CustomErrorInner, ErrorSeverity, ErrorType, map_sys_error,
 };
+use podfetch_identity::api::Principal;
 
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 fn get_size(path: &str) -> Result<u64, std::io::Error> {
@@ -28,7 +29,6 @@ fn get_size(path: &str) -> Result<u64, std::io::Error> {
 }
 use crate::sys::{self, SysExtraInfo, VersionInfo};
 use crate::url_rewriting::resolve_server_url_from_headers;
-use podfetch_identity::domain::user::User;
 use podfetch_identity::login::{self, LoginControllerError, LoginRequest};
 use reqwest::StatusCode;
 use sysinfo::{Disks, System};
@@ -48,7 +48,7 @@ body = SysExtraInfo)),
 tag="sys"
 )]
 pub async fn get_sys_info(
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
 ) -> Result<Json<SysExtraInfo>, CustomError> {
     if !requester.is_admin() {
         return Err(CustomErrorInner::Forbidden(Info).into());
@@ -171,6 +171,7 @@ mod tests {
     use common_infrastructure::config::ConfigModel;
     use common_infrastructure::error::{CustomErrorInner, ErrorType};
     use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
+    use podfetch_identity::api::Principal;
     use podfetch_identity::domain::user::User;
     use podfetch_identity::role::Role;
     use serde_json::Value;
@@ -446,7 +447,7 @@ mod tests {
             true,
         );
 
-        let result = super::get_sys_info(Extension(non_admin)).await;
+        let result = super::get_sys_info(Extension(Principal::from(&non_admin))).await;
         match result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
             Ok(_) => panic!("expected forbidden error"),
