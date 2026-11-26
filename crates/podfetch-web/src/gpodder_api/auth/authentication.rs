@@ -254,7 +254,7 @@ mod tests {
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
 
     fn app_state() -> AppState {
-        AppState::new()
+        crate::test_support::tests::app_state()
     }
 
     #[tokio::test]

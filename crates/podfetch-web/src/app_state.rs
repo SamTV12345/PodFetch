@@ -34,7 +34,6 @@ use crate::services::user_auth::service::UserAuthService;
 use crate::services::user_onboarding::service::UserOnboardingService;
 use crate::usecases::watchtime::WatchtimeUseCase;
 use common_infrastructure::config::EnvironmentService;
-use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use podfetch_cast::StubCastDriver;
 use podfetch_persistence::adapters::AuthorRepositoryImpl;
 use podfetch_persistence::adapters::BookAudioFileRepositoryImpl;
@@ -108,16 +107,13 @@ pub struct AppState {
     pub watchtime_service: Arc<WatchtimeUseCase>,
 }
 
-impl Default for AppState {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl AppState {
-    pub fn new() -> Self {
-        let database = podfetch_persistence::db::database();
-        let environment = Arc::new(ENVIRONMENT_SERVICE.clone());
+    /// Wires every service onto `database`. Only the
+    /// [`crate::application::Application`] (and test support) builds one.
+    pub(crate) fn build(
+        database: podfetch_persistence::db::Database,
+        environment: Arc<EnvironmentService>,
+    ) -> Self {
         let device_service = Arc::new(DeviceService::new(Arc::new(DeviceRepositoryImpl::new(
             database.clone(),
         ))));

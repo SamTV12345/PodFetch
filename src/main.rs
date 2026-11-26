@@ -6,7 +6,8 @@ use crate::command_line_runner::start_command_line;
 
 use common_infrastructure::config::EnvironmentService;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
-use podfetch_web::startup::handle_config_for_server_startup;
+use podfetch_web::application::Application;
+use std::sync::Arc;
 
 mod agent;
 mod command_line_runner;
@@ -36,20 +37,21 @@ async fn main() -> std::io::Result<()> {
         return agent::run_agent(config).await;
     }
 
+    let app = match Application::build(Arc::new(ENVIRONMENT_SERVICE.clone())) {
+        Ok(app) => app,
+        Err(e) => {
+            eprintln!("PodFetch cannot start: {e}");
+            exit(1);
+        }
+    };
+
     if args().len() > 1 {
-        if let Err(e) = start_command_line(args()).await {
+        if let Err(e) = start_command_line(app.state(), args()).await {
             tracing::error!("Error in command line: {e}");
             exit(1);
         }
         exit(0)
     }
 
-    let router = handle_config_for_server_startup();
-    let port = ENVIRONMENT_SERVICE.port;
-    let bind_addr = format!("0.0.0.0:{port}");
-    let listener = tokio::net::TcpListener::bind(&bind_addr).await?;
-    tracing::info!("Listening on {bind_addr}");
-
-    axum::serve(listener, router).await?;
-    Ok(())
+    app.run().await
 }

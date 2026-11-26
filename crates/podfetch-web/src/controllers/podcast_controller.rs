@@ -932,7 +932,7 @@ pub mod tests {
     }
 
     fn app_state() -> AppState {
-        AppState::new()
+        crate::test_support::tests::app_state()
     }
 
     #[tokio::test]
@@ -1460,7 +1460,7 @@ pub mod tests {
     // ── Path-based API key proxy tests ──────────────────────────────────
 
     fn create_api_key_user() -> String {
-        let state = AppState::new();
+        let state = crate::test_support::tests::app_state();
         let mut user = UserTestDataBuilder::new().build();
         user.username = format!("proxy-test-user-{}", Uuid::new_v4());
         let api_key = format!("proxy-test-key-{}", Uuid::new_v4());

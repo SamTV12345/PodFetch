@@ -25,7 +25,6 @@ use crate::controllers::watch_time_controller::get_watchtime_router;
 use crate::controllers::websocket_controller::get_websocket_router;
 use crate::routes::global_routes;
 use crate::server::SOCKET_IO_LAYER;
-use crate::services::file::service::FileService;
 use crate::services::podcast::service::PodcastService;
 use crate::services::settings::service::SettingsService;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
@@ -36,7 +35,6 @@ use axum::http::header;
 use axum::middleware::from_fn_with_state;
 use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::get;
-use clokwerk::{Scheduler, TimeUnits};
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::runtime::{ENVIRONMENT_SERVICE, MAIN_ROOM};
 use maud::{Markup, html};
@@ -46,10 +44,7 @@ use tracing::info;
 
 const CSS: &str = "css";
 const JS: &str = "javascript";
-use std::process::exit;
 use std::sync::OnceLock;
-use std::thread;
-use std::time::Duration;
 use tokio::fs;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -208,49 +203,6 @@ async fn index(headers: http::HeaderMap) -> Html<String> {
     Html(transform_index_files(&headers))
 }
 
-fn check_if_multiple_auth_is_configured() -> bool {
-    let mut num_of_auth_count = 0;
-    if ENVIRONMENT_SERVICE.http_basic {
-        num_of_auth_count += 1;
-    }
-    if ENVIRONMENT_SERVICE.oidc_configured {
-        num_of_auth_count += 1;
-    }
-    if ENVIRONMENT_SERVICE.reverse_proxy {
-        num_of_auth_count += 1;
-    }
-    num_of_auth_count > 1
-}
-
-pub fn check_server_config() {
-    if ENVIRONMENT_SERVICE.http_basic
-        && (ENVIRONMENT_SERVICE.password.is_none() || ENVIRONMENT_SERVICE.username.is_none())
-    {
-        eprintln!(
-            "BASIC_AUTH activated but no username or password set. Please set username and password in the .env file."
-        );
-        exit(1);
-    }
-
-    if ENVIRONMENT_SERVICE.gpodder_integration_enabled
-        && !(ENVIRONMENT_SERVICE.http_basic
-            || ENVIRONMENT_SERVICE.oidc_configured
-            || ENVIRONMENT_SERVICE.reverse_proxy)
-    {
-        eprintln!(
-            "GPODDER_INTEGRATION_ENABLED activated but no BASIC_AUTH or OIDC_AUTH set. Please set BASIC_AUTH or OIDC_AUTH in the .env file."
-        );
-        exit(1);
-    }
-
-    if check_if_multiple_auth_is_configured() {
-        eprintln!(
-            "You cannot have oidc and basic auth enabled at the same time. Please disable one of them."
-        );
-        exit(1);
-    }
-}
-
 pub fn get_ui_config() -> OpenApiRouter {
     OpenApiRouter::new().nest(
         "/ui/",
@@ -378,36 +330,9 @@ fn get_private_api(state: AppState) -> OpenApiRouter {
     }
 }
 
-/// Builds the full Router with migrations, settings, and SocketIO —
-/// but **without** the background scheduler. Use this for tests.
-pub fn build_server_router() -> Router {
-    let state = AppState::new();
-    podfetch_persistence::run_migrations();
-
-    check_server_config();
-
-    match FileService::create_podcast_root_directory_exists() {
-        Ok(_) => {}
-        Err(e) => {
-            tracing::error!("Could not create podcast root directory: {e}");
-            panic!("Could not create podcast root directory: {e}");
-        }
-    }
-
-    insert_default_settings_if_not_present(state.settings_service.as_ref())
-        .expect("Could not insert default settings");
-
-    state
-        .user_auth_service
-        .ensure_standard_user_present()
-        .expect("Could not seed standard user");
-
-    if ENVIRONMENT_SERVICE.audiobookshelf_integration_enabled
-        && let Err(e) = state.audiobookshelf_library_service.bootstrap_defaults()
-    {
-        tracing::error!("Could not bootstrap audiobookshelf default libraries: {e:?}");
-    }
-
+/// Builds the full router (API, UI, socket.io, API docs) for `state`.
+/// Bootstrapping the database is [`crate::application::Application::build`]'s job.
+pub(crate) fn build_router(state: AppState) -> Router {
     let sub_dir = ENVIRONMENT_SERVICE
         .sub_directory
         .clone()
@@ -565,72 +490,6 @@ async fn http_request_logger(req: Request, next: axum::middleware::Next) -> Resp
         tracing::info!("{method} {path_and_query} -> {status} in {elapsed_ms}ms");
     }
     response
-}
-
-/// Full server startup including background scheduler for polling and cleanup.
-pub fn handle_config_for_server_startup() -> Router {
-    let router = build_server_router();
-
-    // Background scheduler — not started during tests to avoid SQLite lock contention
-    let scheduler_state = AppState::new();
-    let settings_service_for_polling = scheduler_state.settings_service.clone();
-    let settings_service_for_cleanup = scheduler_state.settings_service;
-    let session_service_for_cleanup = scheduler_state.session_service;
-    thread::spawn(move || {
-        let mut scheduler = Scheduler::new();
-
-        let polling_interval = ENVIRONMENT_SERVICE.get_polling_interval();
-        scheduler.every(polling_interval.minutes()).run(move || {
-            // A panic here would silently stop polling until the next restart.
-            match settings_service_for_polling.get_settings() {
-                Ok(Some(settings)) if settings.auto_update => {
-                    info!("Polling for new episodes");
-                    match run_poll() {
-                        Ok(()) => info!("Polling for new episodes successful"),
-                        Err(e) => tracing::error!("Error polling for new episodes: {e}"),
-                    }
-                }
-                Ok(Some(_)) => {}
-                Ok(None) => tracing::error!("Could not get settings from database"),
-                Err(e) => tracing::error!("Could not load settings for polling: {e}"),
-            }
-        });
-
-        scheduler.every(1.day()).run(move || {
-            if let Err(e) = session_service_for_cleanup.cleanup_expired() {
-                tracing::error!("Error clearing old sessions: {e}");
-            }
-            match settings_service_for_cleanup.get_settings() {
-                Ok(Some(settings)) if settings.auto_cleanup => {
-                    PodcastEpisodeService::cleanup_old_episodes(settings.auto_cleanup_days);
-                }
-                Ok(Some(_)) => {}
-                Ok(None) => tracing::error!("Could not get settings from database"),
-                Err(e) => tracing::error!("Could not load settings for cleanup: {e}"),
-            }
-        });
-
-        loop {
-            scheduler.run_pending();
-            thread::sleep(Duration::from_millis(1000));
-        }
-    });
-
-    // Transcription job worker — like the scheduler above, only started for
-    // the real server (not `build_server_router`, which tests use) to avoid
-    // SQLite lock contention in tests. Also gated on a transcription backend
-    // actually being configured, even though `run_transcription_worker`
-    // itself no-ops without one, so no task is spawned at all when the
-    // feature is off.
-    if ENVIRONMENT_SERVICE.transcription_config.is_some() {
-        tokio::spawn(crate::services::transcript::worker::run_transcription_worker());
-    }
-
-    if let Some(oidc_config) = ENVIRONMENT_SERVICE.oidc_config.as_ref() {
-        crate::services::oidc::discovery::spawn_endpoint_discovery(oidc_config);
-    }
-
-    router
 }
 
 #[cfg(test)]

@@ -201,7 +201,7 @@ mod tests {
     }
 
     fn app_state() -> AppState {
-        AppState::new()
+        crate::test_support::tests::app_state()
     }
 
     fn non_admin_user() -> User {

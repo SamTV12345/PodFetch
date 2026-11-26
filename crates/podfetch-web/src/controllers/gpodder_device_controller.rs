@@ -195,7 +195,6 @@ pub fn get_gpodder_device_router() -> OpenApiRouter<AppState> {
 #[cfg(test)]
 mod tests {
     use super::GPodderSyncGroupsResponse;
-    use crate::app_state::AppState;
     use crate::gpodder_api::auth::test_support::tests::create_auth_gpodder;
     use crate::subscription::SubscriptionChangesToClient;
     use crate::test_support::tests::{TestServerWrapper, handle_test_startup};
@@ -261,7 +260,7 @@ mod tests {
     #[serial]
     async fn test_manage_sync_groups() {
         let mut server = handle_test_startup().await;
-        let user = AppState::new()
+        let user = crate::test_support::tests::app_state()
             .user_admin_service
             .create_user(UserTestDataBuilder::new().build())
             .unwrap();
@@ -361,7 +360,7 @@ mod tests {
     #[serial]
     async fn test_web_group_keeps_favorites_in_sync() {
         let mut server = handle_test_startup().await;
-        let user = AppState::new()
+        let user = crate::test_support::tests::app_state()
             .user_admin_service
             .create_user(UserTestDataBuilder::new().build())
             .unwrap();

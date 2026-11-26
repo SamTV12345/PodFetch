@@ -176,6 +176,15 @@ END $$;
         });
     }
 
+    /// An `AppState` on the shared test database, for tests that call
+    /// services directly. Call it after `handle_test_startup`.
+    pub fn app_state() -> crate::app_state::AppState {
+        crate::app_state::AppState::build(
+            podfetch_persistence::db::database(),
+            std::sync::Arc::new(common_infrastructure::runtime::ENVIRONMENT_SERVICE.clone()),
+        )
+    }
+
     pub async fn handle_test_startup<'a>() -> TestServerWrapper<'a> {
         ensure_test_env_vars();
         let mutex = lock_global_mutex_recovering_poison();
@@ -191,7 +200,11 @@ END $$;
         #[cfg(feature = "sqlite")]
         cleanup_sqlite();
 
-        let mut test_server = TestServer::new(crate::startup::build_server_router());
+        let application = crate::application::Application::build(std::sync::Arc::new(
+            common_infrastructure::runtime::ENVIRONMENT_SERVICE.clone(),
+        ))
+        .expect("test application starts");
+        let mut test_server = TestServer::new(application.router());
         test_server.add_header("Authorization", "Basic cG9zdGdyZXM6cG9zdGdyZXM=");
         TestServerWrapper { test_server, mutex }
     }

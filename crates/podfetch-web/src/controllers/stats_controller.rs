@@ -49,7 +49,6 @@ pub fn get_stats_router() -> OpenApiRouter<AppState> {
 
 #[cfg(test)]
 mod tests {
-    use crate::app_state::AppState;
     use crate::services::listening_event::service::ListeningEventService;
     use crate::test_support::tests::handle_test_startup;
     use chrono::{NaiveDate, NaiveDateTime};
@@ -139,7 +138,7 @@ mod tests {
             .username
             .clone()
             .unwrap_or_else(|| "postgres".to_string());
-        AppState::new()
+        crate::test_support::tests::app_state()
             .user_auth_service
             .find_by_username(&username)
             .unwrap()

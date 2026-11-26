@@ -71,7 +71,7 @@ async fn status_returns_server_payload() {
 #[serial]
 async fn login_happy_path_returns_bearer_and_libraries_bootstrap() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
 
     let token = login_audiobookshelf(&mut server, &user).await;
@@ -95,7 +95,7 @@ async fn login_happy_path_returns_bearer_and_libraries_bootstrap() {
 #[serial]
 async fn login_wrong_password_is_rejected() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
 
     server.test_server.clear_headers();
@@ -115,7 +115,7 @@ async fn login_wrong_password_is_rejected() {
 #[serial]
 async fn login_unknown_user_is_rejected() {
     let mut server = handle_test_startup().await;
-    let _state = AppState::new();
+    let _state = crate::test_support::tests::app_state();
     server.test_server.clear_headers();
     let response = server
         .test_server
@@ -158,7 +158,7 @@ async fn protected_route_with_bogus_token_is_unauthorized() {
 #[serial]
 async fn authorize_with_valid_token_returns_user() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
 
     let _token = login_audiobookshelf(&mut server, &user).await;
@@ -172,7 +172,7 @@ async fn authorize_with_valid_token_returns_user() {
 #[serial]
 async fn logout_returns_ok_for_authenticated_user() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     login_audiobookshelf(&mut server, &user).await;
     let response = server.test_server.post("/logout").await;
@@ -185,7 +185,7 @@ async fn logout_returns_ok_for_authenticated_user() {
 #[serial]
 async fn list_libraries_returns_default_bootstrap() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     login_audiobookshelf(&mut server, &user).await;
 
@@ -207,7 +207,7 @@ async fn list_libraries_returns_default_bootstrap() {
 #[serial]
 async fn get_library_by_id_returns_dto() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     login_audiobookshelf(&mut server, &user).await;
 
@@ -230,7 +230,7 @@ async fn get_library_by_id_returns_dto() {
 #[serial]
 async fn get_library_nonexistent_is_404() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     login_audiobookshelf(&mut server, &user).await;
     let response = server
@@ -250,7 +250,7 @@ async fn get_library_nonexistent_is_404() {
 #[serial]
 async fn me_returns_current_user_with_token() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     let token = login_audiobookshelf(&mut server, &user).await;
 
@@ -269,7 +269,7 @@ async fn me_returns_current_user_with_token() {
 #[serial]
 async fn list_library_items_lists_podcasts_as_library_items() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
 
     let podcast = insert_test_podcast("List test podcast", &state, user.id);
@@ -305,7 +305,7 @@ async fn list_library_items_lists_podcasts_as_library_items() {
 #[serial]
 async fn get_item_by_id_returns_podcast_with_episodes() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
 
     let podcast = insert_test_podcast("Detail test podcast", &state, user.id);
@@ -335,7 +335,7 @@ async fn get_item_by_id_returns_podcast_with_episodes() {
 #[serial]
 async fn get_item_unknown_id_is_404() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     login_audiobookshelf(&mut server, &user).await;
     let response = server.test_server.get("/api/items/li_pod_99999").await;
@@ -352,7 +352,7 @@ async fn get_item_unknown_id_is_404() {
 #[serial]
 async fn play_sync_close_updates_media_progress() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
 
     let podcast = insert_test_podcast("Session test podcast", &state, user.id);
@@ -437,7 +437,7 @@ async fn play_sync_close_updates_media_progress() {
 #[serial]
 async fn session_cross_user_access_is_forbidden() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user_a = create_user_for_audiobookshelf(&state);
     let user_b = create_user_for_audiobookshelf(&state);
 
@@ -479,7 +479,7 @@ async fn session_cross_user_access_is_forbidden() {
 #[serial]
 async fn stream_track_serves_full_file_when_no_range() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
 
     let bytes = generate_pseudo_audio_bytes(4096);
@@ -521,7 +521,7 @@ async fn stream_track_serves_full_file_when_no_range() {
 #[serial]
 async fn stream_track_honors_byte_range() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
 
     let bytes = generate_pseudo_audio_bytes(8192);
@@ -571,7 +571,7 @@ async fn stream_track_honors_byte_range() {
 #[serial]
 async fn stream_track_without_token_is_unauthorized() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
 
     let bytes = generate_pseudo_audio_bytes(1024);
@@ -731,7 +731,7 @@ fn set_episode_legacy_id(episode_uuid: &str, legacy: i64) {
 #[serial]
 async fn legacy_integer_ids_resolve_to_same_podcast_and_episode() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
 
     let bytes = generate_pseudo_audio_bytes(2048);
@@ -824,7 +824,7 @@ async fn legacy_integer_ids_resolve_to_same_podcast_and_episode() {
 #[serial]
 async fn legacy_integer_ids_start_session_with_canonical_uuid() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
 
     let podcast = insert_test_podcast("Legacy session pod", &state, user.id);
@@ -864,7 +864,7 @@ async fn legacy_integer_ids_start_session_with_canonical_uuid() {
 #[serial]
 async fn podcast_cover_redirects_to_remote_url_when_no_local_file() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     // Use the repository directly so we can set original_image_url to a
     // proper https URL (the test podcast helper uses fake bookkeeping).
@@ -909,7 +909,7 @@ async fn login_response_shape_matches_upstream_payload() {
     // serverSettings / ereaderDevices / Source. The capitalised `Source` is
     // significant - the mobile apps read it with that exact case.
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     server.test_server.clear_headers();
     let resp = server
@@ -958,7 +958,7 @@ async fn login_response_shape_matches_upstream_payload() {
 #[serial]
 async fn recent_episodes_endpoint_returns_episodes_envelope() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     let lib = state
         .audiobookshelf_library_service
@@ -1010,7 +1010,7 @@ async fn recent_episodes_endpoint_returns_episodes_envelope() {
 #[serial]
 async fn recent_episodes_rejects_non_podcast_library() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     let lib = state
         .audiobookshelf_library_service
@@ -1040,7 +1040,7 @@ async fn recent_episodes_rejects_non_podcast_library() {
 #[serial]
 async fn personalized_endpoint_returns_empty_array_stub() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     let lib = state
         .audiobookshelf_library_service
@@ -1062,7 +1062,7 @@ async fn personalized_endpoint_returns_empty_array_stub() {
 #[serial]
 async fn items_in_progress_returns_library_items_envelope() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     let podcast = insert_test_podcast("Progress pod", &state, user.id);
     let episode = insert_test_episode(&podcast.id, "Ep");
@@ -1094,7 +1094,7 @@ async fn playback_session_shape_matches_upstream() {
     // Pins PlaybackSession.toJSONForClient() so the mobile apps can read
     // the session payload off /api/items/.../play without crashing.
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     let podcast = insert_test_podcast("Shape session pod", &state, user.id);
     let episode = insert_test_episode(&podcast.id, "Shape ep");
@@ -1160,7 +1160,7 @@ async fn play_response_passes_android_kotlin_required_fields() {
     // by reading C:\Users\samue\RustroverProjects\audiobookshelf-app\
     // android\app\src\main\java\com\audiobookshelf\app\data\.
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     let podcast = insert_test_podcast("Android compat pod", &state, user.id);
     let episode = insert_test_episode(&podcast.id, "Compat ep");
@@ -1239,7 +1239,7 @@ async fn play_response_passes_android_kotlin_required_fields() {
 #[serial]
 async fn book_playback_session_carries_book_id() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     let lib = state
         .audiobookshelf_library_service
@@ -1294,7 +1294,7 @@ async fn podcast_library_item_shape_matches_upstream() {
     // Pins the full LibraryItem.toOldJSONExpanded() shape for podcasts so we
     // know we're byte-shape-compatible with upstream.
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     let podcast = insert_test_podcast("Shape Item Pod", &state, user.id);
     let _ep = insert_test_episode(&podcast.id, "Episode");
@@ -1393,7 +1393,7 @@ async fn podcast_library_item_shape_matches_upstream() {
 #[serial]
 async fn title_ignore_prefix_is_calculated_for_podcast() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     let podcast = insert_test_podcast_named("The Daily Sample", &state, user.id);
     login_audiobookshelf(&mut server, &user).await;
@@ -1423,7 +1423,7 @@ async fn me_dto_includes_all_upstream_user_fields() {
     // fields stop the mobile apps. If you ever change a field name here you
     // are breaking the wire compat.
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     login_audiobookshelf(&mut server, &user).await;
     let resp = server.test_server.get("/api/me").await;
@@ -1465,7 +1465,7 @@ async fn me_dto_includes_all_upstream_user_fields() {
 #[serial]
 async fn podcast_episode_shape_matches_audiobookshelf() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     let podcast = insert_test_podcast("Shape pod", &state, user.id);
     let episode = insert_test_episode(&podcast.id, "Shape ep");
@@ -1528,7 +1528,7 @@ async fn podcast_episode_shape_matches_audiobookshelf() {
 #[serial]
 async fn patch_me_progress_creates_progress_row_and_reflects_in_me() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     let podcast = insert_test_podcast("Patch pod", &state, user.id);
     let episode = insert_test_episode(&podcast.id, "Patch ep");
@@ -1561,7 +1561,7 @@ async fn patch_me_progress_creates_progress_row_and_reflects_in_me() {
 #[serial]
 async fn patch_me_progress_item_only_works_for_books() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     login_audiobookshelf(&mut server, &user).await;
 
@@ -1585,7 +1585,7 @@ async fn patch_me_progress_item_only_works_for_books() {
 #[serial]
 async fn patch_me_progress_batch_upserts_multiple() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     let podcast = insert_test_podcast("Batch pod", &state, user.id);
     let ep_a = insert_test_episode(&podcast.id, "ep a");
@@ -1624,7 +1624,7 @@ async fn patch_me_progress_batch_upserts_multiple() {
 #[serial]
 async fn patch_me_progress_batch_rejects_empty_payload() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     login_audiobookshelf(&mut server, &user).await;
 
@@ -1644,7 +1644,7 @@ async fn patch_me_progress_batch_rejects_empty_payload() {
 #[serial]
 async fn item_file_endpoint_streams_episode_audio() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
 
     let bytes = generate_pseudo_audio_bytes(2048);
@@ -1669,7 +1669,7 @@ async fn item_file_endpoint_streams_episode_audio() {
 #[serial]
 async fn item_file_endpoint_honors_range() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     let bytes = generate_pseudo_audio_bytes(4096);
     let path = write_temp_audio_file(&bytes, "range-file.mp3");
@@ -1698,7 +1698,7 @@ async fn item_file_endpoint_honors_range() {
 async fn file_watcher_starts_clean_when_no_book_library_has_folders() {
     use crate::services::audiobookshelf::file_watcher::AudiobookFileWatcher;
     let _server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let watcher = AudiobookFileWatcher::new(
         state.audiobookshelf_library_service.clone(),
         state.audiobookshelf_scanner.clone(),
@@ -1711,7 +1711,7 @@ async fn file_watcher_starts_clean_when_no_book_library_has_folders() {
 async fn file_watcher_attaches_to_existing_folder_without_panicking() {
     use crate::services::audiobookshelf::file_watcher::AudiobookFileWatcher;
     let _server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
 
     let tmp = std::env::temp_dir()
         .join("podfetch-abs-watcher")
@@ -1752,7 +1752,7 @@ async fn file_watcher_attaches_to_existing_folder_without_panicking() {
 #[serial]
 async fn upload_writes_file_and_returns_target_dir() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_admin_for_audiobookshelf(&state);
 
     let lib = state
@@ -1821,7 +1821,7 @@ async fn upload_writes_file_and_returns_target_dir() {
 #[serial]
 async fn upload_without_library_returns_4xx() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_admin_for_audiobookshelf(&state);
     login_audiobookshelf(&mut server, &user).await;
 
@@ -1848,7 +1848,7 @@ async fn upload_without_library_returns_4xx() {
 #[serial]
 async fn upload_without_files_returns_4xx() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_admin_for_audiobookshelf(&state);
     let lib = state
         .audiobookshelf_library_service
@@ -1876,7 +1876,7 @@ async fn upload_without_files_returns_4xx() {
 #[serial]
 async fn scan_report_exposes_added_updated_counters() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_admin_for_audiobookshelf(&state);
     let lib = state
         .audiobookshelf_library_service
@@ -1923,7 +1923,7 @@ async fn scan_report_exposes_added_updated_counters() {
 #[serial]
 async fn play_chooses_hls_when_client_lacks_source_codec() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
 
     let podcast = insert_test_podcast("HLS podcast", &state, user.id);
@@ -1965,7 +1965,7 @@ async fn play_chooses_hls_when_client_lacks_source_codec() {
 #[serial]
 async fn play_uses_direct_when_client_supports_source_codec() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
 
     let podcast = insert_test_podcast("Direct podcast", &state, user.id);
@@ -1997,7 +1997,7 @@ async fn play_uses_direct_when_client_supports_source_codec() {
 #[serial]
 async fn hls_master_playlist_returns_m3u8_for_owned_session() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
 
     let podcast = insert_test_podcast("HLS pod", &state, user.id);
@@ -2036,7 +2036,7 @@ async fn hls_master_playlist_returns_m3u8_for_owned_session() {
 #[serial]
 async fn hls_media_playlist_lists_segments_for_duration() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
 
     let podcast = insert_test_podcast("HLS-Index pod", &state, user.id);
@@ -2073,7 +2073,7 @@ async fn hls_media_playlist_lists_segments_for_duration() {
 #[serial]
 async fn hls_playlist_cross_user_access_is_forbidden() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user_a = create_user_for_audiobookshelf(&state);
     let user_b = create_user_for_audiobookshelf(&state);
 
@@ -2109,7 +2109,7 @@ async fn hls_playlist_cross_user_access_is_forbidden() {
 #[serial]
 async fn close_session_persists_listening_session_history() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
 
     let podcast = insert_test_podcast("History pod", &state, user.id);
@@ -2165,7 +2165,7 @@ async fn close_session_persists_listening_session_history() {
 #[serial]
 async fn listening_sessions_isolated_per_user() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user_a = create_user_for_audiobookshelf(&state);
     let user_b = create_user_for_audiobookshelf(&state);
 
@@ -2211,7 +2211,7 @@ async fn listening_sessions_isolated_per_user() {
 #[serial]
 async fn list_audiobooks_library_items_returns_books() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
 
     let lib = state
@@ -2254,7 +2254,7 @@ async fn list_audiobooks_library_items_returns_books() {
 #[serial]
 async fn get_book_item_includes_chapters_and_audio_files() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     let lib = state
         .audiobookshelf_library_service
@@ -2293,7 +2293,7 @@ async fn get_book_item_includes_chapters_and_audio_files() {
 #[serial]
 async fn play_book_session_returns_tracks_per_audio_file() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     let lib = state
         .audiobookshelf_library_service
@@ -2331,7 +2331,7 @@ async fn play_book_session_returns_tracks_per_audio_file() {
 #[serial]
 async fn stream_book_track_serves_correct_audio_file() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     let lib = state
         .audiobookshelf_library_service
@@ -2498,7 +2498,7 @@ async fn search_podcast_without_token_is_unauthorized() {
 #[serial]
 async fn search_podcast_without_term_returns_empty_array() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     login_audiobookshelf(&mut server, &user).await;
     let response = server.test_server.get("/api/search/podcast").await;
@@ -2515,7 +2515,7 @@ async fn search_podcast_without_term_returns_empty_array() {
 #[serial]
 async fn create_podcast_feed_rejects_non_http_url() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     login_audiobookshelf(&mut server, &user).await;
     let response = server
@@ -2534,7 +2534,7 @@ async fn create_podcast_feed_rejects_non_http_url() {
 #[serial]
 async fn create_podcast_rejects_empty_feed_url() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     login_audiobookshelf(&mut server, &user).await;
     let response = server
@@ -2624,7 +2624,7 @@ fn map_itunes_result_pins_audiobookshelf_shape() {
 #[serial]
 async fn listening_stats_returns_empty_buckets_for_new_user() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     login_audiobookshelf(&mut server, &user).await;
 
@@ -2646,7 +2646,7 @@ async fn listening_stats_returns_empty_buckets_for_new_user() {
 async fn listening_stats_aggregates_play_close_cycle() {
     use chrono::{Datelike, Utc};
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     let podcast = insert_test_podcast("Stats Podcast", &state, user.id);
     let episode = insert_test_episode(&podcast.id, "Stats Episode");
@@ -2722,7 +2722,7 @@ async fn listening_stats_aggregates_play_close_cycle() {
 #[serial]
 async fn list_playlists_starts_empty() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     login_audiobookshelf(&mut server, &user).await;
 
@@ -2737,7 +2737,7 @@ async fn list_playlists_starts_empty() {
 #[serial]
 async fn create_playlist_returns_audiobookshelf_shape() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     let podcast = insert_test_podcast("Playlist Podcast", &state, user.id);
     let episode = insert_test_episode(&podcast.id, "Playlist Episode");
@@ -2777,7 +2777,7 @@ async fn create_playlist_returns_audiobookshelf_shape() {
 #[serial]
 async fn create_playlist_rejects_missing_episode_id() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     login_audiobookshelf(&mut server, &user).await;
     let resp = server
@@ -2799,7 +2799,7 @@ async fn create_playlist_rejects_missing_episode_id() {
 #[serial]
 async fn batch_add_and_remove_round_trip() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     let podcast = insert_test_podcast("Batch Podcast", &state, user.id);
     let ep1 = insert_test_episode(&podcast.id, "Episode 1");
@@ -2855,7 +2855,7 @@ async fn batch_add_and_remove_round_trip() {
 #[serial]
 async fn delete_playlist_removes_it() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     login_audiobookshelf(&mut server, &user).await;
 
@@ -2886,7 +2886,7 @@ async fn delete_playlist_removes_it() {
 #[serial]
 async fn playlist_belongs_only_to_owner() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let alice = create_user_for_audiobookshelf(&state);
     let bob = create_user_for_audiobookshelf(&state);
     login_audiobookshelf(&mut server, &alice).await;
@@ -2923,7 +2923,7 @@ async fn playlist_belongs_only_to_owner() {
 #[serial]
 async fn library_playlists_endpoint_paginates() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     login_audiobookshelf(&mut server, &user).await;
     for n in 0..3 {
@@ -2962,7 +2962,7 @@ fn write_temp_audio_file(bytes: &[u8], filename: &str) -> String {
 #[serial]
 async fn regular_user_cannot_subscribe_the_server_to_feeds() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     // Role `user` with the default USER_PODCAST_LIMIT=0.
     let user = create_user_for_audiobookshelf(&state);
     login_audiobookshelf(&mut server, &user).await;
@@ -3005,7 +3005,7 @@ async fn regular_user_cannot_subscribe_the_server_to_feeds() {
 async fn privileged_users_pass_the_podcast_permission_check() {
     for role in ["admin", "uploader"] {
         let mut server = handle_test_startup().await;
-        let state = AppState::new();
+        let state = crate::test_support::tests::app_state();
         let user = create_user_with_role(&state, role);
         login_audiobookshelf(&mut server, &user).await;
 
@@ -3023,7 +3023,7 @@ async fn privileged_users_pass_the_podcast_permission_check() {
 #[serial]
 async fn regular_user_cannot_upload_or_scan() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_for_audiobookshelf(&state);
     login_audiobookshelf(&mut server, &user).await;
     let library_id = state
@@ -3061,7 +3061,7 @@ async fn regular_user_cannot_upload_or_scan() {
 #[serial]
 async fn uploader_may_upload_but_not_scan() {
     let mut server = handle_test_startup().await;
-    let state = AppState::new();
+    let state = crate::test_support::tests::app_state();
     let user = create_user_with_role(&state, "uploader");
     login_audiobookshelf(&mut server, &user).await;
     let library_id = state
