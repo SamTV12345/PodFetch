@@ -49,7 +49,7 @@ pub async fn rescan_episodes(
     if !requester.is_admin() {
         return Err(map_rescan_error(RescanError::<CustomError>::Forbidden));
     }
-    let opts = body.map(|Json(o)| o).unwrap_or_default();
+    let opts = body.map_or_default(|Json(o)| o);
 
     let scan_service = EpisodeScanServiceImpl::default_service();
     let chapter_stats =

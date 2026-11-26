@@ -203,14 +203,11 @@ async fn fetch_and_parse_feed(feed_url: &str) -> Result<Channel, CustomError> {
 fn shape_feed(channel: &Channel, feed_url: &str) -> Value {
     let itunes = channel.itunes_ext();
     let image = crate::podcast::channel_image_url(channel).unwrap_or_default();
-    let categories: Vec<Value> = itunes
-        .map(|i| i.categories.clone())
-        .map(|cats| {
-            cats.into_iter()
-                .map(|c| Value::from(c.text))
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_default();
+    let categories: Vec<Value> = itunes.map(|i| i.categories.clone()).map_or_default(|cats| {
+        cats.into_iter()
+            .map(|c| Value::from(c.text))
+            .collect::<Vec<_>>()
+    });
     let metadata = json!({
         "image": image,
         "categories": categories,

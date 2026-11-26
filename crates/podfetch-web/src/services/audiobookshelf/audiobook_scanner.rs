@@ -137,10 +137,7 @@ impl AudiobookScanner {
         sort_smart_track(&mut probed);
 
         // Aggregate metadata from first file (audiobookshelf behavior)
-        let representative_tags = probed
-            .first()
-            .map(|(_, p)| p.tags.clone())
-            .unwrap_or_default();
+        let representative_tags = probed.first().map_or_default(|(_, p)| p.tags.clone());
         let resolved = metadata_resolver::resolve(folder, &representative_tags);
         let total_duration: f64 = probed.iter().map(|(_, p)| p.duration).sum();
 
@@ -198,8 +195,7 @@ impl AudiobookScanner {
             let relative = path.strip_prefix(folder).map_or_else(
                 |_| {
                     path.file_name()
-                        .map(|s| s.to_string_lossy().to_string())
-                        .unwrap_or_default()
+                        .map_or_default(|s| s.to_string_lossy().to_string())
                 },
                 |p| p.to_string_lossy().to_string(),
             );
@@ -347,8 +343,7 @@ fn smart_track_key(path: &Path, tags: &ProbedTags) -> (i32, i32, String) {
         .unwrap_or(0);
     let name = path
         .file_name()
-        .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_default();
+        .map_or_default(|n| n.to_string_lossy().to_string());
     (disc, track, name)
 }
 

@@ -84,9 +84,7 @@ impl StatsApplicationService for StatsService {
                         || "Unknown Podcast".to_string(),
                         |podcast| podcast.name.clone(),
                     ),
-                    image_url: podcast
-                        .map(|podcast| podcast.image_url.clone())
-                        .unwrap_or_default(),
+                    image_url: podcast.map_or_default(|podcast| podcast.image_url.clone()),
                     listened_seconds: seconds,
                     listened_episodes: episodes.len() as i64,
                 }

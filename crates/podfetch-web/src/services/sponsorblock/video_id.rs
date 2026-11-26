@@ -42,10 +42,7 @@ fn parse_video_id(input: &str) -> Option<String> {
                     return valid_id(&v);
                 }
                 // /embed/ID  or  /shorts/ID  or  /v/ID
-                let segs: Vec<&str> = url
-                    .path_segments()
-                    .map(Iterator::collect)
-                    .unwrap_or_default();
+                let segs: Vec<&str> = url.path_segments().map_or_default(Iterator::collect);
                 if let [kind, id, ..] = segs.as_slice()
                     && matches!(*kind, "embed" | "shorts" | "v")
                 {

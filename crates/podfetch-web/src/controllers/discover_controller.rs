@@ -99,13 +99,11 @@ pub async fn get_for_you(
 }
 
 fn parse_category_ids(input: Option<&str>) -> Vec<u32> {
-    input
-        .map(|s| {
-            s.split(',')
-                .filter_map(|part| part.trim().parse::<u32>().ok())
-                .collect()
-        })
-        .unwrap_or_default()
+    input.map_or_default(|s| {
+        s.split(',')
+            .filter_map(|part| part.trim().parse::<u32>().ok())
+            .collect()
+    })
 }
 
 pub fn get_discover_router() -> OpenApiRouter<AppState> {

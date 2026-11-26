@@ -134,17 +134,13 @@ pub fn map_podcast(podcast: &Podcast, episodes: &[PodcastEpisode], library_id: &
 }
 
 fn metadata_json(podcast: &Podcast) -> Value {
-    let genres: Vec<Value> = podcast
-        .keywords
-        .as_deref()
-        .map(|k| {
-            k.split(',')
-                .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty())
-                .map(Value::from)
-                .collect()
-        })
-        .unwrap_or_default();
+    let genres: Vec<Value> = podcast.keywords.as_deref().map_or_default(|k| {
+        k.split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .map(Value::from)
+            .collect()
+    });
     let title_ignore_prefix = title_ignore_prefix(&podcast.name);
     json!({
         "title": podcast.name,
