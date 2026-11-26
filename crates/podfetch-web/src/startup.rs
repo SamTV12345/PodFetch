@@ -55,8 +55,8 @@ use utoipa_scalar::Scalar;
 use utoipa_scalar::Servable as UtoipaServable;
 use utoipa_swagger_ui::SwaggerUi;
 
-use crate::services::user_auth::service::UserAuthService;
 use common_infrastructure::error::ErrorSeverity::Warning;
+use podfetch_identity::services::user_auth::service::UserAuthService;
 use std::sync::Arc;
 
 static AUDIOBOOKSHELF_FILE_WATCHER: OnceLock<

@@ -1,0 +1,27 @@
+[package]
+name = "podfetch-identity"
+version = "0.1.0"
+edition = "2024"
+description = "Identity & Access bounded context: users, roles, sessions, invites, login"
+
+[lints]
+workspace = true
+
+[features]
+default = []
+sqlite = ["common-infrastructure/sqlite", "podfetch-events/sqlite"]
+postgresql = ["common-infrastructure/postgresql", "podfetch-events/postgresql"]
+
+[dependencies]
+common-infrastructure = { workspace = true }
+podfetch-events = { workspace = true }
+podfetch-kernel = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+diesel = { workspace = true }
+serde = { workspace = true }
+sha256 = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+utoipa = { workspace = true }
+uuid = { workspace = true }
+

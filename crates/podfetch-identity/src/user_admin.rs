@@ -13,8 +13,8 @@ pub struct UserSummary {
     pub explicit_consent: bool,
 }
 
-impl From<podfetch_domain::user_admin::UserSummary> for UserSummary {
-    fn from(value: podfetch_domain::user_admin::UserSummary) -> Self {
+impl From<crate::domain::user_admin::UserSummary> for UserSummary {
+    fn from(value: crate::domain::user_admin::UserSummary) -> Self {
         Self {
             id: value.id.to_string(),
             username: value.username,
@@ -25,7 +25,7 @@ impl From<podfetch_domain::user_admin::UserSummary> for UserSummary {
     }
 }
 
-impl From<UserSummary> for podfetch_domain::user_admin::UserSummary {
+impl From<UserSummary> for crate::domain::user_admin::UserSummary {
     fn from(value: UserSummary) -> Self {
         Self {
             id: Uuid::parse_str(&value.id).unwrap_or_else(|_| Uuid::nil()),
@@ -51,8 +51,8 @@ pub struct UserWithApiKey {
     pub language: Option<String>,
 }
 
-impl From<podfetch_domain::user_admin::UserWithApiKey> for UserWithApiKey {
-    fn from(value: podfetch_domain::user_admin::UserWithApiKey) -> Self {
+impl From<crate::domain::user_admin::UserWithApiKey> for UserWithApiKey {
+    fn from(value: crate::domain::user_admin::UserWithApiKey) -> Self {
         Self {
             id: value.id.to_string(),
             username: value.username,
@@ -80,8 +80,8 @@ pub struct ManagedUser {
     pub language: Option<String>,
 }
 
-impl From<podfetch_domain::user_admin::ManagedUser> for ManagedUser {
-    fn from(value: podfetch_domain::user_admin::ManagedUser) -> Self {
+impl From<crate::domain::user_admin::ManagedUser> for ManagedUser {
+    fn from(value: crate::domain::user_admin::ManagedUser) -> Self {
         Self {
             id: value.id,
             username: value.username,
@@ -96,7 +96,7 @@ impl From<podfetch_domain::user_admin::ManagedUser> for ManagedUser {
     }
 }
 
-impl From<ManagedUser> for podfetch_domain::user_admin::ManagedUser {
+impl From<ManagedUser> for crate::domain::user_admin::ManagedUser {
     fn from(value: ManagedUser) -> Self {
         Self {
             id: value.id,

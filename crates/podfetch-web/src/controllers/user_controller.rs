@@ -1,21 +1,21 @@
 use crate::app_state::AppState;
-use crate::invite::Invite;
-use crate::invite::{self, InviteControllerError, InvitePostModel};
-use crate::role::STANDARD_USER;
-use crate::user_admin::{
+use axum::extract::{Path, State};
+use axum::{Extension, Json};
+use podfetch_identity::domain::user::User;
+use podfetch_identity::invite::Invite;
+use podfetch_identity::invite::{self, InviteControllerError, InvitePostModel};
+use podfetch_identity::role::STANDARD_USER;
+use podfetch_identity::user_admin::{
     self, UserAdminControllerError, UserCoreUpdateModel, UserRoleUpdateModel, UserSummary,
     UserWithApiKey,
 };
-use crate::user_onboarding::{self, UserOnboardingModel};
-use axum::extract::{Path, State};
-use axum::{Extension, Json};
-use podfetch_domain::user::User;
+use podfetch_identity::user_onboarding::{self, UserOnboardingModel};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::services::user_admin::service::map_requester;
 use common_infrastructure::error::{ApiError, CustomError, CustomErrorInner, ErrorType};
+use podfetch_identity::services::user_admin::service::map_requester;
 
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -343,15 +343,15 @@ pub fn get_user_router() -> OpenApiRouter<AppState> {
 #[cfg(test)]
 mod tests {
     use crate::app_state::AppState;
-    use crate::invite::Invite;
     use crate::test_support::tests::handle_test_startup;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
-    use crate::user_admin::UserWithApiKey;
     use axum::extract::{Path, State};
     use axum::{Extension, Json};
     use common_infrastructure::error::{CustomErrorInner, ErrorType};
     use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
-    use podfetch_domain::user::User;
+    use podfetch_identity::domain::user::User;
+    use podfetch_identity::invite::Invite;
+    use podfetch_identity::user_admin::UserWithApiKey;
     use serde_json::json;
     use serial_test::serial;
     use uuid::Uuid;

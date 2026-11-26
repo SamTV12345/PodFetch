@@ -30,7 +30,7 @@ use axum::http::StatusCode;
 use axum::{Extension, Json};
 use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -665,7 +665,7 @@ mod tests {
     use diesel::ExpressionMethods;
     use diesel::QueryDsl;
     use diesel::RunQueryDsl;
-    use podfetch_domain::user::User;
+    use podfetch_identity::domain::user::User;
     use podfetch_persistence::db::get_connection;
     use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
     use podfetch_persistence::schema::podcast_episodes::dsl as pe_dsl;

@@ -5,7 +5,7 @@ use axum::{Extension, Json};
 use common_infrastructure::error::CustomError;
 use common_infrastructure::path::trim_from_path;
 use podfetch_domain::gpodder_setting::GpodderSetting;
-use podfetch_domain::session::Session;
+use podfetch_identity::domain::session::Session;
 use serde::Deserialize;
 use serde_json::Value;
 use utoipa::ToSchema;

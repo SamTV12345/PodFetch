@@ -219,7 +219,7 @@ pub async fn patch_progress_batch(
 
 fn upsert_progress_from_payload(
     state: &AppState,
-    user: &podfetch_domain::user::User,
+    user: &podfetch_identity::domain::user::User,
     library_item_id: &str,
     episode_id: Option<String>,
     payload: ProgressUpdatePayload,

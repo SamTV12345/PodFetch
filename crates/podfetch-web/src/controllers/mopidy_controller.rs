@@ -8,7 +8,7 @@ use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use podfetch_domain::device::{Device, kind as device_kind};
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;

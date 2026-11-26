@@ -14,7 +14,7 @@ postgresql = ["common-infrastructure/postgresql", "podfetch-persistence/postgres
 
 [dependencies]
 common-infrastructure = { workspace = true }
-chrono = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
 diesel = { workspace = true }
 futures = { workspace = true }
 serde = { workspace = true }

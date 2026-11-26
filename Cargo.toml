@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "crates/common-infrastructure", "crates/podfetch-agent-protocol", "crates/podfetch-cast", "crates/podfetch-domain", "crates/podfetch-events", "crates/podfetch-web", "crates/podfetch-persistence", "crates/podfetch-storage"]
+members = [".", "crates/common-infrastructure", "crates/podfetch-agent-protocol", "crates/podfetch-cast", "crates/podfetch-domain", "crates/podfetch-events", "crates/podfetch-identity", "crates/podfetch-kernel", "crates/podfetch-web", "crates/podfetch-persistence", "crates/podfetch-storage"]
 resolver = "2"
 
 [package]
@@ -30,6 +30,7 @@ podfetch-domain = { workspace = true }
 podfetch-persistence = { workspace = true }
 podfetch-storage = { workspace = true }
 podfetch-web = { workspace = true }
+podfetch-identity = { workspace = true }
 
 # Async runtime
 tokio = { workspace = true }
@@ -115,6 +116,8 @@ podfetch-agent-protocol = { path = "crates/podfetch-agent-protocol" }
 podfetch-cast = { path = "crates/podfetch-cast" }
 podfetch-domain = { path = "crates/podfetch-domain" }
 podfetch-events = { path = "crates/podfetch-events" }
+podfetch-identity = { path = "crates/podfetch-identity" }
+podfetch-kernel = { path = "crates/podfetch-kernel" }
 podfetch-persistence = { path = "crates/podfetch-persistence", default-features = false }
 podfetch-storage = { path = "crates/podfetch-storage" }
 podfetch-web = { path = "crates/podfetch-web", default-features = false }

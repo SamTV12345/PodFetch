@@ -1,7 +1,7 @@
-use crate::db::{Database, PersistenceError};
+use crate::domain::user_admin::{ManagedUser, UserAdminRepository};
+use common_infrastructure::db::{Database, PersistenceError};
 use diesel::prelude::{AsChangeset, Insertable, Queryable};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
-use podfetch_domain::user_admin::{ManagedUser, UserAdminRepository};
 use uuid::Uuid;
 
 diesel::table! {
@@ -83,7 +83,7 @@ impl UserAdminRepository for DieselUserAdminRepository {
         let mut conn = self.database.connection()?;
         diesel::insert_into(users)
             .values((
-                id.eq(podfetch_domain::ids::new_id().to_string()),
+                id.eq(uuid::Uuid::now_v7().to_string()),
                 username.eq(user.username),
                 role.eq(user.role),
                 password.eq(user.password),

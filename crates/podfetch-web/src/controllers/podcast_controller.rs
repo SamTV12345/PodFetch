@@ -40,7 +40,7 @@ use common_infrastructure::config::is_env_var_present_and_true;
 use common_infrastructure::http::get_http_client;
 use common_infrastructure::request::add_basic_auth_headers_conditionally;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use reqwest::header::HeaderMap as ReqwestHeaderMap;
 
 /// Client for streaming remote episodes through PodFetch.
@@ -911,7 +911,7 @@ pub mod tests {
     use axum::http::HeaderMap;
     use axum::{Extension, Json};
     use common_infrastructure::error::CustomErrorInner;
-    use podfetch_domain::user::User;
+    use podfetch_identity::domain::user::User;
     use serde_json::json;
     use serial_test::serial;
     use uuid::Uuid;

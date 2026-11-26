@@ -3,7 +3,7 @@ pub mod tests {
     use fake::Fake;
     use fake::faker::internet::raw::Username;
     use fake::locales::EN;
-    use podfetch_domain::user::User;
+    use podfetch_identity::domain::user::User;
 
     pub struct UserTestDataBuilder {
         id: uuid::Uuid,

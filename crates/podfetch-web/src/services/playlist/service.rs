@@ -7,7 +7,7 @@ use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeSer
 use crate::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
 use common_infrastructure::error::CustomError;
 use podfetch_domain::playlist::{Playlist, PlaylistItem, PlaylistRepository};
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use podfetch_persistence::adapters::PlaylistRepositoryImpl;
 use podfetch_persistence::db::database;
 use podfetch_persistence::episode::EpisodeEntity as Episode;

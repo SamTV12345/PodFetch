@@ -16,7 +16,7 @@ use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use podfetch_domain::podcast_episode_transcript::PodcastEpisodeTranscript;
 use podfetch_domain::podcast_episode_transcript::TranscriptSegment;
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
@@ -488,7 +488,7 @@ mod tests {
         PodcastEpisodeTranscriptRepository, TranscriptSegment, TranscriptSource, TranscriptStatus,
         UpsertTranscript,
     };
-    use podfetch_domain::user::User;
+    use podfetch_identity::domain::user::User;
     use podfetch_persistence::adapters::PodcastEpisodeTranscriptRepositoryImpl;
     use podfetch_persistence::db::{database, get_connection};
     use podfetch_persistence::schema::podcast_episodes::dsl as pe_dsl;

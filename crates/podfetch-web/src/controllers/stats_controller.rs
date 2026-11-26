@@ -6,7 +6,7 @@ use axum::http::HeaderMap;
 use axum::{Extension, Json};
 use common_infrastructure::error::ErrorSeverity::Info;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 

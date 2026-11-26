@@ -10,7 +10,7 @@ use axum::response::IntoResponse;
 use common_infrastructure::error::CustomError;
 use common_infrastructure::error::CustomErrorInner;
 use common_infrastructure::error::ErrorSeverity::Warning;
-use podfetch_domain::session::Session;
+use podfetch_identity::domain::session::Session;
 use sha256::digest;
 
 pub async fn handle_cookie_session(

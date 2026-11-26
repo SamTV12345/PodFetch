@@ -1,6 +1,5 @@
 use crate::app_state::AppState;
 use crate::auth::{AuthControllerError, parse_basic_auth};
-use crate::services::user_auth::service::UserAuthService;
 use axum::extract::{Request, State};
 use axum::http::header::AUTHORIZATION;
 use axum::middleware::Next;
@@ -12,7 +11,8 @@ use common_infrastructure::http::get_async_sync_client;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use jsonwebtoken::jwk::{Jwk, JwkSet};
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
+use podfetch_identity::services::user_auth::service::UserAuthService;
 use serde_json::Value;
 use sha256::digest;
 use std::fmt::Display;

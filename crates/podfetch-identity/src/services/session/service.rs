@@ -1,8 +1,6 @@
+use crate::domain::session::{Session, SessionRepository};
 use chrono::{NaiveDateTime, Utc};
 use common_infrastructure::error::CustomError;
-use podfetch_domain::session::{Session, SessionRepository};
-use podfetch_persistence::adapters::SessionRepositoryImpl;
-use podfetch_persistence::db::database;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -14,10 +12,6 @@ pub struct SessionService {
 impl SessionService {
     pub fn new(repository: Arc<dyn SessionRepository<Error = CustomError>>) -> Self {
         Self { repository }
-    }
-
-    pub fn default_service() -> Self {
-        Self::new(Arc::new(SessionRepositoryImpl::new(database())))
     }
 
     pub fn create_session(&self, username: String, user_id: Uuid) -> Result<Session, CustomError> {

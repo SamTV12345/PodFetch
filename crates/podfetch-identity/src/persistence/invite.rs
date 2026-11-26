@@ -1,9 +1,9 @@
-use crate::db::{Database, PersistenceError};
+use crate::domain::invite::{Invite, InviteRepository};
 use chrono::{Duration, Utc};
+use common_infrastructure::db::{Database, PersistenceError};
 use diesel::ExpressionMethods;
 use diesel::prelude::{Identifiable, Insertable, Queryable};
 use diesel::{OptionalExtension, QueryDsl, RunQueryDsl};
-use podfetch_domain::invite::{Invite, InviteRepository};
 use uuid::Uuid;
 
 diesel::table! {

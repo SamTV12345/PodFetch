@@ -8,7 +8,7 @@ use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use common_infrastructure::error::CustomError;
 use podfetch_cast::CastMedia;
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 

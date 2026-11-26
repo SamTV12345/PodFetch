@@ -8,7 +8,7 @@ use podfetch_cast::{
     CastTarget, ControlCmd, DiscoveredCastDevice,
 };
 use podfetch_domain::device::{Device, kind as device_kind};
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::str::FromStr;

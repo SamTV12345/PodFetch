@@ -7,7 +7,7 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
 use common_infrastructure::error::CustomError;
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -184,7 +184,7 @@ mod tests {
         );
     }
 
-    fn other_user() -> podfetch_domain::user::User {
+    fn other_user() -> podfetch_identity::domain::user::User {
         let mut user = UserTestDataBuilder::new().build();
         user.id = Uuid::new_v4();
         user

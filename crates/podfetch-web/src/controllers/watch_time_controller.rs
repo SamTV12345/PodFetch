@@ -10,7 +10,7 @@ use axum::extract::Path;
 use axum::extract::State;
 use axum::http::HeaderMap;
 use axum::{Extension, Json};
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use reqwest::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;

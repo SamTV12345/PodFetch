@@ -1,4 +1,4 @@
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;

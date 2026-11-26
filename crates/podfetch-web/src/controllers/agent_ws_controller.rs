@@ -14,7 +14,7 @@ use axum::routing::get;
 use chrono::Utc;
 use futures::{SinkExt, StreamExt};
 use podfetch_agent_protocol::{AgentMsg, ErrorCode, PROTOCOL_VERSION, ServerMsg};
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::{info, warn};

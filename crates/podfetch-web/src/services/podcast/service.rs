@@ -21,7 +21,7 @@ use common_infrastructure::runtime::{ENVIRONMENT_SERVICE, ITUNES_URL};
 use podfetch_domain::favorite::FavoriteRepository;
 use podfetch_domain::ordering::{OrderCriteria, OrderOption};
 use podfetch_domain::podcast::{NewPodcast, PodcastMetadataUpdate, PodcastRepository};
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use podfetch_persistence::adapters::{DeviceSyncGroupRepositoryImpl, SubscriptionRepositoryImpl};
 use podfetch_persistence::db::PersistenceError;
 use podfetch_persistence::db::database;

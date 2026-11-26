@@ -6,7 +6,7 @@ use crate::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
 use chrono::Utc;
 use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use podfetch_domain::episode_triage::{EpisodeTriage, EpisodeTriageRepository, TriageStatus};
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use podfetch_persistence::adapters::EpisodeTriageRepositoryImpl;
 use podfetch_persistence::db::database;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;

@@ -14,7 +14,7 @@ use axum::extract::{Path, State};
 use axum::http::HeaderMap;
 use axum::http::Response;
 use axum::{Extension, Json};
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use reqwest::StatusCode;
 
 #[utoipa::path(
@@ -274,7 +274,7 @@ mod tests {
         );
     }
 
-    fn non_admin_user() -> podfetch_domain::user::User {
+    fn non_admin_user() -> podfetch_identity::domain::user::User {
         UserTestDataBuilder::new().build()
     }
 

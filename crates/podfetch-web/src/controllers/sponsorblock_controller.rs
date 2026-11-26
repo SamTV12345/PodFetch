@@ -3,7 +3,7 @@ use crate::controllers::podcast_episode_controller::resolve_episode_uuid;
 use axum::extract::Path;
 use axum::{Extension, Json};
 use common_infrastructure::error::CustomError;
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use podfetch_persistence::sponsorblock::{SponsorblockRepository, SponsorblockUserSettingsEntity};
 use serde::{Deserialize, Serialize};
 use utoipa_axum::router::OpenApiRouter;

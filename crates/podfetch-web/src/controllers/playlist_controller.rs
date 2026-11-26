@@ -7,7 +7,7 @@ pub use crate::playlist::PlaylistDtoPost;
 use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use common_infrastructure::error::CustomError;
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use reqwest::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -141,7 +141,7 @@ mod tests {
     use diesel::QueryDsl;
     use diesel::RunQueryDsl;
     use diesel::dsl::count_star;
-    use podfetch_domain::user::User;
+    use podfetch_identity::domain::user::User;
     use podfetch_persistence::db::get_connection;
     use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
     use podfetch_persistence::schema::playlist_items::dsl as pli_dsl;

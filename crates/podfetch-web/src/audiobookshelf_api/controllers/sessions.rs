@@ -72,7 +72,7 @@ pub async fn play_item_episode(
 
 async fn start_session(
     state: AppState,
-    user: podfetch_domain::user::User,
+    user: podfetch_identity::domain::user::User,
     item_id: &str,
     episode_id: Option<&str>,
     _body: Option<PlayRequestBody>,
@@ -423,7 +423,7 @@ pub async fn close_session(
 
 async fn start_book_session(
     state: AppState,
-    user: podfetch_domain::user::User,
+    user: podfetch_identity::domain::user::User,
     item_id: &str,
     body: Option<PlayRequestBody>,
 ) -> Result<Json<PlaybackSessionDto>, CustomError> {

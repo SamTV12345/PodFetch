@@ -12,7 +12,7 @@ use diesel::dsl::max;
 use diesel::prelude::*;
 use podfetch_domain::episode::Episode;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use podfetch_persistence::db::get_connection;
 use podfetch_persistence::favorite::FavoriteEntity as Favorite;
 use podfetch_persistence::podcast::PodcastEntity as Podcast;

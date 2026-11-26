@@ -7,7 +7,7 @@ use crate::services::podcast::service::PodcastService;
 use common_infrastructure::error::CustomError;
 use podfetch_domain::favorite::FavoriteRepository;
 use podfetch_domain::podcast::PodcastRepository;
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use podfetch_persistence::db::database;
 use podfetch_persistence::favorite::DieselFavoriteRepository;
 use podfetch_persistence::podcast::DieselPodcastRepository;

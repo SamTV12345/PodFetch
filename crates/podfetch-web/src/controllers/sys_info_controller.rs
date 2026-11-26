@@ -26,9 +26,10 @@ fn get_size(path: &str) -> Result<u64, std::io::Error> {
     }
     Ok(total)
 }
-use crate::sys::{self, LoginControllerError, LoginRequest, SysExtraInfo, VersionInfo};
+use crate::sys::{self, SysExtraInfo, VersionInfo};
 use crate::url_rewriting::resolve_server_url_from_headers;
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
+use podfetch_identity::login::{self, LoginControllerError, LoginRequest};
 use reqwest::StatusCode;
 use sysinfo::{Disks, System};
 use utoipa_axum::router::OpenApiRouter;
@@ -109,7 +110,7 @@ pub async fn login(
     State(state): State<AppState>,
     auth: Json<LoginRequest>,
 ) -> Result<StatusCode, ErrorType> {
-    sys::login(state.login_service.as_ref(), &auth.0)
+    login::login(state.login_service.as_ref(), &auth.0)
         .map(|_| StatusCode::OK)
         .map_err(map_login_error)
 }
@@ -163,7 +164,6 @@ pub fn get_sys_info_router() -> OpenApiRouter<AppState> {
 #[cfg(test)]
 mod tests {
     use crate::app_state::AppState;
-    use crate::role::Role;
     use crate::test_support::tests::handle_test_startup;
     use axum::Extension;
     use axum::extract::State;
@@ -171,7 +171,8 @@ mod tests {
     use common_infrastructure::config::ConfigModel;
     use common_infrastructure::error::{CustomErrorInner, ErrorType};
     use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
-    use podfetch_domain::user::User;
+    use podfetch_identity::domain::user::User;
+    use podfetch_identity::role::Role;
     use serde_json::Value;
     use serial_test::serial;
     use sha256::digest;

@@ -9,7 +9,7 @@
 use chrono::{NaiveDateTime, Utc};
 use podfetch_domain::audiobookshelf::library::Library;
 use podfetch_domain::audiobookshelf::media_progress::MediaProgress;
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use serde_json::{Value, json};
 
 /// audiobookshelf event name for the connection-init payload.

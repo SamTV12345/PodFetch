@@ -1,8 +1,8 @@
-use crate::db::{Database, PersistenceError};
+use crate::domain::session::{Session, SessionRepository};
 use chrono::NaiveDateTime;
+use common_infrastructure::db::{Database, PersistenceError};
 use diesel::prelude::{Insertable, Queryable};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
-use podfetch_domain::session::{Session, SessionRepository};
 use uuid::Uuid;
 
 diesel::table! {

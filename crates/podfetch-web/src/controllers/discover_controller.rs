@@ -5,7 +5,7 @@ use crate::services::discover::service::{CategoryDto, DiscoverService};
 use axum::extract::Query;
 use axum::{Extension, Json};
 use common_infrastructure::error::CustomError;
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use serde::Deserialize;
 use utoipa::IntoParams;
 use utoipa_axum::router::OpenApiRouter;

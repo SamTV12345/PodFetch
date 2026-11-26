@@ -3,7 +3,7 @@ pub mod tests {
     use crate::test_support::tests::TestServerWrapper;
     use base64::Engine;
     use base64::engine::general_purpose;
-    use podfetch_domain::user::User;
+    use podfetch_identity::domain::user::User;
 
     pub async fn create_auth_gpodder(server: &mut TestServerWrapper<'_>, user: &User) {
         let encoded_auth =

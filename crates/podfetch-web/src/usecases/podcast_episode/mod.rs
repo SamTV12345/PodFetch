@@ -27,7 +27,7 @@ use common_infrastructure::telegram::send_new_episode_notification;
 use common_infrastructure::time::opt_or_empty_string;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use podfetch_domain::podcast_episode::{NewPodcastEpisode, PodcastEpisodeRepository};
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use podfetch_persistence::db::database;
 use podfetch_persistence::db::get_connection;
 use podfetch_persistence::podcast::PodcastEntity as Podcast;

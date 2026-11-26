@@ -16,7 +16,7 @@ use common_infrastructure::error::CustomErrorInner;
 use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::runtime::DEFAULT_DEVICE;
 use podfetch_domain::device::kind::is_castable;
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
 use utoipa::ToSchema;

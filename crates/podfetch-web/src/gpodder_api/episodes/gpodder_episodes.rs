@@ -10,7 +10,7 @@ use axum::{Extension, Json};
 use common_infrastructure::error::CustomError;
 use common_infrastructure::path::trim_from_path;
 use common_infrastructure::time::get_current_timestamp;
-use podfetch_domain::session::Session;
+use podfetch_identity::domain::session::Session;
 use serde::Serialize;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;

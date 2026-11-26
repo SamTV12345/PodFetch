@@ -13,8 +13,8 @@ pub struct Invite {
     pub expires_at: chrono::NaiveDateTime,
 }
 
-impl From<podfetch_domain::invite::Invite> for Invite {
-    fn from(value: podfetch_domain::invite::Invite) -> Self {
+impl From<crate::domain::invite::Invite> for Invite {
+    fn from(value: crate::domain::invite::Invite) -> Self {
         Self {
             id: value.id,
             role: value.role,
