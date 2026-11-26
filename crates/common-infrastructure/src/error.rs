@@ -93,7 +93,9 @@ impl From<PersistenceError> for CustomError {
     fn from(value: PersistenceError) -> Self {
         match value {
             PersistenceError::Database(db_error) => map_db_error(db_error, ErrorSeverity::Critical),
-            PersistenceError::Pool(_) | PersistenceError::Connection(_) => {
+            PersistenceError::Pool(_)
+            | PersistenceError::Connection(_)
+            | PersistenceError::Locked { .. } => {
                 CustomErrorInner::Unknown(ErrorSeverity::Critical).into()
             }
         }
