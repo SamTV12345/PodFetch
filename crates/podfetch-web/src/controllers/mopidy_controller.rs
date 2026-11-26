@@ -8,7 +8,7 @@ use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use podfetch_domain::device::{Device, kind as device_kind};
-use podfetch_domain::user::User;
+use podfetch_identity::api::Principal;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
@@ -66,7 +66,7 @@ fn normalize_url(raw: &str) -> Result<String, CustomError> {
     Ok(trimmed.to_string())
 }
 
-fn require_admin(user: &User) -> Result<(), CustomError> {
+fn require_admin(user: &Principal) -> Result<(), CustomError> {
     if user.is_admin() {
         Ok(())
     } else {
@@ -82,9 +82,11 @@ fn require_admin(user: &User) -> Result<(), CustomError> {
 )]
 pub async fn list_mopidy_servers(
     State(state): State<AppState>,
-    Extension(user): Extension<User>,
+    Extension(user): Extension<Principal>,
 ) -> Result<Json<Vec<MopidyServerResponse>>, CustomError> {
-    let devices = state.device_service.list_castable_for_user(user.id)?;
+    let devices = state
+        .device_service
+        .list_castable_for_user(user.id.into())?;
     Ok(Json(
         devices
             .iter()
@@ -107,7 +109,7 @@ pub async fn list_mopidy_servers(
 )]
 pub async fn add_mopidy_server(
     State(state): State<AppState>,
-    Extension(user): Extension<User>,
+    Extension(user): Extension<Principal>,
     Json(req): Json<AddMopidyServerRequest>,
 ) -> Result<Json<MopidyServerResponse>, CustomError> {
     require_admin(&user)?;
@@ -129,7 +131,7 @@ pub async fn add_mopidy_server(
         deviceid: url.clone(),
         kind: kind.to_string(),
         name: req.name,
-        user_id: user.id,
+        user_id: user.id.into(),
         chromecast_uuid: Some(Uuid::new_v4().to_string()),
         agent_id: None,
         last_seen_at: None,
@@ -156,7 +158,7 @@ pub async fn add_mopidy_server(
     tag = "mopidy"
 )]
 pub async fn test_mopidy_server(
-    Extension(user): Extension<User>,
+    Extension(user): Extension<Principal>,
     Json(req): Json<TestMopidyServerRequest>,
 ) -> Result<Json<MopidyTestResult>, CustomError> {
     require_admin(&user)?;
@@ -187,7 +189,7 @@ pub async fn test_mopidy_server(
 )]
 pub async fn delete_mopidy_server(
     State(state): State<AppState>,
-    Extension(user): Extension<User>,
+    Extension(user): Extension<Principal>,
     Path(id): Path<String>,
 ) -> Result<(), CustomError> {
     let uuid = Uuid::parse_str(&id).map_err(|_| {

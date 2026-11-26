@@ -5,6 +5,7 @@
 //! across transcript segments, and an admin-only reparse-all action.
 
 use crate::app_state::AppState;
+use crate::auth_middleware::FeedApiKey;
 use crate::controllers::podcast_episode_controller::resolve_episode_uuid;
 use axum::body::Body;
 use axum::extract::{Path, Query, State};
@@ -16,7 +17,7 @@ use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use podfetch_domain::podcast_episode_transcript::PodcastEpisodeTranscript;
 use podfetch_domain::podcast_episode_transcript::TranscriptSegment;
-use podfetch_domain::user::User;
+use podfetch_identity::api::Principal;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
@@ -225,7 +226,7 @@ async fn stream_transcript_file(
 pub async fn get_transcripts_of_episode(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Extension(_requester): Extension<User>,
+    Extension(_requester): Extension<Principal>,
 ) -> Result<Json<Vec<TranscriptDto>>, CustomError> {
     let episode_id = resolve_episode_uuid(&id)?;
     let mut transcripts: Vec<TranscriptDto> = state
@@ -272,7 +273,7 @@ pub async fn get_transcripts_of_episode(
 pub async fn get_preferred_transcript(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Extension(_requester): Extension<User>,
+    Extension(_requester): Extension<Principal>,
 ) -> Result<Json<TranscriptWithSegmentsDto>, CustomError> {
     let episode_id = resolve_episode_uuid(&id)?;
     let preferred = state
@@ -299,7 +300,7 @@ pub async fn get_preferred_transcript(
 pub async fn get_transcript_file(
     State(state): State<AppState>,
     Path((id, tid)): Path<(String, String)>,
-    Extension(_requester): Extension<User>,
+    Extension(_requester): Extension<Principal>,
 ) -> Result<Response, CustomError> {
     let episode_id = resolve_episode_uuid(&id)?;
     let transcript_id = parse_transcript_uuid(&tid)?;
@@ -344,7 +345,7 @@ pub async fn get_transcript_file_with_api_key(
 pub async fn enqueue_transcription(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
 ) -> Result<Response, common_infrastructure::error::ErrorType> {
     if !requester.is_privileged_user() {
         return Err(CustomError::from(CustomErrorInner::Forbidden(Warning)).into());
@@ -387,7 +388,8 @@ pub async fn search_transcripts(
     State(state): State<AppState>,
     headers: http::HeaderMap,
     Query(params): Query<TranscriptSearchQuery>,
-    Extension(requester): Extension<User>,
+    Extension(_requester): Extension<Principal>,
+    Extension(api_key): Extension<FeedApiKey>,
 ) -> Result<Json<Vec<TranscriptSearchGroupDto>>, CustomError> {
     let server_url = crate::url_rewriting::resolve_server_url_from_headers(&headers);
     // `page` is 0-based; the repository itself does not validate it, so a
@@ -422,7 +424,7 @@ pub async fn search_transcripts(
                     group,
                     crate::podcast_episode_dto::PodcastEpisodeDto::from_episode_with_user(
                         episode,
-                        Some(requester.clone()),
+                        api_key.as_deref(),
                         None,
                         &server_url,
                     ),
@@ -445,7 +447,7 @@ pub async fn search_transcripts(
 )]
 pub async fn reparse_transcripts(
     State(state): State<AppState>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
 ) -> Result<Json<ReparseReportDto>, CustomError> {
     if !requester.is_admin() {
         return Err(CustomErrorInner::Forbidden(Warning).into());
@@ -488,7 +490,8 @@ mod tests {
         PodcastEpisodeTranscriptRepository, TranscriptSegment, TranscriptSource, TranscriptStatus,
         UpsertTranscript,
     };
-    use podfetch_domain::user::User;
+    use podfetch_identity::api::Principal;
+    use podfetch_identity::domain::user::User;
     use podfetch_persistence::adapters::PodcastEpisodeTranscriptRepositoryImpl;
     use podfetch_persistence::db::{database, get_connection};
     use podfetch_persistence::schema::podcast_episodes::dsl as pe_dsl;
@@ -857,7 +860,7 @@ mod tests {
         let result = super::enqueue_transcription(
             State(app_state()),
             Path(Uuid::new_v4().to_string()),
-            Extension(non_privileged),
+            Extension(Principal::from(&non_privileged)),
         )
         .await;
 
@@ -883,7 +886,9 @@ mod tests {
         // is simulated by invoking the handler with a non-admin `Extension`,
         // matching the pattern used by other controllers' forbidden tests.
         let _server = server; // keep the DB/mutex guard alive for the duration
-        let result = super::reparse_transcripts(State(app_state()), Extension(non_admin)).await;
+        let result =
+            super::reparse_transcripts(State(app_state()), Extension(Principal::from(&non_admin)))
+                .await;
 
         match result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),

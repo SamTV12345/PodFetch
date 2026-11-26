@@ -17,7 +17,7 @@ use diesel::{Connection, QueryableByName, RunQueryDsl};
 use diesel_migrations::MigrationHarness;
 use podfetch_persistence::db::SQLITE_MIGRATIONS;
 
-/// Canonical `STANDARD_USER_ID` (`crate::role::STANDARD_USER_ID`) in text form.
+/// Canonical `STANDARD_USER_ID` (`podfetch_identity::role::STANDARD_USER_ID`) in text form.
 const CANON: &str = "00000000-0000-7000-8000-000000009999";
 /// A random uuid standing in for what the uuid migration handed the user.
 const RANDOM: &str = "11111111-2222-4333-8444-555555555555";

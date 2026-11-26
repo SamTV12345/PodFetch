@@ -3174,6 +3174,7 @@ dependencies = [
  "podfetch-agent-protocol",
  "podfetch-cast",
  "podfetch-domain",
+ "podfetch-identity",
  "podfetch-persistence",
  "podfetch-storage",
  "podfetch-web",
@@ -3244,6 +3245,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "podfetch-identity"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "common-infrastructure",
+ "diesel",
+ "podfetch-events",
+ "podfetch-kernel",
+ "serde",
+ "sha256",
+ "thiserror 2.0.21",
+ "tracing",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "podfetch-kernel"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
 name = "podfetch-persistence"
 version = "0.1.0"
 dependencies = [
@@ -3307,6 +3335,8 @@ dependencies = [
  "podfetch-cast",
  "podfetch-domain",
  "podfetch-events",
+ "podfetch-identity",
+ "podfetch-kernel",
  "podfetch-persistence",
  "podfetch-storage",
  "quick-xml 0.42.0",

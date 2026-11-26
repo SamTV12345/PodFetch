@@ -12,7 +12,7 @@ use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuild
 use serde_json::{Value, json};
 use serial_test::serial;
 
-fn create_user_for_audiobookshelf(state: &AppState) -> podfetch_domain::user::User {
+fn create_user_for_audiobookshelf(state: &AppState) -> podfetch_identity::domain::user::User {
     let user = state
         .user_admin_service
         .create_user(UserTestDataBuilder::new().build())
@@ -28,7 +28,7 @@ fn create_user_for_audiobookshelf(state: &AppState) -> podfetch_domain::user::Us
         .expect("assign unique api_key for test user")
 }
 
-fn create_user_with_role(state: &AppState, role: &str) -> podfetch_domain::user::User {
+fn create_user_with_role(state: &AppState, role: &str) -> podfetch_identity::domain::user::User {
     let mut user = create_user_for_audiobookshelf(state);
     user.role = role.to_string();
     state
@@ -37,7 +37,7 @@ fn create_user_with_role(state: &AppState, role: &str) -> podfetch_domain::user:
         .expect("assign role to test user")
 }
 
-fn create_admin_for_audiobookshelf(state: &AppState) -> podfetch_domain::user::User {
+fn create_admin_for_audiobookshelf(state: &AppState) -> podfetch_identity::domain::user::User {
     create_user_with_role(state, "admin")
 }
 

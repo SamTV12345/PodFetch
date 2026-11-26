@@ -8,7 +8,6 @@ pub mod file_access;
 pub mod filter;
 pub mod gpodder;
 pub mod history;
-pub mod invite;
 pub mod manifest;
 pub mod notification;
 pub mod playlist;
@@ -17,7 +16,6 @@ pub mod podcast_episode;
 pub mod podcast_episode_dto;
 pub mod podcast_settings;
 pub mod podcast_view;
-pub mod role;
 pub mod rss;
 pub mod settings;
 pub mod stats;
@@ -25,8 +23,6 @@ pub mod subscription;
 pub mod sys;
 pub mod tags;
 pub mod url_rewriting;
-pub mod user_admin;
-pub mod user_onboarding;
 pub mod watchtime;
 
 // Application services (implementations of the traits above)
@@ -62,6 +58,7 @@ pub mod startup;
 // Application state
 pub mod app_state;
 pub mod application;
+mod identity_tests;
 
 // File access API adapter
 pub mod api_file_access;

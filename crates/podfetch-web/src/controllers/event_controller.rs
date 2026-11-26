@@ -5,8 +5,8 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
 use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
-use podfetch_domain::user::User;
 use podfetch_events::{DeliveryStatus, DeliveryView, EventBusError};
+use podfetch_identity::api::Principal;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::router::OpenApiRouter;
@@ -75,7 +75,7 @@ pub struct DeliveryQuery {
     pub limit: Option<i64>,
 }
 
-fn require_admin(user: &User) -> Result<(), CustomError> {
+fn require_admin(user: &Principal) -> Result<(), CustomError> {
     if user.is_admin() {
         Ok(())
     } else {
@@ -108,7 +108,7 @@ fn map_event_error(error: EventBusError) -> CustomError {
 )]
 pub async fn list_event_deliveries(
     State(state): State<AppState>,
-    Extension(user): Extension<User>,
+    Extension(user): Extension<Principal>,
     Query(query): Query<DeliveryQuery>,
 ) -> Result<Json<Vec<EventDeliveryDto>>, CustomError> {
     require_admin(&user)?;
@@ -143,7 +143,7 @@ pub async fn list_event_deliveries(
 )]
 pub async fn get_event_stats(
     State(state): State<AppState>,
-    Extension(user): Extension<User>,
+    Extension(user): Extension<Principal>,
 ) -> Result<Json<EventStatsDto>, CustomError> {
     require_admin(&user)?;
     let mut stats = EventStatsDto::default();
@@ -176,7 +176,7 @@ pub async fn get_event_stats(
 )]
 pub async fn retry_event_delivery(
     State(state): State<AppState>,
-    Extension(user): Extension<User>,
+    Extension(user): Extension<Principal>,
     Path((event_seq, handler)): Path<(i64, String)>,
 ) -> Result<StatusCode, CustomError> {
     require_admin(&user)?;

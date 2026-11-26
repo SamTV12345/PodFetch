@@ -1,8 +1,8 @@
+use crate::domain::invite::InviteRepository;
 use crate::invite::{Invite, InviteApplicationService};
 use crate::role::Role;
 use common_infrastructure::error::ErrorSeverity::{Debug, Error, Warning};
 use common_infrastructure::error::{CustomError, CustomErrorInner};
-use podfetch_domain::invite::InviteRepository;
 use std::sync::Arc;
 
 #[derive(Clone)]

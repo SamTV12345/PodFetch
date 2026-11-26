@@ -13,7 +13,7 @@ use common_infrastructure::error::CustomErrorInner;
 use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::path::trim_from_path;
 use common_infrastructure::time::get_current_timestamp;
-use podfetch_domain::session::Session;
+use podfetch_identity::domain::session::Session;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -309,7 +309,10 @@ mod tests {
 
     /// Sets up Basic Auth headers directly on the test server (no login/cookie).
     /// This mirrors how Kodi and other Simple API clients authenticate.
-    fn setup_basic_auth(server: &mut TestServerWrapper<'_>, user: &podfetch_domain::user::User) {
+    fn setup_basic_auth(
+        server: &mut TestServerWrapper<'_>,
+        user: &podfetch_identity::domain::user::User,
+    ) {
         let encoded_auth =
             general_purpose::STANDARD.encode(format!("{}:{}", user.username, "password"));
         server.test_server.clear_headers();

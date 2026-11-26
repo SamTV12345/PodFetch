@@ -4,7 +4,7 @@
 pub mod tests {
     use crate::test_support::tests::TestServerWrapper;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
-    use podfetch_domain::user::User;
+    use podfetch_identity::domain::user::User;
     use serde_json::Value;
     use serde_json::json;
 

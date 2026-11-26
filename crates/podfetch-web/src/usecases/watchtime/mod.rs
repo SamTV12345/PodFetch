@@ -13,14 +13,14 @@ use common_infrastructure::error::CustomError;
 use podfetch_domain::episode::{EpisodeRepository, NewEpisode};
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::listening_event::NewListeningEvent;
-use podfetch_domain::user::User;
-use podfetch_domain::user_admin::UserAdminRepository;
+use podfetch_identity::api::Principal;
+use podfetch_identity::domain::user_admin::UserAdminRepository;
+use podfetch_identity::persistence::user_admin::DieselUserAdminRepository;
 use podfetch_persistence::db::database;
 use podfetch_persistence::episode::DieselEpisodeRepository;
 use podfetch_persistence::episode::EpisodeEntity as Episode;
 use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
-use podfetch_persistence::user_admin::DieselUserAdminRepository;
 
 use common_infrastructure::error::CustomErrorInner;
 use common_infrastructure::error::ErrorSeverity::Warning;
@@ -225,7 +225,7 @@ impl WatchtimeUseCase {
     }
 
     pub fn get_last_watched_episodes(
-        user: &User,
+        user: &Principal,
     ) -> Result<Vec<(PodcastEpisode, Episode, Podcast)>, CustomError> {
         Self::repo()
             .find_last_watched_episodes(&user.username)
@@ -459,7 +459,8 @@ impl WatchtimeApplicationService for WatchtimeUseCase {
 
     fn get_last_watched(
         &self,
-        user: &User,
+        user: &Principal,
+        api_key: Option<&str>,
         server_url: &str,
     ) -> Result<Vec<Self::LastWatchedItem>, Self::Error> {
         Self::get_last_watched_episodes(user).map(|items| {
@@ -469,7 +470,7 @@ impl WatchtimeApplicationService for WatchtimeUseCase {
                     PodcastWatchedEpisodeModelWithPodcastEpisode {
                         podcast_episode: PodcastEpisodeDto::from_episode_with_user(
                             podcast_episode,
-                            Some(user.clone()),
+                            api_key,
                             None::<FavoritePodcastEpisode>,
                             server_url,
                         ),

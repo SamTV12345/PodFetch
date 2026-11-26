@@ -1,9 +1,9 @@
+use crate::domain::user_admin::{ManagedUser, UserAdminRepository};
 use crate::services::invite::service::InviteService;
 use crate::user_admin::UserSummary;
 use crate::user_onboarding::{UserOnboardingApplicationService, UserOnboardingModel};
 use common_infrastructure::error::ErrorSeverity::{Debug, Warning};
 use common_infrastructure::error::{CustomError, CustomErrorInner};
-use podfetch_domain::user_admin::{ManagedUser, UserAdminRepository};
 use sha256::digest;
 use std::sync::Arc;
 
@@ -70,7 +70,7 @@ impl UserOnboardingService {
         }
 
         let user = self.repository.create(ManagedUser {
-            id: podfetch_domain::ids::new_id(),
+            id: uuid::Uuid::now_v7(),
             username,
             role: invite.role,
             password: Some(digest(password)),

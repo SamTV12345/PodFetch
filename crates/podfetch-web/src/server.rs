@@ -10,7 +10,6 @@ use common_infrastructure::runtime::MAIN_ROOM;
 use futures::executor::block_on;
 use podfetch_cast::{CastSessionId, CastStatus};
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
-use podfetch_domain::user::User;
 use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use serde::Serialize;
@@ -60,7 +59,7 @@ impl ChatServerHandle {
     ) {
         let podcast_episode: PodcastEpisodeDto = PodcastEpisodeDto::from_episode_with_user(
             podcast_episode.clone(),
-            None::<User>,
+            None,
             None::<FavoritePodcastEpisode>,
             "",
         );
@@ -119,7 +118,7 @@ impl ChatServerHandle {
             &PodcastEpisodeDeleteMessage {
                 podcast_episode: PodcastEpisodeDto::from_episode_with_user(
                     podcast_episode.clone(),
-                    None::<User>,
+                    None,
                     None::<FavoritePodcastEpisode>,
                     "",
                 ),
@@ -168,7 +167,7 @@ impl ChatServerHandle {
             .map(|episode| {
                 PodcastEpisodeDto::from_episode_with_user(
                     episode,
-                    None::<User>,
+                    None,
                     None::<FavoritePodcastEpisode>,
                     "",
                 )

@@ -9,11 +9,11 @@
 //! follow-up; for now those users must hit /api/authorize with a token they
 //! obtained out-of-band.)
 
-use crate::services::user_admin::service::UserAdminService;
-use crate::services::user_auth::service::UserAuthService;
 use common_infrastructure::error::ErrorSeverity::{Debug, Warning};
 use common_infrastructure::error::{CustomError, CustomErrorInner};
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
+use podfetch_identity::services::user_admin::service::UserAdminService;
+use podfetch_identity::services::user_auth::service::UserAuthService;
 use sha256::digest;
 use std::sync::Arc;
 use uuid::Uuid;

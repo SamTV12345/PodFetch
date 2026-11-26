@@ -1,4 +1,4 @@
-use podfetch_domain::user::User;
+use podfetch_identity::api::Principal;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -27,19 +27,26 @@ pub trait PlaylistApplicationService {
 
     fn add_playlist(
         &self,
-        user: User,
+        user: Principal,
+        api_key: Option<&str>,
         playlist: PlaylistDtoPost,
     ) -> Result<Self::PlaylistDto, Self::Error>;
     fn update_playlist(
         &self,
-        user: User,
+        user: Principal,
+        api_key: Option<&str>,
         playlist_id: String,
         playlist: PlaylistDtoPost,
     ) -> Result<Self::PlaylistDto, Self::Error>;
-    fn get_all_playlists(&self, user: User) -> Result<Vec<Self::PlaylistDto>, Self::Error>;
+    fn get_all_playlists(
+        &self,
+        user: Principal,
+        api_key: Option<&str>,
+    ) -> Result<Vec<Self::PlaylistDto>, Self::Error>;
     fn get_playlist_by_id(
         &self,
-        user: User,
+        user: Principal,
+        api_key: Option<&str>,
         playlist_id: String,
     ) -> Result<Self::PlaylistDto, Self::Error>;
     fn delete_playlist_by_id(&self, user_id: Uuid, playlist_id: String) -> Result<(), Self::Error>;
@@ -53,43 +60,50 @@ pub trait PlaylistApplicationService {
 
 pub fn add_playlist<S>(
     service: &S,
-    user: User,
+    user: Principal,
+    api_key: Option<&str>,
     playlist: PlaylistDtoPost,
 ) -> Result<S::PlaylistDto, S::Error>
 where
     S: PlaylistApplicationService,
 {
-    service.add_playlist(user, playlist)
+    service.add_playlist(user, api_key, playlist)
 }
 
 pub fn update_playlist<S>(
     service: &S,
-    user: User,
+    user: Principal,
+    api_key: Option<&str>,
     playlist_id: String,
     playlist: PlaylistDtoPost,
 ) -> Result<S::PlaylistDto, S::Error>
 where
     S: PlaylistApplicationService,
 {
-    service.update_playlist(user, playlist_id, playlist)
+    service.update_playlist(user, api_key, playlist_id, playlist)
 }
 
-pub fn get_all_playlists<S>(service: &S, user: User) -> Result<Vec<S::PlaylistDto>, S::Error>
+pub fn get_all_playlists<S>(
+    service: &S,
+    user: Principal,
+    api_key: Option<&str>,
+) -> Result<Vec<S::PlaylistDto>, S::Error>
 where
     S: PlaylistApplicationService,
 {
-    service.get_all_playlists(user)
+    service.get_all_playlists(user, api_key)
 }
 
 pub fn get_playlist_by_id<S>(
     service: &S,
-    user: User,
+    user: Principal,
+    api_key: Option<&str>,
     playlist_id: String,
 ) -> Result<S::PlaylistDto, S::Error>
 where
     S: PlaylistApplicationService,
 {
-    service.get_playlist_by_id(user, playlist_id)
+    service.get_playlist_by_id(user, api_key, playlist_id)
 }
 
 pub fn delete_playlist_by_id<S>(

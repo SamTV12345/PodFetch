@@ -1,0 +1,16 @@
+[package]
+name = "podfetch-kernel"
+version = "0.1.0"
+edition = "2024"
+description = "Shared kernel: identifiers every bounded context may use"
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true }
+utoipa = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

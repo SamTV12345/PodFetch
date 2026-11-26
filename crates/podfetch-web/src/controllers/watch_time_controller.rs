@@ -1,4 +1,5 @@
 use crate::app_state::AppState;
+use crate::auth_middleware::FeedApiKey;
 use crate::history::EpisodeDto;
 use crate::podcast::PodcastDto;
 use crate::podcast_episode_dto::PodcastEpisodeDto;
@@ -10,7 +11,7 @@ use axum::extract::Path;
 use axum::extract::State;
 use axum::http::HeaderMap;
 use axum::{Extension, Json};
-use podfetch_domain::user::User;
+use podfetch_identity::api::Principal;
 use reqwest::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -31,7 +32,7 @@ tag="watchtime"
 )]
 pub async fn log_watchtime(
     State(state): State<AppState>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     Json(podcast_watch): Json<PodcastWatchedPostModel>,
 ) -> Result<StatusCode, CustomError> {
     let podcast_episode_id = podcast_watch.podcast_episode_id.clone();
@@ -54,15 +55,20 @@ tag="watchtime"
 )]
 pub async fn get_last_watched(
     State(state): State<AppState>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
+    Extension(api_key): Extension<FeedApiKey>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<LastWatchedItem>>, CustomError> {
     let server_url = resolve_server_url_from_headers(&headers);
-    let episodes =
-        watchtime::get_last_watched(state.watchtime_service.as_ref(), &requester, &server_url)
-            .map_err(map_watchtime_error)?
-            .into_iter()
-            .collect();
+    let episodes = watchtime::get_last_watched(
+        state.watchtime_service.as_ref(),
+        &requester,
+        api_key.as_deref(),
+        &server_url,
+    )
+    .map_err(map_watchtime_error)?
+    .into_iter()
+    .collect();
     Ok(Json(episodes))
 }
 
@@ -76,7 +82,7 @@ tag="watchtime"
 pub async fn get_watchtime(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
 ) -> Result<Json<EpisodeDto>, CustomError> {
     watchtime::get_watchtime(state.watchtime_service.as_ref(), &id, &requester.username)
         .map(Json)

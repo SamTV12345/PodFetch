@@ -7,7 +7,7 @@ use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeSer
 use crate::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
 use common_infrastructure::error::CustomError;
 use podfetch_domain::playlist::{Playlist, PlaylistItem, PlaylistRepository};
-use podfetch_domain::user::User;
+use podfetch_identity::api::Principal;
 use podfetch_persistence::adapters::PlaylistRepositoryImpl;
 use podfetch_persistence::db::database;
 use podfetch_persistence::episode::EpisodeEntity as Episode;
@@ -43,7 +43,7 @@ impl PlaylistService {
     fn to_playlist_dto(
         playlist: Playlist,
         items: Vec<(PlaylistItem, PodcastEpisode, Option<Episode>)>,
-        user: User,
+        api_key: Option<&str>,
     ) -> PlaylistDto {
         let items = items
             .into_iter()
@@ -52,7 +52,7 @@ impl PlaylistService {
                     PodcastEpisodeWithHistory {
                         podcast_episode: PodcastEpisodeDto::from_episode_with_user(
                             podcast_episode,
-                            Some(user.clone()),
+                            api_key,
                             None,
                             "",
                         ),
@@ -75,7 +75,7 @@ impl PlaylistService {
     fn load_playlist_items(
         &self,
         playlist_id: &str,
-        user: &User,
+        user: &Principal,
     ) -> Result<Vec<(PlaylistItem, PodcastEpisode, Option<Episode>)>, CustomError> {
         let items = self.repository.list_items_by_playlist_id(playlist_id)?;
 
@@ -121,7 +121,7 @@ impl PlaylistService {
     fn create_playlist_if_missing(
         &self,
         playlist: PlaylistDtoPost,
-        user: &User,
+        user: &Principal,
     ) -> Result<Playlist, CustomError> {
         if let Some(existing) = self.repository.find_by_name(&playlist.name)? {
             return Ok(existing);
@@ -130,7 +130,7 @@ impl PlaylistService {
         let inserted = self.repository.insert_playlist(Playlist {
             id: Uuid::new_v4().to_string(),
             name: playlist.name.clone(),
-            user_id: user.id,
+            user_id: user.id.into(),
         })?;
 
         for (position, item) in playlist.items.iter().enumerate() {
@@ -156,17 +156,19 @@ impl PlaylistApplicationService for PlaylistService {
 
     fn add_playlist(
         &self,
-        user: User,
+        user: Principal,
+        api_key: Option<&str>,
         playlist: PlaylistDtoPost,
     ) -> Result<Self::PlaylistDto, Self::Error> {
         let playlist = self.create_playlist_if_missing(playlist, &user)?;
         let items = self.load_playlist_items(&playlist.id, &user)?;
-        Ok(Self::to_playlist_dto(playlist, items, user))
+        Ok(Self::to_playlist_dto(playlist, items, api_key))
     }
 
     fn update_playlist(
         &self,
-        user: User,
+        user: Principal,
+        api_key: Option<&str>,
         playlist_id: String,
         playlist: PlaylistDtoPost,
     ) -> Result<Self::PlaylistDto, Self::Error> {
@@ -179,7 +181,7 @@ impl PlaylistApplicationService for PlaylistService {
         }
 
         self.repository
-            .update_playlist_name(&playlist_id, user.id, &playlist.name)?;
+            .update_playlist_name(&playlist_id, user.id.into(), &playlist.name)?;
         self.repository.delete_items_by_playlist_id(&playlist_id)?;
         for (position, item) in playlist.items.iter().enumerate() {
             self.repository.insert_playlist_item(PlaylistItem {
@@ -191,28 +193,33 @@ impl PlaylistApplicationService for PlaylistService {
 
         let playlist = self.find_playlist_by_id(&playlist_id)?;
         let items = self.load_playlist_items(&playlist.id, &user)?;
-        Ok(Self::to_playlist_dto(playlist, items, user))
+        Ok(Self::to_playlist_dto(playlist, items, api_key))
     }
 
-    fn get_all_playlists(&self, user: User) -> Result<Vec<Self::PlaylistDto>, Self::Error> {
+    fn get_all_playlists(
+        &self,
+        user: Principal,
+        api_key: Option<&str>,
+    ) -> Result<Vec<Self::PlaylistDto>, Self::Error> {
         self.repository
-            .list_by_user(user.id)?
+            .list_by_user(user.id.into())?
             .into_iter()
             .map(|playlist| {
                 let items = self.load_playlist_items(&playlist.id, &user)?;
-                Ok(Self::to_playlist_dto(playlist, items, user.clone()))
+                Ok(Self::to_playlist_dto(playlist, items, api_key))
             })
             .collect()
     }
 
     fn get_playlist_by_id(
         &self,
-        user: User,
+        user: Principal,
+        api_key: Option<&str>,
         playlist_id: String,
     ) -> Result<Self::PlaylistDto, Self::Error> {
-        let playlist = self.find_playlist_by_user_and_id(&playlist_id, user.id)?;
+        let playlist = self.find_playlist_by_user_and_id(&playlist_id, user.id.into())?;
         let items = self.load_playlist_items(&playlist_id, &user)?;
-        Ok(Self::to_playlist_dto(playlist, items, user))
+        Ok(Self::to_playlist_dto(playlist, items, api_key))
     }
 
     fn delete_playlist_by_id(&self, user_id: Uuid, playlist_id: String) -> Result<(), Self::Error> {

@@ -3,7 +3,7 @@ use crate::controllers::podcast_episode_controller::resolve_episode_uuid;
 use axum::extract::Path;
 use axum::{Extension, Json};
 use common_infrastructure::error::CustomError;
-use podfetch_domain::user::User;
+use podfetch_identity::api::Principal;
 use podfetch_persistence::sponsorblock::{SponsorblockRepository, SponsorblockUserSettingsEntity};
 use serde::{Deserialize, Serialize};
 use utoipa_axum::router::OpenApiRouter;
@@ -103,7 +103,7 @@ pub struct SponsorblockEpisodeResponse {
 )]
 pub async fn get_episode_sponsorblock(
     Path(id): Path<String>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
 ) -> Result<Json<SponsorblockEpisodeResponse>, CustomError> {
     let episode_id = resolve_episode_uuid(&id)?.to_string();
 
@@ -141,7 +141,7 @@ pub async fn get_episode_sponsorblock(
     tag = "sponsorblock"
 )]
 pub async fn get_sponsorblock_settings(
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
 ) -> Result<Json<SponsorblockUserSettingsDto>, CustomError> {
     let prefs = match SponsorblockRepository::get_user_settings(&requester.id.to_string())? {
         Some(e) => e.into(),
@@ -160,7 +160,7 @@ pub async fn get_sponsorblock_settings(
     tag = "sponsorblock"
 )]
 pub async fn update_sponsorblock_settings(
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     Json(body): Json<SponsorblockUserSettingsDto>,
 ) -> Result<Json<SponsorblockUserSettingsDto>, CustomError> {
     SponsorblockRepository::upsert_user_settings(

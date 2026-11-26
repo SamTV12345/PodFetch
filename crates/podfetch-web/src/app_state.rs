@@ -16,25 +16,28 @@ use crate::services::episode_triage::service::EpisodeTriageService;
 use crate::services::favorite_podcast_episode::service::FavoritePodcastEpisodeService;
 use crate::services::filter::service::FilterService;
 use crate::services::gpodder_setting::service::GpodderSettingService;
-use crate::services::invite::service::InviteService;
-use crate::services::login::service::LoginService;
 use crate::services::mopidy::driver::{MopidyDriver, MopidyEvent};
 use crate::services::notification::service::NotificationService;
 use crate::services::playlist::service::PlaylistService;
 use crate::services::podcast_episode_chapter::service::PodcastEpisodeChapterService;
 use crate::services::podcast_settings::service::PodcastSettingsService;
-use crate::services::session::service::SessionService;
 use crate::services::settings::service::SettingsService;
 use crate::services::stats::service::StatsService;
 use crate::services::subscription::service::SubscriptionService;
 use crate::services::tag::service::TagService;
 use crate::services::transcript::service::TranscriptService;
-use crate::services::user_admin::service::UserAdminService;
-use crate::services::user_auth::service::UserAuthService;
-use crate::services::user_onboarding::service::UserOnboardingService;
 use crate::usecases::watchtime::WatchtimeUseCase;
 use common_infrastructure::config::EnvironmentService;
 use podfetch_cast::StubCastDriver;
+use podfetch_identity::persistence::adapters::{
+    InviteRepositoryImpl, SessionRepositoryImpl, UserAdminRepositoryImpl,
+};
+use podfetch_identity::services::invite::service::InviteService;
+use podfetch_identity::services::login::service::LoginService;
+use podfetch_identity::services::session::service::SessionService;
+use podfetch_identity::services::user_admin::service::UserAdminService;
+use podfetch_identity::services::user_auth::service::UserAuthService;
+use podfetch_identity::services::user_onboarding::service::UserOnboardingService;
 use podfetch_persistence::adapters::AuthorRepositoryImpl;
 use podfetch_persistence::adapters::BookAudioFileRepositoryImpl;
 use podfetch_persistence::adapters::BookChapterRepositoryImpl;
@@ -45,7 +48,6 @@ use podfetch_persistence::adapters::EpisodeTriageRepositoryImpl;
 use podfetch_persistence::adapters::FavoritePodcastEpisodeRepositoryImpl;
 use podfetch_persistence::adapters::FilterRepositoryImpl;
 use podfetch_persistence::adapters::GpodderSettingRepositoryImpl;
-use podfetch_persistence::adapters::InviteRepositoryImpl;
 use podfetch_persistence::adapters::LibraryRepositoryImpl;
 use podfetch_persistence::adapters::ListeningEventRepositoryImpl;
 use podfetch_persistence::adapters::ListeningSessionRepositoryImpl;
@@ -58,12 +60,10 @@ use podfetch_persistence::adapters::PodcastEpisodeChapterRepositoryImpl;
 use podfetch_persistence::adapters::PodcastEpisodeTranscriptRepositoryImpl;
 use podfetch_persistence::adapters::PodcastSettingsRepositoryImpl;
 use podfetch_persistence::adapters::SeriesRepositoryImpl;
-use podfetch_persistence::adapters::SessionRepositoryImpl;
 use podfetch_persistence::adapters::SettingsRepositoryImpl;
 use podfetch_persistence::adapters::SubscriptionRepositoryImpl;
 use podfetch_persistence::adapters::TagRepositoryImpl;
 use podfetch_persistence::adapters::TranscriptionJobRepositoryImpl;
-use podfetch_persistence::adapters::UserAdminRepositoryImpl;
 use std::sync::Arc;
 use tokio::sync::Mutex as AsyncMutex;
 use tokio::sync::mpsc;
@@ -71,6 +71,7 @@ use tokio::sync::mpsc;
 #[derive(Clone)]
 pub struct AppState {
     pub event_bus: Arc<podfetch_events::EventBus>,
+    pub identity: Arc<dyn podfetch_identity::api::IdentityApi>,
     pub agent_dispatcher: Arc<AgentDispatcher>,
     pub agent_registry: Arc<AgentRegistry>,
     pub audiobookshelf_book_service: Arc<AudiobookshelfBookService>,
@@ -115,7 +116,6 @@ impl AppState {
         database: podfetch_persistence::db::Database,
         environment: Arc<EnvironmentService>,
     ) -> Self {
-        let event_bus_database = database.clone();
         let device_service = Arc::new(DeviceService::new(Arc::new(DeviceRepositoryImpl::new(
             database.clone(),
         ))));
@@ -192,9 +192,18 @@ impl AppState {
             Arc::new(TranscriptionJobRepositoryImpl::new(database.clone())),
         ));
         let watchtime_service = Arc::new(WatchtimeUseCase::new());
+        let identity: Arc<dyn podfetch_identity::api::IdentityApi> =
+            Arc::new(podfetch_identity::api::Identity::new(Arc::new(
+                UserAdminRepositoryImpl::new(database.clone()),
+            )));
+        let event_bus = podfetch_events::EventBus::new(
+            database.clone(),
+            podfetch_events::EventBusConfig::default(),
+        );
         let user_admin_service = Arc::new(UserAdminService::new(
             Arc::new(UserAdminRepositoryImpl::new(database.clone())),
             environment.clone(),
+            event_bus.clone(),
         ));
         let user_onboarding_service = Arc::new(UserOnboardingService::new(
             invite_service.clone(),
@@ -252,10 +261,8 @@ impl AppState {
         let audiobookshelf_hls_transcoder = Arc::new(HlsTranscoder::new(environment.clone()));
 
         Self {
-            event_bus: podfetch_events::EventBus::new(
-                event_bus_database,
-                podfetch_events::EventBusConfig::default(),
-            ),
+            event_bus,
+            identity,
             agent_dispatcher,
             agent_registry,
             audiobookshelf_book_service,

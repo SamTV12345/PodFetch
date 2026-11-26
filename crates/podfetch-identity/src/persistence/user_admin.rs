@@ -1,7 +1,7 @@
-use crate::db::{Database, PersistenceError};
+use crate::domain::user_admin::{ManagedUser, UserAdminRepository};
+use common_infrastructure::db::{Database, PersistenceError};
 use diesel::prelude::{AsChangeset, Insertable, Queryable};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
-use podfetch_domain::user_admin::{ManagedUser, UserAdminRepository};
 use uuid::Uuid;
 
 diesel::table! {
@@ -83,7 +83,7 @@ impl UserAdminRepository for DieselUserAdminRepository {
         let mut conn = self.database.connection()?;
         diesel::insert_into(users)
             .values((
-                id.eq(podfetch_domain::ids::new_id().to_string()),
+                id.eq(uuid::Uuid::now_v7().to_string()),
                 username.eq(user.username),
                 role.eq(user.role),
                 password.eq(user.password),
@@ -95,6 +95,18 @@ impl UserAdminRepository for DieselUserAdminRepository {
             ))
             .get_result::<UserEntity>(&mut conn)
             .map(Into::into)
+            .map_err(Into::into)
+    }
+
+    fn find_by_id(&self, id_to_find: Uuid) -> Result<Option<ManagedUser>, Self::Error> {
+        use self::users::dsl::*;
+
+        let mut conn = self.database.connection()?;
+        users
+            .filter(id.eq(id_to_find.to_string()))
+            .first::<UserEntity>(&mut conn)
+            .optional()
+            .map(|user| user.map(Into::into))
             .map_err(Into::into)
     }
 
@@ -178,4 +190,25 @@ impl UserAdminRepository for DieselUserAdminRepository {
             .map(|_| ())
             .map_err(Into::into)
     }
+}
+
+/// Deletes the user named `username_to_delete` on `conn`, normally inside the
+/// transaction that also publishes [`crate::events::UserDeleted`]. Returns the
+/// id of the deleted user, `None` when there was none.
+pub fn delete_by_username_on(
+    conn: &mut common_infrastructure::db::DBType,
+    username_to_delete: &str,
+) -> Result<Option<Uuid>, diesel::result::Error> {
+    use self::users::dsl::*;
+
+    let Some(found) = users
+        .filter(username.eq(username_to_delete))
+        .select(id)
+        .first::<String>(conn)
+        .optional()?
+    else {
+        return Ok(None);
+    };
+    diesel::delete(users.filter(id.eq(&found))).execute(conn)?;
+    Ok(Uuid::parse_str(&found).ok())
 }

@@ -1,4 +1,5 @@
 use crate::app_state::AppState;
+use crate::auth_middleware::FeedApiKey;
 use crate::controllers::podcast_episode_controller::{
     PodcastEpisodeWithHistory, resolve_episode_uuid, spawn_single_episode_download,
 };
@@ -11,7 +12,7 @@ use axum::{Extension, Json};
 use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use podfetch_domain::episode_triage::TriageStatus;
-use podfetch_domain::user::User;
+use podfetch_identity::api::Principal;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::router::OpenApiRouter;
@@ -57,13 +58,15 @@ pub struct ClearInboxResponse {
 )]
 pub async fn get_inbox(
     State(state): State<AppState>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
+    Extension(api_key): Extension<FeedApiKey>,
     Query(query): Query<TriageListQuery>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastEpisodeWithHistory>>, CustomError> {
     let server_url = resolve_server_url_from_headers(&headers);
     let items = state.episode_triage_service.get_inbox(
         &requester,
+        api_key.as_deref(),
         query.last_episode_date.clone(),
         query.limit(),
         &server_url,
@@ -79,13 +82,16 @@ pub async fn get_inbox(
 )]
 pub async fn get_waiting_list(
     State(state): State<AppState>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
+    Extension(api_key): Extension<FeedApiKey>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastEpisodeWithHistory>>, CustomError> {
     let server_url = resolve_server_url_from_headers(&headers);
-    let items = state
-        .episode_triage_service
-        .get_waiting_list(&requester, &server_url)?;
+    let items = state.episode_triage_service.get_waiting_list(
+        &requester,
+        api_key.as_deref(),
+        &server_url,
+    )?;
     Ok(Json(items))
 }
 
@@ -98,13 +104,15 @@ pub async fn get_waiting_list(
 )]
 pub async fn get_archive(
     State(state): State<AppState>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
+    Extension(api_key): Extension<FeedApiKey>,
     Query(query): Query<TriageListQuery>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastEpisodeWithHistory>>, CustomError> {
     let server_url = resolve_server_url_from_headers(&headers);
     let items = state.episode_triage_service.get_archive(
         &requester,
+        api_key.as_deref(),
         query.last_episode_date.clone(),
         query.limit(),
         &server_url,
@@ -122,7 +130,7 @@ pub async fn get_archive(
 pub async fn set_episode_triage(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
     Json(body): Json<TriageStatusPut>,
 ) -> Result<StatusCode, CustomError> {
     let status = TriageStatus::from_string(&body.status).ok_or_else(|| -> CustomError {
@@ -138,7 +146,7 @@ pub async fn set_episode_triage(
 
     state
         .episode_triage_service
-        .set_status(requester.id, episode_uuid, status)?;
+        .set_status(requester.id.into(), episode_uuid, status)?;
 
     // Picking an episode from the inbox also kicks off its download — but only
     // when the user is allowed to trigger downloads and the file isn't present
@@ -160,7 +168,7 @@ pub async fn set_episode_triage(
 )]
 pub async fn clear_inbox(
     State(state): State<AppState>,
-    Extension(requester): Extension<User>,
+    Extension(requester): Extension<Principal>,
 ) -> Result<Json<ClearInboxResponse>, CustomError> {
     let dismissed = state.episode_triage_service.clear_inbox(&requester)?;
     Ok(Json(ClearInboxResponse { dismissed }))
@@ -188,7 +196,8 @@ mod tests {
     use diesel::ExpressionMethods;
     use diesel::QueryDsl;
     use diesel::RunQueryDsl;
-    use podfetch_domain::user::User;
+    use podfetch_identity::api::Principal;
+    use podfetch_identity::domain::user::User;
     use podfetch_persistence::db::get_connection;
     use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
     use podfetch_persistence::schema::podcast_episodes::dsl as pe_dsl;
@@ -302,7 +311,7 @@ mod tests {
 
         let inbox = state
             .episode_triage_service
-            .get_inbox(&user, None, 100_000, "")
+            .get_inbox(&Principal::from(&user), None, None, 100_000, "")
             .unwrap();
         let in_inbox = |ep: &PodcastEpisode| inbox.iter().any(|i| i.podcast_episode.id == ep.id);
 
@@ -406,7 +415,7 @@ mod tests {
         let result = super::set_episode_triage(
             State(app_state()),
             Path(episode.id.clone()),
-            Extension(user.clone()),
+            Extension(Principal::from(&user.clone())),
             Json(TriageStatusPut {
                 status: "queued".to_string(),
             }),
@@ -416,7 +425,7 @@ mod tests {
 
         let waiting = app_state()
             .episode_triage_service
-            .get_waiting_list(&user, "")
+            .get_waiting_list(&Principal::from(&user), None, "")
             .unwrap();
         assert!(
             waiting.iter().any(|i| i.podcast_episode.id == episode.id),
@@ -424,7 +433,7 @@ mod tests {
         );
         let inbox = app_state()
             .episode_triage_service
-            .get_inbox(&user, None, 100, "")
+            .get_inbox(&Principal::from(&user), None, None, 100, "")
             .unwrap();
         assert!(
             !inbox.iter().any(|i| i.podcast_episode.id == episode.id),

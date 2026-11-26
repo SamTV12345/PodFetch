@@ -10,7 +10,7 @@ use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::path::trim_from_path;
 use common_infrastructure::time::get_current_timestamp;
 use podfetch_domain::device_sync_group::DeviceSyncGroup;
-use podfetch_domain::session::Session;
+use podfetch_identity::domain::session::Session;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;

@@ -13,7 +13,7 @@ use crate::audiobookshelf_api::socket_io::events::{
 use crate::server::SOCKET_IO_LAYER;
 use podfetch_domain::audiobookshelf::library::Library;
 use podfetch_domain::audiobookshelf::media_progress::MediaProgress;
-use podfetch_domain::user::User;
+use podfetch_identity::domain::user::User;
 
 pub fn user_room(user_id: uuid::Uuid) -> String {
     user_id.to_string()

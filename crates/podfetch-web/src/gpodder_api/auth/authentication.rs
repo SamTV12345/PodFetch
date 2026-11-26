@@ -11,7 +11,7 @@ use axum_extra::extract::cookie::{Cookie, SameSite};
 use common_infrastructure::config::EnvironmentService;
 use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
-use podfetch_domain::session::Session;
+use podfetch_identity::domain::session::Session;
 use sha256::digest;
 
 #[utoipa::path(
@@ -89,9 +89,9 @@ pub async fn logout(
 fn handle_proxy_auth(
     rq: axum::extract::Request,
     username: &str,
-    user_auth_service: &crate::services::user_auth::service::UserAuthService,
+    user_auth_service: &podfetch_identity::services::user_auth::service::UserAuthService,
     environment: &EnvironmentService,
-    session_service: &crate::services::session::service::SessionService,
+    session_service: &podfetch_identity::services::session::service::SessionService,
 ) -> Result<(CookieJar, StatusCode), CustomError> {
     let config = environment.reverse_proxy_config.clone().unwrap();
     let header_name = &config.header_name;
@@ -147,9 +147,9 @@ fn handle_proxy_auth(
 fn handle_gpodder_basic_auth(
     rq: axum::extract::Request,
     username: &str,
-    user_auth_service: &crate::services::user_auth::service::UserAuthService,
+    user_auth_service: &podfetch_identity::services::user_auth::service::UserAuthService,
     environment: &EnvironmentService,
-    session_service: &crate::services::session::service::SessionService,
+    session_service: &podfetch_identity::services::session::service::SessionService,
 ) -> Result<(CookieJar, StatusCode), CustomError> {
     let authorization_header = rq
         .headers()
@@ -232,7 +232,7 @@ pub fn get_auth_router() -> utoipa_axum::router::OpenApiRouter<AppState> {
 mod tests {
     use crate::app_state::AppState;
     use crate::gpodder_api::auth::authentication::create_session_cookie;
-    use podfetch_domain::session::Session;
+    use podfetch_identity::domain::session::Session;
     use serial_test::serial;
 
     #[test]

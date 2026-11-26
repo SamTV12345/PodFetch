@@ -1,9 +1,9 @@
+use crate::domain::user::User;
+use crate::domain::user_admin::{ManagedUser, UserAdminRepository};
 use crate::role::{Role, STANDARD_USER, STANDARD_USER_ID};
 use common_infrastructure::config::EnvironmentService;
 use common_infrastructure::error::ErrorSeverity::{Debug, Warning};
 use common_infrastructure::error::{CustomError, CustomErrorInner};
-use podfetch_domain::user::User;
-use podfetch_domain::user_admin::{ManagedUser, UserAdminRepository};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -50,7 +50,7 @@ impl UserAuthService {
         }
 
         self.repository.create(ManagedUser {
-            id: podfetch_domain::ids::new_id(),
+            id: uuid::Uuid::now_v7(),
             username,
             role,
             password,
@@ -120,7 +120,7 @@ impl UserAuthService {
         }
 
         self.repository.create(ManagedUser {
-            id: podfetch_domain::ids::new_id(),
+            id: uuid::Uuid::now_v7(),
             username: admin_username.clone(),
             role: Role::Admin.to_string(),
             password: self.environment.password.clone(),
@@ -175,138 +175,5 @@ impl UserAuthService {
             country: None,
             language: None,
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::test_support::tests::handle_test_startup;
-    use common_infrastructure::config::EnvironmentService;
-    use podfetch_domain::filter::{Filter, FilterRepository};
-    use podfetch_persistence::adapters::{FilterRepositoryImpl, UserAdminRepositoryImpl};
-    use podfetch_persistence::db::database;
-    use serial_test::serial;
-
-    /// Build a `UserAuthService` that behaves like a deployment with **no**
-    /// configured admin username (the no-auth mode from the bug report), backed
-    /// by the real migrated test database.
-    fn no_auth_service() -> UserAuthService {
-        let mut environment = EnvironmentService::for_tests();
-        environment.username = None;
-        UserAuthService::new(
-            Arc::new(UserAdminRepositoryImpl::new(database())),
-            Arc::new(environment),
-        )
-    }
-
-    /// Regression test for "Unable to add new podcast feed" (#2109).
-    ///
-    /// In no-auth mode every request is attributed to the standard user
-    /// (id [`STANDARD_USER_ID`]), which historically was never written to the
-    /// `users` table. Any write keyed on that id then failed the
-    /// `REFERENCES users(id)` foreign key. Seeding the row keeps the FK intact
-    /// while making the reference valid.
-    #[tokio::test]
-    #[serial]
-    async fn standard_user_is_seeded_so_fk_bound_writes_succeed() {
-        // Migrates the DB, enables `PRAGMA foreign_keys = ON`, and starts clean.
-        let _ts = handle_test_startup().await;
-
-        let service = no_auth_service();
-        let filter_repo = FilterRepositoryImpl::new(database());
-        let standard_filter = || Filter::new(STANDARD_USER_ID, None, true, None, false);
-
-        // The requester in no-auth mode is the standard user...
-        assert_eq!(service.read_only_admin_user().id, STANDARD_USER_ID);
-        // ...but it does not yet exist in the database.
-        assert!(
-            service
-                .repository
-                .find_by_username(STANDARD_USER)
-                .unwrap()
-                .is_none(),
-            "standard user must be absent before seeding",
-        );
-
-        // Reproduces the bug: a write referencing the absent user violates the FK.
-        assert!(
-            filter_repo.save(standard_filter()).is_err(),
-            "FK must reject a reference to a non-existent user",
-        );
-
-        // The fix: seed the standard user once.
-        service.ensure_standard_user_present().unwrap();
-
-        let seeded = service
-            .repository
-            .find_by_username(STANDARD_USER)
-            .unwrap()
-            .expect("standard user must exist after seeding");
-        assert_eq!(
-            seeded.id, STANDARD_USER_ID,
-            "seed must preserve the fixed id"
-        );
-
-        // Idempotent: a second startup must not error or duplicate.
-        service.ensure_standard_user_present().unwrap();
-
-        // The previously-failing FK-bound write now succeeds.
-        filter_repo
-            .save(standard_filter())
-            .expect("filter save must succeed once the standard user exists");
-    }
-
-    /// When a named admin username is configured the requester is a real
-    /// database user, so the standard user must not be seeded.
-    #[tokio::test]
-    #[serial]
-    async fn standard_user_is_not_seeded_when_admin_username_configured() {
-        let _ts = handle_test_startup().await;
-
-        let service = UserAuthService::new(
-            Arc::new(UserAdminRepositoryImpl::new(database())),
-            Arc::new(EnvironmentService::for_tests()),
-        );
-
-        service.ensure_standard_user_present().unwrap();
-
-        assert!(
-            service
-                .repository
-                .find_by_username(STANDARD_USER)
-                .unwrap()
-                .is_none(),
-            "standard user must not be seeded when a named admin is configured",
-        );
-    }
-
-    /// OIDC onboarding creates users without an api_key, but the UI needs one
-    /// to open its socket.io connection (#2282).
-    #[tokio::test]
-    #[serial]
-    async fn ensure_api_key_generates_once_and_persists() {
-        let _ts = handle_test_startup().await;
-
-        let service = UserAuthService::new(
-            Arc::new(UserAdminRepositoryImpl::new(database())),
-            Arc::new(EnvironmentService::for_tests()),
-        );
-
-        let created = service
-            .create_user("oidc_user".to_string(), "user".to_string(), None, false)
-            .unwrap();
-        assert!(created.api_key.is_none());
-
-        let with_key = service.ensure_api_key(created).unwrap();
-        let api_key = with_key.api_key.clone().expect("api key must be set");
-        assert_eq!(api_key.len(), 32);
-        assert!(!api_key.contains('-'));
-
-        // Persisted, and a second call keeps the existing key.
-        let stored = service.find_by_username("oidc_user").unwrap();
-        assert_eq!(stored.api_key.as_deref(), Some(api_key.as_str()));
-        let again = service.ensure_api_key(stored).unwrap();
-        assert_eq!(again.api_key.as_deref(), Some(api_key.as_str()));
     }
 }

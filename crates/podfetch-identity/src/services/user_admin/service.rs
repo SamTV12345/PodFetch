@@ -1,26 +1,55 @@
+use crate::domain::user::{User, UserWithoutPassword};
+use crate::domain::user_admin::UserAdminRepository;
+use crate::events::UserDeleted;
+use crate::persistence::user_admin::delete_by_username_on;
 use crate::role::STANDARD_USER_ID;
 use crate::user_admin::{ManagedUser, UserAdminApplicationService};
 use common_infrastructure::config::EnvironmentService;
-use common_infrastructure::error::CustomError;
-use podfetch_domain::user::{User, UserWithoutPassword};
-use podfetch_domain::user_admin::UserAdminRepository;
+use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
+use podfetch_events::{EventBus, EventBusError};
+use podfetch_kernel::UserId;
 use std::sync::Arc;
+
+fn map_event_error(error: EventBusError) -> CustomError {
+    tracing::error!("Could not publish identity event: {error}");
+    CustomErrorInner::Unknown(ErrorSeverity::Error).into()
+}
 
 #[derive(Clone)]
 pub struct UserAdminService {
     repository: Arc<dyn UserAdminRepository<Error = CustomError>>,
     environment: Arc<EnvironmentService>,
+    events: Arc<EventBus>,
 }
 
 impl UserAdminService {
     pub fn new(
         repository: Arc<dyn UserAdminRepository<Error = CustomError>>,
         environment: Arc<EnvironmentService>,
+        events: Arc<EventBus>,
     ) -> Self {
         Self {
             repository,
             environment,
+            events,
         }
+    }
+
+    /// Deletes the user and publishes [`UserDeleted`] in the same
+    /// transaction, so other contexts learn about every deletion and about
+    /// no deletion that was rolled back.
+    fn delete_and_publish(&self, username: &str) -> Result<(), CustomError> {
+        self.events
+            .transaction(|tx| -> Result<(), EventBusError> {
+                if let Some(user_id) = delete_by_username_on(tx.conn(), username)? {
+                    tx.publish(&UserDeleted {
+                        user_id: UserId::from(user_id),
+                        username: username.to_owned(),
+                    })?;
+                }
+                Ok(())
+            })
+            .map_err(map_event_error)
     }
 
     pub fn read_only_admin_id(&self) -> uuid::Uuid {
@@ -58,7 +87,7 @@ impl UserAdminService {
     }
 
     pub fn delete_user_by_username(&self, username: &str) -> Result<(), CustomError> {
-        self.repository.delete_by_username(username)
+        self.delete_and_publish(username)
     }
 }
 
@@ -86,6 +115,6 @@ impl UserAdminApplicationService for UserAdminService {
     }
 
     fn delete_by_username(&self, username: &str) -> Result<(), Self::Error> {
-        self.repository.delete_by_username(username)
+        self.delete_and_publish(username)
     }
 }

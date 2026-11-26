@@ -12,7 +12,7 @@ use diesel::dsl::max;
 use diesel::prelude::*;
 use podfetch_domain::episode::Episode;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
-use podfetch_domain::user::User;
+use podfetch_identity::api::Principal;
 use podfetch_persistence::db::get_connection;
 use podfetch_persistence::favorite::FavoriteEntity as Favorite;
 use podfetch_persistence::podcast::PodcastEntity as Podcast;
@@ -69,7 +69,8 @@ impl From<JoinedFavoritePodcastEpisode> for FavoritePodcastEpisode {
 
 impl TimelineItem {
     pub fn get_timeline(
-        user: User,
+        user: Principal,
+        api_key: Option<&str>,
         favored_only: TimelineQueryParams,
         server_url: &str,
     ) -> Result<TimelineItem, CustomError> {
@@ -95,7 +96,7 @@ impl TimelineItem {
         let user_id_to_search = user.id.to_string();
 
         let _ = FilterService::default_service()
-            .save_timeline_decision(user.id, favored_only.favored_only.unwrap_or(false));
+            .save_timeline_decision(user.id.into(), favored_only.favored_only.unwrap_or(false));
 
         let (ph1, ph2) = diesel::alias!(phi_struct as ph1, phi_struct as ph2);
 
@@ -190,7 +191,7 @@ impl TimelineItem {
                     (
                         PodcastEpisodeDto::from_episode_with_user(
                             podcast_episode,
-                            Some(user.clone()),
+                            api_key,
                             fav_episode.map(Into::into),
                             server_url,
                         ),
