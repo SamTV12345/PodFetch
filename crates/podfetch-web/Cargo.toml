@@ -51,6 +51,7 @@ sha1 = { workspace = true }
 
 # Async
 tokio = { workspace = true }
+tokio-util = { workspace = true }
 futures = { workspace = true }
 
 # HTTP client

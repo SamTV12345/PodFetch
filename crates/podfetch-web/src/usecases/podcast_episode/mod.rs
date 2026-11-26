@@ -10,7 +10,7 @@ use crate::services::podcast::metadata::PodcastBuilder;
 use crate::services::podcast_settings::service::PodcastSettingsService;
 use crate::services::settings::service::SettingsService;
 use crate::services::transcript::service::{FeedTranscriptTag, TranscriptService};
-use chrono::{DateTime, FixedOffset, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use common_infrastructure::config::FileHandlerType;
 use common_infrastructure::config::TELEGRAM_API_ENABLED;
 use common_infrastructure::config::is_env_var_present_and_true;
@@ -193,30 +193,37 @@ impl PodcastEpisodeUseCase {
             .map_err(Into::into)
     }
 
+    /// Normalises an item's `pubDate` to RFC 3339; empty when it has none.
+    ///
+    /// Feeds are sloppy, so besides RFC 2822 and RFC 3339 this accepts an
+    /// RFC 2822 date with a non-standard weekday ("Thurs, 2 Jan 2025 …").
+    /// Unparseable dates fall back to 2021-01-01 so the episode is still kept.
     fn parse_recording_date(item: &Item) -> String {
-        let mut inserted_date = String::new();
-
-        if let Some(date) = &item.pub_date {
-            fn parse_naive(timestring: &str) -> chrono::ParseResult<DateTime<FixedOffset>> {
-                let date_without_weekday = &timestring[5..];
-                DateTime::parse_from_str(date_without_weekday, "%d %b %Y %H:%M:%S %z")
-            }
-
-            let parsed_date = DateTime::parse_from_rfc2822(date).unwrap_or(
-                DateTime::parse_from_rfc3339(date).unwrap_or(
-                    parse_naive(date)
-                        .unwrap_or(DateTime::parse_from_rfc3339("2021-01-01T00:00:00Z").unwrap()),
-                ),
-            );
-            inserted_date = parsed_date.with_timezone(&Utc).to_rfc3339();
-        }
-
-        inserted_date
+        let Some(date) = item.pub_date.as_deref() else {
+            return String::new();
+        };
+        let without_weekday = |s: &str| {
+            let (_, rest) = s.split_once(',')?;
+            DateTime::parse_from_str(rest.trim(), "%d %b %Y %H:%M:%S %z").ok()
+        };
+        DateTime::parse_from_rfc2822(date)
+            .or_else(|_| DateTime::parse_from_rfc3339(date))
+            .ok()
+            .or_else(|| without_weekday(date))
+            .map_or_else(
+                || {
+                    Utc.with_ymd_and_hms(2021, 1, 1, 0, 0, 0)
+                        .unwrap()
+                        .to_rfc3339()
+                },
+                |parsed| parsed.with_timezone(&Utc).to_rfc3339(),
+            )
     }
 
     fn insert_podcast_episode(
         podcast: &Podcast,
         item: &Item,
+        enclosure_url: &str,
         episode_image_url: &str,
         duration: i32,
     ) -> Result<PodcastEpisode, CustomError> {
@@ -239,7 +246,7 @@ impl PodcastEpisodeUseCase {
                     .title
                     .clone()
                     .unwrap_or_else(|| "No title given".to_string()),
-                url: item.enclosure.clone().unwrap().url,
+                url: enclosure_url.to_owned(),
                 date_of_recording: Self::parse_recording_date(item),
                 image_url: episode_image_url.to_string(),
                 total_time: duration,
@@ -518,7 +525,9 @@ impl PodcastEpisodeUseCase {
     ) -> Result<Vec<PodcastEpisode>, CustomError> {
         let podcast_settings =
             PodcastSettingsService::get_settings_for_podcast(Self::parse_id(&podcast.id)?)?;
-        let settings = SettingsService::shared().get_settings()?.unwrap();
+        let settings = SettingsService::shared()
+            .get_settings()?
+            .ok_or_else(|| CustomError::from(CustomErrorInner::Unknown(ErrorSeverity::Error)))?;
         let n_episodes;
 
         if let Some(podcast_settings) = podcast_settings {
@@ -568,27 +577,21 @@ impl PodcastEpisodeUseCase {
                 Self::handle_podcast_image_insert(podcast, &channel)?;
 
                 for item in &channel.items {
-                    if item.enclosure.is_none() {
+                    let Some(enclosure) = &item.enclosure else {
                         tracing::info!(
                             "Skipping podcast episode {:?} as it has no enclosure",
                             item.title
                         );
                         continue;
-                    }
+                    };
 
                     let itunes_ext = &item.itunes_ext;
                     let opt_found_podcast_episode: Option<PodcastEpisode> = match &item.guid {
                         Some(guid) => Self::get_podcast_episode_by_guid(&guid.value)?,
-                        None => {
-                            if let Some(enclosure) = &item.enclosure {
-                                Self::get_podcast_episode_by_url(
-                                    &enclosure.url.clone(),
-                                    Some(Self::parse_id(&podcast.id)?),
-                                )?
-                            } else {
-                                None
-                            }
-                        }
+                        None => Self::get_podcast_episode_by_url(
+                            &enclosure.url,
+                            Some(Self::parse_id(&podcast.id)?),
+                        )?,
                     };
 
                     if let Some(podcast_episode) = &opt_found_podcast_episode {
@@ -597,9 +600,7 @@ impl PodcastEpisodeUseCase {
                             updated_podcast_episode.name = title.clone();
                         }
 
-                        if let Some(enclosure) = &item.enclosure {
-                            updated_podcast_episode.url = enclosure.url.clone();
-                        }
+                        updated_podcast_episode.url.clone_from(&enclosure.url);
 
                         if let Some(description) = &item.description {
                             updated_podcast_episode.description = description.clone();
@@ -659,6 +660,7 @@ impl PodcastEpisodeUseCase {
                     let inserted_episode = Self::insert_podcast_episode(
                         podcast,
                         item,
+                        &enclosure.url,
                         &image_url,
                         duration_of_podcast_episode as i32,
                     )?;
@@ -742,27 +744,30 @@ impl PodcastEpisodeUseCase {
 
             let returned_data_from_server = Self::do_request_to_podcast_server(podcast.clone())?;
 
-            let channel = Channel::read_from(returned_data_from_server.content.as_bytes()).unwrap();
-            let items = channel.items();
-            Self::update_episodes_on_redirect(items)?;
+            let channel = Channel::read_from(returned_data_from_server.content.as_bytes())
+                .map_err(|e| {
+                    CustomErrorInner::BadRequest(
+                        format!("Invalid podcast feed after redirect to {new_url}: {e}"),
+                        ErrorSeverity::Warning,
+                    )
+                })?;
+            Self::update_episodes_on_redirect(channel.items())?;
         }
         Ok(())
     }
 
     fn update_episodes_on_redirect(items: &[Item]) -> Result<(), CustomError> {
         for item in items {
-            match &item.guid {
-                Some(guid) => {
-                    let opt_found_podcast_episode = Self::get_podcast_episode_by_guid(&guid.value)?;
-                    if let Some(found_podcast_episode) = opt_found_podcast_episode {
-                        let mut podcast_episode = found_podcast_episode.clone();
-                        podcast_episode.url = item.enclosure.as_ref().unwrap().url.clone();
-                        Self::update_podcast_episode(podcast_episode)?;
-                    }
-                }
-                None => {
-                    println!("No guid found for episode {:?}", item.title.as_ref());
-                }
+            let (Some(guid), Some(enclosure)) = (&item.guid, &item.enclosure) else {
+                tracing::debug!(
+                    "Skipping redirected item {:?} without guid/enclosure",
+                    item.title
+                );
+                continue;
+            };
+            if let Some(mut podcast_episode) = Self::get_podcast_episode_by_guid(&guid.value)? {
+                podcast_episode.url.clone_from(&enclosure.url);
+                Self::update_podcast_episode(podcast_episode)?;
             }
         }
         Ok(())
@@ -805,7 +810,7 @@ impl PodcastEpisodeUseCase {
 
     #[inline]
     pub fn get_url_file_suffix(url: &str) -> Result<String, Error> {
-        let mut url = Url::parse(url).unwrap();
+        let mut url = Url::parse(url).map_err(Error::other)?;
         url.set_query(None);
         Ok(Path::new(&String::from(url))
             .extension()
@@ -828,14 +833,12 @@ impl PodcastEpisodeUseCase {
         Self::get_podcast_episodes_by_podcast_to_k(top_k)
     }
 
+    /// Percent-encodes the last path segment (the file name) of `url`.
     pub fn map_to_local_url(url: &str) -> String {
-        let mut splitted_url = url.split('/').collect::<Vec<&str>>();
-        let new_last_part = urlencoding::encode(splitted_url.last().unwrap())
-            .clone()
-            .to_string();
-        splitted_url.pop();
-        splitted_url.push(&new_last_part);
-        splitted_url.join("/")
+        match url.rsplit_once('/') {
+            Some((base, file)) => format!("{base}/{}", urlencoding::encode(file)),
+            None => urlencoding::encode(url).into_owned(),
+        }
     }
 
     pub fn find_all_downloaded_podcast_episodes_by_podcast_id(
@@ -1238,6 +1241,54 @@ fn extract_transcript_tags(item: &Item) -> Vec<FeedTranscriptTag> {
 
 #[cfg(test)]
 mod tests {
+    fn item_with_date(date: &str) -> Item {
+        Item {
+            pub_date: Some(date.to_owned()),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn recording_date_accepts_common_formats() {
+        let parse = |d| PodcastEpisodeUseCase::parse_recording_date(&item_with_date(d));
+        assert_eq!(
+            parse("Thu, 02 Jan 2025 10:00:00 +0000"),
+            "2025-01-02T10:00:00+00:00"
+        );
+        assert_eq!(
+            parse("2025-01-02T10:00:00+01:00"),
+            "2025-01-02T09:00:00+00:00"
+        );
+        assert_eq!(
+            parse("Thurs, 02 Jan 2025 10:00:00 +0000"),
+            "2025-01-02T10:00:00+00:00"
+        );
+        assert_eq!(
+            PodcastEpisodeUseCase::parse_recording_date(&Item::default()),
+            ""
+        );
+    }
+
+    #[test]
+    fn recording_date_never_panics_on_garbage() {
+        // Used to slice `&date[5..]`, which panicked on short or non-ASCII input.
+        for garbage in ["", "abc", "äöüäöü", "Mo., 1 Jän 2025"] {
+            assert_eq!(
+                PodcastEpisodeUseCase::parse_recording_date(&item_with_date(garbage)),
+                "2021-01-01T00:00:00+00:00"
+            );
+        }
+    }
+
+    #[test]
+    fn local_url_encodes_only_the_file_name() {
+        assert_eq!(
+            PodcastEpisodeUseCase::map_to_local_url("http://host/podcasts/my show/ep 1.mp3"),
+            "http://host/podcasts/my show/ep%201.mp3"
+        );
+        assert_eq!(PodcastEpisodeUseCase::map_to_local_url("a b"), "a%20b");
+    }
+
     use super::*;
     use rss::extension::{Extension, ExtensionBuilder};
     use std::collections::BTreeMap;

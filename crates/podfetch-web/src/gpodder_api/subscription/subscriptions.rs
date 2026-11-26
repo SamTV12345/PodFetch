@@ -5,8 +5,8 @@ use crate::subscription::{
     SubscriptionUpdateRequest, build_opml, to_client_changes,
 };
 use axum::extract::{Path, Query, State};
-use axum::http::Response;
-use axum::response::IntoResponse;
+use axum::http::header;
+use axum::response::{IntoResponse, Response};
 use axum::{Extension, Json};
 use common_infrastructure::error::CustomError;
 use common_infrastructure::error::CustomErrorInner;
@@ -67,11 +67,7 @@ pub async fn get_subscriptions_all(
         .get_user_subscriptions(flag.user_id, query.since)?;
 
     if username.1 == "opml" {
-        Ok(Response::builder()
-            .header("Content-Type", "text/x-opml+xml")
-            .body(build_opml(&changes.add).to_string().unwrap())
-            .unwrap()
-            .into_response())
+        opml_response(&changes.add)
     } else {
         Ok(Json(to_client_changes(changes)).into_response())
     }
@@ -215,14 +211,7 @@ pub async fn get_simple_subscriptions(
         .get_user_subscriptions(flag.user_id, 0)?;
 
     match format {
-        "opml" => {
-            let xml = build_opml(&changes.add).to_string().unwrap();
-            Ok(Response::builder()
-                .header("Content-Type", "text/x-opml+xml")
-                .body(xml)
-                .unwrap()
-                .into_response())
-        }
+        "opml" => opml_response(&changes.add),
         "json" => {
             let urls: Vec<String> = changes.add.iter().map(|s| s.podcast.clone()).collect();
             Ok(Json(urls).into_response())
@@ -234,11 +223,7 @@ pub async fn get_simple_subscriptions(
                 .map(|s| s.podcast.as_str())
                 .collect::<Vec<_>>()
                 .join("\n");
-            Ok(Response::builder()
-                .header("Content-Type", "text/plain")
-                .body(text)
-                .unwrap()
-                .into_response())
+            Ok(([(header::CONTENT_TYPE, "text/plain")], text).into_response())
         }
         _ => Err(CustomErrorInner::BadRequest(
             "Unsupported format. Use .opml, .json, or .txt".to_string(),
@@ -292,6 +277,18 @@ pub async fn put_simple_subscriptions(
 
 pub fn get_simple_subscription_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new().routes(routes!(get_simple_subscriptions))
+}
+
+fn opml_response(
+    subscriptions: &[crate::subscription::Subscription],
+) -> Result<Response, CustomError> {
+    let xml = build_opml(subscriptions).to_string().map_err(|e| {
+        tracing::error!("Could not serialise OPML: {e}");
+        CustomError::from(CustomErrorInner::Unknown(
+            common_infrastructure::error::ErrorSeverity::Error,
+        ))
+    })?;
+    Ok(([(header::CONTENT_TYPE, "text/x-opml+xml")], xml).into_response())
 }
 
 #[cfg(test)]

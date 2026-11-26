@@ -17,6 +17,7 @@ use podfetch_domain::audiobookshelf::library_item_id::{EpisodeId, LibraryItemId}
 use std::path::PathBuf;
 use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, SeekFrom};
+use tokio_util::io::ReaderStream;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -97,59 +98,39 @@ pub async fn serve_file_with_range(
     if !path.is_file() {
         return Err(CustomErrorInner::NotFound(Debug).into());
     }
-    let mut file = fs::File::open(&path)
-        .await
-        .map_err(|_| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
-    let total = file
-        .metadata()
-        .await
-        .map_err(|_| CustomError::from(CustomErrorInner::NotFound(Debug)))?
-        .len();
-    let mime = mime_guess::from_path(path)
-        .first_or_octet_stream()
-        .to_string();
+    let not_found = |_| CustomError::from(CustomErrorInner::NotFound(Debug));
+    let mut file = fs::File::open(&path).await.map_err(not_found)?;
+    let total = file.metadata().await.map_err(not_found)?.len();
+    let mime = mime_guess::from_path(path).first_or_octet_stream();
 
-    if let Some(range_header) = headers
+    let mut out_headers = HeaderMap::new();
+    if let Ok(mime) = HeaderValue::from_str(mime.as_ref()) {
+        out_headers.insert(header::CONTENT_TYPE, mime);
+    }
+    out_headers.insert(header::ACCEPT_RANGES, HeaderValue::from_static("bytes"));
+
+    let range = headers
         .get(header::RANGE)
         .and_then(|v| v.to_str().ok())
         .and_then(parse_range)
-        .and_then(|r| materialize_range(r, total))
-    {
-        let (start, end) = range_header;
-        let len = end - start + 1;
-        file.seek(SeekFrom::Start(start))
-            .await
-            .map_err(|_| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
-        let mut buf = vec![0u8; len as usize];
-        file.read_exact(&mut buf)
-            .await
-            .map_err(|_| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
-        let mut out_headers = HeaderMap::new();
-        out_headers.insert(header::CONTENT_TYPE, HeaderValue::from_str(&mime).unwrap());
-        out_headers.insert(header::ACCEPT_RANGES, HeaderValue::from_static("bytes"));
-        out_headers.insert(
-            header::CONTENT_RANGE,
-            HeaderValue::from_str(&format!("bytes {start}-{end}/{total}")).unwrap(),
-        );
-        out_headers.insert(
-            header::CONTENT_LENGTH,
-            HeaderValue::from_str(&len.to_string()).unwrap(),
-        );
-        return Ok((StatusCode::PARTIAL_CONTENT, out_headers, Body::from(buf)).into_response());
-    }
+        .and_then(|r| materialize_range(r, total));
 
-    let mut buf = Vec::with_capacity(total as usize);
-    file.read_to_end(&mut buf)
-        .await
-        .map_err(|_| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
-    let mut out_headers = HeaderMap::new();
-    out_headers.insert(header::CONTENT_TYPE, HeaderValue::from_str(&mime).unwrap());
-    out_headers.insert(header::ACCEPT_RANGES, HeaderValue::from_static("bytes"));
-    out_headers.insert(
-        header::CONTENT_LENGTH,
-        HeaderValue::from_str(&total.to_string()).unwrap(),
-    );
-    Ok((StatusCode::OK, out_headers, Body::from(buf)).into_response())
+    // Stream the file instead of buffering it: ranges can span a whole
+    // multi-hundred-megabyte audiobook.
+    let (status, len) = match range {
+        Some((start, end)) => {
+            file.seek(SeekFrom::Start(start)).await.map_err(not_found)?;
+            let content_range = format!("bytes {start}-{end}/{total}");
+            if let Ok(value) = HeaderValue::from_str(&content_range) {
+                out_headers.insert(header::CONTENT_RANGE, value);
+            }
+            (StatusCode::PARTIAL_CONTENT, end - start + 1)
+        }
+        None => (StatusCode::OK, total),
+    };
+    out_headers.insert(header::CONTENT_LENGTH, HeaderValue::from(len));
+    let body = Body::from_stream(ReaderStream::new(file.take(len)));
+    Ok((status, out_headers, body).into_response())
 }
 
 fn parse_range(value: &str) -> Option<(Option<u64>, Option<u64>)> {
