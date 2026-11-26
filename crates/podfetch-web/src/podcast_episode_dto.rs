@@ -2,7 +2,7 @@ use crate::url_rewriting::resolve_image_url;
 use chrono::NaiveDateTime;
 use common_infrastructure::config::FileHandlerType;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
-use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
+use podfetch_library::domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;

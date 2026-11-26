@@ -12,8 +12,8 @@ path = "src/lib.rs"
 
 [features]
 default = []
-sqlite = ["common-infrastructure/sqlite", "podfetch-persistence/sqlite", "podfetch-events/sqlite", "podfetch-identity/sqlite", "podfetch-notifications/sqlite", "podfetch-casting/sqlite"]
-postgresql = ["common-infrastructure/postgresql", "podfetch-persistence/postgresql", "podfetch-events/postgresql", "podfetch-identity/postgresql", "podfetch-notifications/postgresql", "podfetch-casting/postgresql"]
+sqlite = ["common-infrastructure/sqlite", "podfetch-persistence/sqlite", "podfetch-events/sqlite", "podfetch-identity/sqlite", "podfetch-notifications/sqlite", "podfetch-casting/sqlite", "podfetch-library/sqlite"]
+postgresql = ["common-infrastructure/postgresql", "podfetch-persistence/postgresql", "podfetch-events/postgresql", "podfetch-identity/postgresql", "podfetch-notifications/postgresql", "podfetch-casting/postgresql", "podfetch-library/postgresql"]
 
 [dependencies]
 common-infrastructure = { workspace = true }
@@ -24,6 +24,7 @@ podfetch-events = { workspace = true }
 podfetch-identity = { workspace = true }
 podfetch-notifications = { workspace = true }
 podfetch-casting = { workspace = true }
+podfetch-library = { workspace = true }
 podfetch-kernel = { workspace = true }
 podfetch-persistence = { workspace = true }
 podfetch-storage = { workspace = true }

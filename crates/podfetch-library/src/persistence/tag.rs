@@ -1,10 +1,10 @@
-use crate::db::{Database, PersistenceError};
+use crate::domain::tag::{Tag, TagRepository, TagUpdate, TagsPodcast};
+use common_infrastructure::db::{Database, PersistenceError};
 use diesel::BoolExpressionMethods;
 use diesel::JoinOnDsl;
 use diesel::OptionalExtension;
 use diesel::prelude::{AsChangeset, Insertable, Queryable};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use podfetch_domain::tag::{Tag, TagRepository, TagUpdate, TagsPodcast};
 use uuid::Uuid;
 
 diesel::table! {
@@ -127,6 +127,36 @@ impl TagRepository for DieselTagRepository {
             .filter(tags_dsl::user_id.eq(user_id_to_find.to_string()))
             .load::<TagEntity>(&mut self.database.connection()?)
             .map(|tags: Vec<TagEntity>| tags.into_iter().map(Into::into).collect())
+            .map_err(Into::into)
+    }
+
+    fn get_tags_of_podcasts(
+        &self,
+        podcast_ids: &[Uuid],
+        user_id_to_find: Uuid,
+    ) -> Result<Vec<(Uuid, Tag)>, Self::Error> {
+        use self::tags::dsl as tags_dsl;
+        use self::tags_podcasts::dsl as tags_podcasts_dsl;
+
+        if podcast_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        tags_dsl::tags
+            .inner_join(tags_podcasts::table.on(tags_dsl::id.eq(tags_podcasts_dsl::tag_id)))
+            .select((tags_podcasts_dsl::podcast_id, tags::all_columns))
+            .filter(tags_podcasts_dsl::podcast_id.eq_any(podcast_ids.iter().map(Uuid::to_string)))
+            .filter(tags_dsl::user_id.eq(user_id_to_find.to_string()))
+            .load::<(String, TagEntity)>(&mut self.database.connection()?)
+            .map(|rows| {
+                rows.into_iter()
+                    .map(|(podcast_id, tag)| {
+                        (
+                            Uuid::parse_str(&podcast_id).expect("valid uuid in db"),
+                            tag.into(),
+                        )
+                    })
+                    .collect()
+            })
             .map_err(Into::into)
     }
 

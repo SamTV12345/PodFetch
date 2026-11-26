@@ -1,0 +1,21 @@
+[package]
+name = "podfetch-library"
+version = "0.1.0"
+edition = "2024"
+description = "Library bounded context: favorites, tags, playlists, filters, episode triage"
+
+[lints]
+workspace = true
+
+[features]
+default = []
+sqlite = ["common-infrastructure/sqlite"]
+postgresql = ["common-infrastructure/postgresql"]
+
+[dependencies]
+common-infrastructure = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+diesel = { workspace = true }
+serde = { workspace = true }
+utoipa = { workspace = true }
+uuid = { workspace = true }

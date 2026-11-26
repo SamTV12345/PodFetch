@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "crates/common-infrastructure", "crates/podfetch-agent-protocol", "crates/podfetch-cast", "crates/podfetch-casting", "crates/podfetch-domain", "crates/podfetch-events", "crates/podfetch-identity", "crates/podfetch-kernel", "crates/podfetch-notifications", "crates/podfetch-web", "crates/podfetch-persistence", "crates/podfetch-storage"]
+members = [".", "crates/common-infrastructure", "crates/podfetch-agent-protocol", "crates/podfetch-cast", "crates/podfetch-casting", "crates/podfetch-domain", "crates/podfetch-events", "crates/podfetch-identity", "crates/podfetch-kernel", "crates/podfetch-library", "crates/podfetch-notifications", "crates/podfetch-web", "crates/podfetch-persistence", "crates/podfetch-storage"]
 resolver = "2"
 
 [package]
@@ -119,6 +119,7 @@ podfetch-events = { path = "crates/podfetch-events" }
 podfetch-identity = { path = "crates/podfetch-identity" }
 podfetch-notifications = { path = "crates/podfetch-notifications" }
 podfetch-casting = { path = "crates/podfetch-casting" }
+podfetch-library = { path = "crates/podfetch-library" }
 podfetch-kernel = { path = "crates/podfetch-kernel" }
 podfetch-persistence = { path = "crates/podfetch-persistence", default-features = false }
 podfetch-storage = { path = "crates/podfetch-storage" }

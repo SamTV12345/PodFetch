@@ -660,7 +660,7 @@ pub fn get_podcast_episode_router() -> OpenApiRouter<AppState> {
 #[cfg(test)]
 mod tests {
     use crate::app_state::AppState;
-    use crate::services::favorite_podcast_episode::service::FavoritePodcastEpisodeService;
+
     use crate::test_support::tests::handle_test_startup;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::Extension;
@@ -839,7 +839,7 @@ mod tests {
             .await;
         assert_eq!(response.status_code(), 200);
 
-        let favorite = FavoritePodcastEpisodeService::default_service()
+        let favorite = crate::library::favorite_episodes()
             .get_by_user_id_and_episode_id(
                 admin_user_id(),
                 Uuid::parse_str(&inserted_episode.id).unwrap(),
@@ -1362,7 +1362,7 @@ mod tests {
         std::fs::write(&plain_file, b"plain").unwrap();
         mark_episode_downloaded(&fav_episode, &fav_file);
         mark_episode_downloaded(&plain_episode, &plain_file);
-        FavoritePodcastEpisodeService::default_service()
+        crate::library::favorite_episodes()
             .set_favorite(
                 admin_user_id(),
                 Uuid::parse_str(&fav_episode.id).unwrap(),
@@ -1560,7 +1560,7 @@ mod tests {
         let podcast_id = podcast_with_directory(temp_podcast_dir().to_str().unwrap());
         let episode = insert_episode(&podcast_id, "fav-delete-1", "fav-delete-guid-1", "Fav 1");
         insert_episode(&podcast_id, "fav-delete-2", "fav-delete-guid-2", "Fav 2");
-        FavoritePodcastEpisodeService::default_service()
+        crate::library::favorite_episodes()
             .set_favorite(admin_user_id(), Uuid::parse_str(&episode.id).unwrap(), true)
             .unwrap();
         assert_eq!(favorite_rows_for_podcast(&podcast_id), 1);

@@ -1,8 +1,6 @@
-use crate::filter::Filter;
+use crate::domain::filter::FilterRepository;
+use crate::dto::filter::Filter;
 use common_infrastructure::error::CustomError;
-use podfetch_domain::filter::FilterRepository;
-use podfetch_persistence::adapters::FilterRepositoryImpl;
-use podfetch_persistence::db::database;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -14,10 +12,6 @@ pub struct FilterService {
 impl FilterService {
     pub fn new(repository: Arc<dyn FilterRepository<Error = CustomError>>) -> Self {
         Self { repository }
-    }
-
-    pub fn default_service() -> Self {
-        Self::new(Arc::new(FilterRepositoryImpl::new(database())))
     }
 
     pub fn get_filter_by_user_id(&self, user_id: Uuid) -> Result<Option<Filter>, CustomError> {

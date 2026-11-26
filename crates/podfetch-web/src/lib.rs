@@ -4,9 +4,9 @@ pub mod background;
 pub mod device;
 pub mod events;
 pub mod file_access;
-pub mod filter;
 pub mod gpodder;
 pub mod history;
+pub mod library;
 pub mod manifest;
 pub mod playlist;
 pub mod podcast;
@@ -20,7 +20,6 @@ pub mod settings;
 pub mod stats;
 pub mod subscription;
 pub mod sys;
-pub mod tags;
 pub mod url_rewriting;
 pub mod watchtime;
 
@@ -59,6 +58,7 @@ pub mod app_state;
 pub mod application;
 mod casting_tests;
 mod identity_tests;
+mod library_tests;
 
 // File access API adapter
 pub mod api_file_access;

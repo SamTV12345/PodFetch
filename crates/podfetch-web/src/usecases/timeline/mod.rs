@@ -4,17 +4,16 @@ use crate::podcast::PodcastDto;
 use crate::podcast::map_podcast_to_dto;
 use crate::podcast_episode::{TimelineFavorite, TimelineQueryParams};
 use crate::podcast_episode_dto::PodcastEpisodeDto;
-use crate::services::filter::service::FilterService;
 use common_infrastructure::error::ErrorSeverity::Critical;
 use common_infrastructure::error::{CustomError, map_db_error};
 use diesel::RunQueryDsl;
 use diesel::dsl::max;
 use diesel::prelude::*;
 use podfetch_domain::episode::Episode;
-use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_identity::api::Principal;
+use podfetch_library::domain::favorite_podcast_episode::FavoritePodcastEpisode;
+use podfetch_library::persistence::favorite::FavoriteEntity as Favorite;
 use podfetch_persistence::db::get_connection;
-use podfetch_persistence::favorite::FavoriteEntity as Favorite;
 use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use podfetch_persistence::schema::favorite_podcast_episodes::dsl::favorite_podcast_episodes;
@@ -95,7 +94,7 @@ impl TimelineItem {
 
         let user_id_to_search = user.id.to_string();
 
-        let _ = FilterService::default_service()
+        let _ = crate::library::filters()
             .save_timeline_decision(user.id.into(), favored_only.favored_only.unwrap_or(false));
 
         let (ph1, ph2) = diesel::alias!(phi_struct as ph1, phi_struct as ph2);

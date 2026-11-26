@@ -15,8 +15,8 @@ use chrono::DateTime;
 use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
-use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::podcast_episode_transcript::TranscriptStatus;
+use podfetch_library::domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use rss::extension::itunes::{
     ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtension, ITunesChannelExtensionBuilder,
     ITunesItemExtensionBuilder, ITunesOwner, ITunesOwnerBuilder,

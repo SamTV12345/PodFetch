@@ -29,8 +29,8 @@ pub struct Tag {
     pub color: String,
 }
 
-impl From<podfetch_domain::tag::Tag> for Tag {
-    fn from(value: podfetch_domain::tag::Tag) -> Self {
+impl From<crate::domain::tag::Tag> for Tag {
+    fn from(value: crate::domain::tag::Tag) -> Self {
         Self {
             id: value.id,
             name: value.name,
@@ -48,8 +48,8 @@ pub struct TagsPodcast {
     pub podcast_id: String,
 }
 
-impl From<podfetch_domain::tag::TagsPodcast> for TagsPodcast {
-    fn from(value: podfetch_domain::tag::TagsPodcast) -> Self {
+impl From<crate::domain::tag::TagsPodcast> for TagsPodcast {
+    fn from(value: crate::domain::tag::TagsPodcast) -> Self {
         Self {
             tag_id: value.tag_id,
             podcast_id: value.podcast_id.to_string(),

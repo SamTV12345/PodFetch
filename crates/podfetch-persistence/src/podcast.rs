@@ -1,11 +1,9 @@
 use crate::db::{Database, PersistenceError};
 use diesel::prelude::*;
-use diesel::{
-    BoolExpressionMethods, ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, RunQueryDsl,
-};
-use podfetch_domain::favorite::Favorite;
+use diesel::{ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, RunQueryDsl};
+use podfetch_domain::ordering::{OrderCriteria, OrderOption};
 use podfetch_domain::podcast::{
-    NewPodcast, Podcast, PodcastMetadataUpdate, PodcastRepository, PodcastWithFavorite,
+    NewPodcast, Podcast, PodcastMetadataUpdate, PodcastQuery, PodcastRepository,
 };
 use uuid::Uuid;
 
@@ -54,15 +52,7 @@ diesel::table! {
     }
 }
 
-diesel::table! {
-    favorites (user_id, podcast_id) {
-        user_id -> Text,
-        podcast_id -> Text,
-        favored -> Bool,
-    }
-}
-
-diesel::allow_tables_to_appear_in_same_query!(podcasts, podcast_episodes, favorites);
+diesel::allow_tables_to_appear_in_same_query!(podcasts, podcast_episodes);
 
 #[derive(Queryable, Identifiable, Selectable, Debug, Clone, Default)]
 #[diesel(table_name = podcasts)]
@@ -170,23 +160,6 @@ impl From<NewPodcast> for NewPodcastEntity {
     }
 }
 
-#[derive(Queryable, Debug, Clone)]
-struct FavoriteEntity {
-    user_id: String,
-    podcast_id: String,
-    favored: bool,
-}
-
-impl From<FavoriteEntity> for Favorite {
-    fn from(entity: FavoriteEntity) -> Self {
-        Self {
-            user_id: Uuid::parse_str(&entity.user_id).expect("valid uuid in db"),
-            podcast_id: Uuid::parse_str(&entity.podcast_id).expect("valid uuid in db"),
-            favored: entity.favored,
-        }
-    }
-}
-
 pub struct DieselPodcastRepository {
     database: Database,
 }
@@ -281,26 +254,31 @@ impl PodcastRepository for DieselPodcastRepository {
             .map_err(Into::into)
     }
 
-    fn find_all_with_favorites(
-        &self,
-        user_id: Uuid,
-    ) -> Result<Vec<PodcastWithFavorite>, Self::Error> {
-        podcasts::table
-            .left_join(
-                favorites::table.on(favorites::user_id
-                    .eq(user_id.to_string())
-                    .and(favorites::podcast_id.eq(podcasts::id))),
-            )
-            .load::<(PodcastEntity, Option<FavoriteEntity>)>(&mut self.database.connection()?)
-            .map(|results| {
-                results
-                    .into_iter()
-                    .map(|(podcast, favorite)| PodcastWithFavorite {
-                        podcast: podcast.into(),
-                        favorite: favorite.map(Into::into),
-                    })
-                    .collect()
-            })
+    fn search(&self, query: PodcastQuery) -> Result<Vec<Podcast>, Self::Error> {
+        diesel::define_sql_function!(fn lower(x: diesel::sql_types::Text) -> diesel::sql_types::Text);
+
+        let mut sql = podcasts::table.into_boxed();
+        sql = match (query.order_option, query.order) {
+            (OrderOption::Title, OrderCriteria::Asc) => sql.order_by(podcasts::name.asc()),
+            (OrderOption::Title, OrderCriteria::Desc) => sql.order_by(podcasts::name.desc()),
+            (OrderOption::PublishedDate, OrderCriteria::Asc) => {
+                sql.order_by(podcasts::last_build_date.asc())
+            }
+            (OrderOption::PublishedDate, OrderCriteria::Desc) => {
+                sql.order_by(podcasts::last_build_date.desc())
+            }
+        };
+        if let Some(title) = query.title {
+            sql = sql.filter(lower(podcasts::name).like(format!("%{}%", title.to_lowercase())));
+        }
+        if let Some(ids) = query.only_ids {
+            if ids.is_empty() {
+                return Ok(Vec::new());
+            }
+            sql = sql.filter(podcasts::id.eq_any(ids.iter().map(Uuid::to_string)));
+        }
+        sql.load::<PodcastEntity>(&mut self.database.connection()?)
+            .map(|entities| entities.into_iter().map(Into::into).collect())
             .map_err(Into::into)
     }
 

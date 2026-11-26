@@ -11,8 +11,8 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::{Extension, Json};
 use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
-use podfetch_domain::episode_triage::TriageStatus;
 use podfetch_identity::api::Principal;
+use podfetch_library::domain::episode_triage::TriageStatus;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::router::OpenApiRouter;
@@ -305,7 +305,7 @@ mod tests {
             .set_status(
                 user.id,
                 Uuid::parse_str(&dismissed.id).unwrap(),
-                podfetch_domain::episode_triage::TriageStatus::Dismissed,
+                podfetch_library::domain::episode_triage::TriageStatus::Dismissed,
             )
             .unwrap();
 

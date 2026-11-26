@@ -24,7 +24,6 @@ use serde_json::Value;
 use std::sync::LazyLock;
 use std::thread;
 
-use crate::filter::Filter;
 pub use crate::podcast::{
     DeletePodcast, OpmlModel, PodcastAddModel, PodcastFavorUpdateModel, PodcastInsertModel,
     PodcastRSSAddModel, PodcastSearchModelUtoipa, PodcastSearchReturn, PodcastUpdateNameRequest,
@@ -41,7 +40,8 @@ use crate::url_rewriting::resolve_server_url_from_headers;
 use common_infrastructure::config::is_env_var_present_and_true;
 use common_infrastructure::http::get_http_client;
 use common_infrastructure::request::add_basic_auth_headers_conditionally;
-use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
+use podfetch_library::domain::favorite_podcast_episode::FavoritePodcastEpisode;
+use podfetch_library::dto::filter::Filter;
 use reqwest::header::HeaderMap as ReqwestHeaderMap;
 
 /// Client for streaming remote episodes through PodFetch.
@@ -80,7 +80,7 @@ pub async fn get_filter(
     let filter = state
         .filter_service
         .get_filter_by_user_id(requester.id.into())?
-        .unwrap_or(crate::filter::default_podcast_filter());
+        .unwrap_or(podfetch_library::dto::filter::default_podcast_filter());
     Ok(Json(filter))
 }
 

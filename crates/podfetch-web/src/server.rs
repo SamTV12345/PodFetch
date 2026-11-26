@@ -9,7 +9,7 @@ use crate::podcast_episode_dto::PodcastEpisodeDto;
 use common_infrastructure::runtime::MAIN_ROOM;
 use futures::executor::block_on;
 use podfetch_cast::{CastSessionId, CastStatus};
-use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
+use podfetch_library::domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use serde::Serialize;

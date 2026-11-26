@@ -358,8 +358,8 @@ mod tests {
     }
 
     fn is_favorite(user_id: uuid::Uuid, podcast_id: &str) -> bool {
-        use podfetch_domain::favorite::FavoriteRepository;
-        podfetch_persistence::favorite::DieselFavoriteRepository::new(
+        use podfetch_library::domain::favorite::FavoriteRepository;
+        podfetch_library::persistence::favorite::DieselFavoriteRepository::new(
             podfetch_persistence::db::database(),
         )
         .find_favored_by_user_id(user_id)

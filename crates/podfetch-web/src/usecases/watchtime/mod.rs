@@ -11,11 +11,11 @@ use crate::watchtime::{
 use chrono::{NaiveDateTime, Utc};
 use common_infrastructure::error::CustomError;
 use podfetch_domain::episode::{EpisodeRepository, NewEpisode};
-use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::listening_event::NewListeningEvent;
 use podfetch_identity::api::Principal;
 use podfetch_identity::domain::user_admin::UserAdminRepository;
 use podfetch_identity::persistence::user_admin::DieselUserAdminRepository;
+use podfetch_library::domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_persistence::db::database;
 use podfetch_persistence::episode::DieselEpisodeRepository;
 use podfetch_persistence::episode::EpisodeEntity as Episode;

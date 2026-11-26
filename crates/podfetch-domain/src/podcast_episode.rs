@@ -2,7 +2,6 @@ use chrono::NaiveDateTime;
 use uuid::Uuid;
 
 use crate::episode::Episode;
-use crate::favorite_podcast_episode::FavoritePodcastEpisode;
 
 /// A podcast episode - technology-agnostic domain entity.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -48,12 +47,8 @@ pub struct NewPodcastEpisode {
     pub youtube_video_id: Option<String>,
 }
 
-/// Result type for paginated episode queries with history and favorites.
-pub type PodcastEpisodeWithHistory = Vec<(
-    PodcastEpisode,
-    Option<Episode>,
-    Option<FavoritePodcastEpisode>,
-)>;
+/// Result type for paginated episode queries with the user's history.
+pub type PodcastEpisodeWithHistory = Vec<(PodcastEpisode, Option<Episode>)>;
 
 /// Repository trait for PodcastEpisode persistence operations.
 pub trait PodcastEpisodeRepository: Send + Sync {
@@ -85,8 +80,8 @@ pub trait PodcastEpisodeRepository: Send + Sync {
     // Pagination methods
     fn get_nth_page(&self, last_id: Uuid, limit: i64) -> Result<Vec<PodcastEpisode>, Self::Error>;
 
-    /// Get episodes of a podcast with watch history and favorites for a user.
-    /// Returns episodes with optional history and favorites, paginated by date_of_recording.
+    /// Get episodes of a podcast with the user's watch history, paginated by
+    /// date_of_recording.
     fn get_episodes_with_history(
         &self,
         podcast_id: Uuid,
