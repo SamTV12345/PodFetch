@@ -1,5 +1,3 @@
-use crate::services::download::chapter::Chapter;
-use crate::services::download::service::DownloadService;
 use crate::settings::{
     EpisodeScanService, EpisodeWithPath, MediaFileFormat, ParsedChapter,
     UpsertPodcastEpisodeChapter,
@@ -8,6 +6,7 @@ use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeSer
 use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use file_format::FileFormat;
 use podfetch_domain::podcast_episode_chapter::PodcastEpisodeChapterRepository;
+use podfetch_media::audio::Chapter;
 use podfetch_persistence::adapters::PodcastEpisodeChapterRepositoryImpl;
 use podfetch_persistence::db::database;
 use std::sync::Arc;
@@ -73,12 +72,12 @@ impl EpisodeScanService for EpisodeScanServiceImpl {
     }
 
     fn read_chapters_mp3(&self, path: &str) -> Result<Vec<ParsedChapter>, Self::Error> {
-        let chapters = DownloadService::read_chapters_from_mp3(&path.to_string())?;
+        let chapters = podfetch_media::audio::chapters::read_from_mp3(path)?;
         Ok(map_chapters(chapters))
     }
 
     fn read_chapters_mp4(&self, path: &str) -> Vec<ParsedChapter> {
-        let chapters = DownloadService::read_chapters_from_mp4(&path.to_string());
+        let chapters = podfetch_media::audio::chapters::read_from_mp4(path);
         map_chapters(chapters)
     }
 

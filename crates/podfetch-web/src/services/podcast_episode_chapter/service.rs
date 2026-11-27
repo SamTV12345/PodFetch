@@ -1,7 +1,7 @@
-use crate::services::download::chapter::Chapter;
 use crate::settings::UpsertPodcastEpisodeChapter;
 use common_infrastructure::error::CustomError;
 use podfetch_domain::podcast_episode_chapter::PodcastEpisodeChapterRepository;
+use podfetch_media::audio::Chapter;
 use podfetch_persistence::adapters::PodcastEpisodeChapterRepositoryImpl;
 use podfetch_persistence::db::database;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;

@@ -35,13 +35,14 @@ use crate::podcast::{
     map_podcast_error, map_proxy_podcast_error, parse_search_type, require_admin,
     require_privileged, require_proxy_episode, sanitize_proxy_request_headers,
 };
-use crate::services::file::service::{FileService, perform_podcast_variable_replacement};
+use crate::services::file::service::FileService;
 use crate::url_rewriting::resolve_server_url_from_headers;
 use common_infrastructure::config::is_env_var_present_and_true;
 use common_infrastructure::http::get_http_client;
 use common_infrastructure::request::add_basic_auth_headers_conditionally;
 use podfetch_library::domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_library::dto::filter::Filter;
+use podfetch_media::naming::{NamingRules, Replacement};
 use reqwest::header::HeaderMap as ReqwestHeaderMap;
 
 /// Client for streaming remote episodes through PodFetch.
@@ -640,7 +641,6 @@ use crate::podcast::{map_podcast_to_dto, map_podcast_with_context_to_dto};
 use crate::podcast_episode_dto::PodcastEpisodeDto;
 use crate::rss::RSSAPiKey;
 use crate::server::ChatServerHandle;
-use crate::settings::Setting;
 use crate::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -857,28 +857,12 @@ pub async fn retrieve_podcast_sample_format(
         language: "en".to_string(),
         explicit: "false".to_string(),
     };
-    let settings = Setting {
-        id: uuid::Uuid::nil().to_string(),
-        episode_numbering: false,
-        auto_download: false,
-        auto_update: false,
-        auto_cleanup: false,
-        auto_cleanup_days: 0,
-        podcast_prefill: 0,
-        replace_invalid_characters: false,
-        use_existing_filename: false,
-        replacement_strategy: "remove".to_string(),
-        episode_format: String::new(),
+    let rules = NamingRules {
+        replacement: Replacement::Remove,
         podcast_format: sample_string.0.content,
-        direct_paths: true,
-        auto_transcode_opus: false,
-        use_one_cover_for_all_episodes: false,
-        max_parallel_downloads: 3,
-        sponsorblock_enabled: true,
-        nfo_format: "off".to_string(),
-        cover_filename: "image".to_string(),
+        episode_format: String::new(),
     };
-    let result = perform_podcast_variable_replacement(settings.into(), podcast, None);
+    let result = podfetch_media::naming::podcast_directory_name(&rules, &podcast);
 
     match result {
         Ok(v) => Ok(Json(v)),

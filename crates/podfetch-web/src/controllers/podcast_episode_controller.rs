@@ -17,9 +17,7 @@ use crate::podcast_episode::{
 };
 use crate::podcast_episode_dto::PodcastEpisodeDto;
 use crate::server::ChatServerHandle;
-use crate::services::file::service::perform_episode_variable_replacement;
 use crate::services::podcast::service::PodcastService;
-use crate::settings::Setting;
 use crate::url_rewriting::resolve_server_url_from_headers;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use crate::usecases::timeline::TimelineItem;
@@ -32,7 +30,7 @@ use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use podfetch_gpodder::dto::subscription::GPodderAvailablePodcast;
 use podfetch_identity::api::Principal;
-use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
+use podfetch_media::naming::{EpisodeNaming, NamingRules, Replacement};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -592,48 +590,20 @@ pub async fn retrieve_episode_sample_format(
     sample_string: Json<EpisodeFormatDto>,
 ) -> Result<String, CustomError> {
     // Sample episode for formatting
-    let episode: PodcastEpisode = PodcastEpisode {
-        id: uuid::Uuid::nil().to_string(),
-        legacy_id: None,
-        podcast_id: uuid::Uuid::nil().to_string(),
-        episode_id: "0218342".to_string(),
+    let episode = EpisodeNaming {
         name: "My Homelab".to_string(),
         url: "http://podigee.com/rss/123".to_string(),
         date_of_recording: "2023-12-24".to_string(),
-        image_url: "http://podigee.com/rss/123/image".to_string(),
         total_time: 1200,
         description: "My description".to_string(),
-        download_time: None,
         guid: "081923123".to_string(),
-        deleted: false,
-        file_episode_path: None,
-        file_image_path: None,
-        episode_numbering_processed: false,
-        download_location: None,
-        youtube_video_id: None,
     };
-    let settings = Setting {
-        id: uuid::Uuid::nil().to_string(),
-        episode_numbering: false,
-        auto_download: false,
-        auto_update: false,
-        auto_cleanup: false,
-        auto_cleanup_days: 0,
-        podcast_prefill: 0,
-        replace_invalid_characters: false,
-        use_existing_filename: false,
-        replacement_strategy: "remove".to_string(),
+    let rules = NamingRules {
+        replacement: Replacement::Remove,
         episode_format: sample_string.0.content,
         podcast_format: "test".to_string(),
-        direct_paths: true,
-        auto_transcode_opus: false,
-        use_one_cover_for_all_episodes: false,
-        max_parallel_downloads: 3,
-        sponsorblock_enabled: true,
-        nfo_format: "off".to_string(),
-        cover_filename: "image".to_string(),
     };
-    let result = perform_episode_variable_replacement(settings.into(), episode, None, 1, None)?;
+    let result = podfetch_media::naming::episode_file_stem(&rules, &episode, 1, None)?;
 
     Ok(result)
 }

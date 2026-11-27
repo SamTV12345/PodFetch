@@ -73,8 +73,6 @@ opml = { workspace = true }
 xml-builder = { workspace = true }
 
 # Media metadata
-id3 = { workspace = true }
-mp4ameta = { workspace = true }
 file-format = { workspace = true }
 
 # Database (for direct queries in usecases/controllers)
@@ -89,7 +87,6 @@ urlencoding = { workspace = true }
 regex = { workspace = true }
 quick-xml = { workspace = true }
 notify = { workspace = true }
-strfmt = { workspace = true }
 tracing = { workspace = true }
 thiserror = { workspace = true }
 rand = { workspace = true }
