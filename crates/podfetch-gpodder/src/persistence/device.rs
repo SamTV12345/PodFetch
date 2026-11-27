@@ -1,8 +1,8 @@
-use crate::db::{Database, PersistenceError};
+use crate::domain::device::{Device, DeviceRepository, kind as device_kind};
 use chrono::NaiveDateTime;
+use common_infrastructure::db::{Database, PersistenceError};
 use diesel::RunQueryDsl;
 use diesel::{ExpressionMethods, QueryDsl};
-use podfetch_domain::device::{Device, DeviceRepository};
 use uuid::Uuid;
 
 diesel::table! {
@@ -40,12 +40,7 @@ impl From<Device> for DeviceEntity {
         Self {
             // Every inserted device must carry a non-null TEXT id; generate one
             // when the domain object has none yet.
-            id: Some(
-                value
-                    .id
-                    .unwrap_or_else(podfetch_domain::ids::new_id)
-                    .to_string(),
-            ),
+            id: Some(value.id.unwrap_or_else(uuid::Uuid::now_v7).to_string()),
             deviceid: value.deviceid,
             kind: value.kind,
             name: value.name,
@@ -112,6 +107,7 @@ impl DeviceRepository for DieselDeviceRepository {
 
         devices
             .filter(user_id.eq(user_id_to_find.to_string()))
+            .filter(kind.ne_all(device_kind::CASTABLE))
             .load::<DeviceEntity>(&mut conn)
             .map(|items| items.into_iter().map(Into::into).collect())
             .map_err(Into::into)
@@ -122,9 +118,14 @@ impl DeviceRepository for DieselDeviceRepository {
 
         let mut conn = self.database.connection()?;
 
-        diesel::delete(devices.filter(user_id.eq(user_id_to_delete.to_string())))
-            .execute(&mut conn)
-            .map(|_| ())
-            .map_err(Into::into)
+        // Cast targets share the table but belong to the casting context.
+        diesel::delete(
+            devices
+                .filter(user_id.eq(user_id_to_delete.to_string()))
+                .filter(kind.ne_all(device_kind::CASTABLE)),
+        )
+        .execute(&mut conn)
+        .map(|_| ())
+        .map_err(Into::into)
     }
 }

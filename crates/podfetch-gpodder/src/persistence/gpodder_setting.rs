@@ -1,8 +1,8 @@
-use crate::db::{Database, PersistenceError};
+use crate::domain::gpodder_setting::{GpodderSetting, GpodderSettingRepository};
+use common_infrastructure::db::{Database, PersistenceError};
 use diesel::prelude::{Insertable, Queryable, QueryableByName};
 use diesel::sql_types::{Nullable, Text};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
-use podfetch_domain::gpodder_setting::{GpodderSetting, GpodderSettingRepository};
 use uuid::Uuid;
 
 diesel::table! {
@@ -136,7 +136,7 @@ impl GpodderSettingRepository for DieselGpodderSettingRepository {
             None => {
                 diesel::insert_into(gs_dsl::gpodder_settings)
                     .values(NewGpodderSettingEntity {
-                        id: podfetch_domain::ids::new_id().to_string(),
+                        id: uuid::Uuid::now_v7().to_string(),
                         user_id: setting.user_id.to_string(),
                         scope: setting.scope.clone(),
                         scope_id: setting.scope_id.clone(),
@@ -148,5 +148,15 @@ impl GpodderSettingRepository for DieselGpodderSettingRepository {
                 Ok(setting)
             }
         }
+    }
+
+    fn delete_by_user_id(&self, user_id_to_delete: Uuid) -> Result<usize, Self::Error> {
+        use self::gpodder_settings::dsl as gs_dsl;
+
+        diesel::delete(
+            gs_dsl::gpodder_settings.filter(gs_dsl::user_id.eq(user_id_to_delete.to_string())),
+        )
+        .execute(&mut self.database.connection()?)
+        .map_err(Into::into)
     }
 }

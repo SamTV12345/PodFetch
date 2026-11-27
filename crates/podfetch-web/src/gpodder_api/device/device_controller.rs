@@ -1,5 +1,4 @@
 use crate::app_state::AppState;
-use crate::device::{self, DeviceControllerError, DevicePost, DeviceResponse};
 use crate::gpodder::{ensure_session_user, map_gpodder_error, parse_since_epoch};
 use crate::history::map_episode_to_dto;
 use crate::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
@@ -9,7 +8,8 @@ use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::path::trim_from_path;
 use common_infrastructure::time::get_current_timestamp;
-use podfetch_domain::device_sync_group::DeviceSyncGroup;
+use podfetch_gpodder::domain::device_sync_group::DeviceSyncGroup;
+use podfetch_gpodder::dto::device::{self, DeviceControllerError, DevicePost, DeviceResponse};
 use podfetch_identity::domain::session::Session;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;

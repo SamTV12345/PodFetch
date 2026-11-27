@@ -355,3 +355,70 @@ impl TagRepository for TagRepositoryImpl {
             .map_err(Into::into)
     }
 }
+
+// ── Favorite ────────────────────────────────────────────────────────────────
+
+use crate::domain::favorite::{Favorite, FavoriteRepository};
+use crate::persistence::favorite::DieselFavoriteRepository;
+
+/// [`FavoriteRepository`] with the error type the web layer works with.
+pub struct FavoriteRepositoryImpl {
+    inner: DieselFavoriteRepository,
+}
+
+impl FavoriteRepositoryImpl {
+    pub fn new(database: Database) -> Self {
+        Self {
+            inner: DieselFavoriteRepository::new(database),
+        }
+    }
+}
+
+impl FavoriteRepository for FavoriteRepositoryImpl {
+    type Error = CustomError;
+
+    fn upsert(&self, favorite: Favorite) -> Result<(), Self::Error> {
+        self.inner.upsert(favorite).map_err(Into::into)
+    }
+
+    fn find_by_user_id_and_podcast_id(
+        &self,
+        user_id: Uuid,
+        podcast_id: Uuid,
+    ) -> Result<Option<Favorite>, Self::Error> {
+        self.inner
+            .find_by_user_id_and_podcast_id(user_id, podcast_id)
+            .map_err(Into::into)
+    }
+
+    fn find_favored_by_user_id(&self, user_id: Uuid) -> Result<Vec<Favorite>, Self::Error> {
+        self.inner
+            .find_favored_by_user_id(user_id)
+            .map_err(Into::into)
+    }
+
+    fn delete_by_user_id(&self, user_id: Uuid) -> Result<(), Self::Error> {
+        self.inner.delete_by_user_id(user_id).map_err(Into::into)
+    }
+
+    fn update_podcast_favor(
+        &self,
+        podcast_id: Uuid,
+        favor: bool,
+        user_id: Uuid,
+    ) -> Result<(), Self::Error> {
+        self.inner
+            .update_podcast_favor(podcast_id, favor, user_id)
+            .map_err(Into::into)
+    }
+
+    fn find_by_user_and_podcasts(
+        &self,
+        user_id: Uuid,
+        podcast_ids: &[Uuid],
+    ) -> Result<Vec<Favorite>, Self::Error> {
+        self.inner
+            .find_by_user_and_podcasts(user_id, podcast_ids)
+            .map_err(Into::into)
+    }
+}

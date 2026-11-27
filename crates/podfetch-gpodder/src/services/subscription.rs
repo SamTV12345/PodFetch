@@ -1,12 +1,14 @@
-use crate::subscription::{
+use crate::domain::device_sync_group::DeviceSyncGroupRepository;
+use crate::domain::subscription::{Subscription, SubscriptionRepository};
+use crate::dto::subscription::{
     GPodderAvailablePodcast, SubscriptionApplicationService, SubscriptionChangesToClient,
     SubscriptionModelChanges, SubscriptionUpdateRequest,
 };
+use crate::events::SubscriptionsChanged;
 use chrono::{DateTime, NaiveDateTime};
 use common_infrastructure::error::CustomError;
 use common_infrastructure::runtime::DEFAULT_DEVICE;
-use podfetch_domain::device_sync_group::DeviceSyncGroupRepository;
-use podfetch_domain::subscription::{Subscription, SubscriptionRepository};
+use podfetch_events::EventBus;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -15,16 +17,19 @@ use uuid::Uuid;
 pub struct SubscriptionService {
     repository: Arc<dyn SubscriptionRepository<Error = CustomError>>,
     sync_group_repository: Arc<dyn DeviceSyncGroupRepository<Error = CustomError>>,
+    events: Arc<EventBus>,
 }
 
 impl SubscriptionService {
     pub fn new(
         repository: Arc<dyn SubscriptionRepository<Error = CustomError>>,
         sync_group_repository: Arc<dyn DeviceSyncGroupRepository<Error = CustomError>>,
+        events: Arc<EventBus>,
     ) -> Self {
         Self {
             repository,
             sync_group_repository,
+            events,
         }
     }
 
@@ -56,7 +61,7 @@ impl SubscriptionService {
         rows: Vec<Subscription>,
         since: NaiveDateTime,
         timestamp: i64,
-    ) -> podfetch_domain::subscription::SubscriptionModelChanges {
+    ) -> crate::domain::subscription::SubscriptionModelChanges {
         let mut by_podcast: BTreeMap<String, Vec<Subscription>> = BTreeMap::new();
         for row in rows {
             by_podcast.entry(row.podcast.clone()).or_default().push(row);
@@ -83,7 +88,7 @@ impl SubscriptionService {
             }
         }
 
-        podfetch_domain::subscription::SubscriptionModelChanges {
+        crate::domain::subscription::SubscriptionModelChanges {
             add,
             remove,
             timestamp,
@@ -108,7 +113,7 @@ impl SubscriptionService {
                 .repository
                 .get_device_subscriptions(device_id, user_id, since, timestamp)
                 .map(Into::into)
-                .map(crate::subscription::to_client_changes);
+                .map(crate::dto::subscription::to_client_changes);
         }
 
         let mut rows = vec![];
@@ -122,7 +127,7 @@ impl SubscriptionService {
             rows.extend(changes.add);
             rows.extend(changes.remove);
         }
-        Ok(crate::subscription::to_client_changes(
+        Ok(crate::dto::subscription::to_client_changes(
             Self::merge_group_subscriptions(rows, since, timestamp).into(),
         ))
     }
@@ -160,21 +165,34 @@ impl SubscriptionService {
         }
 
         // A device that shares its subscriptions with the web UI also keeps
-        // the web favorites in sync.
+        // the web favorites in sync; the library reacts to the event.
+        // Best effort: a failing publish must not fail the client's sync.
         if device_id != DEFAULT_DEVICE && devices.iter().any(|d| d == DEFAULT_DEVICE) {
-            Self::sync_favorites(user_id, &request.add, &request.remove);
+            self.publish_web_change(user_id, device_id, &request.add, &request.remove);
         }
         Ok(update_urls)
     }
 
-    /// Best effort: a failing favorite update must not fail the client's sync.
-    pub fn sync_favorites(user_id: Uuid, add: &[String], remove: &[String]) {
-        if let Err(err) =
-            crate::services::podcast::service::PodcastService::apply_gpodder_subscriptions_to_favorites(
-                user_id, add, remove,
-            )
-        {
-            tracing::warn!("Could not update favorites from GPodder subscriptions: {err:?}");
+    /// Announces that the subscriptions shared with the web UI changed, so
+    /// the library updates the favorites. Best effort: a failing publish
+    /// must not fail the client's sync.
+    pub fn publish_web_change(
+        &self,
+        user_id: Uuid,
+        device: &str,
+        added: &[String],
+        removed: &[String],
+    ) {
+        if added.is_empty() && removed.is_empty() {
+            return;
+        }
+        if let Err(err) = self.events.publish(&SubscriptionsChanged {
+            user_id: user_id.into(),
+            device: device.to_owned(),
+            added: added.to_vec(),
+            removed: removed.to_vec(),
+        }) {
+            tracing::warn!("Could not publish subscription change: {err}");
         }
     }
 
@@ -197,11 +215,9 @@ impl SubscriptionService {
         Ok(urls)
     }
 
-    pub fn get_available_gpodder_podcasts(
-        &self,
-    ) -> Result<Vec<GPodderAvailablePodcast>, CustomError> {
+    pub fn get_subscribed_feeds(&self) -> Result<Vec<GPodderAvailablePodcast>, CustomError> {
         self.repository
-            .get_available_gpodder_podcasts()
+            .get_subscribed_feeds()
             .map(|podcasts| podcasts.into_iter().map(Into::into).collect())
     }
 
@@ -239,7 +255,7 @@ impl SubscriptionApplicationService for SubscriptionService {
         self.update_subscriptions(device_id, user_id, request)
     }
 
-    fn get_available_gpodder_podcasts(&self) -> Result<Vec<GPodderAvailablePodcast>, Self::Error> {
-        self.get_available_gpodder_podcasts()
+    fn get_subscribed_feeds(&self) -> Result<Vec<GPodderAvailablePodcast>, Self::Error> {
+        self.get_subscribed_feeds()
     }
 }

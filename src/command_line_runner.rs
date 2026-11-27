@@ -3,23 +3,18 @@ use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::time::get_current_timestamp_str;
 use podfetch_identity::domain::user::{User, UserWithoutPassword};
 use podfetch_identity::role::Role;
-use podfetch_persistence::adapters::DeviceRepositoryImpl;
-use podfetch_persistence::db::database;
 use podfetch_web::app_state::AppState;
 use podfetch_web::controllers::sys_info_controller::built_info;
-use podfetch_web::services::device::service::DeviceService;
 use podfetch_web::services::podcast::service::PodcastService;
 use podfetch_web::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use sha256::digest;
 use std::env::Args;
 use std::io::{Error, ErrorKind, stdin};
 use std::process::exit;
-use std::sync::Arc;
 use tracing::error;
 
 pub async fn start_command_line(state: &AppState, mut args: Args) -> Result<(), CustomError> {
     println!("Starting from command line");
-    let device_service = DeviceService::new(Arc::new(DeviceRepositoryImpl::new(database())));
     // Skip first argument
     args.next();
     let Some(arg) = args.next() else {
@@ -180,22 +175,14 @@ pub async fn start_command_line(state: &AppState, mut args: Args) -> Result<(), 
                     match available_users.iter().find(|u| u.username == username) {
                         Some(user) => {
                             let user_id = user.id;
-                            device_service
-                                .delete_by_user_id(user_id)
-                                .expect("Error deleting devices");
-                            PodcastService::delete_favorites_by_user_id(user_id)
-                                .expect("Error deleting favorites");
                             state
                                 .session_service
                                 .delete_by_user_id(user_id)
                                 .expect("Error deleting sessions");
-                            state
-                                .subscription_service
-                                .delete_by_user_id(user_id)
-                                .expect("Error deleting subscriptions");
-                            // Publishes `identity.user_deleted`; the listening
-                            // context removes the user's episode actions and
-                            // listening events when it handles the event.
+                            // Publishes `identity.user_deleted`; every context
+                            // removes its own data of the user when it handles
+                            // the event (gPodder devices and subscriptions,
+                            // favorites, cast devices, episode actions).
                             state
                                 .user_admin_service
                                 .delete_user_by_username(&trim_string(&username))

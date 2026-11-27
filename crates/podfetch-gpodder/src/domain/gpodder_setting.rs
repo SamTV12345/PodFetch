@@ -18,4 +18,5 @@ pub trait GpodderSettingRepository: Send + Sync {
         scope_id: Option<&str>,
     ) -> Result<Option<GpodderSetting>, Self::Error>;
     fn save_setting(&self, setting: GpodderSetting) -> Result<GpodderSetting, Self::Error>;
+    fn delete_by_user_id(&self, user_id: Uuid) -> Result<usize, Self::Error>;
 }

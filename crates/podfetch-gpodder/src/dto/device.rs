@@ -1,4 +1,4 @@
-use podfetch_domain::device::Device;
+use crate::domain::device::Device;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use utoipa::ToSchema;

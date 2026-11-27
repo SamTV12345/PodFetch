@@ -1,0 +1,27 @@
+[package]
+name = "podfetch-gpodder"
+version = "0.1.0"
+edition = "2024"
+description = "gPodder sync bounded context: devices, sync groups, subscriptions, settings"
+
+[lints]
+workspace = true
+
+[features]
+default = []
+sqlite = ["common-infrastructure/sqlite", "podfetch-events/sqlite", "podfetch-identity/sqlite"]
+postgresql = ["common-infrastructure/postgresql", "podfetch-events/postgresql", "podfetch-identity/postgresql"]
+
+[dependencies]
+common-infrastructure = { workspace = true }
+podfetch-events = { workspace = true }
+podfetch-identity = { workspace = true }
+podfetch-kernel = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+opml = { workspace = true }
+thiserror = { workspace = true }
+diesel = { workspace = true }
+serde = { workspace = true }
+tracing = { workspace = true }
+utoipa = { workspace = true }
+uuid = { workspace = true }

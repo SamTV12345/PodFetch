@@ -187,6 +187,33 @@ END $$;
         )
     }
 
+    /// Runs the event processor until no delivery is pending any more, so a
+    /// test can check what the handlers did. Failed deliveries wait for
+    /// their retry and are not waited for.
+    pub async fn process_events() {
+        use podfetch_events::DeliveryStatus;
+
+        let state = app_state();
+        let processor = state.event_bus.spawn_processor();
+        for _ in 0..200 {
+            let open = [DeliveryStatus::Pending, DeliveryStatus::Processing]
+                .into_iter()
+                .map(|status| {
+                    state
+                        .event_bus
+                        .deliveries(Some(status), 1000)
+                        .unwrap()
+                        .len()
+                })
+                .sum::<usize>();
+            if open == 0 {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+        }
+        processor.stop(std::time::Duration::from_secs(1)).await;
+    }
+
     pub async fn handle_test_startup<'a>() -> TestServerWrapper<'a> {
         ensure_test_env_vars();
         let mutex = lock_global_mutex_recovering_poison();

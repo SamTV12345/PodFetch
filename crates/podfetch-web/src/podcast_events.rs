@@ -42,7 +42,8 @@ impl Event for EpisodeDownloadFailed {
     }
 }
 
-/// The bus the download code publishes to.
+/// The bus the download code and the static podcast service publish to
+/// (also the library's `PodcastFavorChanged` from `update_favor_podcast`).
 ///
 /// Transitional: the download pipeline is still a set of associated
 /// functions without injected dependencies. Once the podcast context gets

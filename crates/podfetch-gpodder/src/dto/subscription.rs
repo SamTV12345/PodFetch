@@ -12,8 +12,8 @@ pub struct Subscription {
     pub deleted: Option<chrono::NaiveDateTime>,
 }
 
-impl From<podfetch_domain::subscription::Subscription> for Subscription {
-    fn from(value: podfetch_domain::subscription::Subscription) -> Self {
+impl From<crate::domain::subscription::Subscription> for Subscription {
+    fn from(value: crate::domain::subscription::Subscription) -> Self {
         Self {
             id: value.id.to_string(),
             user_id: value.user_id.to_string(),
@@ -32,10 +32,10 @@ pub struct SubscriptionChangesToClient {
     pub timestamp: i64,
 }
 
-impl From<podfetch_domain::subscription::SubscriptionChangesToClient>
+impl From<crate::domain::subscription::SubscriptionChangesToClient>
     for SubscriptionChangesToClient
 {
-    fn from(value: podfetch_domain::subscription::SubscriptionChangesToClient) -> Self {
+    fn from(value: crate::domain::subscription::SubscriptionChangesToClient) -> Self {
         Self {
             add: value.add,
             remove: value.remove,
@@ -51,8 +51,8 @@ pub struct SubscriptionModelChanges {
     pub timestamp: i64,
 }
 
-impl From<podfetch_domain::subscription::SubscriptionModelChanges> for SubscriptionModelChanges {
-    fn from(value: podfetch_domain::subscription::SubscriptionModelChanges) -> Self {
+impl From<crate::domain::subscription::SubscriptionModelChanges> for SubscriptionModelChanges {
+    fn from(value: crate::domain::subscription::SubscriptionModelChanges) -> Self {
         Self {
             add: value.add.into_iter().map(Into::into).collect(),
             remove: value.remove.into_iter().map(Into::into).collect(),
@@ -68,8 +68,8 @@ pub struct GPodderAvailablePodcast {
     pub podcast: String,
 }
 
-impl From<podfetch_domain::subscription::GPodderAvailablePodcast> for GPodderAvailablePodcast {
-    fn from(value: podfetch_domain::subscription::GPodderAvailablePodcast) -> Self {
+impl From<crate::domain::subscription::GPodderAvailablePodcast> for GPodderAvailablePodcast {
+    fn from(value: crate::domain::subscription::GPodderAvailablePodcast) -> Self {
         Self {
             device: value.device,
             podcast: value.podcast,
@@ -115,7 +115,7 @@ pub trait SubscriptionApplicationService {
         user_id: Uuid,
         request: SubscriptionUpdateRequest,
     ) -> Result<Vec<Vec<String>>, Self::Error>;
-    fn get_available_gpodder_podcasts(&self) -> Result<Vec<GPodderAvailablePodcast>, Self::Error>;
+    fn get_subscribed_feeds(&self) -> Result<Vec<GPodderAvailablePodcast>, Self::Error>;
 }
 
 pub fn to_client_changes(changes: SubscriptionModelChanges) -> SubscriptionChangesToClient {

@@ -4,7 +4,7 @@ use axum::extract::{Path, Query, State};
 use axum::{Extension, Json};
 use common_infrastructure::error::CustomError;
 use common_infrastructure::path::trim_from_path;
-use podfetch_domain::gpodder_setting::GpodderSetting;
+use podfetch_gpodder::domain::gpodder_setting::GpodderSetting;
 use podfetch_identity::domain::session::Session;
 use serde::Deserialize;
 use serde_json::Value;

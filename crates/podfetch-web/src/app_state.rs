@@ -6,15 +6,11 @@ use crate::services::audiobookshelf::listening_session_service::AudiobookshelfLi
 use crate::services::audiobookshelf::login_service::AudiobookshelfLoginService;
 use crate::services::audiobookshelf::media_progress_service::AudiobookshelfMediaProgressService;
 use crate::services::audiobookshelf::playback_session_service::AudiobookshelfPlaybackSessionService;
-use crate::services::device::service::DeviceService;
-use crate::services::device_sync_group::service::DeviceSyncGroupService;
 use crate::services::episode_triage::service::EpisodeTriageService;
-use crate::services::gpodder_setting::service::GpodderSettingService;
 use crate::services::playlist::service::PlaylistService;
 use crate::services::podcast_episode_chapter::service::PodcastEpisodeChapterService;
 use crate::services::podcast_settings::service::PodcastSettingsService;
 use crate::services::settings::service::SettingsService;
-use crate::services::subscription::service::SubscriptionService;
 use crate::services::transcript::service::TranscriptService;
 use crate::usecases::watchtime::WatchtimeUseCase;
 use common_infrastructure::config::EnvironmentService;
@@ -24,6 +20,14 @@ use podfetch_casting::agent::registry::AgentRegistry;
 use podfetch_casting::dto::ServerCastOrchestrator;
 use podfetch_casting::mopidy::driver::{MopidyDriver, MopidyEvent};
 use podfetch_casting::orchestrator::CastOrchestrator;
+use podfetch_gpodder::persistence::DeviceRepositoryImpl;
+use podfetch_gpodder::persistence::DeviceSyncGroupRepositoryImpl;
+use podfetch_gpodder::persistence::GpodderSettingRepositoryImpl;
+use podfetch_gpodder::persistence::SubscriptionRepositoryImpl;
+use podfetch_gpodder::services::device::DeviceService;
+use podfetch_gpodder::services::device_sync_group::DeviceSyncGroupService;
+use podfetch_gpodder::services::gpodder_setting::GpodderSettingService;
+use podfetch_gpodder::services::subscription::SubscriptionService;
 use podfetch_identity::persistence::adapters::{
     InviteRepositoryImpl, SessionRepositoryImpl, UserAdminRepositoryImpl,
 };
@@ -49,9 +53,6 @@ use podfetch_persistence::adapters::AuthorRepositoryImpl;
 use podfetch_persistence::adapters::BookAudioFileRepositoryImpl;
 use podfetch_persistence::adapters::BookChapterRepositoryImpl;
 use podfetch_persistence::adapters::BookRepositoryImpl;
-use podfetch_persistence::adapters::DeviceRepositoryImpl;
-use podfetch_persistence::adapters::DeviceSyncGroupRepositoryImpl;
-use podfetch_persistence::adapters::GpodderSettingRepositoryImpl;
 use podfetch_persistence::adapters::LibraryRepositoryImpl;
 use podfetch_persistence::adapters::ListeningSessionRepositoryImpl;
 use podfetch_persistence::adapters::MediaProgressRepositoryImpl;
@@ -62,7 +63,6 @@ use podfetch_persistence::adapters::PodcastEpisodeTranscriptRepositoryImpl;
 use podfetch_persistence::adapters::PodcastSettingsRepositoryImpl;
 use podfetch_persistence::adapters::SeriesRepositoryImpl;
 use podfetch_persistence::adapters::SettingsRepositoryImpl;
-use podfetch_persistence::adapters::SubscriptionRepositoryImpl;
 use podfetch_persistence::adapters::TranscriptionJobRepositoryImpl;
 use std::sync::Arc;
 use tokio::sync::Mutex as AsyncMutex;
@@ -184,9 +184,14 @@ impl AppState {
             listening_events.clone(),
             Arc::new(crate::listening::CatalogPodcasts),
         ));
+        let event_bus = podfetch_events::EventBus::new(
+            database.clone(),
+            podfetch_events::EventBusConfig::default(),
+        );
         let subscription_service = Arc::new(SubscriptionService::new(
             Arc::new(SubscriptionRepositoryImpl::new(database.clone())),
             Arc::new(DeviceSyncGroupRepositoryImpl::new(database.clone())),
+            event_bus.clone(),
         ));
         let tag_service = Arc::new(TagService::new(Arc::new(TagRepositoryImpl::new(
             database.clone(),
@@ -202,10 +207,6 @@ impl AppState {
             Arc::new(podfetch_identity::api::Identity::new(Arc::new(
                 UserAdminRepositoryImpl::new(database.clone()),
             )));
-        let event_bus = podfetch_events::EventBus::new(
-            database.clone(),
-            podfetch_events::EventBusConfig::default(),
-        );
         podfetch_notifications::handlers::subscribe(
             &event_bus,
             notification_service.clone(),
@@ -224,6 +225,39 @@ impl AppState {
             ),
             listening_events.clone(),
         );
+        podfetch_gpodder::handlers::subscribe_user_cleanup(
+            &event_bus,
+            Arc::new(podfetch_gpodder::handlers::UserData {
+                devices: Arc::new(DeviceRepositoryImpl::new(database.clone())),
+                subscriptions: Arc::new(SubscriptionRepositoryImpl::new(database.clone())),
+                sync_groups: Arc::new(DeviceSyncGroupRepositoryImpl::new(database.clone())),
+                settings: Arc::new(
+                    podfetch_gpodder::persistence::GpodderSettingRepositoryImpl::new(
+                        database.clone(),
+                    ),
+                ),
+            }),
+        );
+        let favorites: Arc<
+            dyn podfetch_library::domain::favorite::FavoriteRepository<
+                    Error = common_infrastructure::error::CustomError,
+                >,
+        > = Arc::new(podfetch_library::persistence::FavoriteRepositoryImpl::new(
+            database.clone(),
+        ));
+        podfetch_library::handlers::subscribe_user_cleanup(&event_bus, favorites.clone());
+        podfetch_library::handlers::subscribe_favorite_sync(
+            &event_bus,
+            favorites,
+            Arc::new(crate::catalog_ports::CatalogFeeds),
+        );
+        if environment.gpodder_integration_enabled {
+            podfetch_gpodder::handlers::subscribe_favorite_sync(
+                &event_bus,
+                subscription_service.clone(),
+                Arc::new(crate::catalog_ports::CatalogFeeds),
+            );
+        }
         crate::podcast_events::install(event_bus.clone());
         let user_admin_service = Arc::new(UserAdminService::new(
             Arc::new(UserAdminRepositoryImpl::new(database.clone())),
