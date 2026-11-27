@@ -2,17 +2,13 @@ use podfetch_catalog::persistence::podcast::PodcastEntity as Podcast;
 
 use std::path::Path;
 
-use crate::podcast::PodcastInsertModel;
 use crate::podcast_settings::PodcastSetting;
 use crate::services::podcast::service::PodcastService;
 use crate::services::podcast_settings::service::PodcastSettingsService;
 use crate::services::settings::service::SettingsService;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use common_infrastructure::config::FileHandlerType;
-use common_infrastructure::error::{
-    CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error,
-};
-use common_infrastructure::http::get_http_client;
+use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use common_infrastructure::rss::RSSFeedParser;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use podfetch_catalog::persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
@@ -68,49 +64,38 @@ impl FileService {
         Ok(())
     }
 
-    pub async fn create_podcast_directory_exists(
-        podcast_insert_model: &PodcastInsertModel,
-        channel: Option<Channel>,
+    /// Makes the directory for a podcast about to be added and returns its
+    /// name. `directory_id_known`: a podcast with the same directory id is
+    /// in the catalog, so an existing directory of the same name is its own.
+    pub fn create_podcast_directory(
+        channel: &Channel,
+        directory_id_known: bool,
     ) -> Result<String, CustomError> {
-        let escaped_title =
-            prepare_podcast_title_to_directory(podcast_insert_model, channel).await?;
+        let escaped_title = prepare_podcast_title_to_directory(channel)?;
         let escaped_path = format!("podcasts/{escaped_title}");
 
-        if FileHandleWrapper::path_exists(
+        if !FileHandleWrapper::path_exists(
             &escaped_path,
             FileRequest::Directory,
             &ENVIRONMENT_SERVICE.default_file_handler,
         ) {
-            // Check if this is a new podcast with the same name as an old one
-
-            let podcast =
-                PodcastService::get_podcast_by_directory_id(&podcast_insert_model.id.to_string())?;
-            match podcast {
-                Some(_) => {
-                    // is the same podcast
-                    Ok(escaped_path)
-                }
-                None => {
-                    // has not been inserted into the database yet
-                    let mut i = 1;
-                    while Path::new(&format!("podcasts/{escaped_title}-{i}")).exists() {
-                        i += 1;
-                    }
-                    // This is save to insert because this directory does not exist
-                    FileHandleWrapper::create_dir(
-                        &format!("podcasts/{escaped_title}-{i}"),
-                        &ENVIRONMENT_SERVICE.default_file_handler,
-                    )?;
-                    Ok(format!("podcasts/{escaped_title}-{i}"))
-                }
-            }
-        } else {
             FileHandleWrapper::create_dir(
                 &escaped_path,
                 &ENVIRONMENT_SERVICE.default_file_handler,
             )?;
-            Ok(escaped_path)
+            return Ok(escaped_path);
         }
+        if directory_id_known {
+            return Ok(escaped_path);
+        }
+        // Another podcast of the same name: number this one's directory.
+        let mut i = 1;
+        while Path::new(&format!("podcasts/{escaped_title}-{i}")).exists() {
+            i += 1;
+        }
+        let numbered = format!("podcasts/{escaped_title}-{i}");
+        FileHandleWrapper::create_dir(&numbered, &ENVIRONMENT_SERVICE.default_file_handler)?;
+        Ok(numbered)
     }
 
     /// Download the podcast's main image to `<podcast_path>/<cover_filename>.<ext>`.
@@ -214,35 +199,12 @@ impl FileService {
     }
 }
 
-pub async fn prepare_podcast_title_to_directory(
-    podcast: &PodcastInsertModel,
-    channel: Option<Channel>,
-) -> Result<String, CustomError> {
+pub fn prepare_podcast_title_to_directory(channel: &Channel) -> Result<String, CustomError> {
     let retrieved_settings = required_settings()?;
     // The podcast row does not exist yet at this point (this runs during
     // initial insert), so there can be no per-podcast settings override.
     let opt_podcast_settings = PodcastSettingsService::get_settings_for_podcast(uuid::Uuid::nil())?;
-
-    let podcast = match channel {
-        Some(channel) => RSSFeedParser::parse_rss_feed(channel),
-        None => {
-            let content = get_http_client(&ENVIRONMENT_SERVICE)
-                .get(&podcast.feed_url)
-                .send()
-                .await
-                .map_err(map_reqwest_error)?
-                .bytes()
-                .await
-                .map_err(map_reqwest_error)?;
-            let channel = Channel::read_from(&content[..]).map_err(|e| {
-                CustomErrorInner::BadRequest(
-                    format!("Invalid podcast feed: {e}"),
-                    ErrorSeverity::Info,
-                )
-            })?;
-            RSSFeedParser::parse_rss_feed(channel)
-        }
-    };
+    let podcast = RSSFeedParser::parse_rss_feed(channel.clone());
 
     podfetch_media::naming::podcast_directory_name(
         &naming_rules(&retrieved_settings, opt_podcast_settings.as_ref()),

@@ -382,4 +382,239 @@ mod tests {
             1
         );
     }
+
+    // ── Subscribing ─────────────────────────────────────────────────────
+
+    use common_infrastructure::error::CustomErrorInner;
+    use podfetch_catalog::subscribe::{PodcastStorage, SubscribeRequest, Subscriptions};
+
+    /// Records what the media library is asked to store.
+    #[derive(Default)]
+    struct Storage {
+        directories: Mutex<Vec<bool>>,
+        covers: Mutex<Vec<(Uuid, String)>>,
+    }
+
+    impl PodcastStorage for Storage {
+        fn create_directory(
+            &self,
+            channel: &rss::Channel,
+            directory_id_known: bool,
+        ) -> Result<String, CustomError> {
+            self.directories.lock().unwrap().push(directory_id_known);
+            Ok(format!("podcasts/{}", channel.title()))
+        }
+
+        fn store_cover(
+            &self,
+            podcast: &podfetch_catalog::domain::podcast::Podcast,
+        ) -> Result<(), CustomError> {
+            self.covers
+                .lock()
+                .unwrap()
+                .push((podcast.id, podcast.image_url.clone()));
+            Ok(())
+        }
+    }
+
+    const NEW_FEED: &str = "https://example.com/new.xml";
+
+    fn subscribe_fixture(limit: u32) -> (Subscriptions, Arc<Feeds>, Arc<Storage>) {
+        let feeds = Arc::new(Feeds::default());
+        let storage = Arc::new(Storage::default());
+        let subscriptions = Subscriptions::new(
+            podfetch_persistence::db::database(),
+            feeds.clone(),
+            storage.clone(),
+            limit,
+        );
+        (subscriptions, feeds, storage)
+    }
+
+    fn user(name: &str) -> Uuid {
+        podfetch_identity::services::user_auth::service::UserAuthService::new(
+            Arc::new(
+                podfetch_identity::persistence::adapters::UserAdminRepositoryImpl::new(
+                    podfetch_persistence::db::database(),
+                ),
+            ),
+            Arc::new(common_infrastructure::config::EnvironmentService::for_tests()),
+        )
+        .create_user(name.to_string(), "user".to_string(), None, false)
+        .unwrap()
+        .id
+    }
+
+    fn request(feed_url: &str) -> SubscribeRequest {
+        SubscribeRequest {
+            feed_url: feed_url.to_string(),
+            ..SubscribeRequest::default()
+        }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn a_feed_is_subscribed_with_what_it_says_about_itself() {
+        let _ts = handle_test_startup().await;
+        let (subscriptions, feeds, storage) = subscribe_fixture(0);
+        let cover = "https://example.com/cover.jpg";
+        feeds.set(
+            NEW_FEED,
+            rss(
+                &format!(r#"<itunes:image href="{cover}"/>"#),
+                &item("g1", "First", ""),
+            ),
+        );
+        let user = user("subscriber");
+
+        let podcast = subscriptions
+            .subscribe(SubscribeRequest {
+                added_by: Some(user),
+                ..request(NEW_FEED)
+            })
+            .unwrap();
+
+        assert_eq!(podcast.name, "Sync");
+        assert_eq!(podcast.rssfeed, NEW_FEED);
+        assert_eq!(podcast.image_url, cover);
+        assert_eq!(podcast.original_image_url, cover);
+        assert_eq!(podcast.directory_name, "podcasts/Sync");
+        assert_eq!(podcast.added_by, Some(user));
+        let directory_id: i32 = podcast.directory_id.parse().unwrap();
+        assert!((100..10_000_000).contains(&directory_id));
+        assert_eq!(*storage.directories.lock().unwrap(), [false]);
+        assert_eq!(
+            *storage.covers.lock().unwrap(),
+            [(podcast.id, cover.to_string())]
+        );
+        assert_eq!(
+            app_state()
+                .catalog
+                .podcast_by_feed(NEW_FEED)
+                .unwrap()
+                .map(|p| p.id),
+            Some(podcast.id)
+        );
+        assert!(
+            app_state()
+                .catalog
+                .episodes_of_podcast(podcast.id)
+                .unwrap()
+                .is_empty(),
+            "the episodes come with the first refresh"
+        );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn what_the_directory_knows_wins_over_the_feed() {
+        let _ts = handle_test_startup().await;
+        let (subscriptions, feeds, storage) = subscribe_fixture(0);
+        feeds.set(NEW_FEED, rss("", ""));
+        // Another feed with the same directory id is in the catalog already.
+        PodcastService::add_podcast_to_database("old", "42", FEED, "", "podcasts/Mine").unwrap();
+
+        let podcast = subscriptions
+            .subscribe(SubscribeRequest {
+                title: Some("Mine".to_string()),
+                image_url: Some("https://example.com/art.jpg".to_string()),
+                directory_id: Some(42),
+                ..request(NEW_FEED)
+            })
+            .unwrap();
+
+        assert_eq!(podcast.name, "Mine");
+        assert_eq!(podcast.directory_id, "42");
+        assert_eq!(podcast.original_image_url, "https://example.com/art.jpg");
+        assert_eq!(*storage.directories.lock().unwrap(), [true]);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn a_feed_without_an_image_gets_the_default_one() {
+        let _ts = handle_test_startup().await;
+        let (subscriptions, feeds, _storage) = subscribe_fixture(0);
+        feeds.set(NEW_FEED, rss("", ""));
+
+        let podcast = subscriptions.subscribe(request(NEW_FEED)).unwrap();
+
+        assert!(common_infrastructure::runtime::is_default_image_url(
+            &podcast.image_url
+        ));
+        assert_eq!(podcast.original_image_url, "");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn a_feed_already_subscribed_is_a_conflict() {
+        let _ts = handle_test_startup().await;
+        let (subscriptions, feeds, storage) = subscribe_fixture(0);
+        feeds.set(NEW_FEED, rss("", ""));
+        subscriptions.subscribe(request(NEW_FEED)).unwrap();
+
+        let err = subscriptions.subscribe(request(NEW_FEED)).unwrap_err();
+
+        assert!(
+            matches!(err.inner, CustomErrorInner::Conflict(..)),
+            "{err:?}"
+        );
+        assert_eq!(storage.directories.lock().unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn an_invalid_feed_is_not_subscribed() {
+        let _ts = handle_test_startup().await;
+        let (subscriptions, feeds, storage) = subscribe_fixture(0);
+        feeds.set(NEW_FEED, "<html>not a feed</html>".to_string());
+
+        let err = subscriptions.subscribe(request(NEW_FEED)).unwrap_err();
+
+        assert!(
+            matches!(err.inner, CustomErrorInner::BadRequest(..)),
+            "{err:?}"
+        );
+        assert!(
+            app_state()
+                .catalog
+                .podcast_by_feed(NEW_FEED)
+                .unwrap()
+                .is_none()
+        );
+        assert!(storage.directories.lock().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn users_subscribe_within_their_limit() {
+        let _ts = handle_test_startup().await;
+        let (subscriptions, feeds, _storage) = subscribe_fixture(1);
+        feeds.set(NEW_FEED, rss("", ""));
+        let user = user("limited");
+
+        subscriptions.ensure_can_add(user, false, 1).unwrap();
+        subscriptions
+            .subscribe(SubscribeRequest {
+                added_by: Some(user),
+                ..request(NEW_FEED)
+            })
+            .unwrap();
+
+        let err = subscriptions.ensure_can_add(user, false, 1).unwrap_err();
+        assert!(
+            matches!(err.inner, CustomErrorInner::BadRequest(..)),
+            "{err:?}"
+        );
+        subscriptions.ensure_can_add(user, true, 1).unwrap();
+        subscriptions
+            .ensure_can_add(Uuid::now_v7(), false, 1)
+            .unwrap();
+
+        let (closed, _, _) = subscribe_fixture(0);
+        let err = closed.ensure_can_add(user, false, 1).unwrap_err();
+        assert!(
+            matches!(err.inner, CustomErrorInner::Forbidden(..)),
+            "{err:?}"
+        );
+    }
 }

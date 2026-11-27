@@ -99,14 +99,6 @@ pub struct PodcastFavorUpdateModel {
     pub favored: bool,
 }
 
-#[derive(Debug, Clone)]
-pub struct PodcastInsertModel {
-    pub title: String,
-    pub id: i32,
-    pub feed_url: String,
-    pub image_url: String,
-}
-
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct PodcastDto {
     pub id: String,
@@ -353,8 +345,6 @@ pub enum PodcastControllerError<E: Display> {
     NotFound,
     #[error("bad request: {0}")]
     BadRequest(String),
-    #[error("quota exceeded: {0}")]
-    QuotaExceeded(String),
     #[error("{0}")]
     Service(E),
 }
@@ -367,9 +357,6 @@ pub fn map_podcast_error(error: PodcastControllerError<CustomError>) -> CustomEr
         PodcastControllerError::NotFound => CustomErrorInner::NotFound(ErrorSeverity::Debug).into(),
         PodcastControllerError::BadRequest(message) => {
             CustomErrorInner::BadRequest(message, ErrorSeverity::Info).into()
-        }
-        PodcastControllerError::QuotaExceeded(message) => {
-            CustomErrorInner::BadRequest(message, ErrorSeverity::Warning).into()
         }
         PodcastControllerError::Service(error) => error,
     }
@@ -441,30 +428,6 @@ pub fn require_admin<Err: Display>(is_admin: bool) -> Result<(), PodcastControll
     } else {
         Err(PodcastControllerError::Forbidden)
     }
-}
-
-pub fn check_podcast_add_permission<Err: Display>(
-    is_privileged: bool,
-    user_podcast_limit: u32,
-    current_count: i64,
-    adding_count: u32,
-) -> Result<(), PodcastControllerError<Err>> {
-    if is_privileged {
-        return Ok(());
-    }
-
-    if user_podcast_limit == 0 {
-        return Err(PodcastControllerError::Forbidden);
-    }
-
-    let new_total = current_count + adding_count as i64;
-    if new_total > user_podcast_limit as i64 {
-        return Err(PodcastControllerError::QuotaExceeded(format!(
-            "Adding {adding_count} podcast(s) would exceed your limit of {user_podcast_limit}. You currently have {current_count}."
-        )));
-    }
-
-    Ok(())
 }
 
 pub fn parse_podcast_id<Err: Display>(id: &str) -> Result<i32, PodcastControllerError<Err>> {

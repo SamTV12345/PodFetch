@@ -1,7 +1,6 @@
 use crate::app_state::AppState;
 use crate::auth_middleware::FeedApiKey;
 use crate::background::spawn_detached;
-use crate::controllers::controller_utils::{get_default_image, unwrap_string};
 use crate::controllers::id_resolver::{ResolvedId, parse_resolved_id};
 use crate::services::podcast::service::PodcastService;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
@@ -13,21 +12,14 @@ use axum::response::IntoResponse;
 use axum::{Extension, Json, debug_handler};
 use axum_extra::extract::OptionalQuery;
 use common_infrastructure::config::{BASIC_AUTH, OIDC_AUTH};
-use common_infrastructure::http::COMMON_USER_AGENT;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
-use opml::{OPML, Outline};
 use podfetch_identity::api::Principal;
-use rand::RngExt;
-use reqwest::header::HeaderValue;
-use rss::Channel;
-use serde_json::Value;
 use std::sync::LazyLock;
 use std::thread;
 
 pub use crate::podcast::{
-    DeletePodcast, OpmlModel, PodcastAddModel, PodcastFavorUpdateModel, PodcastInsertModel,
-    PodcastRSSAddModel, PodcastSearchModelUtoipa, PodcastSearchReturn, PodcastUpdateNameRequest,
-    ProxyPodcastParams,
+    DeletePodcast, OpmlModel, PodcastAddModel, PodcastFavorUpdateModel, PodcastRSSAddModel,
+    PodcastSearchModelUtoipa, PodcastSearchReturn, PodcastUpdateNameRequest, ProxyPodcastParams,
     SearchType::{ITunes, Podindex},
 };
 use crate::podcast::{
@@ -38,12 +30,10 @@ use crate::podcast::{
 use crate::services::file::service::FileService;
 use crate::url_rewriting::resolve_server_url_from_headers;
 use common_infrastructure::config::is_env_var_present_and_true;
-use common_infrastructure::http::get_http_client;
 use common_infrastructure::request::add_basic_auth_headers_conditionally;
 use podfetch_library::domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_library::dto::filter::Filter;
 use podfetch_media::naming::{NamingRules, Replacement};
-use reqwest::header::HeaderMap as ReqwestHeaderMap;
 
 /// Client for streaming remote episodes through PodFetch.
 static PROXY_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
@@ -270,46 +260,11 @@ pub async fn add_podcast(
     headers: HeaderMap,
     Json(track_id): Json<PodcastAddModel>,
 ) -> Result<Json<PodcastDto>, CustomError> {
-    PodcastService::ensure_can_add_podcasts(&requester, 1)?;
-
-    let query: Vec<(&str, String)> = vec![
-        ("id", track_id.track_id.to_string()),
-        ("entity", "podcast".to_string()),
-    ];
-
-    let res = get_http_client(&ENVIRONMENT_SERVICE)
-        .get("https://itunes.apple.com/lookup")
-        .query(&query)
-        .send()
-        .await
-        .map_err(map_reqwest_error)?
-        .json::<Value>()
-        .await
-        .map_err(map_reqwest_error)?;
-
-    let result = &res["results"][0];
-    let collection_id = result["collectionId"]
-        .as_i64()
-        .and_then(|id| i32::try_from(id).ok())
-        .ok_or_else(|| {
-            CustomErrorInner::BadRequest(
-                format!("iTunes has no podcast with id {}", track_id.track_id),
-                ErrorSeverity::Info,
-            )
-        })?;
-
+    crate::subscriptions::ensure_can_add_podcasts(&requester, 1)?;
     let server_url = resolve_server_url_from_headers(&headers);
-    let inserted = PodcastService::handle_insert_of_podcast(
-        PodcastInsertModel {
-            feed_url: unwrap_string(&result["feedUrl"]),
-            title: unwrap_string(&result["collectionName"]),
-            id: collection_id,
-            image_url: unwrap_string(&result["artworkUrl600"]),
-        },
-        None,
-        Some(requester.id.into()),
-    )
-    .await?;
+    let inserted =
+        crate::subscriptions::subscribe_itunes(track_id.track_id, Some(requester.id.into()))
+            .await?;
     Ok(Json(map_podcast_to_dto(inserted.into(), &server_url)))
 }
 
@@ -326,39 +281,13 @@ pub async fn add_podcast_by_feed(
     headers: HeaderMap,
     Json(rss_feed): Json<PodcastRSSAddModel>,
 ) -> Result<Json<PodcastDto>, CustomError> {
-    PodcastService::ensure_can_add_podcasts(&requester, 1)?;
-    let PodcastRSSAddModel { rss_feed_url } = rss_feed;
-    let mut header_map = ReqwestHeaderMap::new();
-    header_map.insert(
-        reqwest::header::USER_AGENT,
-        HeaderValue::from_static(COMMON_USER_AGENT),
-    );
-    add_basic_auth_headers_conditionally(rss_feed_url.clone(), &mut header_map);
-    let body = get_http_client(&ENVIRONMENT_SERVICE)
-        .get(&rss_feed_url)
-        .headers(header_map)
-        .send()
-        .await
-        .map_err(map_reqwest_error)?
-        .bytes()
-        .await
-        .map_err(map_reqwest_error)?;
-    let channel = parse_feed(&body)?;
-
-    // `ThreadRng` is not `Send`, so it must not live across the await below.
-    let id = rand::rng().random_range(100..10_000_000);
+    crate::subscriptions::ensure_can_add_podcasts(&requester, 1)?;
     let server_url = resolve_server_url_from_headers(&headers);
-    let inserted = PodcastService::handle_insert_of_podcast(
-        PodcastInsertModel {
-            feed_url: rss_feed_url,
-            title: channel.title.clone(),
-            id,
-            image_url: podfetch_catalog::feed::channel_image_url(&channel)
-                .unwrap_or_else(|| get_default_image(&server_url)),
-        },
-        Some(channel),
-        Some(requester.id.into()),
-    )
+    let inserted = crate::subscriptions::subscribe(SubscribeRequest {
+        feed_url: rss_feed.rss_feed_url,
+        added_by: Some(requester.id.into()),
+        ..SubscribeRequest::default()
+    })
     .await?;
     let res: PodcastDto = map_podcast_to_dto(inserted.into(), &server_url);
 
@@ -377,12 +306,9 @@ pub async fn import_podcasts_from_opml(
     requester: Extension<Principal>,
     Json(opml): Json<OpmlModel>,
 ) -> Result<StatusCode, CustomError> {
-    let document = OPML::from_str(&opml.content).map_err(|e| {
-        CustomErrorInner::BadRequest(format!("Invalid OPML file: {e}"), ErrorSeverity::Info)
-    })?;
-    let feed_urls = opml_feed_urls(&document.body.outlines);
+    let feed_urls = podfetch_catalog::subscribe::opml_feed_urls(&opml.content)?;
     let feed_count = u32::try_from(feed_urls.len()).unwrap_or(u32::MAX);
-    PodcastService::ensure_can_add_podcasts(&requester, feed_count)?;
+    crate::subscriptions::ensure_can_add_podcasts(&requester, feed_count)?;
 
     let added_by = Some(requester.id);
     spawn_detached("opml-import", move || async move {
@@ -398,20 +324,6 @@ pub async fn import_podcasts_from_opml(
     Ok(StatusCode::OK)
 }
 
-/// Collects the feed URLs of all leaf outlines, depth-first.
-fn opml_feed_urls(outlines: &[Outline]) -> Vec<String> {
-    outlines
-        .iter()
-        .flat_map(|outline| {
-            if outline.outlines.is_empty() {
-                outline.xml_url.clone().into_iter().collect()
-            } else {
-                opml_feed_urls(&outline.outlines)
-            }
-        })
-        .collect()
-}
-
 #[utoipa::path(
 post,
 path="/podcasts/podindex",
@@ -424,17 +336,16 @@ pub async fn add_podcast_from_podindex(
     Extension(requester): Extension<Principal>,
     Json(id): Json<PodcastAddModel>,
 ) -> Result<StatusCode, CustomError> {
-    PodcastService::ensure_can_add_podcasts(&requester, 1)?;
+    crate::subscriptions::ensure_can_add_podcasts(&requester, 1)?;
     ensure_podindex_configured::<CustomError>(
-        !ENVIRONMENT_SERVICE.podindex_api_key.is_empty()
-            && !ENVIRONMENT_SERVICE.podindex_api_secret.is_empty(),
+        crate::subscriptions::directories().podindex_configured(),
     )
     .map_err(map_podcast_error)?;
 
     let added_by = Some(requester.id);
     let track_id = id.track_id;
     spawn_detached("podindex-import", move || async move {
-        PodcastService::insert_podcast_from_podindex(track_id, added_by.map(Into::into))
+        crate::subscriptions::subscribe_podindex(track_id, added_by.map(Into::into))
             .await
             .map(|_| ())
     });
@@ -595,46 +506,15 @@ pub async fn update_active_podcast(
 
 /// Imports a single feed of an OPML file and reports the outcome to the UI.
 async fn import_opml_feed(feed_url: String, added_by: Option<uuid::Uuid>) {
-    match fetch_and_insert_feed(&feed_url, added_by).await {
+    let request = SubscribeRequest {
+        feed_url,
+        added_by,
+        ..SubscribeRequest::default()
+    };
+    match crate::subscriptions::subscribe(request).await {
         Ok(podcast) => ChatServerHandle::broadcast_opml_added(&podcast),
         Err(error) => ChatServerHandle::broadcast_opml_error(error.to_string()),
     }
-}
-
-async fn fetch_and_insert_feed(
-    feed_url: &str,
-    added_by: Option<uuid::Uuid>,
-) -> Result<podfetch_catalog::persistence::podcast::PodcastEntity, CustomError> {
-    let body = get_http_client(&ENVIRONMENT_SERVICE)
-        .get(feed_url)
-        .send()
-        .await
-        .map_err(map_reqwest_error)?
-        .bytes()
-        .await
-        .map_err(map_reqwest_error)?;
-    let channel = parse_feed(&body)?;
-    // An empty image URL makes the default image apply at response time.
-    let image_url = podfetch_catalog::feed::channel_image_url(&channel).unwrap_or_default();
-
-    PodcastService::handle_insert_of_podcast(
-        PodcastInsertModel {
-            feed_url: feed_url.to_owned(),
-            title: channel.title.clone(),
-            id: rand::random::<i32>(),
-            image_url,
-        },
-        Some(channel),
-        added_by,
-    )
-    .await
-}
-
-fn parse_feed(body: &[u8]) -> Result<Channel, CustomError> {
-    Channel::read_from(body).map_err(|e| {
-        CustomErrorInner::BadRequest(format!("Invalid podcast feed: {e}"), ErrorSeverity::Info)
-            .into()
-    })
 }
 
 use crate::podcast::PodcastDto;
@@ -642,6 +522,7 @@ use crate::podcast::{map_podcast_to_dto, map_podcast_with_context_to_dto};
 use crate::podcast_episode_dto::PodcastEpisodeDto;
 use crate::rss::RSSAPiKey;
 use crate::server::ChatServerHandle;
+use podfetch_catalog::subscribe::SubscribeRequest;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
