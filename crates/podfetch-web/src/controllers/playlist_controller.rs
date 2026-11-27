@@ -169,10 +169,10 @@ mod tests {
     use diesel::QueryDsl;
     use diesel::RunQueryDsl;
     use diesel::dsl::count_star;
+    use podfetch_catalog::persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
     use podfetch_identity::api::Principal;
     use podfetch_identity::domain::user::User;
     use podfetch_persistence::db::get_connection;
-    use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
     use podfetch_persistence::schema::playlist_items::dsl as pli_dsl;
     use podfetch_persistence::schema::podcast_episodes::dsl as pe_dsl;
     use serde_json::json;

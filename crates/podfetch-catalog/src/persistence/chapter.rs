@@ -1,10 +1,11 @@
-use crate::db::{Database, PersistenceError};
-use chrono::NaiveDateTime;
-use diesel::prelude::{Insertable, Queryable, Selectable};
-use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
-use podfetch_domain::podcast_episode_chapter::{
+use crate::domain::chapter::{
     PodcastEpisodeChapter, PodcastEpisodeChapterRepository, UpsertPodcastEpisodeChapter,
 };
+use chrono::NaiveDateTime;
+use common_infrastructure::db::{Database, PersistenceError};
+use common_infrastructure::error::CustomError;
+use diesel::prelude::{Insertable, Queryable, Selectable};
+use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
 diesel::table! {
@@ -157,6 +158,41 @@ impl PodcastEpisodeChapterRepository for DieselPodcastEpisodeChapterRepository {
         diesel::delete(pec_dsl::podcast_episode_chapters.filter(pec_dsl::episode_id.eq_any(ids)))
             .execute(&mut self.database.connection()?)
             .map(|_| ())
+            .map_err(Into::into)
+    }
+}
+
+// ── PodcastEpisodeChapter ───────────────────────────────────────────────────
+
+pub struct PodcastEpisodeChapterRepositoryImpl {
+    inner: DieselPodcastEpisodeChapterRepository,
+}
+
+impl PodcastEpisodeChapterRepositoryImpl {
+    pub fn new(database: Database) -> Self {
+        Self {
+            inner: DieselPodcastEpisodeChapterRepository::new(database),
+        }
+    }
+}
+
+impl PodcastEpisodeChapterRepository for PodcastEpisodeChapterRepositoryImpl {
+    type Error = CustomError;
+
+    fn upsert(&self, chapter: UpsertPodcastEpisodeChapter) -> Result<(), Self::Error> {
+        self.inner.upsert(chapter).map_err(Into::into)
+    }
+
+    fn get_by_episode_id(
+        &self,
+        episode_id: Uuid,
+    ) -> Result<Vec<PodcastEpisodeChapter>, Self::Error> {
+        self.inner.get_by_episode_id(episode_id).map_err(Into::into)
+    }
+
+    fn delete_by_episode_ids(&self, episode_ids: &[Uuid]) -> Result<(), Self::Error> {
+        self.inner
+            .delete_by_episode_ids(episode_ids)
             .map_err(Into::into)
     }
 }

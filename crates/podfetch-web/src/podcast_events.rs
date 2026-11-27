@@ -1,80 +1,12 @@
-//! Events the podcast context publishes (its published language).
+//! The event bus for code that has no injected dependencies yet: the
+//! static podcast service and episode use case publish through it.
 //!
-//! Downstream contexts read them with their own types, so the field names
-//! and type strings here are a contract: add fields freely, but rename or
-//! remove one only with a new event version.
+//! The events themselves belong to their contexts: `podfetch_catalog::events`
+//! (podcast refreshed/removed) and `podfetch_media::events` (episode
+//! downloaded / download failed).
 
 use podfetch_events::{Event, EventBus};
-use serde::{Deserialize, Serialize};
 use std::sync::{Arc, PoisonError, RwLock};
-
-/// An episode file was downloaded and is ready to be played.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EpisodeDownloaded {
-    pub episode_id: String,
-    pub episode_name: String,
-    pub podcast_id: String,
-    pub podcast_name: String,
-}
-
-impl Event for EpisodeDownloaded {
-    const TYPE: &'static str = "podcast.episode_downloaded";
-
-    fn aggregate_id(&self) -> String {
-        self.episode_id.clone()
-    }
-}
-
-/// Downloading an episode failed.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EpisodeDownloadFailed {
-    pub episode_id: String,
-    pub episode_name: String,
-    pub podcast_id: String,
-    pub reason: String,
-}
-
-impl Event for EpisodeDownloadFailed {
-    const TYPE: &'static str = "podcast.episode_download_failed";
-
-    fn aggregate_id(&self) -> String {
-        self.episode_id.clone()
-    }
-}
-
-/// The catalog refreshed a podcast's episodes from its feed (after adding
-/// it, on every poll and on a manual refresh).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct PodcastRefreshed {
-    pub podcast_id: String,
-    pub podcast_name: String,
-}
-
-impl Event for PodcastRefreshed {
-    const TYPE: &'static str = "podcast.refreshed";
-
-    fn aggregate_id(&self) -> String {
-        self.podcast_id.clone()
-    }
-}
-
-/// A podcast left the catalog. The other contexts removed what they kept
-/// about it before (see `crate::podcast_removal`); this is for reactions
-/// that may happen afterwards.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct PodcastRemoved {
-    pub podcast_id: String,
-    pub podcast_name: String,
-    pub rssfeed: String,
-}
-
-impl Event for PodcastRemoved {
-    const TYPE: &'static str = "podcast.removed";
-
-    fn aggregate_id(&self) -> String {
-        self.podcast_id.clone()
-    }
-}
 
 /// The bus the download code and the static podcast service publish to
 /// (also the library's `PodcastFavorChanged` from `update_favor_podcast`).
@@ -107,6 +39,8 @@ pub(crate) fn publish<E: Event>(event: &E) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use podfetch_catalog::events::PodcastRefreshed;
+    use podfetch_media::events::{EpisodeDownloadFailed, EpisodeDownloaded};
     use podfetch_notifications::inbound;
 
     /// The notifications context reads these events with its own types;

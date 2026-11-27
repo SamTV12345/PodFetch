@@ -16,6 +16,7 @@ use common_infrastructure::error::{
     CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error,
 };
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
+use podfetch_catalog::persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use podfetch_domain::podcast_episode_transcript::{
     PodcastEpisodeTranscript, PodcastEpisodeTranscriptRepository, TranscriptSearchHit,
     TranscriptSegment, TranscriptSource, TranscriptStatus, TranscriptionJob,
@@ -25,7 +26,6 @@ use podfetch_persistence::adapters::{
     PodcastEpisodeTranscriptRepositoryImpl, TranscriptionJobRepositoryImpl,
 };
 use podfetch_persistence::db::database;
-use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use podfetch_storage::FileHandleWrapper;
 use std::collections::{HashMap, HashSet};
 use std::io::Read;
@@ -677,9 +677,9 @@ mod tests {
     use axum::http::StatusCode;
     use axum::routing::get;
     use diesel::prelude::*;
+    use podfetch_catalog::persistence::podcast_episode;
     use podfetch_domain::podcast_episode_transcript::TranscriptSearchHit;
     use podfetch_persistence::db::{get_connection, run_migrations};
-    use podfetch_persistence::podcast_episode;
     use podfetch_persistence::schema::{podcast_episodes, podcasts};
     use std::sync::MutexGuard;
     // ── shared DB test setup ────────────────────────────────────────────

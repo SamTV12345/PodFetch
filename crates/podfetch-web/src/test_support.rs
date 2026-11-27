@@ -190,9 +190,9 @@ END $$;
     /// Loads an episode with its file state by its feed episode id.
     pub fn episode_by_feed_id(
         feed_episode_id: &str,
-    ) -> podfetch_persistence::podcast_episode::PodcastEpisodeEntity {
-        use podfetch_domain::podcast_episode::PodcastEpisodeRepository;
-        podfetch_persistence::podcast_episode::DieselPodcastEpisodeRepository::new(
+    ) -> podfetch_catalog::persistence::podcast_episode::PodcastEpisodeEntity {
+        use podfetch_catalog::domain::podcast_episode::PodcastEpisodeRepository;
+        podfetch_catalog::persistence::podcast_episode::DieselPodcastEpisodeRepository::new(
             podfetch_persistence::db::database(),
         )
         .find_by_episode_id(feed_episode_id)
@@ -202,9 +202,11 @@ END $$;
     }
 
     /// Loads an episode with its file state by its database id.
-    pub fn episode_by_id(id: &str) -> podfetch_persistence::podcast_episode::PodcastEpisodeEntity {
-        use podfetch_domain::podcast_episode::PodcastEpisodeRepository;
-        podfetch_persistence::podcast_episode::DieselPodcastEpisodeRepository::new(
+    pub fn episode_by_id(
+        id: &str,
+    ) -> podfetch_catalog::persistence::podcast_episode::PodcastEpisodeEntity {
+        use podfetch_catalog::domain::podcast_episode::PodcastEpisodeRepository;
+        podfetch_catalog::persistence::podcast_episode::DieselPodcastEpisodeRepository::new(
             podfetch_persistence::db::database(),
         )
         .find_by_id(uuid::Uuid::parse_str(id).unwrap())
@@ -216,9 +218,9 @@ END $$;
     /// Changes the file state of a seeded episode (owned by the media
     /// library) and returns the episode as stored.
     pub fn change_episode_files(
-        episode: &podfetch_persistence::podcast_episode::PodcastEpisodeEntity,
-        change: impl FnOnce(&mut podfetch_persistence::podcast_episode::PodcastEpisodeEntity),
-    ) -> podfetch_persistence::podcast_episode::PodcastEpisodeEntity {
+        episode: &podfetch_catalog::persistence::podcast_episode::PodcastEpisodeEntity,
+        change: impl FnOnce(&mut podfetch_catalog::persistence::podcast_episode::PodcastEpisodeEntity),
+    ) -> podfetch_catalog::persistence::podcast_episode::PodcastEpisodeEntity {
         use podfetch_media::files::{EpisodeFile, EpisodeFileRepository};
         let mut changed = episode_by_id(&episode.id);
         change(&mut changed);

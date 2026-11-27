@@ -5,12 +5,12 @@ use crate::services::discover::categories::{
 use crate::services::discover::itunes_charts::{ItunesChartEntry, ItunesChartsService};
 use crate::services::podcast::service::PodcastService;
 use common_infrastructure::error::CustomError;
-use podfetch_domain::podcast::PodcastRepository;
+use podfetch_catalog::domain::podcast::PodcastRepository;
+use podfetch_catalog::persistence::podcast::DieselPodcastRepository;
 use podfetch_identity::api::Principal;
 use podfetch_library::domain::favorite::FavoriteRepository;
 use podfetch_library::persistence::favorite::DieselFavoriteRepository;
 use podfetch_persistence::db::database;
-use podfetch_persistence::podcast::DieselPodcastRepository;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use utoipa::ToSchema;

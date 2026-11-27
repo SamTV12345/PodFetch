@@ -1,6 +1,6 @@
+use podfetch_catalog::persistence::podcast::PodcastEntity as Podcast;
+use podfetch_catalog::persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use podfetch_identity::api::Principal;
-use podfetch_persistence::podcast::PodcastEntity as Podcast;
-use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 
 use crate::controllers::controller_utils::unwrap_string;
 use crate::podcast::map_podcast_with_context_to_dto;
@@ -16,15 +16,15 @@ use common_infrastructure::error::{
 use common_infrastructure::http::COMMON_USER_AGENT;
 use common_infrastructure::http::get_http_client;
 use common_infrastructure::runtime::{ENVIRONMENT_SERVICE, ITUNES_URL};
-use podfetch_domain::ordering::{OrderCriteria, OrderOption};
-use podfetch_domain::podcast::{
+use podfetch_catalog::domain::ordering::{OrderCriteria, OrderOption};
+use podfetch_catalog::domain::podcast::{
     NewPodcast, PodcastMetadataUpdate, PodcastQuery, PodcastRepository,
 };
+use podfetch_catalog::persistence::podcast::DieselPodcastRepository;
 use podfetch_library::domain::favorite::FavoriteRepository;
 use podfetch_library::persistence::favorite::DieselFavoriteRepository;
 use podfetch_persistence::db::PersistenceError;
 use podfetch_persistence::db::database;
-use podfetch_persistence::podcast::DieselPodcastRepository;
 use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue, USER_AGENT};
 use rss::Channel;
 use serde_json::Value;
@@ -276,7 +276,7 @@ impl PodcastService {
     /// Tells the other contexts that the podcast's episodes were refreshed
     /// from its feed; the media library then auto-downloads the latest ones.
     pub fn announce_refreshed(podcast: &Podcast) {
-        crate::podcast_events::publish(&crate::podcast_events::PodcastRefreshed {
+        crate::podcast_events::publish(&podfetch_catalog::events::PodcastRefreshed {
             podcast_id: podcast.id.clone(),
             podcast_name: podcast.name.clone(),
         });
@@ -310,13 +310,15 @@ impl PodcastService {
 
     pub fn find_by_rss_feed(
         rss_feed: &str,
-    ) -> Result<Option<podfetch_domain::podcast::Podcast>, CustomError> {
+    ) -> Result<Option<podfetch_catalog::domain::podcast::Podcast>, CustomError> {
         podcast_repo()
             .find_by_rss_feed(rss_feed)
             .map_err(CustomError::from)
     }
 
-    pub fn find_by_id(id: Uuid) -> Result<Option<podfetch_domain::podcast::Podcast>, CustomError> {
+    pub fn find_by_id(
+        id: Uuid,
+    ) -> Result<Option<podfetch_catalog::domain::podcast::Podcast>, CustomError> {
         podcast_repo().find_by_id(id).map_err(CustomError::from)
     }
 
@@ -443,8 +445,8 @@ impl PodcastService {
     }
 
     pub fn query_for_podcast(query: &str) -> Result<Vec<PodcastEpisode>, CustomError> {
-        use podfetch_domain::podcast_episode::PodcastEpisodeRepository;
-        podfetch_persistence::podcast_episode::DieselPodcastEpisodeRepository::new(
+        use podfetch_catalog::domain::podcast_episode::PodcastEpisodeRepository;
+        podfetch_catalog::persistence::podcast_episode::DieselPodcastEpisodeRepository::new(
             podfetch_persistence::db::database(),
         )
         .search_by_text(query)
@@ -548,7 +550,7 @@ impl PodcastService {
     /// API composition: podcasts come from the catalog, favorite flag and
     /// tags from the library, fetched in bulk for the whole list.
     fn with_library_context(
-        podcasts: Vec<podfetch_domain::podcast::Podcast>,
+        podcasts: Vec<podfetch_catalog::domain::podcast::Podcast>,
         user_id: Uuid,
         api_key: Option<&str>,
         server_url: &str,

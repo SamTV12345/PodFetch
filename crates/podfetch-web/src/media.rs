@@ -10,7 +10,6 @@
 
 use crate::podcast_settings::PodcastSetting;
 use crate::services::file::service::{FileService, naming_rules};
-use crate::services::podcast::service::PodcastService;
 use crate::services::podcast_episode_chapter::service::PodcastEpisodeChapterService;
 use crate::services::podcast_settings::service::PodcastSettingsService;
 use crate::services::settings::service::SettingsService;
@@ -20,6 +19,10 @@ use common_infrastructure::db::Database;
 use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use common_infrastructure::http::get_http_client;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
+use podfetch_catalog::api::{CatalogApi, LocalCatalog};
+use podfetch_catalog::domain::podcast_episode::PodcastEpisode as PodcastEpisodeDomain;
+use podfetch_catalog::persistence::podcast::PodcastEntity;
+use podfetch_catalog::persistence::podcast_episode::PodcastEpisodeEntity;
 use podfetch_media::audio::Chapter;
 use podfetch_media::auto_download::{AutoDownload, DownloadRunner};
 use podfetch_media::catalog::{Catalog, MediaEpisode, MediaPodcast};
@@ -31,8 +34,6 @@ use podfetch_media::rescan::EpisodeRescanner;
 use podfetch_media::settings::{MediaSettings, MediaSettingsSource};
 use podfetch_media::sponsorblock::{SponsorblockClient, SponsorblockService, SponsorblockSwitch};
 use podfetch_persistence::db::database;
-use podfetch_persistence::podcast::PodcastEntity;
-use podfetch_persistence::podcast_episode::PodcastEpisodeEntity;
 use std::str::FromStr;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -54,7 +55,8 @@ impl MediaServices {
         environment: Arc<EnvironmentService>,
         settings: Arc<SettingsService>,
     ) -> Self {
-        let catalog: Arc<dyn Catalog> = Arc::new(CatalogAdapter);
+        let catalog_api: Arc<dyn CatalogApi> = Arc::new(LocalCatalog::new(database.clone()));
+        let catalog: Arc<dyn Catalog> = Arc::new(CatalogAdapter(catalog_api.clone()));
         let media_settings: Arc<dyn MediaSettingsSource> =
             Arc::new(SettingsAdapter(settings.clone()));
         let settings_for_queue = settings.clone();
@@ -73,7 +75,7 @@ impl MediaServices {
         ));
         let downloader = Arc::new(Downloader::new(
             environment,
-            catalog,
+            catalog.clone(),
             media_settings,
             files.clone(),
             sponsorblock.clone(),
@@ -83,9 +85,9 @@ impl MediaServices {
         ));
         let rescanner = Arc::new(EpisodeRescanner::new(downloader.clone()));
         let auto_download = Arc::new(AutoDownload::new(
-            Arc::new(CatalogAdapter),
+            catalog.clone(),
             Arc::new(SettingsAdapter(settings_for_queue)),
-            Arc::new(DownloadIfMissing),
+            Arc::new(DownloadIfMissing(catalog_api)),
         ));
         Self {
             files,
@@ -190,29 +192,41 @@ fn parse_id(id: &str) -> Result<Uuid, CustomError> {
 // ── Ports ───────────────────────────────────────────────────────────────
 
 /// The catalog as the media library reaches it.
-pub struct CatalogAdapter;
+/// Reads go through the catalog's API; the commands still through the
+/// episode use case until it moves into the catalog crate (step 5.3c).
+pub struct CatalogAdapter(pub Arc<dyn CatalogApi>);
+
+fn not_found() -> CustomError {
+    CustomErrorInner::NotFound(ErrorSeverity::Warning).into()
+}
+
+fn media_episodes(episodes: Vec<PodcastEpisodeDomain>) -> Vec<MediaEpisode> {
+    episodes
+        .into_iter()
+        .map(|episode| media_episode(&PodcastEpisodeEntity::from(episode)))
+        .collect()
+}
 
 impl Catalog for CatalogAdapter {
     fn podcast(&self, podcast_id: &str) -> Result<MediaPodcast, CustomError> {
-        PodcastService::get_podcast(parse_id(podcast_id)?).map(|p| media_podcast(&p))
+        let podcast = self
+            .0
+            .podcast(parse_id(podcast_id)?)?
+            .ok_or_else(not_found)?;
+        Ok(media_podcast(&PodcastEntity::from(podcast)))
     }
 
     fn episodes_of_podcast(&self, podcast_id: &str) -> Result<Vec<MediaEpisode>, CustomError> {
-        Ok(
-            PodcastEpisodeUseCase::get_episodes_by_podcast_id(parse_id(podcast_id)?)?
-                .iter()
-                .map(media_episode)
-                .collect(),
-        )
+        Ok(media_episodes(
+            self.0.episodes_of_podcast(parse_id(podcast_id)?)?,
+        ))
     }
 
     fn latest_episodes(&self, podcast_id: &str, n: i32) -> Result<Vec<MediaEpisode>, CustomError> {
-        Ok(
-            PodcastEpisodeUseCase::get_last_n_podcast_episodes_by_count(parse_id(podcast_id)?, n)?
-                .iter()
-                .map(media_episode)
-                .collect(),
-        )
+        Ok(media_episodes(
+            self.0
+                .latest_episodes(parse_id(podcast_id)?, i64::from(n))?,
+        ))
     }
 
     fn position_of_episode(
@@ -388,19 +402,24 @@ impl DurationProbe for Ffprobe {
 
 /// Downloads an episode for the auto-download queue, unless its file is
 /// there already or the user deleted it in the meantime.
-pub struct DownloadIfMissing;
+pub struct DownloadIfMissing(pub Arc<dyn CatalogApi>);
 
 impl DownloadRunner for DownloadIfMissing {
     fn download(&self, episode_id: &str) -> Result<(), CustomError> {
-        let Some(episode) =
-            PodcastEpisodeUseCase::get_podcast_episode_by_internal_id(parse_id(episode_id)?)?
-        else {
+        let Some(episode) = self.0.episode(parse_id(episode_id)?)? else {
             return Ok(());
         };
+        let episode = PodcastEpisodeEntity::from(episode);
         if episode.deleted {
             return Ok(());
         }
-        let podcast = PodcastService::get_podcast(parse_id(&episode.podcast_id)?)?;
-        PodcastEpisodeUseCase::download_podcast_episode_if_not_locally_available(episode, podcast)
+        let podcast = self
+            .0
+            .podcast(parse_id(&episode.podcast_id)?)?
+            .ok_or_else(not_found)?;
+        PodcastEpisodeUseCase::download_podcast_episode_if_not_locally_available(
+            episode,
+            PodcastEntity::from(podcast),
+        )
     }
 }

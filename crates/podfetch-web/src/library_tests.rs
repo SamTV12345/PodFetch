@@ -5,7 +5,7 @@ mod tests {
     use crate::services::podcast::service::PodcastService;
     use crate::test_support::tests::handle_test_startup;
     use common_infrastructure::config::EnvironmentService;
-    use podfetch_domain::ordering::{OrderCriteria, OrderOption};
+    use podfetch_catalog::domain::ordering::{OrderCriteria, OrderOption};
     use podfetch_identity::api::Principal;
     use podfetch_identity::persistence::adapters::UserAdminRepositoryImpl;
     use podfetch_identity::services::user_auth::service::UserAuthService;

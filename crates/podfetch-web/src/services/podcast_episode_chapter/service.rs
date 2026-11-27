@@ -1,8 +1,8 @@
 use crate::settings::UpsertPodcastEpisodeChapter;
 use common_infrastructure::error::CustomError;
-use podfetch_domain::podcast_episode_chapter::PodcastEpisodeChapterRepository;
+use podfetch_catalog::domain::chapter::PodcastEpisodeChapterRepository;
+use podfetch_catalog::persistence::chapter::PodcastEpisodeChapterRepositoryImpl;
 use podfetch_media::audio::Chapter;
-use podfetch_persistence::adapters::PodcastEpisodeChapterRepositoryImpl;
 use podfetch_persistence::db::database;
 use std::sync::Arc;
 
@@ -51,8 +51,7 @@ impl PodcastEpisodeChapterService {
     pub fn get_chapters_by_episode_id(
         &self,
         episode_id: uuid::Uuid,
-    ) -> Result<Vec<podfetch_domain::podcast_episode_chapter::PodcastEpisodeChapter>, CustomError>
-    {
+    ) -> Result<Vec<podfetch_catalog::domain::chapter::PodcastEpisodeChapter>, CustomError> {
         self.repository.get_by_episode_id(episode_id)
     }
 }

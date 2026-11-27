@@ -6,7 +6,7 @@ use axum::extract::{Path, State};
 use axum::http::HeaderMap;
 use axum::response::{IntoResponse, Response};
 use axum_extra::extract::OptionalQuery;
-use podfetch_persistence::podcast::PodcastEntity as Podcast;
+use podfetch_catalog::persistence::podcast::PodcastEntity as Podcast;
 
 use crate::podcast_episode_dto::PodcastEpisodeDto;
 pub use crate::rss::{RSSAPiKey, RSSQuery};
@@ -518,9 +518,9 @@ pub fn get_websocket_router() -> OpenApiRouter<AppState> {
 mod tests {
     use crate::test_support::tests::handle_test_startup;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use podfetch_catalog::persistence::podcast::PodcastEntity as Podcast;
+    use podfetch_catalog::persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
     use podfetch_persistence::db::get_connection;
-    use podfetch_persistence::podcast::PodcastEntity as Podcast;
-    use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
     use podfetch_persistence::schema::podcast_episodes::dsl as pe_dsl;
     use serial_test::serial;
     use uuid::Uuid;

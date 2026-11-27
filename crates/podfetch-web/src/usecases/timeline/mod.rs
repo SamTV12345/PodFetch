@@ -12,11 +12,13 @@ use crate::podcast_episode::{TimelineFavorite, TimelineQueryParams};
 use crate::podcast_episode_dto::PodcastEpisodeDto;
 use crate::services::podcast::service::PodcastService;
 use common_infrastructure::error::CustomError;
-use podfetch_domain::podcast_episode::{EpisodeFilter, PodcastEpisode, PodcastEpisodeRepository};
+use podfetch_catalog::domain::podcast_episode::{
+    EpisodeFilter, PodcastEpisode, PodcastEpisodeRepository,
+};
+use podfetch_catalog::persistence::podcast_episode::DieselPodcastEpisodeRepository;
 use podfetch_identity::api::Principal;
 use podfetch_listening::domain::episode::{Episode, EpisodeRepository, Listener};
 use podfetch_persistence::db::database;
-use podfetch_persistence::podcast_episode::DieselPodcastEpisodeRepository;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;

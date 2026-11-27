@@ -1,4 +1,4 @@
-use crate::podcast_events::{self, EpisodeDownloadFailed, EpisodeDownloaded};
+use crate::podcast_events;
 use crate::server::ChatServerHandle;
 use crate::services::file::service::FileService;
 use crate::services::podcast::metadata::PodcastBuilder;
@@ -18,14 +18,15 @@ use common_infrastructure::retry::do_retry;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use common_infrastructure::time::opt_or_empty_string;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use podfetch_domain::podcast_episode::{NewPodcastEpisode, PodcastEpisodeRepository};
+use podfetch_catalog::domain::podcast_episode::{NewPodcastEpisode, PodcastEpisodeRepository};
+use podfetch_catalog::persistence::podcast::PodcastEntity as Podcast;
+use podfetch_catalog::persistence::podcast_episode::DieselPodcastEpisodeRepository;
+use podfetch_catalog::persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use podfetch_identity::api::Principal;
 use podfetch_listening::domain::episode::{Episode, EpisodeRepository};
+use podfetch_media::events::{EpisodeDownloadFailed, EpisodeDownloaded};
 use podfetch_persistence::db::database;
 use podfetch_persistence::db::get_connection;
-use podfetch_persistence::podcast::PodcastEntity as Podcast;
-use podfetch_persistence::podcast_episode::DieselPodcastEpisodeRepository;
-use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use podfetch_storage::{FileHandleWrapper, FileRequest};
 use reqwest::header::{ACCEPT, HeaderMap};
 use reqwest::redirect::Policy;
@@ -308,7 +309,7 @@ impl PodcastEpisodeUseCase {
         let actions = crate::listening::episode_actions();
         let mut cursor = last_id;
         let mut page: Vec<(
-            podfetch_domain::podcast_episode::PodcastEpisode,
+            podfetch_catalog::domain::podcast_episode::PodcastEpisode,
             Option<Episode>,
         )> = Vec::new();
         loop {

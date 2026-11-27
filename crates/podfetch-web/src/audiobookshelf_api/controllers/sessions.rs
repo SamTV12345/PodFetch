@@ -88,9 +88,9 @@ async fn start_session(
         .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))
         .and_then(resolve_episode)?;
 
-    let podcast: podfetch_domain::podcast::Podcast =
+    let podcast: podfetch_catalog::domain::podcast::Podcast =
         PodcastService::get_podcast(podcast_id)?.into();
-    let episodes: Vec<podfetch_domain::podcast_episode::PodcastEpisode> =
+    let episodes: Vec<podfetch_catalog::domain::podcast_episode::PodcastEpisode> =
         PodcastEpisodeService::get_episodes_by_podcast_id(podcast_id)?
             .into_iter()
             .map(Into::into)

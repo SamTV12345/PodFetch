@@ -1,4 +1,4 @@
-use podfetch_persistence::podcast::PodcastEntity as Podcast;
+use podfetch_catalog::persistence::podcast::PodcastEntity as Podcast;
 
 use std::path::Path;
 
@@ -15,8 +15,8 @@ use common_infrastructure::error::{
 use common_infrastructure::http::get_http_client;
 use common_infrastructure::rss::RSSFeedParser;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
+use podfetch_catalog::persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use podfetch_media::naming::{NamingRules, Replacement};
-use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use podfetch_storage::FileHandleWrapper;
 use podfetch_storage::FileRequest;
 use podfetch_storage::{FileType, build_podcast_image_paths, determine_file_extension};
@@ -288,10 +288,10 @@ mod tests {
     // ── check_if_podcast_main_image_downloaded integration tests ─────────
 
     use super::FileService;
-    use podfetch_domain::podcast::NewPodcast;
-    use podfetch_domain::podcast::PodcastRepository;
+    use podfetch_catalog::domain::podcast::NewPodcast;
+    use podfetch_catalog::domain::podcast::PodcastRepository;
+    use podfetch_catalog::persistence::podcast::DieselPodcastRepository;
     use podfetch_persistence::db::database;
-    use podfetch_persistence::podcast::DieselPodcastRepository;
     use std::io::Write;
 
     fn seed_podcast(image_url: &str, directory_id: &str) -> String {

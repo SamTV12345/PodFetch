@@ -196,10 +196,10 @@ mod tests {
     use diesel::ExpressionMethods;
 
     use diesel::RunQueryDsl;
+    use podfetch_catalog::persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
     use podfetch_identity::api::Principal;
     use podfetch_identity::domain::user::User;
     use podfetch_persistence::db::get_connection;
-    use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
     use podfetch_persistence::schema::podcast_episodes::dsl as pe_dsl;
     use serde_json::{Value, json};
     use serial_test::serial;
@@ -220,7 +220,7 @@ mod tests {
         user
     }
 
-    fn add_podcast(slug: &str) -> podfetch_persistence::podcast::PodcastEntity {
+    fn add_podcast(slug: &str) -> podfetch_catalog::persistence::podcast::PodcastEntity {
         crate::services::podcast::service::PodcastService::add_podcast_to_database(
             &unique_name("Triage Podcast"),
             slug,

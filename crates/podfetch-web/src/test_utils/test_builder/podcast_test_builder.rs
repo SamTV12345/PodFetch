@@ -4,7 +4,7 @@ pub mod tests {
     use fake::Fake;
     use fake::Faker;
     use fake::faker::lorem::de_de::Word;
-    use podfetch_persistence::podcast::PodcastEntity as Podcast;
+    use podfetch_catalog::persistence::podcast::PodcastEntity as Podcast;
 
     #[derive(Default, Builder, Debug)]
     #[builder(setter(into), default)]
