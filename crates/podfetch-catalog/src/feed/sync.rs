@@ -27,6 +27,10 @@ use uuid::Uuid;
 pub struct FetchedFeed {
     pub url: String,
     pub content: String,
+    /// The feed moved for good: it was reached only through permanent
+    /// redirects (301/308), so `url` is its new home. Temporary redirects
+    /// (tracking or CDN hops) don't count.
+    pub moved_permanently: bool,
 }
 
 /// Port to the network: fetches a feed.
@@ -47,9 +51,15 @@ impl HttpFeedFetcher {
 
 impl FeedFetcher for HttpFeedFetcher {
     fn fetch(&self, feed_url: &str) -> Result<FetchedFeed, CustomError> {
-        // Follows every redirect, as the feed refresh always did.
+        // Follows every redirect, as the feed refresh always did, and
+        // remembers their status codes.
+        let hops = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let seen = hops.clone();
         let client = get_sync_client(&self.environment)
-            .redirect(reqwest::redirect::Policy::custom(|attempt| {
+            .redirect(reqwest::redirect::Policy::custom(move |attempt| {
+                if let Ok(mut seen) = seen.lock() {
+                    seen.push(attempt.status());
+                }
                 attempt.follow()
             }))
             .build()
@@ -67,8 +77,25 @@ impl FeedFetcher for HttpFeedFetcher {
             .map_err(map_reqwest_error)?;
         let url = response.url().to_string();
         let content = response.text().map_err(map_reqwest_error)?;
-        Ok(FetchedFeed { url, content })
+        let hops = hops.lock().map_or_else(|_| Vec::new(), |h| h.clone());
+        Ok(FetchedFeed {
+            url,
+            content,
+            moved_permanently: moved_permanently(&hops),
+        })
     }
+}
+
+/// Whether a chain of redirects means the feed moved for good: there was
+/// at least one, and every one was permanent.
+pub(crate) fn moved_permanently(hops: &[reqwest::StatusCode]) -> bool {
+    !hops.is_empty()
+        && hops.iter().all(|status| {
+            matches!(
+                *status,
+                reqwest::StatusCode::MOVED_PERMANENTLY | reqwest::StatusCode::PERMANENT_REDIRECT
+            )
+        })
 }
 
 /// What a refresh found that other contexts may need.
@@ -120,6 +147,11 @@ impl FeedSync {
             invalid_feed(&podcast.name, e)
         })?;
 
+        if fetched.moved_permanently && fetched.url != podcast.rssfeed {
+            tracing::info!("The podcast {} has moved to {}", podcast.name, fetched.url);
+            self.podcasts.update_rss_feed(podcast.id, &fetched.url)?;
+            // The enclosure URLs are taken over below, with every item.
+        }
         self.follow_new_feed_url(podcast, &channel)?;
         if let Some(update) = read::metadata(&channel, podcast.id) {
             self.podcasts.update_metadata(update)?;
@@ -300,5 +332,94 @@ impl FeedSync {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{FeedFetcher, HttpFeedFetcher, moved_permanently};
+    use common_infrastructure::config::EnvironmentService;
+    use reqwest::StatusCode;
+    use std::sync::Arc;
+
+    /// Serves `/feed.xml`, `/moved` (301 → feed), `/twice` (308 → 301 →
+    /// feed) and `/tracked` (301 → 302 → feed) on its own thread (the
+    /// fetcher uses blocking HTTP); returns the base URL.
+    fn serve() -> String {
+        use axum::http::{StatusCode as S, header::LOCATION};
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            runtime.block_on(async move {
+                let to = |status: S, location: &'static str| {
+                    move || async move { (status, [(LOCATION, location)]) }
+                };
+                let app = axum::Router::new()
+                    .route("/feed.xml", axum::routing::get(|| async { "<rss/>" }))
+                    .route(
+                        "/moved",
+                        axum::routing::get(to(S::MOVED_PERMANENTLY, "/feed.xml")),
+                    )
+                    .route(
+                        "/twice",
+                        axum::routing::get(to(S::PERMANENT_REDIRECT, "/moved")),
+                    )
+                    .route(
+                        "/tracked",
+                        axum::routing::get(to(S::MOVED_PERMANENTLY, "/hop")),
+                    )
+                    .route("/hop", axum::routing::get(to(S::FOUND, "/feed.xml")));
+                let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+                tx.send(listener.local_addr().unwrap()).unwrap();
+                let _ = axum::serve(listener, app).await;
+            });
+        });
+        format!("http://{}", rx.recv().unwrap())
+    }
+
+    fn fetcher() -> HttpFeedFetcher {
+        let mut environment = EnvironmentService::new();
+        environment.proxy_url = None;
+        HttpFeedFetcher::new(Arc::new(environment))
+    }
+
+    #[test]
+    fn the_fetcher_tells_a_move_from_a_detour() {
+        let base = serve();
+        let fetch = |path: &str| fetcher().fetch(&format!("{base}{path}")).unwrap();
+
+        let direct = fetch("/feed.xml");
+        assert_eq!(direct.content, "<rss/>");
+        assert!(!direct.moved_permanently);
+
+        for path in ["/moved", "/twice"] {
+            let moved = fetch(path);
+            assert_eq!(moved.url, format!("{base}/feed.xml"), "{path}");
+            assert!(moved.moved_permanently, "{path}");
+        }
+
+        let tracked = fetch("/tracked");
+        assert_eq!(tracked.url, format!("{base}/feed.xml"));
+        assert!(!tracked.moved_permanently);
+    }
+
+    #[test]
+    fn only_permanent_redirects_move_a_feed() {
+        assert!(!moved_permanently(&[]));
+        assert!(moved_permanently(&[StatusCode::MOVED_PERMANENTLY]));
+        assert!(moved_permanently(&[
+            StatusCode::PERMANENT_REDIRECT,
+            StatusCode::MOVED_PERMANENTLY
+        ]));
+        assert!(!moved_permanently(&[StatusCode::FOUND]));
+        assert!(!moved_permanently(&[StatusCode::TEMPORARY_REDIRECT]));
+        // A tracking hop in the chain: the final URL may be short-lived.
+        assert!(!moved_permanently(&[
+            StatusCode::MOVED_PERMANENTLY,
+            StatusCode::FOUND
+        ]));
     }
 }

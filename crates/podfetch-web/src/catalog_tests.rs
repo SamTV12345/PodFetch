@@ -103,23 +103,41 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::{Arc, Mutex};
 
-    /// Serves feeds by URL; they can change between refreshes.
+    /// Serves feeds by URL; they can change between refreshes, and a URL
+    /// can redirect (permanently or not) to another one.
     #[derive(Default)]
-    struct Feeds(Mutex<HashMap<String, String>>);
+    struct Feeds {
+        content: Mutex<HashMap<String, String>>,
+        redirects: Mutex<HashMap<String, (String, bool)>>,
+    }
 
     impl Feeds {
         fn set(&self, url: &str, xml: String) {
-            self.0.lock().unwrap().insert(url.to_string(), xml);
+            self.content.lock().unwrap().insert(url.to_string(), xml);
+        }
+
+        fn redirect(&self, from: &str, to: &str, permanently: bool) {
+            self.redirects
+                .lock()
+                .unwrap()
+                .insert(from.to_string(), (to.to_string(), permanently));
         }
     }
 
     impl FeedFetcher for Feeds {
         fn fetch(&self, feed_url: &str) -> Result<FetchedFeed, CustomError> {
-            let content = self
-                .0
+            let (url, moved_permanently) = self
+                .redirects
                 .lock()
                 .unwrap()
                 .get(feed_url)
+                .cloned()
+                .unwrap_or_else(|| (feed_url.to_string(), false));
+            let content = self
+                .content
+                .lock()
+                .unwrap()
+                .get(&url)
                 .cloned()
                 .ok_or_else(|| {
                     CustomError::from(common_infrastructure::error::CustomErrorInner::NotFound(
@@ -127,8 +145,9 @@ mod tests {
                     ))
                 })?;
             Ok(FetchedFeed {
-                url: feed_url.to_string(),
+                url,
                 content,
+                moved_permanently,
             })
         }
     }
@@ -318,6 +337,49 @@ mod tests {
                 .episodes_of_podcast(podcast.id)
                 .unwrap()
                 .is_empty()
+        );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn a_feed_that_moved_permanently_is_stored_under_its_new_url() {
+        let _ts = handle_test_startup().await;
+        let (sync, feeds, podcast) = sync_fixture();
+        let moved = "https://example.com/new-home.xml";
+        feeds.set(
+            moved,
+            rss("", &item("g1", "First", "").replace("g1.mp3", "new/g1.mp3")),
+        );
+        feeds.redirect(FEED, moved, true);
+
+        sync.sync(&podcast).unwrap();
+
+        let stored = app_state().catalog.podcast(podcast.id).unwrap().unwrap();
+        assert_eq!(stored.rssfeed, moved);
+        let episodes = app_state().catalog.episodes_of_podcast(podcast.id).unwrap();
+        assert_eq!(episodes[0].url, "https://example.com/new/g1.mp3");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn a_temporary_redirect_keeps_the_feed_url() {
+        let _ts = handle_test_startup().await;
+        let (sync, feeds, podcast) = sync_fixture();
+        let detour = "https://tracker.example.com/feed.xml";
+        feeds.set(detour, rss("", &item("g1", "First", "")));
+        feeds.redirect(FEED, detour, false);
+
+        sync.sync(&podcast).unwrap();
+
+        let stored = app_state().catalog.podcast(podcast.id).unwrap().unwrap();
+        assert_eq!(stored.rssfeed, FEED);
+        assert_eq!(
+            app_state()
+                .catalog
+                .episodes_of_podcast(podcast.id)
+                .unwrap()
+                .len(),
+            1
         );
     }
 }

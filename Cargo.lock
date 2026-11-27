@@ -3262,12 +3262,16 @@ dependencies = [
 name = "podfetch-catalog"
 version = "0.1.0"
 dependencies = [
+ "axum",
  "chrono",
  "common-infrastructure",
  "diesel",
  "podfetch-events",
+ "reqwest 0.13.5",
+ "rss",
  "serde",
  "serde_json",
+ "tokio",
  "tracing",
  "uuid",
 ]
