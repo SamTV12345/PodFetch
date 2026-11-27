@@ -27,3 +27,29 @@ pub fn favorite_episodes() -> FavoritePodcastEpisodeService {
         database(),
     )))
 }
+
+/// The catalog ids of the podcast's episodes that some user marked as
+/// favorite.
+pub fn liked_episodes_of_podcast(
+    podcast_id: uuid::Uuid,
+) -> Result<std::collections::HashSet<String>, common_infrastructure::error::CustomError> {
+    let favorites = favorite_episodes();
+    let mut liked = std::collections::HashSet::new();
+    for episode in
+        crate::usecases::podcast_episode::PodcastEpisodeUseCase::get_episodes_by_podcast_id(
+            podcast_id,
+        )?
+    {
+        let id = uuid::Uuid::parse_str(&episode.id).map_err(|_| {
+            common_infrastructure::error::CustomError::from(
+                common_infrastructure::error::CustomErrorInner::Unknown(
+                    common_infrastructure::error::ErrorSeverity::Error,
+                ),
+            )
+        })?;
+        if favorites.is_liked_by_someone(id)? {
+            liked.insert(episode.id);
+        }
+    }
+    Ok(liked)
+}

@@ -147,7 +147,17 @@ pub async fn run_cleanup(
     let settings =
         settings::cleanup_settings(state.settings_service.as_ref(), requester.is_admin())
             .map_err(map_settings_controller_error)?;
-    PodcastEpisodeService::cleanup_old_episodes(settings.auto_cleanup_days);
+    let library = state.media.library.clone();
+    tokio::task::spawn_blocking(move || {
+        PodcastEpisodeService::cleanup_old_episodes(&library, settings.auto_cleanup_days);
+    })
+    .await
+    .map_err(|e| {
+        tracing::error!("Cleanup task failed: {e}");
+        CustomError::from(common_infrastructure::error::CustomErrorInner::Unknown(
+            common_infrastructure::error::ErrorSeverity::Error,
+        ))
+    })?;
     Ok(StatusCode::OK)
 }
 

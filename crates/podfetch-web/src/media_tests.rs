@@ -282,11 +282,14 @@ mod tests {
         let downloaded = episode_with(&podcast("first"), "first-ep", url);
         let other = episode_with(&podcast("second"), "second-ep", url);
 
-        let stored = PodcastEpisodeUseCase::update_podcast_episode_status(
-            &episode_by_id(&downloaded),
-            Some(common_infrastructure::config::FileHandlerType::Local),
-        )
-        .unwrap();
+        crate::media::episode_files()
+            .record_download(
+                &downloaded,
+                Some("Local".to_string()),
+                chrono::Utc::now().naive_utc(),
+            )
+            .unwrap();
+        let stored = episode_by_id(&downloaded);
 
         assert_eq!(stored.id, downloaded);
         assert!(stored.download_time.is_some());
@@ -309,8 +312,7 @@ mod tests {
             e.download_time = Some(chrono::Utc::now().naive_utc());
         });
 
-        PodcastEpisodeUseCase::remove_download_status_of_episode(Uuid::parse_str(&id).unwrap())
-            .unwrap();
+        crate::media::episode_files().clear_download(&id).unwrap();
         PodcastEpisodeUseCase::update_deleted(&id, true).unwrap();
         let deleted = episode_by_id(&id);
         assert!(deleted.deleted);
@@ -486,5 +488,138 @@ mod tests {
                 Some(format!("{id}/24.mp3"))
             );
         }
+    }
+
+    // ── Library commands ────────────────────────────────────────────────
+
+    /// A file on the local storage, in a directory of its own.
+    fn local_file(name: &str) -> String {
+        let dir = std::env::temp_dir().join(format!("podfetch-media-{}", Uuid::now_v7()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join(name);
+        std::fs::write(&path, b"audio").unwrap();
+        path.to_string_lossy().into_owned()
+    }
+
+    /// Records the episode as downloaded to `path` on the local storage.
+    fn downloaded_to(id: &str, path: &str) {
+        change_episode_files(&episode_by_id(id), |e| {
+            e.file_episode_path = Some(path.to_string());
+            e.download_location = Some("Local".into());
+            e.download_time = Some(chrono::Utc::now().naive_utc());
+        });
+    }
+
+    fn exists(path: &str) -> bool {
+        std::path::Path::new(path).exists()
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn a_file_deleted_on_request_is_gone_and_stays_gone() {
+        let _ts = handle_test_startup().await;
+        let id = episode_with(&podcast("lib-delete"), "d1", "https://example.com/d1.mp3");
+        let path = local_file("d1.mp3");
+        downloaded_to(&id, &path);
+
+        app_state()
+            .media
+            .library
+            .delete_on_request(&crate::media::media_episode(&episode_by_id(&id)))
+            .unwrap();
+
+        assert!(!exists(&path));
+        let stored = episode_by_id(&id);
+        assert!(stored.deleted, "not downloaded again on its own");
+        assert_eq!(stored.download_location, None);
+        assert_eq!(stored.file_episode_path, None);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn a_resync_forgets_downloads_whose_file_is_gone() {
+        let _ts = handle_test_startup().await;
+        let podcast_id = podcast("lib-resync");
+        let present = episode_with(&podcast_id, "r1", "https://example.com/r1.mp3");
+        let lost = episode_with(&podcast_id, "r2", "https://example.com/r2.mp3");
+        let path = local_file("r1.mp3");
+        downloaded_to(&present, &path);
+        downloaded_to(&lost, "/tmp/podfetch-media-gone/r2.mp3");
+
+        let affected = app_state().media.library.resync(&podcast_id).unwrap();
+
+        assert_eq!(affected, 1);
+        assert_eq!(episode_by_id(&lost).download_location, None);
+        assert!(!episode_by_id(&lost).deleted);
+        assert_eq!(
+            episode_by_id(&present).download_location.as_deref(),
+            Some("Local")
+        );
+        assert!(exists(&path));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn removing_a_podcasts_files_keeps_the_episodes_asked_for() {
+        let _ts = handle_test_startup().await;
+        let podcast_id = podcast("lib-remove");
+        let kept = episode_with(&podcast_id, "k1", "https://example.com/k1.mp3");
+        let removed = episode_with(&podcast_id, "k2", "https://example.com/k2.mp3");
+        let never = episode_with(&podcast_id, "k3", "https://example.com/k3.mp3");
+        let kept_path = local_file("k1.mp3");
+        let removed_path = local_file("k2.mp3");
+        downloaded_to(&kept, &kept_path);
+        downloaded_to(&removed, &removed_path);
+
+        let keep = std::collections::HashSet::from([kept.clone()]);
+        let affected = app_state()
+            .media
+            .library
+            .remove_files(&podcast_id, &keep)
+            .unwrap();
+
+        assert_eq!(affected, 1);
+        assert!(exists(&kept_path));
+        assert!(!exists(&removed_path));
+        assert_eq!(episode_by_id(&removed).download_location, None);
+        assert!(
+            !episode_by_id(&removed).deleted,
+            "may be downloaded again on its own"
+        );
+        assert_eq!(episode_by_id(&never).download_location, None);
+    }
+
+    /// Cleanup removes the files of old episodes, but not of favorites.
+    #[tokio::test]
+    #[serial]
+    async fn the_cleanup_spares_favorites() {
+        let _ts = handle_test_startup().await;
+        let podcast_id = podcast("lib-cleanup");
+        let old = episode_with(&podcast_id, "c1", "https://example.com/c1.mp3");
+        let favorite = episode_with(&podcast_id, "c2", "https://example.com/c2.mp3");
+        let old_path = local_file("c1.mp3");
+        let favorite_path = local_file("c2.mp3");
+        downloaded_to(&old, &old_path);
+        downloaded_to(&favorite, &favorite_path);
+        crate::library::favorite_episodes()
+            .set_favorite(admin().0.into(), Uuid::parse_str(&favorite).unwrap(), true)
+            .unwrap();
+        // Recorded long ago, downloaded long ago.
+        for id in [&old, &favorite] {
+            change_episode_files(&episode_by_id(id), |e| {
+                e.download_time = Some(
+                    chrono::NaiveDate::from_ymd_opt(2020, 1, 1)
+                        .unwrap()
+                        .and_hms_opt(0, 0, 0)
+                        .unwrap(),
+                );
+            });
+        }
+
+        PodcastEpisodeUseCase::cleanup_old_episodes(&app_state().media.library, 1);
+
+        assert!(!exists(&old_path));
+        assert_eq!(episode_by_id(&old).download_location, None);
+        assert!(exists(&favorite_path));
     }
 }

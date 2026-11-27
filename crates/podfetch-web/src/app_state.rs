@@ -179,11 +179,6 @@ impl AppState {
         )));
         let catalog: Arc<dyn podfetch_catalog::api::CatalogApi> =
             Arc::new(podfetch_catalog::api::LocalCatalog::new(database.clone()));
-        let media = crate::media::MediaServices::build(
-            database.clone(),
-            environment.clone(),
-            settings_service.clone(),
-        );
         let listening_events = Arc::new(
             podfetch_listening::services::listening_event::ListeningEventService::new(Arc::new(
                 ListeningEventRepositoryImpl::new(database.clone()),
@@ -196,6 +191,12 @@ impl AppState {
         let event_bus = podfetch_events::EventBus::new(
             database.clone(),
             podfetch_events::EventBusConfig::default(),
+        );
+        let media = crate::media::MediaServices::build(
+            database.clone(),
+            environment.clone(),
+            settings_service.clone(),
+            Arc::new(crate::media::BusEvents(Some(event_bus.clone()))),
         );
         let subscription_service = Arc::new(SubscriptionService::new(
             Arc::new(SubscriptionRepositoryImpl::new(database.clone())),

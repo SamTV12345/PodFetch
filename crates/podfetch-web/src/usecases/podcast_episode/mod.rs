@@ -1,15 +1,9 @@
-use crate::podcast_events;
-use crate::server::ChatServerHandle;
 use crate::services::file::service::FileService;
 use crate::services::podcast_settings::service::PodcastSettingsService;
 use crate::services::settings::service::SettingsService;
 use crate::services::transcript::service::{FeedTranscriptTag, TranscriptService};
-use chrono::Utc;
-use common_infrastructure::config::FileHandlerType;
 use common_infrastructure::error::ErrorSeverity::{Critical, Warning};
 use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity, map_db_error};
-use common_infrastructure::mutex::LockResultExt;
-use common_infrastructure::retry::do_retry;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use podfetch_catalog::domain::podcast_episode::PodcastEpisodeRepository;
@@ -18,25 +12,16 @@ use podfetch_catalog::persistence::podcast_episode::DieselPodcastEpisodeReposito
 use podfetch_catalog::persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use podfetch_identity::api::Principal;
 use podfetch_listening::domain::episode::{Episode, EpisodeRepository};
-use podfetch_media::events::{EpisodeDownloadFailed, EpisodeDownloaded};
 use podfetch_persistence::db::database;
 use podfetch_persistence::db::get_connection;
-use podfetch_storage::{FileHandleWrapper, FileRequest};
 use rss::Guid;
-use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::io::Error;
 use std::path::Path;
-use std::sync::LazyLock;
-use std::sync::Mutex;
-use std::thread;
 use url::Url;
 use uuid::Uuid;
 
 pub struct PodcastEpisodeUseCase;
-static IN_PROGRESS_DOWNLOADS: LazyLock<Mutex<HashSet<String>>> =
-    LazyLock::new(|| Mutex::new(HashSet::new()));
-
 type PodcastEpisodeWithFavorited = Result<
     Vec<(
         PodcastEpisode,
@@ -45,17 +30,6 @@ type PodcastEpisodeWithFavorited = Result<
     )>,
     CustomError,
 >;
-
-struct InProgressDownloadGuard {
-    episode_id: String,
-}
-
-impl Drop for InProgressDownloadGuard {
-    fn drop(&mut self) {
-        let mut guard = IN_PROGRESS_DOWNLOADS.lock().ignore_poison();
-        guard.remove(&self.episode_id);
-    }
-}
 
 impl PodcastEpisodeUseCase {
     fn repo() -> DieselPodcastEpisodeRepository {
@@ -67,17 +41,6 @@ impl PodcastEpisodeUseCase {
     fn parse_id(id: &str) -> Result<Uuid, CustomError> {
         Uuid::parse_str(id).map_err(|_| {
             CustomErrorInner::BadRequest(format!("'{id}' is not a valid id"), Warning).into()
-        })
-    }
-
-    fn try_acquire_download_guard(episode_id: &str) -> Option<InProgressDownloadGuard> {
-        let mut downloads = IN_PROGRESS_DOWNLOADS.lock().ignore_poison();
-        if downloads.contains(episode_id) {
-            return None;
-        }
-        downloads.insert(episode_id.to_string());
-        Some(InProgressDownloadGuard {
-            episode_id: episode_id.to_string(),
         })
     }
 
@@ -293,23 +256,6 @@ impl PodcastEpisodeUseCase {
             .map_err(Into::into)
     }
 
-    /// Records that `episode` was downloaded to `download_location_to_set`
-    /// and returns it as stored now.
-    pub fn update_podcast_episode_status(
-        episode: &PodcastEpisode,
-        download_location_to_set: Option<FileHandlerType>,
-    ) -> Result<PodcastEpisode, CustomError> {
-        crate::media::episode_files().record_download(
-            &episode.id,
-            download_location_to_set.map(|d| d.to_string()),
-            Utc::now().naive_utc(),
-        )?;
-        Self::repo()
-            .find_by_id(Self::parse_id(&episode.id)?)?
-            .map(Into::into)
-            .ok_or_else(|| CustomErrorInner::NotFound(Warning).into())
-    }
-
     pub fn get_episodes() -> Result<Vec<PodcastEpisode>, CustomError> {
         Self::repo()
             .get_all()
@@ -325,10 +271,6 @@ impl PodcastEpisodeUseCase {
             .get_episodes_older_than_days(i64::from(days), podcast_id)
             .map(|episodes| episodes.into_iter().map(Into::into).collect())
             .map_err(Into::into)
-    }
-
-    pub fn remove_download_status_of_episode(id: Uuid) -> Result<(), CustomError> {
-        do_retry(|| crate::media::episode_files().clear_download(&id.to_string()))
     }
 
     pub fn get_episodes_by_podcast_id(id: Uuid) -> Result<Vec<PodcastEpisode>, CustomError> {
@@ -375,57 +317,6 @@ impl PodcastEpisodeUseCase {
         Self::repo()
             .update_episode_numbering_processed(episode_id, processed)
             .map_err(Into::into)
-    }
-
-    pub fn download_podcast_episode_if_not_locally_available(
-        podcast_episode: PodcastEpisode,
-        podcast: Podcast,
-    ) -> Result<(), CustomError> {
-        let podcast_episode_cloned = podcast_episode.clone();
-
-        if podcast_episode.is_downloaded() {
-            return Ok(());
-        }
-        let podcast_inserted = Self::perform_download(&podcast_episode_cloned, &podcast)?;
-        ChatServerHandle::broadcast_podcast_episode_offline_available(&podcast_inserted, &podcast);
-        Ok(())
-    }
-
-    pub fn perform_download(
-        podcast_episode: &PodcastEpisode,
-        podcast_cloned: &Podcast,
-    ) -> Result<PodcastEpisode, CustomError> {
-        let Some(_guard) = Self::try_acquire_download_guard(&podcast_episode.episode_id) else {
-            tracing::info!(
-                "Skipping download for episode {} because a download is already running",
-                podcast_episode.episode_id
-            );
-            return Ok(podcast_episode.clone());
-        };
-        tracing::info!("Downloading podcast episode: {}", podcast_episode.name);
-        if let Err(err) = crate::media::services().downloader.download(
-            &crate::media::media_episode(podcast_episode),
-            &crate::media::media_podcast(podcast_cloned),
-        ) {
-            podcast_events::publish(&EpisodeDownloadFailed {
-                episode_id: podcast_episode.episode_id.clone(),
-                episode_name: podcast_episode.name.clone(),
-                podcast_id: podcast_cloned.id.clone(),
-                reason: err.inner.to_string(),
-            });
-            return Err(err);
-        }
-        let podcast = Self::update_podcast_episode_status(
-            podcast_episode,
-            Some(ENVIRONMENT_SERVICE.default_file_handler.clone()),
-        )?;
-        podcast_events::publish(&EpisodeDownloaded {
-            episode_id: podcast_episode.episode_id.clone(),
-            episode_name: podcast_episode.name.clone(),
-            podcast_id: podcast_cloned.id.clone(),
-            podcast_name: podcast_cloned.name.clone(),
-        });
-        Ok(podcast)
     }
 
     pub fn get_last_n_podcast_episodes(
@@ -563,7 +454,13 @@ impl PodcastEpisodeUseCase {
         Self::get_episodes_by_podcast_id(podcast_id)
     }
 
-    pub fn cleanup_old_episodes(days_from_settings: i32) {
+    /// Removes the files of episodes older than the podcast's cleanup
+    /// period (its own setting, `days_from_settings` otherwise). Episodes a
+    /// user marked as favorite keep their files.
+    pub fn cleanup_old_episodes(
+        library: &podfetch_media::library::MediaLibrary,
+        days_from_settings: i32,
+    ) {
         let Ok(podcasts) =
             crate::services::podcast::service::PodcastService::get_all_podcasts_raw()
         else {
@@ -617,219 +514,16 @@ impl PodcastEpisodeUseCase {
                     }
                 }
 
-                let res = FileService::cleanup_old_episode(&old_podcast_episode);
-
-                match res {
-                    Ok(_) => {
-                        if let Err(err) = Self::remove_download_status_of_episode(episode_id) {
-                            tracing::error!(
-                                "Error clearing download status for episode {}: {}",
-                                old_podcast_episode.id,
-                                err
-                            );
-                        }
-                    }
-                    Err(e) => {
-                        println!("Error deleting podcast episode.{e}");
-                    }
-                }
-            }
-        }
-    }
-
-    pub(crate) fn delete_podcast_episode_locally(
-        episode_id: &str,
-    ) -> Result<PodcastEpisode, CustomError> {
-        let episode = Self::get_podcast_episode_by_id(episode_id)?;
-        if episode.is_none() {
-            return Err(CustomErrorInner::NotFound(Warning).into());
-        }
-
-        match episode {
-            Some(episode) => {
-                FileService::cleanup_old_episode(&episode)?;
-                Self::remove_download_status_of_episode(Self::parse_id(&episode.id)?)?;
-                Self::update_deleted(&episode.id, true)?;
-                Ok(episode)
-            }
-            None => Err(CustomErrorInner::NotFound(Warning).into()),
-        }
-    }
-
-    /// Downloads every episode of the podcast whose DB row has no
-    /// `download_location` (i.e. never downloaded) and is not soft-deleted.
-    /// Runs downloads in parallel chunks of 3.
-    /// Returns the number of episodes that were queued.
-    pub fn download_missing_episodes_for_podcast(podcast: &Podcast) -> Result<usize, CustomError> {
-        let episodes = Self::get_episodes_by_podcast_id(Self::parse_id(&podcast.id)?)?;
-        Ok(Self::download_missing_in(podcast, episodes))
-    }
-
-    /// Download the episodes whose chronological position (oldest = 1) falls
-    /// within the inclusive `[from, to]` range. Positions match
-    /// `get_position_of_episode` (ascending by publication date). Only missing
-    /// episodes are fetched. Returns how many episodes were queued.
-    pub fn download_episode_range_for_podcast(
-        podcast: &Podcast,
-        from: usize,
-        to: usize,
-    ) -> Result<usize, CustomError> {
-        let mut episodes = Self::get_episodes_by_podcast_id(Self::parse_id(&podcast.id)?)?;
-        episodes.sort_by(|a, b| a.date_of_recording.cmp(&b.date_of_recording));
-        let start = from.saturating_sub(1).min(episodes.len());
-        let end = to.min(episodes.len());
-        let slice = if start >= end {
-            Vec::new()
-        } else {
-            episodes[start..end].to_vec()
-        };
-        Ok(Self::download_missing_in(podcast, slice))
-    }
-
-    /// Download every not-yet-downloaded, non-deleted episode in `episodes`
-    /// (in parallel, capped at `MAX_PARALLEL_DOWNLOADS`). Returns how many
-    /// episodes were queued.
-    fn download_missing_in(podcast: &Podcast, episodes: Vec<PodcastEpisode>) -> usize {
-        const MAX_PARALLEL_DOWNLOADS: usize = 3;
-        let missing: Vec<PodcastEpisode> = episodes
-            .into_iter()
-            .filter(|e| !e.deleted && !e.is_downloaded())
-            .collect();
-        let count = missing.len();
-
-        for chunk in missing.chunks(MAX_PARALLEL_DOWNLOADS) {
-            let mut handles = Vec::with_capacity(chunk.len());
-            for episode in chunk.iter().cloned() {
-                let podcast_for_thread = podcast.clone();
-                handles.push(thread::spawn(move || {
-                    if let Err(err) = Self::download_podcast_episode_if_not_locally_available(
-                        episode,
-                        podcast_for_thread,
-                    ) {
-                        tracing::error!("Error downloading podcast episode: {err}");
-                    }
-                }));
-            }
-            for handle in handles {
-                if let Err(err) = handle.join() {
+                if let Err(err) =
+                    library.remove_file(&crate::media::media_episode(&old_podcast_episode))
+                {
                     tracing::error!(
-                        "Error joining download worker for podcast {}: {:?}",
-                        podcast.id,
-                        err
+                        "Error removing the files of episode {}: {err}",
+                        old_podcast_episode.id
                     );
                 }
             }
         }
-        count
-    }
-
-    /// Re-downloads episodes whose DB row says they are downloaded but whose
-    /// file is missing on disk / in the configured backend. Uses
-    /// `perform_download` directly (bypasses the `is_downloaded` guard in
-    /// `download_podcast_episode_if_not_locally_available`). Returns the
-    /// number of episodes that were queued.
-    pub fn redownload_missing_files_for_podcast(podcast: &Podcast) -> Result<usize, CustomError> {
-        const MAX_PARALLEL_DOWNLOADS: usize = 3;
-        let episodes = Self::get_episodes_by_podcast_id(Self::parse_id(&podcast.id)?)?;
-        let to_redownload: Vec<PodcastEpisode> = episodes
-            .into_iter()
-            .filter(|e| !e.deleted && e.is_downloaded() && Self::episode_file_missing(e))
-            .collect();
-        let count = to_redownload.len();
-
-        for chunk in to_redownload.chunks(MAX_PARALLEL_DOWNLOADS) {
-            let mut handles = Vec::with_capacity(chunk.len());
-            for episode in chunk.iter().cloned() {
-                let podcast_for_thread = podcast.clone();
-                handles.push(thread::spawn(move || {
-                    match Self::perform_download(&episode, &podcast_for_thread) {
-                        Ok(updated) => {
-                            ChatServerHandle::broadcast_podcast_episode_offline_available(
-                                &updated,
-                                &podcast_for_thread,
-                            );
-                        }
-                        Err(err) => {
-                            tracing::error!(
-                                "Error re-downloading episode {}: {}",
-                                episode.episode_id,
-                                err
-                            );
-                        }
-                    }
-                }));
-            }
-            for handle in handles {
-                if let Err(err) = handle.join() {
-                    tracing::error!(
-                        "Error joining re-download worker for podcast {}: {:?}",
-                        podcast.id,
-                        err
-                    );
-                }
-            }
-        }
-        Ok(count)
-    }
-
-    /// Clears DB download flags for episodes whose file is missing on disk.
-    /// Filesystem is source of truth; no downloads happen. Returns the number
-    /// of episodes whose flags were cleared.
-    pub fn resync_db_for_podcast(podcast_id: Uuid) -> Result<usize, CustomError> {
-        let episodes = Self::get_episodes_by_podcast_id(podcast_id)?;
-        let mut affected = 0usize;
-        for episode in episodes {
-            if !episode.is_downloaded() {
-                continue;
-            }
-            if !Self::episode_file_missing(&episode) {
-                continue;
-            }
-            Self::remove_download_status_of_episode(Self::parse_id(&episode.id)?)?;
-            ChatServerHandle::broadcast_podcast_episode_deleted_locally(&episode);
-            affected += 1;
-        }
-        Ok(affected)
-    }
-
-    /// Removes every downloaded file for this podcast and clears the matching
-    /// DB flags, but keeps the episode rows intact (unlike single-episode
-    /// delete, this does not set `deleted=true`). Episodes that any user has
-    /// marked as favorite are skipped — same convention as the auto-cleanup
-    /// path (see `cleanup_old_episodes`). Returns the number of episodes
-    /// whose files were removed.
-    pub fn delete_all_downloaded_files_for_podcast(podcast_id: Uuid) -> Result<usize, CustomError> {
-        let favorite_service = crate::library::favorite_episodes();
-        let episodes = Self::get_episodes_by_podcast_id(podcast_id)?;
-        let mut affected = 0usize;
-        for episode in episodes {
-            if !episode.is_downloaded() {
-                continue;
-            }
-            let episode_id = Self::parse_id(&episode.id)?;
-            if favorite_service
-                .is_liked_by_someone(episode_id)
-                .unwrap_or(false)
-            {
-                continue;
-            }
-            FileService::cleanup_old_episode(&episode)?;
-            Self::remove_download_status_of_episode(episode_id)?;
-            ChatServerHandle::broadcast_podcast_episode_deleted_locally(&episode);
-            affected += 1;
-        }
-        Ok(affected)
-    }
-
-    fn episode_file_missing(episode: &PodcastEpisode) -> bool {
-        let (Some(path), Some(location)) = (
-            episode.file_episode_path.as_deref(),
-            episode.download_location.as_deref(),
-        ) else {
-            return true;
-        };
-        let handler = FileHandlerType::from_stored(location);
-        !FileHandleWrapper::path_exists(path, FileRequest::File, &handler)
     }
 
     pub fn get_track_number_for_episode(

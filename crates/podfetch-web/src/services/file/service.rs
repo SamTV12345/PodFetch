@@ -7,11 +7,9 @@ use crate::services::podcast::service::PodcastService;
 use crate::services::podcast_settings::service::PodcastSettingsService;
 use crate::services::settings::service::SettingsService;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
-use common_infrastructure::config::FileHandlerType;
 use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use common_infrastructure::rss::RSSFeedParser;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
-use podfetch_catalog::persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use podfetch_media::naming::{NamingRules, Replacement};
 use podfetch_storage::FileHandleWrapper;
 use podfetch_storage::FileRequest;
@@ -141,28 +139,6 @@ impl FileService {
         )
         .await?;
         PodcastEpisodeService::update_podcast_image(directory_id, &file_path.1)?;
-        Ok(())
-    }
-
-    pub fn cleanup_old_episode(episode: &PodcastEpisode) -> Result<(), CustomError> {
-        tracing::info!("Cleaning up old episode: {}", episode.episode_id);
-
-        fn check_if_file_exists(file_path: &str, file_type: &FileHandlerType) -> bool {
-            FileHandleWrapper::path_exists(file_path, FileRequest::File, file_type)
-        }
-        let Some(location) = episode.download_location.as_deref() else {
-            // Never downloaded, so there is nothing on disk to clean up.
-            return Ok(());
-        };
-        let file_type = FileHandlerType::from_stored(location);
-        for path in [&episode.file_episode_path, &episode.file_image_path]
-            .into_iter()
-            .flatten()
-        {
-            if check_if_file_exists(path, &file_type) {
-                FileHandleWrapper::remove_file(path, &file_type)?;
-            }
-        }
         Ok(())
     }
 

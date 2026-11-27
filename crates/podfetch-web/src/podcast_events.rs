@@ -23,6 +23,11 @@ pub(crate) fn install(bus: Arc<EventBus>) {
     *BUS.write().unwrap_or_else(PoisonError::into_inner) = Some(bus);
 }
 
+/// The installed bus, if any.
+pub(crate) fn bus() -> Option<Arc<EventBus>> {
+    BUS.read().unwrap_or_else(PoisonError::into_inner).clone()
+}
+
 /// Publishes `event`. A failure is logged and does not fail the download
 /// that caused it.
 pub(crate) fn publish<E: Event>(event: &E) {
