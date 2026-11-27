@@ -2,17 +2,13 @@ use podfetch_catalog::persistence::podcast::PodcastEntity as Podcast;
 use podfetch_catalog::persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use podfetch_identity::api::Principal;
 
-use crate::controllers::controller_utils::unwrap_string;
 use crate::podcast::map_podcast_with_context_to_dto;
-use crate::podcast::{ItunesWrapper, PodcastDto, PodcastInsertModel, PodindexResponse};
-use crate::server::ChatServerHandle;
-use crate::services::file::service::FileService;
+use crate::podcast::{ItunesWrapper, PodcastDto, PodindexResponse};
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use common_infrastructure::error::ErrorSeverity::Error;
 use common_infrastructure::error::{
     CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error,
 };
-use common_infrastructure::http::COMMON_USER_AGENT;
 use common_infrastructure::http::get_http_client;
 use common_infrastructure::runtime::{ENVIRONMENT_SERVICE, ITUNES_URL};
 use podfetch_catalog::domain::ordering::{OrderCriteria, OrderOption};
@@ -21,12 +17,7 @@ use podfetch_catalog::persistence::podcast::DieselPodcastRepository;
 use podfetch_library::domain::favorite::FavoriteRepository;
 use podfetch_library::persistence::favorite::DieselFavoriteRepository;
 use podfetch_persistence::db::database;
-use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue, USER_AGENT};
-use rss::Channel;
-use serde_json::Value;
-use sha1::{Digest, Sha1};
 use std::collections::HashMap;
-use tokio::task::spawn_blocking;
 use uuid::Uuid;
 
 pub struct PodcastService;
@@ -60,7 +51,7 @@ impl PodcastService {
     }
 
     pub async fn find_podcast_on_podindex(podcast: &str) -> Result<PodindexResponse, CustomError> {
-        let headers = Self::compute_podindex_header();
+        let headers = podfetch_catalog::subscribe::podindex_headers(&ENVIRONMENT_SERVICE);
 
         let query = vec![("q", podcast)];
 
@@ -96,7 +87,7 @@ impl PodcastService {
         language: Option<&str>,
         max: u32,
     ) -> Result<PodindexResponse, CustomError> {
-        let headers = Self::compute_podindex_header();
+        let headers = podfetch_catalog::subscribe::podindex_headers(&ENVIRONMENT_SERVICE);
         let mut url = "https://api.podcastindex.org/api/1.0/podcasts/trending".to_string();
         let mut params = vec![("max", max.to_string())];
         if !categories.is_empty() {
@@ -140,126 +131,6 @@ impl PodcastService {
             tracing::error!("Could not parse Podcastindex trending response: {e}");
             CustomErrorInner::BadRequest(e.to_string(), Error).into()
         })
-    }
-
-    pub async fn insert_podcast_from_podindex(
-        id: i32,
-        added_by: Option<Uuid>,
-    ) -> Result<Podcast, CustomError> {
-        let resp = get_http_client(&ENVIRONMENT_SERVICE)
-            .get(format!(
-                "https://api.podcastindex.org/api/1.0/podcasts/byfeedid?id={id}"
-            ))
-            .headers(Self::compute_podindex_header())
-            .send()
-            .await
-            .map_err(map_reqwest_error)?;
-        let podcast = resp.json::<Value>().await.map_err(map_reqwest_error)?;
-
-        Self::handle_insert_of_podcast(
-            PodcastInsertModel {
-                title: unwrap_string(&podcast["feed"]["title"]),
-                id,
-                feed_url: unwrap_string(&podcast["feed"]["url"]),
-                image_url: unwrap_string(&podcast["feed"]["image"]),
-            },
-            None,
-            added_by,
-        )
-        .await
-    }
-
-    pub async fn handle_insert_of_podcast(
-        podcast_insert: PodcastInsertModel,
-        channel: Option<Channel>,
-        added_by: Option<Uuid>,
-    ) -> Result<Podcast, CustomError> {
-        let opt_podcast = podcast_repo()
-            .find_by_rss_feed(&podcast_insert.feed_url)
-            .map_err(CustomError::from)?;
-        if opt_podcast.is_some() {
-            return Err(CustomErrorInner::Conflict(
-                format!(
-                    "Podcast with feed url {} already exists",
-                    podcast_insert.feed_url
-                ),
-                ErrorSeverity::Warning,
-            )
-            .into());
-        }
-
-        let podcast_directory_created =
-            FileService::create_podcast_directory_exists(&podcast_insert, channel).await?;
-
-        let inserted_podcast: Podcast = podcast_repo()
-            .create(NewPodcast {
-                name: podcast_insert.title.clone(),
-                directory_id: podcast_insert.id.to_string(),
-                rssfeed: podcast_insert.feed_url.clone(),
-                image_url: podcast_insert.image_url.clone(),
-                directory_name: podcast_directory_created,
-                added_by,
-            })
-            .map(Into::into)
-            .map_err(CustomError::from)?;
-
-        // Remember which image the cover was downloaded from, so the first
-        // feed refresh doesn't treat the podcast as having no image yet.
-        if let Ok(podcast_uuid) = Uuid::parse_str(&inserted_podcast.id)
-            && !common_infrastructure::runtime::is_default_image_url(&podcast_insert.image_url)
-        {
-            Self::update_original_image_url(&podcast_insert.image_url, podcast_uuid)?;
-        }
-
-        // Resolve the cover name via the podcast's UUID; `podcast_insert.id`
-        // is the feed/track id and can't be used to look up settings.
-        let cover_filename = Uuid::parse_str(&inserted_podcast.id).map_or_else(
-            |_| crate::settings::default_cover_filename(),
-            crate::media::cover_filename,
-        );
-        FileService::download_podcast_image(
-            &inserted_podcast.directory_name.clone().clone(),
-            podcast_insert.image_url.clone().clone(),
-            &podcast_insert.id.clone().to_string(),
-            &cover_filename,
-        )
-        .await?;
-        let podcast: Option<Podcast> = podcast_repo()
-            .find_by_track_id(podcast_insert.id)
-            .map(|opt| opt.map(Into::into))
-            .map_err(CustomError::from)?;
-        match podcast {
-            Some(podcast) => {
-                ChatServerHandle::broadcast_podcast_downloaded(podcast.clone());
-                let join_result = spawn_blocking(move || {
-                    tracing::debug!("Inserting podcast episodes of {}", podcast.name);
-                    match PodcastEpisodeService::insert_podcast_episodes(&podcast) {
-                        Ok(inserted_podcasts) => {
-                            ChatServerHandle::broadcast_added_podcast_episodes(
-                                &podcast,
-                                inserted_podcasts.clone(),
-                            );
-                            Self::announce_refreshed(&podcast);
-                        }
-                        Err(e) => {
-                            tracing::error!(
-                                "Error inserting podcast episodes for {}: {e}",
-                                podcast.name
-                            );
-                        }
-                    }
-                })
-                .await;
-                if let Err(e) = join_result {
-                    tracing::error!("Blocking task failed: {e}");
-                }
-                Ok(inserted_podcast)
-            }
-            None => {
-                tracing::error!("No podcast found after insert");
-                Err(CustomErrorInner::NotFound(Error).into())
-            }
-        }
     }
 
     pub fn refresh_podcast(podcast: &Podcast) -> Result<(), CustomError> {
@@ -414,23 +285,6 @@ impl PodcastService {
         .map_err(CustomError::from)
     }
 
-    /// Whether `user` may add `adding` more podcasts to the server: admins
-    /// and uploaders always, other users only within USER_PODCAST_LIMIT
-    /// (0 = not at all). Every endpoint that subscribes the server to a feed -
-    /// native API and compatibility layers alike - must call this.
-    pub fn ensure_can_add_podcasts(user: &Principal, adding: u32) -> Result<(), CustomError> {
-        let current_count = podcast_repo()
-            .count_by_added_by(user.id.into())
-            .map_err(CustomError::from)?;
-        crate::podcast::check_podcast_add_permission::<CustomError>(
-            user.is_privileged_user(),
-            ENVIRONMENT_SERVICE.user_podcast_limit,
-            current_count,
-            adding,
-        )
-        .map_err(crate::podcast::map_podcast_error)
-    }
-
     /// Mirror subscription changes made on a GPodder device that shares its
     /// subscriptions with the web UI into the user's favorites.
     ///
@@ -547,30 +401,6 @@ impl PodcastService {
         podcast_repo()
             .update_active(id, !found.active)
             .map_err(CustomError::from)
-    }
-
-    fn compute_podindex_header() -> HeaderMap {
-        let seconds = chrono::Utc::now().timestamp();
-        let api_key = &ENVIRONMENT_SERVICE.podindex_api_key;
-        let api_secret = &ENVIRONMENT_SERVICE.podindex_api_secret;
-        let digest = Sha1::digest(format!("{api_key}{api_secret}{seconds}"));
-        let hashed_auth_key: String = digest.iter().map(|b| format!("{b:02x}")).collect();
-
-        let mut headers = HeaderMap::new();
-        headers.insert(USER_AGENT, HeaderValue::from_static(COMMON_USER_AGENT));
-        headers.insert("X-Auth-Date", HeaderValue::from(seconds));
-        // Hex digest and digits are always valid header values; only a
-        // misconfigured API key can be rejected.
-        if let Ok(hashed) = HeaderValue::from_str(&hashed_auth_key) {
-            headers.insert(AUTHORIZATION, hashed);
-        }
-        match HeaderValue::from_str(api_key) {
-            Ok(key) => {
-                headers.insert("X-Auth-Key", key);
-            }
-            Err(_) => tracing::error!("PODINDEX_API_KEY contains characters invalid in headers"),
-        }
-        headers
     }
 
     pub fn get_podcasts_by_ids(ids: &[Uuid]) -> Result<Vec<Podcast>, CustomError> {

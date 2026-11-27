@@ -20,6 +20,7 @@ pub mod podcast_settings;
 pub mod podcast_view;
 pub mod rss;
 pub mod settings;
+pub mod subscriptions;
 pub mod sys;
 pub mod url_rewriting;
 pub mod watchtime;

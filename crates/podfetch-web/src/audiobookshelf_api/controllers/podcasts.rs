@@ -4,15 +4,13 @@
 //! `POST /api/podcasts` — actually subscribe to a podcast. Mobile apps submit
 //! this after the user picks an iTunes result or pastes a feed URL.
 //!
-//! Both reuse PodFetch's existing podcast pipeline
-//! (`PodcastService::handle_insert_of_podcast`) under the hood; we only map
+//! Subscribing goes through the catalog's subscriptions
+//! (`crate::subscriptions`) like the native API; we only map
 //! input/output between audiobookshelf-shape JSON and PodFetch's model.
 
 use crate::app_state::AppState;
 use crate::audiobookshelf_api::auth_middleware::AuthenticatedUser;
 use crate::audiobookshelf_api::mapping::podcast::map_podcast;
-use crate::podcast::PodcastInsertModel;
-use crate::services::podcast::service::PodcastService;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use axum::Json;
 use axum::extract::State;
@@ -22,8 +20,8 @@ use common_infrastructure::error::{CustomError, CustomErrorInner, map_reqwest_er
 use common_infrastructure::http::{COMMON_USER_AGENT, get_http_client};
 use common_infrastructure::request::add_basic_auth_headers_conditionally;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
+use podfetch_catalog::subscribe::SubscribeRequest;
 use podfetch_identity::api::Principal;
-use rand::RngExt;
 use reqwest::header::HeaderMap as ReqwestHeaderMap;
 use rss::Channel;
 use serde::Deserialize;
@@ -51,7 +49,7 @@ pub async fn get_podcast_feed(
 ) -> Result<Json<Value>, CustomError> {
     // The preview makes the server fetch an arbitrary URL; only users who
     // may add podcasts at all get to do that.
-    PodcastService::ensure_can_add_podcasts(&Principal::from(&user), 0)?;
+    crate::subscriptions::ensure_can_add_podcasts(&Principal::from(&user), 0)?;
     let feed_url = body.rss_feed.trim().to_string();
     if feed_url.is_empty()
         || (!feed_url.starts_with("http://") && !feed_url.starts_with("https://"))
@@ -112,7 +110,7 @@ pub async fn create_podcast(
 ) -> Result<Json<Value>, CustomError> {
     // Same rules as POST /api/v1/podcasts/feed: admins and uploaders, other
     // users only within USER_PODCAST_LIMIT.
-    PodcastService::ensure_can_add_podcasts(&Principal::from(&user), 1)?;
+    crate::subscriptions::ensure_can_add_podcasts(&Principal::from(&user), 1)?;
     let feed_url = body.media.metadata.feed_url.trim().to_string();
     if feed_url.is_empty() {
         return Err(CustomErrorInner::BadRequest(
@@ -122,37 +120,15 @@ pub async fn create_podcast(
         .into());
     }
 
-    let server_url = crate::url_rewriting::resolve_server_url_from_headers(&headers);
-    let channel = fetch_and_parse_feed(&feed_url).await?;
-    let title = body
-        .media
-        .metadata
-        .title
-        .clone()
-        .unwrap_or_else(|| channel.title().to_string());
-    let image_url = body
-        .media
-        .metadata
-        .image_url
-        .clone()
-        .or_else(|| podfetch_catalog::feed::channel_image_url(&channel))
-        .unwrap_or_else(|| crate::url_rewriting::resolve_image_url("", &server_url));
-    let id = body
-        .media
-        .metadata
-        .itunes_id
-        .map_or_else(|| rand::rng().random_range(100..10_000_000), |v| v as i32);
-
-    let inserted = PodcastService::handle_insert_of_podcast(
-        PodcastInsertModel {
-            feed_url: feed_url.clone(),
-            title,
-            id,
-            image_url,
-        },
-        Some(channel),
-        Some(user.id),
-    )
+    let _server_url = crate::url_rewriting::resolve_server_url_from_headers(&headers);
+    let metadata = &body.media.metadata;
+    let inserted = crate::subscriptions::subscribe(SubscribeRequest {
+        feed_url: feed_url.clone(),
+        title: metadata.title.clone(),
+        image_url: metadata.image_url.clone(),
+        directory_id: metadata.itunes_id.map(|v| v as i32),
+        added_by: Some(user.id),
+    })
     .await?;
 
     let library = state
