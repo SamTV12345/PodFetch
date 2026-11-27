@@ -1,5 +1,5 @@
+use crate::domain::gpodder_setting::{GpodderSetting, GpodderSettingRepository};
 use common_infrastructure::error::CustomError;
-use podfetch_domain::gpodder_setting::{GpodderSetting, GpodderSettingRepository};
 use std::sync::Arc;
 use uuid::Uuid;
 

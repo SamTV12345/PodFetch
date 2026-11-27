@@ -7,12 +7,12 @@ mod tests {
     use podfetch_casting::devices::{CastDevice, CastDeviceRepository, kind};
     use podfetch_casting::handlers::CLEANUP_ON_USER_DELETED;
     use podfetch_casting::persistence::CastDeviceRepositoryImpl;
-    use podfetch_domain::device::{Device, DeviceRepository};
+    use podfetch_gpodder::domain::device::{Device, DeviceRepository};
+    use podfetch_gpodder::persistence::DeviceRepositoryImpl;
     use podfetch_identity::events::UserDeleted;
     use podfetch_identity::persistence::adapters::UserAdminRepositoryImpl;
     use podfetch_identity::services::user_auth::service::UserAuthService;
     use podfetch_kernel::UserId;
-    use podfetch_persistence::adapters::DeviceRepositoryImpl;
     use podfetch_persistence::db::database;
     use serial_test::serial;
     use std::sync::Arc;
@@ -113,11 +113,11 @@ mod tests {
         );
     }
 
-    /// The casting context only removes its own rows: the gPodder devices
-    /// share the table but belong to another context.
+    /// Each context removes only its own rows of the shared devices table:
+    /// casting the cast targets, gPodder sync its devices.
     #[tokio::test]
     #[serial]
-    async fn user_deleted_removes_cast_devices_but_not_gpodder_devices() {
+    async fn user_deleted_removes_each_contexts_devices() {
         let _ts = handle_test_startup().await;
         let state = app_state();
         let leaving = create_user("leaving_caster");
@@ -173,22 +173,47 @@ mod tests {
             vec![kept_cast],
             "other users keep their cast devices"
         );
-        assert_eq!(
-            gpodder.get_devices_of_user(leaving).unwrap().len(),
-            1,
-            "gpodder devices are not the casting context's to delete"
+        assert!(
+            gpodder.get_devices_of_user(leaving).unwrap().is_empty(),
+            "gpodder sync removed its own device"
         );
+    }
+
+    /// gPodder's cleanup leaves the cast targets in the shared table alone.
+    #[tokio::test]
+    #[serial]
+    async fn gpodder_device_cleanup_keeps_cast_devices() {
+        let _ts = handle_test_startup().await;
+        let owner = create_user("mixed_devices");
+        let cast = cast_devices()
+            .register(mopidy(owner, kind::MOPIDY_PERSONAL, "http://c.local:6680"))
+            .unwrap();
+        let gpodder = DeviceRepositoryImpl::new(database());
+        gpodder.create(gpodder_device(owner)).unwrap();
+
+        gpodder.delete_by_user_id(owner).unwrap();
+
+        assert_eq!(cast_devices().list_visible_to(owner).unwrap(), vec![cast]);
+        assert!(gpodder.get_devices_of_user(owner).unwrap().is_empty());
     }
 
     /// Both contexts read the shared `kind` column; they must agree on
     /// which values are cast targets.
     #[test]
     fn device_kinds_agree_between_contexts() {
+        assert_eq!(
+            kind::CASTABLE,
+            podfetch_gpodder::domain::device::kind::CASTABLE
+        );
         for castable in kind::CASTABLE {
-            assert!(podfetch_domain::device::kind::is_castable(castable));
+            assert!(podfetch_gpodder::domain::device::kind::is_castable(
+                castable
+            ));
         }
         for gpodder in ["desktop", "laptop", "mobile", "server", "other"] {
-            assert!(!podfetch_domain::device::kind::is_castable(gpodder));
+            assert!(!podfetch_gpodder::domain::device::kind::is_castable(
+                gpodder
+            ));
             assert!(!kind::is_castable(gpodder));
         }
     }

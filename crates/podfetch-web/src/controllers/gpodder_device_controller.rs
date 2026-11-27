@@ -7,15 +7,14 @@
 //! (e.g. AntennaPod) cannot configure groups themselves, so the web UI does.
 
 use crate::app_state::AppState;
-use crate::services::device_sync_group::service::DeviceSyncGroupService;
-use crate::services::subscription::service::SubscriptionService;
 use axum::extract::State;
 use axum::{Extension, Json};
 use common_infrastructure::error::CustomError;
 use common_infrastructure::error::CustomErrorInner;
 use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::runtime::DEFAULT_DEVICE;
-use podfetch_domain::device::kind::is_castable;
+use podfetch_gpodder::domain::device::kind::is_castable;
+use podfetch_gpodder::services::device_sync_group::DeviceSyncGroupService;
 use podfetch_identity::api::Principal;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
@@ -170,7 +169,7 @@ pub async fn update_gpodder_sync_groups(
     let previous = state
         .device_sync_group_service
         .get_by_user_id(user.id.into())?;
-    let web_members = |rows: &[podfetch_domain::device_sync_group::DeviceSyncGroup]| {
+    let web_members = |rows: &[podfetch_gpodder::domain::device_sync_group::DeviceSyncGroup]| {
         DeviceSyncGroupService::group_of(rows, DEFAULT_DEVICE).map_or_default(|group_id| {
             rows.iter()
                 .filter(|r| r.group_id == group_id)
@@ -192,7 +191,9 @@ pub async fn update_gpodder_sync_groups(
         let urls = state
             .subscription_service
             .get_active_device_podcast_urls(DEFAULT_DEVICE, user.id.into())?;
-        SubscriptionService::sync_favorites(user.id.into(), &urls, &[]);
+        state
+            .subscription_service
+            .publish_web_change(user.id.into(), "sync_group", &urls, &[]);
     }
 
     sync_groups_response(&state, &user).map(Json)
@@ -208,10 +209,10 @@ pub fn get_gpodder_device_router() -> OpenApiRouter<AppState> {
 mod tests {
     use super::GPodderSyncGroupsResponse;
     use crate::gpodder_api::auth::test_support::tests::create_auth_gpodder;
-    use crate::subscription::SubscriptionChangesToClient;
     use crate::test_support::tests::{TestServerWrapper, handle_test_startup};
     use crate::test_utils::test_builder::device_test_builder::tests::DevicePostTestDataBuilder;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use podfetch_gpodder::dto::subscription::SubscriptionChangesToClient;
     use serial_test::serial;
 
     async fn register_device(server: &TestServerWrapper<'_>, username: &str) -> String {
@@ -404,12 +405,15 @@ mod tests {
         // Joining the web interface's group takes over existing subscriptions.
         let (status, _) = put_groups(&server, serde_json::json!([[device, "webview"]])).await;
         assert_eq!(status, 200);
+        crate::test_support::tests::process_events().await;
         assert!(is_favorite(user.id, &podcast.id));
 
         // Unsubscribing in the app removes the favorite, subscribing adds it.
         assert_eq!(subscribe(vec![], vec![feed]).await.status_code(), 200);
+        crate::test_support::tests::process_events().await;
         assert!(!is_favorite(user.id, &podcast.id));
         assert_eq!(subscribe(vec![feed], vec![]).await.status_code(), 200);
+        crate::test_support::tests::process_events().await;
         assert!(is_favorite(user.id, &podcast.id));
 
         // Removing the favorite in the web UI removes it from the app too.
@@ -418,6 +422,7 @@ mod tests {
             podcast_id, false, user.id,
         )
         .unwrap();
+        crate::test_support::tests::process_events().await;
         let changes = device_subscriptions(&server, &username, &device).await;
         assert!(!changes.add.contains(&feed.to_string()));
         assert!(changes.remove.contains(&feed.to_string()));

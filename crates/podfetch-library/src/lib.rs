@@ -7,5 +7,7 @@
 
 pub mod domain;
 pub mod dto;
+pub mod events;
+pub mod handlers;
 pub mod persistence;
 pub mod services;

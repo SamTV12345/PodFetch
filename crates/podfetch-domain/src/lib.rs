@@ -1,7 +1,4 @@
 pub mod audiobookshelf;
-pub mod device;
-pub mod device_sync_group;
-pub mod gpodder_setting;
 pub mod ids;
 pub mod ordering;
 pub mod podcast;
@@ -10,4 +7,3 @@ pub mod podcast_episode_chapter;
 pub mod podcast_episode_transcript;
 pub mod podcast_settings;
 pub mod settings;
-pub mod subscription;

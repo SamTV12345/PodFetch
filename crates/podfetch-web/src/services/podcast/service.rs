@@ -16,7 +16,6 @@ use common_infrastructure::error::{
 };
 use common_infrastructure::http::COMMON_USER_AGENT;
 use common_infrastructure::http::get_http_client;
-use common_infrastructure::runtime::DEFAULT_DEVICE;
 use common_infrastructure::runtime::{ENVIRONMENT_SERVICE, ITUNES_URL};
 use podfetch_domain::ordering::{OrderCriteria, OrderOption};
 use podfetch_domain::podcast::{
@@ -24,7 +23,6 @@ use podfetch_domain::podcast::{
 };
 use podfetch_library::domain::favorite::FavoriteRepository;
 use podfetch_library::persistence::favorite::DieselFavoriteRepository;
-use podfetch_persistence::adapters::{DeviceSyncGroupRepositoryImpl, SubscriptionRepositoryImpl};
 use podfetch_persistence::db::PersistenceError;
 use podfetch_persistence::db::database;
 use podfetch_persistence::podcast::DieselPodcastRepository;
@@ -366,6 +364,18 @@ impl PodcastService {
             .map(|rows| rows.into_iter().map(Into::into).collect())
     }
 
+    pub fn find_by_rss_feed(
+        rss_feed: &str,
+    ) -> Result<Option<podfetch_domain::podcast::Podcast>, CustomError> {
+        podcast_repo()
+            .find_by_rss_feed(rss_feed)
+            .map_err(CustomError::from)
+    }
+
+    pub fn find_by_id(id: Uuid) -> Result<Option<podfetch_domain::podcast::Podcast>, CustomError> {
+        podcast_repo().find_by_id(id).map_err(CustomError::from)
+    }
+
     pub fn get_podcast_by_rss_feed(rss_feed: &str) -> Result<Podcast, CustomError> {
         podcast_repo()
             .find_by_rss_feed(rss_feed)
@@ -527,55 +537,17 @@ impl PodcastService {
     ///
     /// Only feeds that already exist in PodFetch can become favorites; the
     /// subscription rows themselves have already been written by the caller.
-    pub fn apply_gpodder_subscriptions_to_favorites(
-        user_id: Uuid,
-        add: &[String],
-        remove: &[String],
-    ) -> Result<(), CustomError> {
-        let podcasts = podcast_repo();
-        let favorites = favorite_repo();
-        let changes = add
-            .iter()
-            .map(|url| (url, true))
-            .chain(remove.iter().map(|url| (url, false)));
-        for (url, favored) in changes {
-            if let Some(podcast) = podcasts.find_by_rss_feed(url).map_err(CustomError::from)? {
-                favorites
-                    .update_podcast_favor(podcast.id, favored, user_id)
-                    .map_err(CustomError::from)?;
-            }
-        }
-        Ok(())
-    }
-
+    /// Sets the user's favorite flag. gPodder sync mirrors the change into
+    /// the subscriptions when it handles `library.podcast_favor_changed`.
     pub fn update_favor_podcast(id: Uuid, favored: bool, user_id: Uuid) -> Result<(), CustomError> {
         favorite_repo()
             .update_podcast_favor(id, favored, user_id)
             .map_err(CustomError::from)?;
-
-        if ENVIRONMENT_SERVICE.gpodder_integration_enabled
-            && let Some(podcast) = podcast_repo().find_by_id(id).map_err(CustomError::from)?
-        {
-            // Goes through the subscription service so the change also
-            // reaches every GPodder device that shares its subscriptions
-            // with the web UI.
-            let subscription_service =
-                crate::services::subscription::service::SubscriptionService::new(
-                    std::sync::Arc::new(SubscriptionRepositoryImpl::new(database())),
-                    std::sync::Arc::new(DeviceSyncGroupRepositoryImpl::new(database())),
-                );
-            let (add, remove) = if favored {
-                (vec![podcast.rssfeed], vec![])
-            } else {
-                (vec![], vec![podcast.rssfeed])
-            };
-            let _ = subscription_service.update_subscriptions(
-                DEFAULT_DEVICE,
-                user_id,
-                crate::subscription::SubscriptionUpdateRequest { add, remove },
-            );
-        }
-
+        crate::podcast_events::publish(&podfetch_library::events::PodcastFavorChanged {
+            user_id: user_id.into(),
+            podcast_id: id,
+            favored,
+        });
         Ok(())
     }
 

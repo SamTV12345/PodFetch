@@ -1,8 +1,8 @@
-use crate::db::{Database, PersistenceError};
+use crate::domain::device_sync_group::{DeviceSyncGroup, DeviceSyncGroupRepository};
+use common_infrastructure::db::{Database, PersistenceError};
 use diesel::prelude::{Insertable, Queryable, QueryableByName};
 use diesel::sql_types::{Integer, Text};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use podfetch_domain::device_sync_group::{DeviceSyncGroup, DeviceSyncGroupRepository};
 use uuid::Uuid;
 
 diesel::table! {
@@ -88,7 +88,7 @@ impl DeviceSyncGroupRepository for DieselDeviceSyncGroupRepository {
         for group in groups {
             diesel::insert_into(dsg_dsl::device_sync_groups)
                 .values(NewDeviceSyncGroupEntity {
-                    id: podfetch_domain::ids::new_id().to_string(),
+                    id: uuid::Uuid::now_v7().to_string(),
                     user_id: group.user_id.to_string(),
                     group_id: group.group_id,
                     device_id: group.device_id,

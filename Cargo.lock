@@ -3266,6 +3266,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "podfetch-gpodder"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "common-infrastructure",
+ "diesel",
+ "opml",
+ "podfetch-events",
+ "podfetch-identity",
+ "podfetch-kernel",
+ "serde",
+ "thiserror 2.0.21",
+ "tracing",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
 name = "podfetch-identity"
 version = "0.1.0"
 dependencies = [
@@ -3299,7 +3317,11 @@ dependencies = [
  "chrono",
  "common-infrastructure",
  "diesel",
+ "podfetch-events",
+ "podfetch-identity",
+ "podfetch-kernel",
  "serde",
+ "tracing",
  "utoipa",
  "uuid",
 ]
@@ -3402,6 +3424,7 @@ dependencies = [
  "podfetch-casting",
  "podfetch-domain",
  "podfetch-events",
+ "podfetch-gpodder",
  "podfetch-identity",
  "podfetch-kernel",
  "podfetch-library",

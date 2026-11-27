@@ -1,6 +1,6 @@
-use crate::device::DeviceApplicationService;
+use crate::domain::device::{Device, DeviceRepository};
+use crate::dto::device::DeviceApplicationService;
 use common_infrastructure::error::CustomError;
-use podfetch_domain::device::{Device, DeviceRepository};
 use std::sync::Arc;
 use uuid::Uuid;
 

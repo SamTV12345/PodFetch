@@ -1,5 +1,5 @@
+use crate::domain::device::Device;
 use common_infrastructure::error::CustomError;
-use podfetch_domain::device::Device;
 
 #[allow(dead_code)]
 pub trait QueryUseCase {

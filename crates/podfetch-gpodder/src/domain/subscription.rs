@@ -86,7 +86,9 @@ pub trait SubscriptionRepository: Send + Sync {
         add: &[String],
         remove: &[String],
     ) -> Result<Vec<Vec<String>>, Self::Error>;
-    fn get_available_gpodder_podcasts(&self) -> Result<Vec<GPodderAvailablePodcast>, Self::Error>;
+    /// Every feed some gPodder device (not the web UI) subscribed to, with
+    /// the device, without duplicates.
+    fn get_subscribed_feeds(&self) -> Result<Vec<GPodderAvailablePodcast>, Self::Error>;
     fn get_active_device_podcast_urls(
         &self,
         device_id: &str,

@@ -1,2 +1,2 @@
 #[allow(unused_imports)]
-pub use podfetch_domain::device::DeviceRepository;
+pub use podfetch_gpodder::domain::device::DeviceRepository;

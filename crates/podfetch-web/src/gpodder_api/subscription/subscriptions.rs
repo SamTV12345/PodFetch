@@ -1,9 +1,5 @@
 use crate::app_state::AppState;
 use crate::gpodder::{ensure_session_user, map_gpodder_error};
-use crate::subscription::{
-    SubscriptionChangesToClient, SubscriptionPostResponse, SubscriptionRetrieveRequest,
-    SubscriptionUpdateRequest, build_opml, to_client_changes,
-};
 use axum::extract::{Path, Query, State};
 use axum::http::header;
 use axum::response::{IntoResponse, Response};
@@ -13,6 +9,10 @@ use common_infrastructure::error::CustomErrorInner;
 use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::path::trim_from_path;
 use common_infrastructure::time::get_current_timestamp;
+use podfetch_gpodder::dto::subscription::{
+    SubscriptionChangesToClient, SubscriptionPostResponse, SubscriptionRetrieveRequest,
+    SubscriptionUpdateRequest, build_opml, to_client_changes,
+};
 use podfetch_identity::domain::session::Session;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -280,7 +280,7 @@ pub fn get_simple_subscription_router() -> OpenApiRouter<AppState> {
 }
 
 fn opml_response(
-    subscriptions: &[crate::subscription::Subscription],
+    subscriptions: &[podfetch_gpodder::dto::subscription::Subscription],
 ) -> Result<Response, CustomError> {
     let xml = build_opml(subscriptions).to_string().map_err(|e| {
         tracing::error!("Could not serialise OPML: {e}");
@@ -295,12 +295,12 @@ fn opml_response(
 mod tests {
     use crate::app_state::AppState;
     use crate::gpodder_api::auth::test_support::tests::create_auth_gpodder;
-    use crate::subscription::SubscriptionChangesToClient;
     use crate::test_support::tests::{TestServerWrapper, handle_test_startup};
     use crate::test_utils::test_builder::device_test_builder::tests::DevicePostTestDataBuilder;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use base64::Engine;
     use base64::engine::general_purpose;
+    use podfetch_gpodder::dto::subscription::SubscriptionChangesToClient;
     use serial_test::serial;
 
     fn app_state() -> AppState {

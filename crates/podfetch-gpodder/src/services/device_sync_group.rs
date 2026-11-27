@@ -1,5 +1,5 @@
+use crate::domain::device_sync_group::{DeviceSyncGroup, DeviceSyncGroupRepository};
 use common_infrastructure::error::CustomError;
-use podfetch_domain::device_sync_group::{DeviceSyncGroup, DeviceSyncGroupRepository};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -47,7 +47,7 @@ impl DeviceSyncGroupService {
             }
             group_id += 1;
             rows.extend(members.into_iter().map(|device_id| DeviceSyncGroup {
-                id: podfetch_domain::ids::new_id(),
+                id: uuid::Uuid::now_v7(),
                 user_id,
                 group_id,
                 device_id: device_id.clone(),

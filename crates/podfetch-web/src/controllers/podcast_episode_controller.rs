@@ -20,7 +20,6 @@ use crate::server::ChatServerHandle;
 use crate::services::file::service::perform_episode_variable_replacement;
 use crate::services::podcast::service::PodcastService;
 use crate::settings::Setting;
-use crate::subscription::GPodderAvailablePodcast;
 use crate::url_rewriting::resolve_server_url_from_headers;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use crate::usecases::timeline::TimelineItem;
@@ -31,6 +30,7 @@ use axum::http::StatusCode;
 use axum::{Extension, Json};
 use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
+use podfetch_gpodder::dto::subscription::GPodderAvailablePodcast;
 use podfetch_identity::api::Principal;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use utoipa_axum::router::OpenApiRouter;
@@ -190,11 +190,16 @@ pub async fn get_available_podcasts_not_in_webview(
 ) -> Result<Json<Vec<GPodderAvailablePodcast>>, CustomError> {
     web_require_privileged::<CustomError>(requester.is_privileged_user())
         .map_err(map_podcast_episode_controller_error)?;
-    let found_episodes = state
-        .subscription_service
-        .get_available_gpodder_podcasts()?;
+    // API composition: subscribed feeds from gPodder sync, minus the ones
+    // the catalog already has.
+    let mut not_in_catalog = Vec::new();
+    for feed in state.subscription_service.get_subscribed_feeds()? {
+        if PodcastService::find_by_rss_feed(&feed.podcast)?.is_none() {
+            not_in_catalog.push(feed);
+        }
+    }
 
-    Ok(Json(found_episodes))
+    Ok(Json(not_in_catalog))
 }
 
 #[utoipa::path(
@@ -856,6 +861,26 @@ mod tests {
                 subs_dsl::user_id.eq(admin_user_id().to_string()),
                 subs_dsl::device.eq("phone".to_string()),
                 subs_dsl::podcast.eq("https://example.com/not-present.xml".to_string()),
+                subs_dsl::created.eq(Utc::now().naive_utc()),
+                subs_dsl::deleted.eq::<Option<chrono::NaiveDateTime>>(None),
+            ))
+            .execute(&mut get_connection())
+            .unwrap();
+        // A subscribed feed the catalog already has is not offered.
+        crate::services::podcast::service::PodcastService::add_podcast_to_database(
+            "Already Here",
+            "already-here",
+            "https://example.com/already-here.xml",
+            "http://localhost:8080/ui/default.jpg",
+            "already-here",
+        )
+        .unwrap();
+        diesel::insert_into(subs_dsl::subscriptions)
+            .values((
+                subs_dsl::id.eq(Uuid::new_v4().to_string()),
+                subs_dsl::user_id.eq(admin_user_id().to_string()),
+                subs_dsl::device.eq("phone".to_string()),
+                subs_dsl::podcast.eq("https://example.com/already-here.xml".to_string()),
                 subs_dsl::created.eq(Utc::now().naive_utc()),
                 subs_dsl::deleted.eq::<Option<chrono::NaiveDateTime>>(None),
             ))

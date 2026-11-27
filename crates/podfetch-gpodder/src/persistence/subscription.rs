@@ -1,14 +1,13 @@
-use crate::db::{Database, PersistenceError};
+use crate::domain::subscription::{
+    GPodderAvailablePodcast, Subscription, SubscriptionModelChanges, SubscriptionRepository,
+};
 use chrono::{NaiveDateTime, Utc};
+use common_infrastructure::db::{Database, PersistenceError};
 use diesel::BoolExpressionMethods;
-use diesel::JoinOnDsl;
 use diesel::OptionalExtension;
 use diesel::prelude::{AsChangeset, Insertable, Queryable, QueryableByName};
 use diesel::sql_types::{Nullable, Text, Timestamp};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use podfetch_domain::subscription::{
-    GPodderAvailablePodcast, Subscription, SubscriptionModelChanges, SubscriptionRepository,
-};
 use uuid::Uuid;
 
 diesel::table! {
@@ -21,15 +20,6 @@ diesel::table! {
         deleted -> Nullable<Timestamp>,
     }
 }
-
-diesel::table! {
-    podcasts (id) {
-        id -> Text,
-        rssfeed -> Text,
-    }
-}
-
-diesel::allow_tables_to_appear_in_same_query!(subscriptions, podcasts);
 
 #[derive(Debug, Clone, Queryable, QueryableByName, Insertable, AsChangeset)]
 #[diesel(table_name = subscriptions)]
@@ -222,7 +212,7 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
                     );
                     diesel::insert_into(subscriptions_dsl::subscriptions)
                         .values(NewSubscriptionEntity {
-                            id: podfetch_domain::ids::new_id().to_string(),
+                            id: uuid::Uuid::now_v7().to_string(),
                             user_id: subscription.user_id.to_string(),
                             device: subscription.device,
                             podcast: subscription.podcast,
@@ -280,25 +270,15 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
             .map_err(Into::into)
     }
 
-    fn get_available_gpodder_podcasts(&self) -> Result<Vec<GPodderAvailablePodcast>, Self::Error> {
-        use self::podcasts::dsl as podcasts_dsl;
+    fn get_subscribed_feeds(&self) -> Result<Vec<GPodderAvailablePodcast>, Self::Error> {
         use self::subscriptions::dsl as subscriptions_dsl;
 
         subscriptions_dsl::subscriptions
-            .left_join(
-                podcasts_dsl::podcasts.on(subscriptions_dsl::podcast.eq(podcasts_dsl::rssfeed)),
-            )
             .select((subscriptions_dsl::device, subscriptions_dsl::podcast))
-            .filter(podcasts_dsl::rssfeed.is_null())
             .filter(subscriptions_dsl::device.ne("webview"))
             .distinct()
             .load::<GPodderAvailablePodcastEntity>(&mut self.database.connection()?)
-            .map(|podcasts| {
-                podcasts
-                    .into_iter()
-                    .map(Into::into)
-                    .collect::<Vec<GPodderAvailablePodcast>>()
-            })
+            .map(|podcasts| podcasts.into_iter().map(Into::into).collect())
             .map_err(Into::into)
     }
 }
