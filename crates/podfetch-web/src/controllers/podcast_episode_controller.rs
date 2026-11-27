@@ -731,11 +731,11 @@ mod tests {
                 pe_dsl::total_time.eq(1800),
                 pe_dsl::description.eq("podcast episode test".to_string()),
                 pe_dsl::guid.eq(guid.to_string()),
-                pe_dsl::deleted.eq(false),
                 pe_dsl::episode_numbering_processed.eq(false),
             ))
-            .get_result::<PodcastEpisode>(&mut get_connection())
-            .unwrap()
+            .execute(&mut get_connection())
+            .unwrap();
+        crate::test_support::tests::episode_by_feed_id(episode_id)
     }
 
     #[tokio::test]
@@ -992,10 +992,7 @@ mod tests {
             .await;
         assert_eq!(response.status_code(), 204);
 
-        let persisted = pe_dsl::podcast_episodes
-            .filter(pe_dsl::episode_id.eq(episode.episode_id))
-            .first::<PodcastEpisode>(&mut get_connection())
-            .unwrap();
+        let persisted = crate::test_support::tests::episode_by_feed_id(&episode.episode_id);
         assert!(persisted.deleted);
     }
 
@@ -1090,15 +1087,12 @@ mod tests {
     }
 
     fn mark_episode_downloaded(episode: &PodcastEpisode, file_episode_path: &str) {
-        diesel::update(pe_dsl::podcast_episodes.filter(pe_dsl::id.eq(episode.id.clone())))
-            .set((
-                pe_dsl::download_location.eq("Local".to_string()),
-                pe_dsl::download_time.eq(Some(Utc::now().naive_utc())),
-                pe_dsl::file_episode_path.eq(file_episode_path.to_string()),
-                pe_dsl::file_image_path.eq::<Option<String>>(None),
-            ))
-            .execute(&mut get_connection())
-            .unwrap();
+        crate::test_support::tests::change_episode_files(episode, |e| {
+            e.download_location = Some("Local".to_string());
+            e.download_time = Some(Utc::now().naive_utc());
+            e.file_episode_path = Some(file_episode_path.to_string());
+            e.file_image_path = None;
+        });
     }
 
     #[tokio::test]
@@ -1136,10 +1130,7 @@ mod tests {
         let body = response.json::<serde_json::Value>();
         assert_eq!(body["affected"], json!(1));
 
-        let persisted = pe_dsl::podcast_episodes
-            .filter(pe_dsl::id.eq(episode.id.clone()))
-            .first::<PodcastEpisode>(&mut get_connection())
-            .unwrap();
+        let persisted = crate::test_support::tests::episode_by_id(&episode.id.clone());
         assert!(persisted.download_location.is_none());
         assert!(persisted.file_episode_path.is_none());
         assert!(persisted.download_time.is_none());
@@ -1189,10 +1180,7 @@ mod tests {
             !std::path::Path::new(&file_path).exists(),
             "file should have been removed"
         );
-        let persisted = pe_dsl::podcast_episodes
-            .filter(pe_dsl::id.eq(episode.id.clone()))
-            .first::<PodcastEpisode>(&mut get_connection())
-            .unwrap();
+        let persisted = crate::test_support::tests::episode_by_id(&episode.id.clone());
         assert!(persisted.download_location.is_none());
         assert!(persisted.file_episode_path.is_none());
         // Unlike single-episode delete, the `deleted` flag must stay false so
@@ -1412,16 +1400,10 @@ mod tests {
             "non-favorite file should have been removed"
         );
 
-        let fav_persisted = pe_dsl::podcast_episodes
-            .filter(pe_dsl::id.eq(fav_episode.id))
-            .first::<PodcastEpisode>(&mut get_connection())
-            .unwrap();
+        let fav_persisted = crate::test_support::tests::episode_by_id(&fav_episode.id);
         assert!(fav_persisted.download_location.is_some());
 
-        let plain_persisted = pe_dsl::podcast_episodes
-            .filter(pe_dsl::id.eq(plain_episode.id))
-            .first::<PodcastEpisode>(&mut get_connection())
-            .unwrap();
+        let plain_persisted = crate::test_support::tests::episode_by_id(&plain_episode.id);
         assert!(plain_persisted.download_location.is_none());
 
         // Clean up the favorite file we left behind.

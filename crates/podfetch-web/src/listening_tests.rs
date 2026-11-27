@@ -57,7 +57,6 @@ mod tests {
                 pe::total_time.eq(100),
                 pe::description.eq("listening test".to_string()),
                 pe::guid.eq(format!("guid-{key}")),
-                pe::deleted.eq(false),
                 pe::episode_numbering_processed.eq(false),
             ))
             .execute(&mut get_connection())

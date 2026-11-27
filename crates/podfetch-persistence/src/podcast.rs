@@ -42,13 +42,8 @@ diesel::table! {
         image_url -> Text,
         total_time -> Integer,
         description -> Text,
-        download_time -> Nullable<Timestamp>,
         guid -> Text,
-        deleted -> Bool,
-        file_episode_path -> Nullable<Text>,
-        file_image_path -> Nullable<Text>,
         episode_numbering_processed -> Bool,
-        download_location -> Nullable<Text>,
     }
 }
 

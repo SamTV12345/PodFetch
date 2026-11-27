@@ -1,7 +1,6 @@
 use crate::db::{Database, PersistenceError};
 use chrono::{Duration, NaiveDateTime, Utc};
 use diesel::prelude::*;
-use diesel::query_source::Alias;
 use diesel::{
     BoolExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl,
     TextExpressionMethods,
@@ -23,18 +22,25 @@ diesel::table! {
         image_url -> Text,
         total_time -> Integer,
         description -> Text,
-        download_time -> Nullable<Timestamp>,
         guid -> Text,
-        deleted -> Bool,
-        file_episode_path -> Nullable<Text>,
-        file_image_path -> Nullable<Text>,
         episode_numbering_processed -> Bool,
-        download_location -> Nullable<Text>,
         youtube_video_id -> Nullable<Text>,
     }
 }
 
-// Re-declare episode and favorite tables here for joins
+// File state of downloaded episodes (one row per episode that has any).
+diesel::table! {
+    episode_files (episode_id) {
+        episode_id -> Text,
+        download_time -> Nullable<Timestamp>,
+        file_episode_path -> Nullable<Text>,
+        file_image_path -> Nullable<Text>,
+        download_location -> Nullable<Text>,
+        deleted -> Bool,
+    }
+}
+
+diesel::joinable!(episode_files -> podcast_episodes (episode_id));
 
 diesel::table! {
     podcasts (id) {
@@ -56,12 +62,57 @@ diesel::table! {
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(podcast_episodes, podcasts);
+diesel::allow_tables_to_appear_in_same_query!(podcast_episodes, podcasts, episode_files);
 
-#[derive(
-    Queryable, Identifiable, Selectable, AsChangeset, Debug, Clone, PartialEq, Eq, Default,
-)]
-#[diesel(table_name = podcast_episodes)]
+/// `podcast_episodes` with the file state of each episode joined in.
+macro_rules! with_files {
+    () => {
+        podcast_episodes::table.left_join(episode_files::table)
+    };
+}
+
+/// The columns of [`PodcastEpisodeEntity`], in field order, for queries on
+/// [`with_files!`]. Episodes without a file row read as not downloaded and
+/// not deleted.
+macro_rules! entity_columns {
+    () => {
+        (
+            podcast_episodes::id,
+            podcast_episodes::legacy_id,
+            podcast_episodes::podcast_id,
+            podcast_episodes::episode_id,
+            podcast_episodes::name,
+            podcast_episodes::url,
+            podcast_episodes::date_of_recording,
+            podcast_episodes::image_url,
+            podcast_episodes::total_time,
+            podcast_episodes::description,
+            episode_files::download_time.nullable(),
+            podcast_episodes::guid,
+            diesel::dsl::sql::<diesel::sql_types::Bool>("COALESCE(episode_files.deleted, FALSE)"),
+            episode_files::file_episode_path.nullable(),
+            episode_files::file_image_path.nullable(),
+            podcast_episodes::episode_numbering_processed,
+            episode_files::download_location.nullable(),
+            podcast_episodes::youtube_video_id,
+        )
+    };
+}
+
+/// Episodes not deleted by the user (no file row counts as not deleted).
+macro_rules! not_deleted {
+    () => {
+        episode_files::deleted
+            .nullable()
+            .is_null()
+            .or(episode_files::deleted.nullable().eq(false))
+    };
+}
+
+/// An episode with its file state, as the web layer works with it. Read
+/// through [`with_files!`] / [`entity_columns!`]; written to
+/// `podcast_episodes` and `episode_files` separately.
+#[derive(Queryable, Debug, Clone, PartialEq, Eq, Default)]
 pub struct PodcastEpisodeEntity {
     pub id: String,
     pub legacy_id: Option<i64>,
@@ -81,6 +132,77 @@ pub struct PodcastEpisodeEntity {
     pub episode_numbering_processed: bool,
     pub download_location: Option<String>,
     pub youtube_video_id: Option<String>,
+}
+
+/// The catalog columns of an episode, for updates.
+#[derive(AsChangeset, Debug, Clone)]
+#[diesel(table_name = podcast_episodes, treat_none_as_null = true)]
+struct CatalogChangeset {
+    legacy_id: Option<i64>,
+    podcast_id: String,
+    episode_id: String,
+    name: String,
+    url: String,
+    date_of_recording: String,
+    image_url: String,
+    total_time: i32,
+    description: String,
+    guid: String,
+    episode_numbering_processed: bool,
+    youtube_video_id: Option<String>,
+}
+
+impl From<&PodcastEpisodeEntity> for CatalogChangeset {
+    fn from(entity: &PodcastEpisodeEntity) -> Self {
+        Self {
+            legacy_id: entity.legacy_id,
+            podcast_id: entity.podcast_id.clone(),
+            episode_id: entity.episode_id.clone(),
+            name: entity.name.clone(),
+            url: entity.url.clone(),
+            date_of_recording: entity.date_of_recording.clone(),
+            image_url: entity.image_url.clone(),
+            total_time: entity.total_time,
+            description: entity.description.clone(),
+            guid: entity.guid.clone(),
+            episode_numbering_processed: entity.episode_numbering_processed,
+            youtube_video_id: entity.youtube_video_id.clone(),
+        }
+    }
+}
+
+/// The file state of one episode.
+#[derive(Queryable, Insertable, Debug, Clone, Default, PartialEq, Eq)]
+#[diesel(table_name = episode_files)]
+struct FileRow {
+    episode_id: String,
+    download_time: Option<NaiveDateTime>,
+    file_episode_path: Option<String>,
+    file_image_path: Option<String>,
+    download_location: Option<String>,
+    deleted: bool,
+}
+
+impl FileRow {
+    fn of(entity: &PodcastEpisodeEntity) -> Self {
+        Self {
+            episode_id: entity.id.clone(),
+            download_time: entity.download_time,
+            file_episode_path: entity.file_episode_path.clone(),
+            file_image_path: entity.file_image_path.clone(),
+            download_location: entity.download_location.clone(),
+            deleted: entity.deleted,
+        }
+    }
+
+    /// No file state at all: the row is not stored.
+    fn is_empty(&self) -> bool {
+        self.download_time.is_none()
+            && self.file_episode_path.is_none()
+            && self.file_image_path.is_none()
+            && self.download_location.is_none()
+            && !self.deleted
+    }
 }
 
 #[derive(Insertable, Debug, Clone)]
@@ -208,21 +330,95 @@ impl DieselPodcastEpisodeRepository {
     pub fn new(database: Database) -> Self {
         Self { database }
     }
+
+    fn load_by_id(&self, id: &str) -> Result<PodcastEpisode, PersistenceError> {
+        with_files!()
+            .select(entity_columns!())
+            .filter(podcast_episodes::id.eq(id))
+            .first::<PodcastEpisodeEntity>(&mut self.database.connection()?)
+            .map(Into::into)
+            .map_err(Into::into)
+    }
+
+    /// Changes the file state of every episode matching `target` and returns
+    /// their ids.
+    fn modify_files_where(
+        &self,
+        target: Episodes<'_>,
+        change: impl Fn(&mut FileRow),
+    ) -> Result<Vec<String>, PersistenceError> {
+        let mut conn = self.database.connection()?;
+        conn.transaction::<_, diesel::result::Error, _>(|conn| {
+            let ids: Vec<String> = match target {
+                Episodes::Id(id) => podcast_episodes::table
+                    .filter(podcast_episodes::id.eq(id))
+                    .select(podcast_episodes::id)
+                    .load(conn)?,
+                Episodes::FeedEpisodeId(episode_id) => podcast_episodes::table
+                    .filter(podcast_episodes::episode_id.eq(episode_id))
+                    .select(podcast_episodes::id)
+                    .load(conn)?,
+                Episodes::Url(url) => podcast_episodes::table
+                    .filter(podcast_episodes::url.eq(url))
+                    .select(podcast_episodes::id)
+                    .load(conn)?,
+            };
+            for id in &ids {
+                let mut files = episode_files::table
+                    .filter(episode_files::episode_id.eq(id))
+                    .first::<FileRow>(conn)
+                    .optional()?
+                    .unwrap_or_else(|| FileRow {
+                        episode_id: id.clone(),
+                        ..FileRow::default()
+                    });
+                change(&mut files);
+                write_file_row(conn, files)?;
+            }
+            Ok(ids)
+        })
+        .map_err(Into::into)
+    }
+}
+
+/// Which episodes a file state change applies to.
+enum Episodes<'a> {
+    Id(&'a str),
+    FeedEpisodeId(&'a str),
+    Url(&'a str),
+}
+
+/// Stores `files` as the episode's file state: replaces the row, or removes
+/// it when there is no state left.
+fn write_file_row(
+    conn: &mut common_infrastructure::db::DBType,
+    files: FileRow,
+) -> Result<(), diesel::result::Error> {
+    diesel::delete(episode_files::table.filter(episode_files::episode_id.eq(&files.episode_id)))
+        .execute(conn)?;
+    if !files.is_empty() {
+        diesel::insert_into(episode_files::table)
+            .values(files)
+            .execute(conn)?;
+    }
+    Ok(())
 }
 
 impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
     type Error = PersistenceError;
 
     fn create(&self, episode: NewPodcastEpisode) -> Result<PodcastEpisode, Self::Error> {
+        let row = NewPodcastEpisodeEntity::from(episode);
+        let id = row.id.clone();
         diesel::insert_into(podcast_episodes::table)
-            .values(NewPodcastEpisodeEntity::from(episode))
-            .get_result::<PodcastEpisodeEntity>(&mut self.database.connection()?)
-            .map(Into::into)
-            .map_err(Into::into)
+            .values(row)
+            .execute(&mut self.database.connection()?)?;
+        self.load_by_id(&id)
     }
 
     fn find_by_id(&self, id: Uuid) -> Result<Option<PodcastEpisode>, Self::Error> {
-        podcast_episodes::table
+        with_files!()
+            .select(entity_columns!())
             .filter(podcast_episodes::id.eq(id.to_string()))
             .first::<PodcastEpisodeEntity>(&mut self.database.connection()?)
             .optional()
@@ -231,7 +427,8 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
     }
 
     fn find_by_legacy_id(&self, legacy_id: i64) -> Result<Option<PodcastEpisode>, Self::Error> {
-        podcast_episodes::table
+        with_files!()
+            .select(entity_columns!())
             .filter(podcast_episodes::legacy_id.eq(legacy_id))
             .first::<PodcastEpisodeEntity>(&mut self.database.connection()?)
             .optional()
@@ -240,7 +437,8 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
     }
 
     fn find_by_episode_id(&self, episode_id: &str) -> Result<Option<PodcastEpisode>, Self::Error> {
-        podcast_episodes::table
+        with_files!()
+            .select(entity_columns!())
             .filter(podcast_episodes::episode_id.eq(episode_id))
             .first::<PodcastEpisodeEntity>(&mut self.database.connection()?)
             .optional()
@@ -253,7 +451,8 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
         url: &str,
         podcast_id: Option<Uuid>,
     ) -> Result<Option<PodcastEpisode>, Self::Error> {
-        let mut query = podcast_episodes::table
+        let mut query = with_files!()
+            .select(entity_columns!())
             .filter(podcast_episodes::url.eq(url))
             .into_boxed();
 
@@ -269,7 +468,8 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
     }
 
     fn find_by_guid(&self, guid: &str) -> Result<Option<PodcastEpisode>, Self::Error> {
-        podcast_episodes::table
+        with_files!()
+            .select(entity_columns!())
             .filter(podcast_episodes::guid.eq(guid))
             .first::<PodcastEpisodeEntity>(&mut self.database.connection()?)
             .optional()
@@ -288,7 +488,8 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
         {
             return Ok(Vec::new());
         }
-        let mut query = podcast_episodes::table
+        let mut query = with_files!()
+            .select(entity_columns!())
             .order(podcast_episodes::date_of_recording.desc())
             .limit(limit)
             .into_boxed();
@@ -335,12 +536,27 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
             .map_err(Into::into)
     }
 
+    fn search_by_text(&self, text: &str) -> Result<Vec<PodcastEpisode>, Self::Error> {
+        let pattern = format!("%{text}%");
+        with_files!()
+            .select(entity_columns!())
+            .filter(
+                podcast_episodes::name
+                    .like(pattern.clone())
+                    .or(podcast_episodes::description.like(pattern)),
+            )
+            .load::<PodcastEpisodeEntity>(&mut self.database.connection()?)
+            .map(|rows| rows.into_iter().map(Into::into).collect())
+            .map_err(Into::into)
+    }
+
     fn find_by_guids(&self, guids: &[String]) -> Result<Vec<PodcastEpisode>, Self::Error> {
         let conn = &mut self.database.connection()?;
         let mut found = Vec::new();
         // Chunked to stay below the bind parameter limit.
         for chunk in guids.chunks(500) {
-            let rows = podcast_episodes::table
+            let rows = with_files!()
+                .select(entity_columns!())
                 .filter(podcast_episodes::guid.eq_any(chunk))
                 .load::<PodcastEpisodeEntity>(conn)?;
             found.extend(rows.into_iter().map(Into::into));
@@ -349,7 +565,8 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
     }
 
     fn find_by_podcast_id(&self, podcast_id: Uuid) -> Result<Vec<PodcastEpisode>, Self::Error> {
-        podcast_episodes::table
+        with_files!()
+            .select(entity_columns!())
             .filter(podcast_episodes::podcast_id.eq(podcast_id.to_string()))
             .load::<PodcastEpisodeEntity>(&mut self.database.connection()?)
             .map(|entities| entities.into_iter().map(Into::into).collect())
@@ -357,11 +574,12 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
     }
 
     fn find_by_file_path(&self, path: &str) -> Result<Option<PodcastEpisode>, Self::Error> {
-        podcast_episodes::table
+        with_files!()
+            .select(entity_columns!())
             .filter(
-                podcast_episodes::file_episode_path
+                episode_files::file_episode_path
                     .eq(path)
-                    .or(podcast_episodes::file_image_path.eq(path)),
+                    .or(episode_files::file_image_path.eq(path)),
             )
             .first::<PodcastEpisodeEntity>(&mut self.database.connection()?)
             .optional()
@@ -371,34 +589,53 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
 
     fn update(&self, episode: &PodcastEpisode) -> Result<(), Self::Error> {
         let entity = PodcastEpisodeEntity::from(episode);
-        diesel::update(
-            podcast_episodes::table.filter(podcast_episodes::id.eq(episode.id.to_string())),
-        )
-        .set(&entity)
-        .execute(&mut self.database.connection()?)
-        .map(|_| ())
+        let mut conn = self.database.connection()?;
+        conn.transaction(|conn| {
+            diesel::update(podcast_episodes::table.filter(podcast_episodes::id.eq(&entity.id)))
+                .set(CatalogChangeset::from(&entity))
+                .execute(conn)?;
+            write_file_row(conn, FileRow::of(&entity))
+        })
         .map_err(Into::into)
     }
 
     fn delete(&self, id: Uuid) -> Result<(), Self::Error> {
-        diesel::delete(podcast_episodes::table.filter(podcast_episodes::id.eq(id.to_string())))
-            .execute(&mut self.database.connection()?)
-            .map(|_| ())
-            .map_err(Into::into)
+        let id = id.to_string();
+        let mut conn = self.database.connection()?;
+        conn.transaction(|conn| {
+            // Not left to ON DELETE CASCADE: SQLite only enforces it with
+            // foreign keys switched on.
+            diesel::delete(episode_files::table.filter(episode_files::episode_id.eq(&id)))
+                .execute(conn)?;
+            diesel::delete(podcast_episodes::table.filter(podcast_episodes::id.eq(&id)))
+                .execute(conn)
+        })
+        .map(|_| ())
+        .map_err(Into::into)
     }
 
     fn delete_by_podcast_id(&self, podcast_id: Uuid) -> Result<(), Self::Error> {
-        diesel::delete(
-            podcast_episodes::table.filter(podcast_episodes::podcast_id.eq(podcast_id.to_string())),
-        )
-        .execute(&mut self.database.connection()?)
+        let podcast_id = podcast_id.to_string();
+        let mut conn = self.database.connection()?;
+        conn.transaction(|conn| {
+            let episodes = podcast_episodes::table
+                .filter(podcast_episodes::podcast_id.eq(&podcast_id))
+                .select(podcast_episodes::id);
+            diesel::delete(episode_files::table.filter(episode_files::episode_id.eq_any(episodes)))
+                .execute(conn)?;
+            diesel::delete(
+                podcast_episodes::table.filter(podcast_episodes::podcast_id.eq(&podcast_id)),
+            )
+            .execute(conn)
+        })
         .map(|_| ())
         .map_err(Into::into)
     }
 
     fn query_by_url_like(&self, url_pattern: &str) -> Result<Option<PodcastEpisode>, Self::Error> {
         let pattern = format!("%{url_pattern}%");
-        podcast_episodes::table
+        with_files!()
+            .select(entity_columns!())
             .filter(podcast_episodes::url.like(pattern))
             .first::<PodcastEpisodeEntity>(&mut self.database.connection()?)
             .optional()
@@ -407,9 +644,10 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
     }
 
     fn get_nth_page(&self, last_id: Uuid, limit: i64) -> Result<Vec<PodcastEpisode>, Self::Error> {
-        podcast_episodes::table
+        with_files!()
+            .select(entity_columns!())
             .filter(podcast_episodes::id.gt(last_id.to_string()))
-            .filter(podcast_episodes::file_episode_path.is_not_null())
+            .filter(episode_files::file_episode_path.is_not_null())
             .order(podcast_episodes::id.asc())
             .limit(limit)
             .load::<PodcastEpisodeEntity>(&mut self.database.connection()?)
@@ -423,7 +661,8 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
         last_date: Option<&str>,
         limit: i64,
     ) -> Result<Vec<PodcastEpisode>, Self::Error> {
-        let mut query = podcast_episodes::table
+        let mut query = with_files!()
+            .select(entity_columns!())
             .filter(podcast_episodes::podcast_id.eq(podcast_id.to_string()))
             .order(podcast_episodes::date_of_recording.desc())
             .limit(limit)
@@ -465,7 +704,8 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
         podcast_id: Uuid,
         n: i64,
     ) -> Result<Vec<PodcastEpisode>, Self::Error> {
-        podcast_episodes::table
+        with_files!()
+            .select(entity_columns!())
             .filter(podcast_episodes::podcast_id.eq(podcast_id.to_string()))
             .limit(n)
             .order(podcast_episodes::date_of_recording.desc())
@@ -475,7 +715,8 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
     }
 
     fn get_all(&self) -> Result<Vec<PodcastEpisode>, Self::Error> {
-        podcast_episodes::table
+        with_files!()
+            .select(entity_columns!())
             .load::<PodcastEpisodeEntity>(&mut self.database.connection()?)
             .map(|entities| entities.into_iter().map(Into::into).collect())
             .map_err(Into::into)
@@ -496,8 +737,9 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
         // Diesel, so an untouched inbox correctly returns every candidate.
         // The inbox captures every new episode regardless of download state;
         // downloaded-but-not-yet-triaged episodes show up here too.
-        let mut query = podcast_episodes::table
-            .filter(podcast_episodes::deleted.eq(false))
+        let mut query = with_files!()
+            .select(entity_columns!())
+            .filter(not_deleted!())
             .filter(podcast_episodes::id.ne_all(exclude))
             .order(podcast_episodes::date_of_recording.desc())
             .limit(limit)
@@ -518,9 +760,10 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
         last_date: Option<&str>,
         limit: i64,
     ) -> Result<Vec<PodcastEpisode>, Self::Error> {
-        let mut query = podcast_episodes::table
-            .filter(podcast_episodes::download_location.is_not_null())
-            .filter(podcast_episodes::deleted.eq(false))
+        let mut query = with_files!()
+            .select(entity_columns!())
+            .filter(episode_files::download_location.is_not_null())
+            .filter(not_deleted!())
             .order(podcast_episodes::date_of_recording.desc())
             .limit(limit)
             .into_boxed();
@@ -536,8 +779,9 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
     }
 
     fn check_if_downloaded(&self, url: &str) -> Result<bool, Self::Error> {
-        let result = podcast_episodes::table
-            .filter(podcast_episodes::download_location.is_not_null())
+        let result = with_files!()
+            .select(entity_columns!())
+            .filter(episode_files::download_location.is_not_null())
             .filter(podcast_episodes::url.eq(url))
             .first::<PodcastEpisodeEntity>(&mut self.database.connection()?)
             .optional()
@@ -551,8 +795,9 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
         podcast_id: Uuid,
     ) -> Result<Vec<PodcastEpisode>, Self::Error> {
         let cutoff = Utc::now().naive_utc() - Duration::days(days);
-        podcast_episodes::table
-            .filter(podcast_episodes::download_time.lt(cutoff))
+        with_files!()
+            .select(entity_columns!())
+            .filter(episode_files::download_time.lt(cutoff))
             .filter(podcast_episodes::podcast_id.eq(podcast_id.to_string()))
             .load::<PodcastEpisodeEntity>(&mut self.database.connection()?)
             .map(|entities| entities.into_iter().map(Into::into).collect())
@@ -561,8 +806,11 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
 
     fn get_episodes_by_podcast_to_k(&self, top_k: i64) -> Result<Vec<PodcastEpisode>, Self::Error> {
         let (pe1, pe2) = diesel::alias!(podcast_episodes as pe1, podcast_episodes as pe2);
+        let mut conn = self.database.connection()?;
 
-        pe1.select(Alias::fields(&pe1, podcast_episodes::all_columns))
+        // The newest `top_k` episodes of every podcast ...
+        let ids: Vec<String> = pe1
+            .select(pe1.field(podcast_episodes::id))
             .inner_join(
                 podcasts::table.on(podcasts::id.eq(pe1.field(podcast_episodes::podcast_id))),
             )
@@ -574,9 +822,17 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
                         .limit(top_k),
                 ),
             )
-            .load::<PodcastEpisodeEntity>(&mut self.database.connection()?)
-            .map(|entities| entities.into_iter().map(Into::into).collect())
-            .map_err(Into::into)
+            .load::<String>(&mut conn)?;
+        // ... with their file state.
+        let mut found = Vec::new();
+        for chunk in ids.chunks(500) {
+            let rows = with_files!()
+                .select(entity_columns!())
+                .filter(podcast_episodes::id.eq_any(chunk))
+                .load::<PodcastEpisodeEntity>(&mut conn)?;
+            found.extend(rows.into_iter().map(Into::into));
+        }
+        Ok(found)
     }
 
     fn update_local_paths(
@@ -585,27 +841,12 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
         file_image_path: &str,
         file_episode_path: &str,
     ) -> Result<(), Self::Error> {
-        let result = podcast_episodes::table
-            .filter(podcast_episodes::episode_id.eq(episode_id))
-            .first::<PodcastEpisodeEntity>(&mut self.database.connection()?)
-            .optional()?;
-
-        if result.is_some() {
-            let image_col = if file_image_path.is_empty() {
-                None::<&str>
-            } else {
-                Some(file_image_path)
-            };
-            diesel::update(
-                podcast_episodes::table.filter(podcast_episodes::episode_id.eq(episode_id)),
-            )
-            .set((
-                podcast_episodes::file_episode_path.eq(file_episode_path),
-                podcast_episodes::file_image_path.eq(image_col),
-            ))
-            .execute(&mut self.database.connection()?)?;
-        }
-        Ok(())
+        let image = (!file_image_path.is_empty()).then(|| file_image_path.to_owned());
+        self.modify_files_where(Episodes::FeedEpisodeId(episode_id), |files| {
+            files.file_episode_path = Some(file_episode_path.to_owned());
+            files.file_image_path = image.clone();
+        })
+        .map(|_| ())
     }
 
     fn update_download_status(
@@ -614,27 +855,23 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
         download_location: Option<String>,
         download_time: NaiveDateTime,
     ) -> Result<PodcastEpisode, Self::Error> {
-        diesel::update(podcast_episodes::table.filter(podcast_episodes::url.eq(url)))
-            .set((
-                podcast_episodes::download_location.eq(download_location),
-                podcast_episodes::download_time.eq(download_time),
-            ))
-            .get_result::<PodcastEpisodeEntity>(&mut self.database.connection()?)
-            .map(Into::into)
-            .map_err(Into::into)
+        let ids = self.modify_files_where(Episodes::Url(url), |files| {
+            files.download_location = download_location.clone();
+            files.download_time = Some(download_time);
+        })?;
+        let id = ids.first().ok_or(diesel::result::Error::NotFound)?;
+        self.load_by_id(id)
     }
 
     fn remove_download_status(&self, id: Uuid) -> Result<(), Self::Error> {
-        diesel::update(podcast_episodes::table.filter(podcast_episodes::id.eq(id.to_string())))
-            .set((
-                podcast_episodes::download_location.eq::<Option<String>>(None),
-                podcast_episodes::download_time.eq::<Option<NaiveDateTime>>(None),
-                podcast_episodes::file_episode_path.eq::<Option<String>>(None),
-                podcast_episodes::file_image_path.eq::<Option<String>>(None),
-            ))
-            .execute(&mut self.database.connection()?)
-            .map(|_| ())
-            .map_err(Into::into)
+        let id = id.to_string();
+        self.modify_files_where(Episodes::Id(&id), |files| {
+            files.download_location = None;
+            files.download_time = None;
+            files.file_episode_path = None;
+            files.file_image_path = None;
+        })
+        .map(|_| ())
     }
 
     fn update_guid(&self, episode_id: &str, guid: &str) -> Result<(), Self::Error> {
@@ -646,10 +883,10 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
     }
 
     fn update_deleted(&self, episode_id: &str, deleted: bool) -> Result<usize, Self::Error> {
-        diesel::update(podcast_episodes::table.filter(podcast_episodes::episode_id.eq(episode_id)))
-            .set(podcast_episodes::deleted.eq(deleted))
-            .execute(&mut self.database.connection()?)
-            .map_err(Into::into)
+        self.modify_files_where(Episodes::FeedEpisodeId(episode_id), |files| {
+            files.deleted = deleted;
+        })
+        .map(|ids| ids.len())
     }
 
     fn update_total_time(&self, episode_id: &str, total_time: i32) -> Result<(), Self::Error> {

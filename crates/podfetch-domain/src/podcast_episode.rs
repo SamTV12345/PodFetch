@@ -87,6 +87,9 @@ pub trait PodcastEpisodeRepository: Send + Sync {
         guids: Option<&[String]>,
     ) -> Result<i64, Self::Error>;
 
+    /// Episodes whose name or description contains `text`.
+    fn search_by_text(&self, text: &str) -> Result<Vec<PodcastEpisode>, Self::Error>;
+
     /// Episodes with any of the given guids.
     fn find_by_guids(&self, guids: &[String]) -> Result<Vec<PodcastEpisode>, Self::Error>;
     fn find_by_guid(&self, guid: &str) -> Result<Option<PodcastEpisode>, Self::Error>;

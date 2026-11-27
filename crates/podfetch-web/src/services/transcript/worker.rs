@@ -278,9 +278,7 @@ mod tests {
         total_time: i32,
         description: String,
         guid: String,
-        deleted: bool,
         episode_numbering_processed: bool,
-        file_episode_path: Option<String>,
     }
 
     fn seed_podcast() -> Uuid {
@@ -315,12 +313,14 @@ mod tests {
                 total_time: 3600,
                 description: "Test description".to_string(),
                 guid: Uuid::new_v4().to_string(),
-                deleted: false,
                 episode_numbering_processed: false,
-                file_episode_path: file_episode_path.map(ToString::to_string),
             })
             .execute(&mut get_connection())
             .expect("seed episode");
+        let seeded = crate::test_support::tests::episode_by_id(&id.to_string());
+        crate::test_support::tests::change_episode_files(&seeded, |e| {
+            e.file_episode_path = file_episode_path.map(ToString::to_string);
+        });
         id
     }
 

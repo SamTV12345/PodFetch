@@ -499,20 +499,13 @@ impl PodcastService {
     }
 
     pub fn query_for_podcast(query: &str) -> Result<Vec<PodcastEpisode>, CustomError> {
-        use diesel::BoolExpressionMethods;
-        use diesel::QueryDsl;
-        use diesel::RunQueryDsl;
-        use diesel::TextExpressionMethods;
-        use podfetch_persistence::db::get_connection;
-        use podfetch_persistence::schema::podcast_episodes::dsl::*;
-
-        podcast_episodes
-            .filter(
-                name.like(format!("%{query}%"))
-                    .or(description.like(format!("%{query}%"))),
-            )
-            .load::<PodcastEpisode>(&mut get_connection())
-            .map_err(|e| common_infrastructure::error::map_db_error(e, Critical))
+        use podfetch_domain::podcast_episode::PodcastEpisodeRepository;
+        podfetch_persistence::podcast_episode::DieselPodcastEpisodeRepository::new(
+            podfetch_persistence::db::database(),
+        )
+        .search_by_text(query)
+        .map(|episodes| episodes.into_iter().map(Into::into).collect())
+        .map_err(CustomError::from)
     }
 
     /// Whether `user` may add `adding` more podcasts to the server: admins

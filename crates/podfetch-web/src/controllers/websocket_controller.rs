@@ -585,14 +585,16 @@ mod tests {
                 pe_dsl::total_time.eq(1800),
                 pe_dsl::description.eq("rss rewrite test".to_string()),
                 pe_dsl::guid.eq(guid.to_string()),
-                pe_dsl::deleted.eq(false),
                 pe_dsl::episode_numbering_processed.eq(false),
-                pe_dsl::file_episode_path.eq(Some(file_episode_path.to_string())),
-                pe_dsl::file_image_path.eq(Some(file_image_path.to_string())),
-                pe_dsl::download_location.eq(Some("Local".to_string())),
             ))
-            .get_result::<PodcastEpisode>(&mut get_connection())
-            .unwrap()
+            .execute(&mut get_connection())
+            .unwrap();
+        let seeded = crate::test_support::tests::episode_by_feed_id(episode_id);
+        crate::test_support::tests::change_episode_files(&seeded, |e| {
+            e.file_episode_path = Some(file_episode_path.to_string());
+            e.file_image_path = Some(file_image_path.to_string());
+            e.download_location = Some("Local".to_string());
+        })
     }
 
     #[tokio::test]
