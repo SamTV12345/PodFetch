@@ -463,6 +463,9 @@ mod tests {
         fn episodes_of_podcast(&self, _: &str) -> Result<Vec<MediaEpisode>, CustomError> {
             Ok(vec![])
         }
+        fn latest_episodes(&self, _: &str, _: i32) -> Result<Vec<MediaEpisode>, CustomError> {
+            Ok(vec![])
+        }
         fn position_of_episode(&self, _: &str, _: &str) -> Result<usize, CustomError> {
             Ok(3)
         }
@@ -497,6 +500,9 @@ mod tests {
     impl MediaSettingsSource for FixedSettings {
         fn for_podcast(&self, _: &str) -> Result<MediaSettings, CustomError> {
             Ok(self.0.clone())
+        }
+        fn max_parallel_downloads(&self) -> Result<usize, CustomError> {
+            Ok(1)
         }
     }
 

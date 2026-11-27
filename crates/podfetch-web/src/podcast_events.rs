@@ -42,6 +42,22 @@ impl Event for EpisodeDownloadFailed {
     }
 }
 
+/// The catalog refreshed a podcast's episodes from its feed (after adding
+/// it, on every poll and on a manual refresh).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PodcastRefreshed {
+    pub podcast_id: String,
+    pub podcast_name: String,
+}
+
+impl Event for PodcastRefreshed {
+    const TYPE: &'static str = "podcast.refreshed";
+
+    fn aggregate_id(&self) -> String {
+        self.podcast_id.clone()
+    }
+}
+
 /// The bus the download code and the static podcast service publish to
 /// (also the library's `PodcastFavorChanged` from `update_favor_podcast`).
 ///
@@ -116,6 +132,26 @@ mod tests {
             inbound::EpisodeDownloadFailed::VERSION
         );
         assert_eq!(read.reason, "timeout");
+    }
+
+    /// The media library reads `podcast.refreshed` with its own type.
+    #[test]
+    fn media_can_read_podcast_refreshed() {
+        let published = PodcastRefreshed {
+            podcast_id: "p1".into(),
+            podcast_name: "Podcast".into(),
+        };
+        let read: podfetch_media::inbound::PodcastRefreshed =
+            serde_json::from_value(serde_json::to_value(&published).unwrap()).unwrap();
+        assert_eq!(
+            PodcastRefreshed::TYPE,
+            podfetch_media::inbound::PodcastRefreshed::TYPE
+        );
+        assert_eq!(
+            PodcastRefreshed::VERSION,
+            podfetch_media::inbound::PodcastRefreshed::VERSION
+        );
+        assert_eq!(read.podcast_id, "p1");
     }
 
     /// Full path: the download code publishes, the processor delivers and

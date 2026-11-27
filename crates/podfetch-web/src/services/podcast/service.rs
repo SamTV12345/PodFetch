@@ -8,9 +8,8 @@ use crate::podcast::{ItunesWrapper, PodcastDto, PodcastInsertModel, PodindexResp
 use crate::server::ChatServerHandle;
 use crate::services::file::service::FileService;
 use crate::services::podcast::metadata::PodcastExtra;
-use crate::services::podcast_settings::service::PodcastSettingsService;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
-use common_infrastructure::error::ErrorSeverity::{Critical, Error};
+use common_infrastructure::error::ErrorSeverity::Error;
 use common_infrastructure::error::{
     CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error,
 };
@@ -31,7 +30,6 @@ use rss::Channel;
 use serde_json::Value;
 use sha1::{Digest, Sha1};
 use std::collections::HashMap;
-use std::thread;
 use tokio::task::spawn_blocking;
 use uuid::Uuid;
 
@@ -39,15 +37,6 @@ pub struct PodcastService;
 
 fn podcast_repo() -> DieselPodcastRepository {
     DieselPodcastRepository::new(database())
-}
-
-/// Parse a stored podfetch id (entity rows carry the canonical UUID as a
-/// `String`) into a `Uuid` for the repository layer.
-fn parse_id(id: &str) -> Result<Uuid, CustomError> {
-    Uuid::parse_str(id).map_err(|_| {
-        CustomErrorInner::BadRequest(format!("'{id}' is not a valid id"), ErrorSeverity::Warning)
-            .into()
-    })
 }
 
 fn favorite_repo() -> DieselFavoriteRepository {
@@ -254,9 +243,7 @@ impl PodcastService {
                                 &podcast,
                                 inserted_podcasts.clone(),
                             );
-                            if let Err(e) = Self::schedule_episode_download(&podcast) {
-                                tracing::error!("Error scheduling episode download: {e}");
-                            }
+                            Self::announce_refreshed(&podcast);
                         }
                         Err(e) => {
                             tracing::error!(
@@ -279,61 +266,20 @@ impl PodcastService {
         }
     }
 
-    #[tracing::instrument(skip_all, fields(podcast_id = podcast.id, podcast_name = %podcast.name))]
-    pub fn schedule_episode_download(podcast: &Podcast) -> Result<(), CustomError> {
-        let settings =
-            crate::services::settings::service::SettingsService::shared().get_settings()?;
-        let podcast_settings =
-            PodcastSettingsService::get_settings_for_podcast(parse_id(&podcast.id)?)?;
-        match settings {
-            Some(settings) => {
-                if podcast_settings.is_some_and(|s| s.auto_download) || settings.auto_download {
-                    let result =
-                        PodcastEpisodeService::get_last_n_podcast_episodes(podcast.clone())?;
-                    // Bound parallel downloads (and therefore inline Opus
-                    // transcodes) by the configured setting; never below 1.
-                    let max_parallel_downloads = settings.max_parallel_downloads.max(1) as usize;
-                    for chunk in result.chunks(max_parallel_downloads) {
-                        let mut handles = Vec::with_capacity(chunk.len());
-                        for podcast_episode in chunk.iter().cloned() {
-                            if podcast_episode.deleted {
-                                continue;
-                            }
-                            let podcast_for_thread = podcast.clone();
-                            handles.push(thread::spawn(move || {
-                                if let Err(err) = PodcastEpisodeService::download_podcast_episode_if_not_locally_available(
-                                    podcast_episode,
-                                    podcast_for_thread,
-                                ) {
-                                    tracing::error!("Error downloading podcast episode: {err}");
-                                }
-                            }));
-                        }
-
-                        for handle in handles {
-                            if let Err(err) = handle.join() {
-                                tracing::error!(
-                                    "Error joining download worker for podcast {}: {:?}",
-                                    podcast.id,
-                                    err
-                                );
-                            }
-                        }
-                    }
-                }
-                Ok(())
-            }
-            None => {
-                tracing::error!("Error getting settings");
-                Err(CustomErrorInner::Unknown(Critical).into())
-            }
-        }
-    }
-
     pub fn refresh_podcast(podcast: &Podcast) -> Result<(), CustomError> {
         tracing::info!("Refreshing podcast: {}", podcast.name);
         PodcastEpisodeService::insert_podcast_episodes(podcast)?;
-        Self::schedule_episode_download(podcast)
+        Self::announce_refreshed(podcast);
+        Ok(())
+    }
+
+    /// Tells the other contexts that the podcast's episodes were refreshed
+    /// from its feed; the media library then auto-downloads the latest ones.
+    pub fn announce_refreshed(podcast: &Podcast) {
+        crate::podcast_events::publish(&crate::podcast_events::PodcastRefreshed {
+            podcast_id: podcast.id.clone(),
+            podcast_name: podcast.name.clone(),
+        });
     }
 
     pub fn get_podcast_by_episode_id(id: Uuid) -> Result<Podcast, CustomError> {

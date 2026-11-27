@@ -322,4 +322,169 @@ mod tests {
         assert!(!episode_by_id(&id).deleted);
         assert_eq!(file_rows(), 0);
     }
+
+    fn set_auto_download(on: bool) {
+        let settings = app_state().settings_service.clone();
+        let mut current = settings.get_settings().unwrap().unwrap();
+        current.auto_download = on;
+        current.podcast_prefill = 5;
+        settings.update_settings(current).unwrap();
+    }
+
+    /// Delivers the pending events with `state`'s own handlers (each
+    /// `app_state()` has its own download queue), then waits until its
+    /// downloads are done.
+    async fn deliver_and_download(state: &crate::app_state::AppState) {
+        let processor = state.event_bus.spawn_processor();
+        for _ in 0..200 {
+            if delivery_status(podfetch_media::handlers::AUTO_DOWNLOAD_ON_PODCAST_REFRESHED)
+                .is_some_and(|s| s == "done")
+            {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+        }
+        processor.stop(std::time::Duration::from_secs(1)).await;
+        let queue = state.media.auto_download.queue().clone();
+        let idle = tokio::task::spawn_blocking(move || {
+            queue.wait_idle(std::time::Duration::from_secs(30))
+        })
+        .await
+        .unwrap();
+        assert!(idle, "downloads finish");
+    }
+
+    fn delivery_status(handler: &str) -> Option<String> {
+        app_state()
+            .event_bus
+            .deliveries(None, 500)
+            .unwrap()
+            .into_iter()
+            .find(|d| d.handler == handler)
+            .map(|d| d.status)
+    }
+
+    /// Catalog → event → media library → download: a refreshed podcast with
+    /// auto-download gets its episodes downloaded (here: attempted, the
+    /// enclosure is unreachable, which the download announces as failed).
+    /// Episodes the user deleted stay deleted.
+    #[tokio::test]
+    #[serial]
+    async fn a_refreshed_podcast_gets_its_episodes_downloaded() {
+        let _ts = handle_test_startup().await;
+        let state = app_state();
+        set_auto_download(true);
+        let podcast_id = podcast("auto");
+        episode_with(&podcast_id, "wanted", "http://127.0.0.1:9/wanted.mp3");
+        let deleted = episode_with(&podcast_id, "deleted", "http://127.0.0.1:9/deleted.mp3");
+        PodcastEpisodeUseCase::update_deleted(&deleted, true).unwrap();
+
+        crate::podcast_events::publish(&crate::podcast_events::PodcastRefreshed {
+            podcast_id: podcast_id.clone(),
+            podcast_name: "auto".into(),
+        });
+        deliver_and_download(&state).await;
+        assert_eq!(
+            delivery_status(podfetch_media::handlers::AUTO_DOWNLOAD_ON_PODCAST_REFRESHED)
+                .as_deref(),
+            Some("done")
+        );
+
+        let failed: Vec<String> = state
+            .event_bus
+            .deliveries(None, 500)
+            .unwrap()
+            .into_iter()
+            .filter(|d| d.event_type == "podcast.episode_download_failed")
+            .map(|d| d.aggregate_id)
+            .collect();
+        assert!(failed.contains(&"wanted".to_string()), "{failed:?}");
+        assert!(!failed.contains(&"deleted".to_string()), "{failed:?}");
+        set_auto_download(false);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn without_auto_download_a_refresh_downloads_nothing() {
+        let _ts = handle_test_startup().await;
+        let state = app_state();
+        set_auto_download(false);
+        let podcast_id = podcast("manual");
+        episode_with(&podcast_id, "manual-ep", "http://127.0.0.1:9/manual.mp3");
+
+        crate::podcast_events::publish(&crate::podcast_events::PodcastRefreshed {
+            podcast_id,
+            podcast_name: "manual".into(),
+        });
+        deliver_and_download(&state).await;
+
+        let attempted = state
+            .event_bus
+            .deliveries(None, 500)
+            .unwrap()
+            .into_iter()
+            .any(|d| d.event_type.starts_with("podcast.episode_download"));
+        assert!(!attempted);
+    }
+
+    /// Parallel downloads change the file state of different episodes at
+    /// the same time. On SQLite a transaction that reads before it writes
+    /// fails at once with "database is locked" when another connection
+    /// wrote in between (the busy timeout doesn't apply); `modify` must take
+    /// the write lock first.
+    #[tokio::test]
+    #[serial]
+    async fn concurrent_file_changes_do_not_lock_each_other_out() {
+        let _ts = handle_test_startup().await;
+        let podcast_id = podcast("parallel");
+        let ids: Vec<String> = (0..8)
+            .map(|i| {
+                episode_with(
+                    &podcast_id,
+                    &format!("par-{i}"),
+                    &format!("https://example.com/{i}.mp3"),
+                )
+            })
+            .collect();
+
+        let errors: Vec<String> = std::thread::scope(|scope| {
+            let workers: Vec<_> = ids
+                .iter()
+                .map(|id| {
+                    scope.spawn(move || {
+                        let files = DieselEpisodeFileRepository::new(database());
+                        let mut errors = Vec::new();
+                        for round in 0..25 {
+                            if let Err(err) = files.modify(id, &mut |f| {
+                                f.file_episode_path = Some(format!("{id}/{round}.mp3"));
+                            }) {
+                                errors.push(err.to_string());
+                            }
+                        }
+                        errors
+                    })
+                })
+                .collect();
+            workers
+                .into_iter()
+                .flat_map(|w| w.join().unwrap())
+                .collect()
+        });
+
+        assert!(
+            errors.is_empty(),
+            "{} failed: {:?}",
+            errors.len(),
+            errors.first()
+        );
+        for id in &ids {
+            let stored = DieselEpisodeFileRepository::new(database())
+                .find(id)
+                .unwrap();
+            assert_eq!(
+                stored.and_then(|f| f.file_episode_path),
+                Some(format!("{id}/24.mp3"))
+            );
+        }
+    }
 }

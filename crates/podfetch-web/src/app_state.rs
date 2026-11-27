@@ -266,6 +266,7 @@ impl AppState {
         }
         podfetch_audiobooks::handlers::subscribe(&event_bus, database.clone());
         podfetch_media::handlers::subscribe_user_cleanup(&event_bus, media.sponsorblock.clone());
+        podfetch_media::handlers::subscribe_auto_download(&event_bus, media.auto_download.clone());
         crate::podcast_events::install(event_bus.clone());
         let user_admin_service = Arc::new(UserAdminService::new(
             Arc::new(UserAdminRepositoryImpl::new(database.clone())),
