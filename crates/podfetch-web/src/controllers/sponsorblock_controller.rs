@@ -1,10 +1,10 @@
 use crate::app_state::AppState;
 use crate::controllers::podcast_episode_controller::resolve_episode_uuid;
-use axum::extract::Path;
+use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use common_infrastructure::error::CustomError;
 use podfetch_identity::api::Principal;
-use podfetch_persistence::sponsorblock::{SponsorblockRepository, SponsorblockUserSettingsEntity};
+use podfetch_media::sponsorblock::{SkipPreferences, SponsorSegment};
 use serde::{Deserialize, Serialize};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -36,52 +36,49 @@ pub struct SponsorblockUserSettingsDto {
     pub skip_music_offtopic: bool,
 }
 
-impl SponsorblockUserSettingsDto {
-    /// Factory defaults for a user with no stored row. These MUST match the DB
-    /// column defaults in the `2026-06-05-120000_sponsorblock` migration
-    /// (enabled + sponsor + selfpromo on, everything else off).
-    fn defaults() -> Self {
+impl From<SponsorSegment> for SponsorSegmentDto {
+    fn from(s: SponsorSegment) -> Self {
         Self {
-            enabled: true,
-            skip_sponsor: true,
-            skip_selfpromo: true,
-            skip_interaction: false,
-            skip_intro: false,
-            skip_outro: false,
-            skip_preview: false,
-            skip_filler: false,
-            skip_music_offtopic: false,
-        }
-    }
-
-    fn into_entity(self, user_id: String) -> SponsorblockUserSettingsEntity {
-        SponsorblockUserSettingsEntity {
-            user_id,
-            enabled: self.enabled,
-            skip_sponsor: self.skip_sponsor,
-            skip_selfpromo: self.skip_selfpromo,
-            skip_interaction: self.skip_interaction,
-            skip_intro: self.skip_intro,
-            skip_outro: self.skip_outro,
-            skip_preview: self.skip_preview,
-            skip_filler: self.skip_filler,
-            skip_music_offtopic: self.skip_music_offtopic,
+            uuid: s.uuid,
+            category: s.category,
+            action_type: s.action_type,
+            start_ms: s.start_ms,
+            end_ms: s.end_ms,
+            votes: s.votes,
+            locked: s.locked,
+            duration_mismatch: s.duration_mismatch,
         }
     }
 }
 
-impl From<SponsorblockUserSettingsEntity> for SponsorblockUserSettingsDto {
-    fn from(e: SponsorblockUserSettingsEntity) -> Self {
+impl From<SkipPreferences> for SponsorblockUserSettingsDto {
+    fn from(p: SkipPreferences) -> Self {
         Self {
-            enabled: e.enabled,
-            skip_sponsor: e.skip_sponsor,
-            skip_selfpromo: e.skip_selfpromo,
-            skip_interaction: e.skip_interaction,
-            skip_intro: e.skip_intro,
-            skip_outro: e.skip_outro,
-            skip_preview: e.skip_preview,
-            skip_filler: e.skip_filler,
-            skip_music_offtopic: e.skip_music_offtopic,
+            enabled: p.enabled,
+            skip_sponsor: p.skip_sponsor,
+            skip_selfpromo: p.skip_selfpromo,
+            skip_interaction: p.skip_interaction,
+            skip_intro: p.skip_intro,
+            skip_outro: p.skip_outro,
+            skip_preview: p.skip_preview,
+            skip_filler: p.skip_filler,
+            skip_music_offtopic: p.skip_music_offtopic,
+        }
+    }
+}
+
+impl From<SponsorblockUserSettingsDto> for SkipPreferences {
+    fn from(d: SponsorblockUserSettingsDto) -> Self {
+        Self {
+            enabled: d.enabled,
+            skip_sponsor: d.skip_sponsor,
+            skip_selfpromo: d.skip_selfpromo,
+            skip_interaction: d.skip_interaction,
+            skip_intro: d.skip_intro,
+            skip_outro: d.skip_outro,
+            skip_preview: d.skip_preview,
+            skip_filler: d.skip_filler,
+            skip_music_offtopic: d.skip_music_offtopic,
         }
     }
 }
@@ -102,29 +99,19 @@ pub struct SponsorblockEpisodeResponse {
     tag = "sponsorblock"
 )]
 pub async fn get_episode_sponsorblock(
+    State(state): State<AppState>,
     Path(id): Path<String>,
     Extension(requester): Extension<Principal>,
 ) -> Result<Json<SponsorblockEpisodeResponse>, CustomError> {
     let episode_id = resolve_episode_uuid(&id)?.to_string();
+    let sponsorblock = &state.sponsorblock_service;
 
-    let segments = SponsorblockRepository::get_segments_for_episode(&episode_id)?
+    let segments = sponsorblock
+        .segments(&episode_id)?
         .into_iter()
-        .map(|e| SponsorSegmentDto {
-            uuid: e.uuid,
-            category: e.category,
-            action_type: e.action_type,
-            start_ms: e.start_ms,
-            end_ms: e.end_ms,
-            votes: e.votes,
-            locked: e.locked,
-            duration_mismatch: e.duration_mismatch,
-        })
+        .map(Into::into)
         .collect();
-
-    let preferences = match SponsorblockRepository::get_user_settings(&requester.id.to_string())? {
-        Some(e) => e.into(),
-        None => SponsorblockUserSettingsDto::defaults(),
-    };
+    let preferences = sponsorblock.preferences(requester.id)?.into();
 
     Ok(Json(SponsorblockEpisodeResponse {
         segments,
@@ -141,13 +128,11 @@ pub async fn get_episode_sponsorblock(
     tag = "sponsorblock"
 )]
 pub async fn get_sponsorblock_settings(
+    State(state): State<AppState>,
     Extension(requester): Extension<Principal>,
 ) -> Result<Json<SponsorblockUserSettingsDto>, CustomError> {
-    let prefs = match SponsorblockRepository::get_user_settings(&requester.id.to_string())? {
-        Some(e) => e.into(),
-        None => SponsorblockUserSettingsDto::defaults(),
-    };
-    Ok(Json(prefs))
+    let preferences = state.sponsorblock_service.preferences(requester.id)?;
+    Ok(Json(preferences.into()))
 }
 
 #[utoipa::path(
@@ -160,12 +145,13 @@ pub async fn get_sponsorblock_settings(
     tag = "sponsorblock"
 )]
 pub async fn update_sponsorblock_settings(
+    State(state): State<AppState>,
     Extension(requester): Extension<Principal>,
     Json(body): Json<SponsorblockUserSettingsDto>,
 ) -> Result<Json<SponsorblockUserSettingsDto>, CustomError> {
-    SponsorblockRepository::upsert_user_settings(
-        body.clone().into_entity(requester.id.to_string()),
-    )?;
+    state
+        .sponsorblock_service
+        .save_preferences(requester.id, &body.clone().into())?;
     Ok(Json(body))
 }
 

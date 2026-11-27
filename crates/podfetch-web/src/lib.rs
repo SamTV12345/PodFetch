@@ -9,6 +9,7 @@ pub mod history;
 pub mod library;
 pub mod listening;
 pub mod manifest;
+pub mod media;
 pub mod playlist;
 pub mod podcast;
 pub mod podcast_episode;
@@ -61,6 +62,7 @@ mod gpodder_tests;
 mod identity_tests;
 mod library_tests;
 mod listening_tests;
+mod media_tests;
 
 // File access API adapter
 pub mod api_file_access;

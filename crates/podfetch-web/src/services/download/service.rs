@@ -372,7 +372,7 @@ impl DownloadService {
 
         // SponsorBlock: fetch + store segments for YouTube-sourced episodes.
         // Non-fatal — must never fail the download.
-        match crate::services::sponsorblock::service::fetch_and_store_blocking(&podcast_episode) {
+        match crate::media::fetch_sponsor_segments_blocking(&podcast_episode) {
             Ok(n) if n > 0 => tracing::info!(
                 "Stored {n} SponsorBlock segments for episode {}",
                 podcast_episode.id

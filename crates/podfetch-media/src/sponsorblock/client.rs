@@ -1,10 +1,10 @@
-//! Thin SponsorBlock API client built on the project's existing async reqwest
-//! client. Uses the privacy-preserving hash-prefix endpoint so the exact video
-//! ID never leaves this server.
+//! Thin SponsorBlock API client. Uses the privacy-preserving hash-prefix
+//! endpoint so the exact video ID never leaves this server.
 
-use common_infrastructure::error::{CustomError, map_reqwest_error};
-use common_infrastructure::http::{COMMON_USER_AGENT, get_http_client};
-use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
+use common_infrastructure::error::{
+    CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error,
+};
+use common_infrastructure::http::COMMON_USER_AGENT;
 use reqwest::header::USER_AGENT;
 use serde::Deserialize;
 
@@ -65,9 +65,9 @@ struct RawSegment {
 /// whose category is supported. Pure function — unit tested without network.
 pub fn parse_hash_response(body: &str, video_id: &str) -> Result<Vec<FetchedSegment>, CustomError> {
     let videos: Vec<RawVideo> = serde_json::from_str(body).map_err(|e| {
-        common_infrastructure::error::CustomErrorInner::Conflict(
+        CustomErrorInner::Conflict(
             format!("Failed to parse SponsorBlock response: {e}"),
-            common_infrastructure::error::ErrorSeverity::Warning,
+            ErrorSeverity::Warning,
         )
     })?;
 
@@ -100,45 +100,66 @@ pub fn parse_hash_response(body: &str, video_id: &str) -> Result<Vec<FetchedSegm
     Ok(out)
 }
 
-/// Base URL, overridable via `SPONSORBLOCK_API_URL` for self-hosted mirrors.
-fn base_url() -> String {
-    std::env::var("SPONSORBLOCK_API_URL").unwrap_or_else(|_| "https://sponsor.ajay.app".to_string())
+const DEFAULT_BASE_URL: &str = "https://sponsor.ajay.app";
+
+/// Talks to the SponsorBlock API.
+#[derive(Clone)]
+pub struct SponsorblockClient {
+    http: reqwest::Client,
+    base_url: String,
 }
 
-/// Query SponsorBlock for one video. Returns an empty Vec on 404 (no data).
-pub async fn fetch_segments(video_id: &str) -> Result<Vec<FetchedSegment>, CustomError> {
-    let hash = sha256::digest(video_id);
-    let prefix = &hash[..4];
-    let categories = serde_json::to_string(&SUPPORTED_CATEGORIES).unwrap();
-    let url = format!("{}/api/skipSegments/{}", base_url(), prefix);
-
-    let client = get_http_client(&ENVIRONMENT_SERVICE);
-
-    let resp = client
-        .get(&url)
-        .timeout(std::time::Duration::from_secs(10))
-        .header(USER_AGENT, COMMON_USER_AGENT)
-        .query(&[
-            ("categories", categories.as_str()),
-            ("actionTypes", "[\"skip\"]"),
-        ])
-        .send()
-        .await
-        .map_err(map_reqwest_error)?;
-
-    if resp.status() == reqwest::StatusCode::NOT_FOUND {
-        return Ok(Vec::new());
-    }
-    if !resp.status().is_success() {
-        return Err(common_infrastructure::error::CustomErrorInner::Conflict(
-            format!("SponsorBlock returned status {}", resp.status()),
-            common_infrastructure::error::ErrorSeverity::Warning,
-        )
-        .into());
+impl SponsorblockClient {
+    /// A client for the public API, or the mirror in `SPONSORBLOCK_API_URL`
+    /// (for self-hosted instances).
+    pub fn new(http: reqwest::Client) -> Self {
+        let base_url =
+            std::env::var("SPONSORBLOCK_API_URL").unwrap_or_else(|_| DEFAULT_BASE_URL.to_string());
+        Self::with_base_url(http, base_url)
     }
 
-    let body = resp.text().await.map_err(map_reqwest_error)?;
-    parse_hash_response(&body, video_id)
+    pub fn with_base_url(http: reqwest::Client, base_url: impl Into<String>) -> Self {
+        Self {
+            http,
+            base_url: base_url.into(),
+        }
+    }
+
+    /// Queries SponsorBlock for one video. Returns an empty Vec on 404 (no
+    /// data).
+    pub async fn fetch_segments(&self, video_id: &str) -> Result<Vec<FetchedSegment>, CustomError> {
+        let hash = sha256::digest(video_id);
+        let prefix = &hash[..4];
+        let categories = serde_json::to_string(&SUPPORTED_CATEGORIES).unwrap_or_default();
+        let url = format!("{}/api/skipSegments/{}", self.base_url, prefix);
+
+        let resp = self
+            .http
+            .get(&url)
+            .timeout(std::time::Duration::from_secs(10))
+            .header(USER_AGENT, COMMON_USER_AGENT)
+            .query(&[
+                ("categories", categories.as_str()),
+                ("actionTypes", "[\"skip\"]"),
+            ])
+            .send()
+            .await
+            .map_err(map_reqwest_error)?;
+
+        if resp.status() == reqwest::StatusCode::NOT_FOUND {
+            return Ok(Vec::new());
+        }
+        if !resp.status().is_success() {
+            return Err(CustomErrorInner::Conflict(
+                format!("SponsorBlock returned status {}", resp.status()),
+                ErrorSeverity::Warning,
+            )
+            .into());
+        }
+
+        let body = resp.text().await.map_err(map_reqwest_error)?;
+        parse_hash_response(&body, video_id)
+    }
 }
 
 #[cfg(test)]
