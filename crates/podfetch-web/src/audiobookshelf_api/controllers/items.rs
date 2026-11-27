@@ -55,8 +55,9 @@ pub async fn list_library_items(
             podcasts
                 .into_iter()
                 .map(|podcast_entity| {
-                    let domain_podcast: podfetch_domain::podcast::Podcast = podcast_entity.into();
-                    let episodes: Vec<podfetch_domain::podcast_episode::PodcastEpisode> =
+                    let domain_podcast: podfetch_catalog::domain::podcast::Podcast =
+                        podcast_entity.into();
+                    let episodes: Vec<podfetch_catalog::domain::podcast_episode::PodcastEpisode> =
                         PodcastEpisodeService::get_episodes_by_podcast_id(domain_podcast.id)
                             .unwrap_or_default()
                             .into_iter()
@@ -113,8 +114,8 @@ pub async fn get_library_item(
             // Accept legacy `li_pod_{int}` as well as `li_pod_{uuid}`.
             let podcast_id = resolve_podcast_library_item(&id)?;
             let podcast_entity = PodcastService::get_podcast(podcast_id)?;
-            let domain_podcast: podfetch_domain::podcast::Podcast = podcast_entity.into();
-            let episodes: Vec<podfetch_domain::podcast_episode::PodcastEpisode> =
+            let domain_podcast: podfetch_catalog::domain::podcast::Podcast = podcast_entity.into();
+            let episodes: Vec<podfetch_catalog::domain::podcast_episode::PodcastEpisode> =
                 PodcastEpisodeService::get_episodes_by_podcast_id(podcast_id)?
                     .into_iter()
                     .map(Into::into)
@@ -157,7 +158,7 @@ pub async fn get_item_cover(
             // Accept legacy `li_pod_{int}` as well as `li_pod_{uuid}`.
             let pid = resolve_podcast_library_item(&id)?;
             let podcast_entity = PodcastService::get_podcast(pid)?;
-            let podcast: podfetch_domain::podcast::Podcast = podcast_entity.into();
+            let podcast: podfetch_catalog::domain::podcast::Podcast = podcast_entity.into();
             serve_podcast_cover(&podcast).await
         }
         LibraryItemKind::Book => {
@@ -183,7 +184,7 @@ pub async fn get_item_cover(
 /// 3. `podcast.image_url` als URL (redirect)
 /// 4. `podcast.original_image_url` als URL (redirect) — RSS-Feed-Cover
 async fn serve_podcast_cover(
-    podcast: &podfetch_domain::podcast::Podcast,
+    podcast: &podfetch_catalog::domain::podcast::Podcast,
 ) -> Result<Response, CustomError> {
     for candidate in [
         PathBuf::from(&podcast.image_url),
@@ -261,7 +262,7 @@ pub async fn get_item_file(
             let _ = PodcastService::get_podcast(podcast_id)?;
             let episode = PodcastEpisodeService::get_episodes_by_podcast_id(podcast_id)?
                 .into_iter()
-                .map(podfetch_domain::podcast_episode::PodcastEpisode::from)
+                .map(podfetch_catalog::domain::podcast_episode::PodcastEpisode::from)
                 .find(|e| e.id == episode_db_id)
                 .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
             // Local downloaded file wins; if PodFetch never downloaded this

@@ -178,7 +178,7 @@ pub struct UpsertPodcastEpisodeChapter {
 }
 
 impl From<UpsertPodcastEpisodeChapter>
-    for podfetch_domain::podcast_episode_chapter::UpsertPodcastEpisodeChapter
+    for podfetch_catalog::domain::chapter::UpsertPodcastEpisodeChapter
 {
     fn from(value: UpsertPodcastEpisodeChapter) -> Self {
         Self {

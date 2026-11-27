@@ -14,12 +14,11 @@ use crate::services::transcript::service::TranscriptService;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase;
 use crate::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
 use common_infrastructure::error::CustomError;
-use podfetch_domain::podcast_episode_chapter::PodcastEpisodeChapterRepository;
+use podfetch_catalog::domain::chapter::PodcastEpisodeChapterRepository;
+use podfetch_catalog::persistence::chapter::PodcastEpisodeChapterRepositoryImpl;
 use podfetch_domain::podcast_settings::PodcastSettingsRepository;
 use podfetch_library::services::podcast_removal::LibraryPodcastRemoval;
-use podfetch_persistence::adapters::{
-    PodcastEpisodeChapterRepositoryImpl, PodcastSettingsRepositoryImpl,
-};
+use podfetch_persistence::adapters::PodcastSettingsRepositoryImpl;
 use podfetch_persistence::db::database;
 use uuid::Uuid;
 
@@ -65,7 +64,7 @@ pub fn remove_podcast(state: &AppState, podcast_id: Uuid) -> Result<(), CustomEr
     PodcastEpisodeUseCase::delete_episodes_of_podcast(podcast_id)?;
     PodcastService::delete_podcast(podcast_id)?;
 
-    crate::podcast_events::publish(&crate::podcast_events::PodcastRemoved {
+    crate::podcast_events::publish(&podfetch_catalog::events::PodcastRemoved {
         podcast_id: podcast.id,
         podcast_name: podcast.name,
         rssfeed: podcast.rssfeed,

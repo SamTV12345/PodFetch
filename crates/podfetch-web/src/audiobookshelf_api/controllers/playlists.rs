@@ -423,8 +423,9 @@ pub fn expand_playlist(playlist: &Playlist, library_id: &str) -> Result<Value, C
         let episode_uuid = Uuid::parse_str(&episode.id)
             .map_err(|_| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
         let podcast = PodcastService::get_podcast_by_episode_id(episode_uuid)?;
-        let podcast_domain: podfetch_domain::podcast::Podcast = podcast.into();
-        let episode_domain: podfetch_domain::podcast_episode::PodcastEpisode = episode.into();
+        let podcast_domain: podfetch_catalog::domain::podcast::Podcast = podcast.into();
+        let episode_domain: podfetch_catalog::domain::podcast_episode::PodcastEpisode =
+            episode.into();
         let library_item_id = LibraryItemId::Podcast(podcast_domain.id).as_string();
         let episode_id_str = EpisodeId(episode_domain.id).as_string();
         // The "minified" libraryItem upstream lacks `media.episodes`; we

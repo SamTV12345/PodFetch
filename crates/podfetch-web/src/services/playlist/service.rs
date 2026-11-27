@@ -6,12 +6,12 @@ use crate::podcast_episode_dto::PodcastEpisodeDto;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use crate::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
 use common_infrastructure::error::CustomError;
+use podfetch_catalog::persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use podfetch_identity::api::Principal;
 use podfetch_library::domain::playlist::{Playlist, PlaylistItem, PlaylistRepository};
 use podfetch_library::persistence::PlaylistRepositoryImpl;
 use podfetch_listening::domain::episode::Episode;
 use podfetch_persistence::db::database;
-use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use std::sync::Arc;
 use uuid::Uuid;
 

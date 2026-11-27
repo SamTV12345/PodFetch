@@ -30,6 +30,7 @@ use podfetch_casting::agent::registry::AgentRegistry;
 use podfetch_casting::dto::ServerCastOrchestrator;
 use podfetch_casting::mopidy::driver::{MopidyDriver, MopidyEvent};
 use podfetch_casting::orchestrator::CastOrchestrator;
+use podfetch_catalog::persistence::chapter::PodcastEpisodeChapterRepositoryImpl;
 use podfetch_gpodder::persistence::DeviceRepositoryImpl;
 use podfetch_gpodder::persistence::DeviceSyncGroupRepositoryImpl;
 use podfetch_gpodder::persistence::GpodderSettingRepositoryImpl;
@@ -59,7 +60,6 @@ use podfetch_listening::persistence::ListeningEventRepositoryImpl;
 use podfetch_listening::services::stats::StatsService;
 use podfetch_notifications::persistence::NotificationRepositoryImpl;
 use podfetch_notifications::service::NotificationService;
-use podfetch_persistence::adapters::PodcastEpisodeChapterRepositoryImpl;
 use podfetch_persistence::adapters::PodcastEpisodeTranscriptRepositoryImpl;
 use podfetch_persistence::adapters::PodcastSettingsRepositoryImpl;
 use podfetch_persistence::adapters::SettingsRepositoryImpl;
@@ -100,6 +100,7 @@ pub struct AppState {
     pub session_service: Arc<SessionService>,
     pub settings_service: Arc<SettingsService>,
     pub media: crate::media::MediaServices,
+    pub catalog: Arc<dyn podfetch_catalog::api::CatalogApi>,
     pub stats_service: Arc<StatsService>,
     pub subscription_service: Arc<SubscriptionService>,
     pub tag_service: Arc<TagService>,
@@ -176,6 +177,8 @@ impl AppState {
         let settings_service = Arc::new(SettingsService::new(Arc::new(
             SettingsRepositoryImpl::new(database.clone()),
         )));
+        let catalog: Arc<dyn podfetch_catalog::api::CatalogApi> =
+            Arc::new(podfetch_catalog::api::LocalCatalog::new(database.clone()));
         let media = crate::media::MediaServices::build(
             database.clone(),
             environment.clone(),
@@ -255,13 +258,13 @@ impl AppState {
         podfetch_library::handlers::subscribe_favorite_sync(
             &event_bus,
             favorites,
-            Arc::new(crate::catalog_ports::CatalogFeeds),
+            Arc::new(crate::catalog_ports::CatalogFeeds(catalog.clone())),
         );
         if environment.gpodder_integration_enabled {
             podfetch_gpodder::handlers::subscribe_favorite_sync(
                 &event_bus,
                 subscription_service.clone(),
-                Arc::new(crate::catalog_ports::CatalogFeeds),
+                Arc::new(crate::catalog_ports::CatalogFeeds(catalog.clone())),
             );
         }
         podfetch_audiobooks::handlers::subscribe(&event_bus, database.clone());
@@ -357,6 +360,7 @@ impl AppState {
             session_service,
             settings_service,
             media,
+            catalog,
             stats_service,
             subscription_service,
             tag_service,

@@ -99,13 +99,13 @@ pub async fn get_recent_episodes(
     // for sorting and fall back to download_time.
     let podcasts = PodcastService::get_all_podcasts_raw()?;
     let mut episodes_with_podcast: Vec<(
-        podfetch_domain::podcast::Podcast,
-        podfetch_domain::podcast_episode::PodcastEpisode,
+        podfetch_catalog::domain::podcast::Podcast,
+        podfetch_catalog::domain::podcast_episode::PodcastEpisode,
         i64,
     )> = Vec::new();
     for podcast_entity in podcasts {
-        let domain_podcast: podfetch_domain::podcast::Podcast = podcast_entity.into();
-        let eps: Vec<podfetch_domain::podcast_episode::PodcastEpisode> =
+        let domain_podcast: podfetch_catalog::domain::podcast::Podcast = podcast_entity.into();
+        let eps: Vec<podfetch_catalog::domain::podcast_episode::PodcastEpisode> =
             PodcastEpisodeService::get_episodes_by_podcast_id(domain_podcast.id)
                 .unwrap_or_default()
                 .into_iter()
@@ -149,7 +149,7 @@ pub async fn get_recent_episodes(
     })))
 }
 
-fn parse_episode_timestamp(ep: &podfetch_domain::podcast_episode::PodcastEpisode) -> i64 {
+fn parse_episode_timestamp(ep: &podfetch_catalog::domain::podcast_episode::PodcastEpisode) -> i64 {
     if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(&ep.date_of_recording) {
         return dt.timestamp_millis();
     }

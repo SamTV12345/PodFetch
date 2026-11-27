@@ -61,7 +61,7 @@ pub async fn serve_track(
             let _ = PodcastService::get_podcast(podcast_id)?;
             let episode = PodcastEpisodeService::get_episodes_by_podcast_id(podcast_id)?
                 .into_iter()
-                .map(podfetch_domain::podcast_episode::PodcastEpisode::from)
+                .map(podfetch_catalog::domain::podcast_episode::PodcastEpisode::from)
                 .find(|e| e.id == episode_id.0)
                 .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
             episode

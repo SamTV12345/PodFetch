@@ -9,6 +9,8 @@ use crate::watchtime::{
 };
 use chrono::{NaiveDateTime, Utc};
 use common_infrastructure::error::CustomError;
+use podfetch_catalog::persistence::podcast::PodcastEntity as Podcast;
+use podfetch_catalog::persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use podfetch_identity::api::Principal;
 use podfetch_identity::persistence::adapters::UserAdminRepositoryImpl;
 use podfetch_library::domain::favorite_podcast_episode::FavoritePodcastEpisode;
@@ -17,8 +19,6 @@ use podfetch_listening::domain::episode::{EpisodeRepository, Listener, NewEpisod
 use podfetch_listening::domain::listening_event::NewListeningEvent;
 use podfetch_listening::persistence::episode::DieselEpisodeRepository;
 use podfetch_persistence::db::database;
-use podfetch_persistence::podcast::PodcastEntity as Podcast;
-use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use std::sync::Arc;
 
 use common_infrastructure::error::CustomErrorInner;

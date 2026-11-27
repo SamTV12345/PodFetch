@@ -57,7 +57,13 @@ static PROXY_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
 /// loaded podcast, returning the canonical `Uuid` alongside it.
 fn resolve_podcast(
     id: &str,
-) -> Result<(uuid::Uuid, podfetch_persistence::podcast::PodcastEntity), CustomError> {
+) -> Result<
+    (
+        uuid::Uuid,
+        podfetch_catalog::persistence::podcast::PodcastEntity,
+    ),
+    CustomError,
+> {
     let podcast = match parse_resolved_id(id)? {
         ResolvedId::Uuid(uuid) => PodcastService::get_podcast(uuid)?,
         ResolvedId::Legacy(legacy) => PodcastService::get_podcast_by_legacy_id(legacy)?,
@@ -598,7 +604,7 @@ async fn import_opml_feed(feed_url: String, added_by: Option<uuid::Uuid>) {
 async fn fetch_and_insert_feed(
     feed_url: &str,
     added_by: Option<uuid::Uuid>,
-) -> Result<podfetch_persistence::podcast::PodcastEntity, CustomError> {
+) -> Result<podfetch_catalog::persistence::podcast::PodcastEntity, CustomError> {
     let body = get_http_client(&ENVIRONMENT_SERVICE)
         .get(feed_url)
         .send()

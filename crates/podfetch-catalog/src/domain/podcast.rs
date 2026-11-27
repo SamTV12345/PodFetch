@@ -1,4 +1,4 @@
-use crate::ordering::{OrderCriteria, OrderOption};
+use crate::domain::ordering::{OrderCriteria, OrderOption};
 use uuid::Uuid;
 
 /// A podcast in the system - technology-agnostic domain entity.

@@ -163,8 +163,8 @@ pub async fn create_podcast(
                 common_infrastructure::error::ErrorSeverity::Debug,
             ))
         })?;
-    let podcast: podfetch_domain::podcast::Podcast = inserted.into();
-    let episodes: Vec<podfetch_domain::podcast_episode::PodcastEpisode> =
+    let podcast: podfetch_catalog::domain::podcast::Podcast = inserted.into();
+    let episodes: Vec<podfetch_catalog::domain::podcast_episode::PodcastEpisode> =
         PodcastEpisodeService::get_episodes_by_podcast_id(podcast.id)?
             .into_iter()
             .map(Into::into)

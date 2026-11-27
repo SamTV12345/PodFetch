@@ -57,9 +57,9 @@ mod tests {
     use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
     use diesel::ExpressionMethods;
     use diesel::RunQueryDsl;
+    use podfetch_catalog::persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
     use podfetch_listening::domain::listening_event::NewListeningEvent;
     use podfetch_persistence::db::get_connection;
-    use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
     use podfetch_persistence::schema::podcast_episodes::dsl as pe_dsl;
     use serde::Deserialize;
     use serde_json::Value;

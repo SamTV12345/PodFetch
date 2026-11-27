@@ -3259,6 +3259,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "podfetch-catalog"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "common-infrastructure",
+ "diesel",
+ "podfetch-events",
+ "serde",
+ "serde_json",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "podfetch-domain"
 version = "0.1.0"
 dependencies = [
@@ -3471,6 +3485,7 @@ dependencies = [
  "podfetch-audiobooks",
  "podfetch-cast",
  "podfetch-casting",
+ "podfetch-catalog",
  "podfetch-domain",
  "podfetch-events",
  "podfetch-gpodder",

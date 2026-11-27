@@ -12,8 +12,8 @@
 
 use chrono::{NaiveDateTime, Utc};
 use podfetch_audiobooks::domain::library_item_id::{EpisodeId, LibraryItemId};
-use podfetch_domain::podcast::Podcast;
-use podfetch_domain::podcast_episode::PodcastEpisode;
+use podfetch_catalog::domain::podcast::Podcast;
+use podfetch_catalog::domain::podcast_episode::PodcastEpisode;
 use serde_json::{Value, json};
 use std::path::Path;
 

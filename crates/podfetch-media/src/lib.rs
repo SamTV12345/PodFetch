@@ -12,6 +12,7 @@ pub mod audio;
 pub mod auto_download;
 pub mod catalog;
 pub mod download;
+pub mod events;
 pub mod files;
 pub mod handlers;
 pub mod images;

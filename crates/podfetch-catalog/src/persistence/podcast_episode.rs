@@ -1,12 +1,12 @@
-use crate::db::{Database, PersistenceError};
+use crate::domain::podcast_episode::{
+    EpisodeFilter, NewPodcastEpisode, PodcastEpisode, PodcastEpisodeRepository,
+};
 use chrono::{Duration, NaiveDateTime, Utc};
+use common_infrastructure::db::{Database, PersistenceError};
 use diesel::prelude::*;
 use diesel::{
     BoolExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl,
     TextExpressionMethods,
-};
-use podfetch_domain::podcast_episode::{
-    EpisodeFilter, NewPodcastEpisode, PodcastEpisode, PodcastEpisodeRepository,
 };
 use uuid::Uuid;
 
@@ -241,7 +241,7 @@ impl From<&PodcastEpisode> for PodcastEpisodeEntity {
 impl From<NewPodcastEpisode> for NewPodcastEpisodeEntity {
     fn from(episode: NewPodcastEpisode) -> Self {
         Self {
-            id: podfetch_domain::ids::new_id().to_string(),
+            id: Uuid::now_v7().to_string(),
             legacy_id: None,
             podcast_id: episode.podcast_id.to_string(),
             episode_id: episode.episode_id,

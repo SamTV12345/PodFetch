@@ -761,9 +761,9 @@ fn insert_test_podcast(
     name: &str,
     _state: &AppState,
     user_id: uuid::Uuid,
-) -> podfetch_persistence::podcast::PodcastEntity {
-    use podfetch_domain::podcast::{NewPodcast, PodcastRepository};
-    use podfetch_persistence::podcast::DieselPodcastRepository;
+) -> podfetch_catalog::persistence::podcast::PodcastEntity {
+    use podfetch_catalog::domain::podcast::{NewPodcast, PodcastRepository};
+    use podfetch_catalog::persistence::podcast::DieselPodcastRepository;
 
     let repo = DieselPodcastRepository::new(podfetch_persistence::db::database());
     let new = NewPodcast {
@@ -775,7 +775,7 @@ fn insert_test_podcast(
         added_by: Some(user_id),
     };
     let created = repo.create(new).expect("create podcast");
-    podfetch_persistence::podcast::PodcastEntity {
+    podfetch_catalog::persistence::podcast::PodcastEntity {
         id: created.id.to_string(),
         legacy_id: created.legacy_id,
         name: created.name,
@@ -800,7 +800,7 @@ fn insert_test_podcast(
 fn insert_test_episode(
     podcast_id: &str,
     title: &str,
-) -> podfetch_domain::podcast_episode::PodcastEpisode {
+) -> podfetch_catalog::domain::podcast_episode::PodcastEpisode {
     insert_test_episode_with_path(podcast_id, title, "/tmp/nonexistent.mp3")
 }
 
@@ -808,10 +808,10 @@ fn insert_test_episode_with_path(
     podcast_id: &str,
     title: &str,
     file_path: &str,
-) -> podfetch_domain::podcast_episode::PodcastEpisode {
+) -> podfetch_catalog::domain::podcast_episode::PodcastEpisode {
     use chrono::Utc;
-    use podfetch_domain::podcast_episode::{NewPodcastEpisode, PodcastEpisodeRepository};
-    use podfetch_persistence::podcast_episode::DieselPodcastEpisodeRepository;
+    use podfetch_catalog::domain::podcast_episode::{NewPodcastEpisode, PodcastEpisodeRepository};
+    use podfetch_catalog::persistence::podcast_episode::DieselPodcastEpisodeRepository;
 
     let repo = DieselPodcastEpisodeRepository::new(podfetch_persistence::db::database());
     let new = NewPodcastEpisode {
@@ -826,7 +826,7 @@ fn insert_test_episode_with_path(
         guid: format!("guid-{}", uuid::Uuid::new_v4().simple()),
         youtube_video_id: None,
     };
-    let created: podfetch_domain::podcast_episode::PodcastEpisode =
+    let created: podfetch_catalog::domain::podcast_episode::PodcastEpisode =
         repo.create(new).expect("create episode");
     crate::test_support::tests::change_episode_files(&created.into(), |e| {
         e.file_episode_path = Some(file_path.to_string());
@@ -845,8 +845,8 @@ fn generate_pseudo_audio_bytes(len: usize) -> Vec<u8> {
 /// `diesel::MultiConnection`, so this runs against sqlite + postgres alike.
 fn set_podcast_legacy_id(podcast_uuid: &str, legacy: i64) {
     use diesel::prelude::*;
+    use podfetch_catalog::persistence::podcast::podcasts;
     use podfetch_persistence::db::database;
-    use podfetch_persistence::podcast::podcasts;
     let db = database();
     let mut conn = db.connection().expect("db connection");
     diesel::update(podcasts::table.filter(podcasts::id.eq(podcast_uuid.to_string())))
@@ -858,8 +858,8 @@ fn set_podcast_legacy_id(podcast_uuid: &str, legacy: i64) {
 /// Stamps a pre-migration integer `legacy_id` directly onto the episode row.
 fn set_episode_legacy_id(episode_uuid: &str, legacy: i64) {
     use diesel::prelude::*;
+    use podfetch_catalog::persistence::podcast_episode::podcast_episodes;
     use podfetch_persistence::db::database;
-    use podfetch_persistence::podcast_episode::podcast_episodes;
     let db = database();
     let mut conn = db.connection().expect("db connection");
     diesel::update(
@@ -1017,9 +1017,9 @@ async fn podcast_cover_redirects_to_remote_url_when_no_local_file() {
     let user = create_user_for_audiobookshelf(&state);
     // Use the repository directly so we can set original_image_url to a
     // proper https URL (the test podcast helper uses fake bookkeeping).
-    use podfetch_domain::podcast::{NewPodcast, PodcastRepository};
+    use podfetch_catalog::domain::podcast::{NewPodcast, PodcastRepository};
+    use podfetch_catalog::persistence::podcast::DieselPodcastRepository;
     use podfetch_persistence::db::database;
-    use podfetch_persistence::podcast::DieselPodcastRepository;
     let repo = DieselPodcastRepository::new(database());
     let created = repo
         .create(NewPodcast {
@@ -1561,7 +1561,7 @@ fn insert_test_podcast_named(
     name: &str,
     state: &AppState,
     user_id: uuid::Uuid,
-) -> podfetch_persistence::podcast::PodcastEntity {
+) -> podfetch_catalog::persistence::podcast::PodcastEntity {
     insert_test_podcast(name, state, user_id)
 }
 
@@ -3140,8 +3140,8 @@ async fn regular_user_cannot_subscribe_the_server_to_feeds() {
         .await;
     assert_eq!(native.status_code().as_u16(), 403);
 
-    use podfetch_domain::podcast::PodcastRepository;
-    let added = podfetch_persistence::podcast::DieselPodcastRepository::new(
+    use podfetch_catalog::domain::podcast::PodcastRepository;
+    let added = podfetch_catalog::persistence::podcast::DieselPodcastRepository::new(
         podfetch_persistence::db::database(),
     )
     .count_by_added_by(user.id)

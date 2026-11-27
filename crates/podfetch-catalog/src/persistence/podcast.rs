@@ -1,10 +1,10 @@
-use crate::db::{Database, PersistenceError};
-use diesel::prelude::*;
-use diesel::{ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, RunQueryDsl};
-use podfetch_domain::ordering::{OrderCriteria, OrderOption};
-use podfetch_domain::podcast::{
+use crate::domain::ordering::{OrderCriteria, OrderOption};
+use crate::domain::podcast::{
     NewPodcast, Podcast, PodcastMetadataUpdate, PodcastQuery, PodcastRepository,
 };
+use common_infrastructure::db::{Database, PersistenceError};
+use diesel::prelude::*;
+use diesel::{ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
 diesel::table! {
@@ -142,7 +142,7 @@ impl From<Podcast> for PodcastEntity {
 impl From<NewPodcast> for NewPodcastEntity {
     fn from(podcast: NewPodcast) -> Self {
         Self {
-            id: podfetch_domain::ids::new_id().to_string(),
+            id: Uuid::now_v7().to_string(),
             legacy_id: None,
             name: podcast.name,
             directory_id: podcast.directory_id,

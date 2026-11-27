@@ -2,46 +2,6 @@ use crate::db::Database;
 use common_infrastructure::error::CustomError;
 use uuid::Uuid;
 
-// ── PodcastEpisodeChapter ───────────────────────────────────────────────────
-
-use crate::podcast_episode_chapter::DieselPodcastEpisodeChapterRepository;
-use podfetch_domain::podcast_episode_chapter::{
-    PodcastEpisodeChapter, PodcastEpisodeChapterRepository, UpsertPodcastEpisodeChapter,
-};
-
-pub struct PodcastEpisodeChapterRepositoryImpl {
-    inner: DieselPodcastEpisodeChapterRepository,
-}
-
-impl PodcastEpisodeChapterRepositoryImpl {
-    pub fn new(database: Database) -> Self {
-        Self {
-            inner: DieselPodcastEpisodeChapterRepository::new(database),
-        }
-    }
-}
-
-impl PodcastEpisodeChapterRepository for PodcastEpisodeChapterRepositoryImpl {
-    type Error = CustomError;
-
-    fn upsert(&self, chapter: UpsertPodcastEpisodeChapter) -> Result<(), Self::Error> {
-        self.inner.upsert(chapter).map_err(Into::into)
-    }
-
-    fn get_by_episode_id(
-        &self,
-        episode_id: Uuid,
-    ) -> Result<Vec<PodcastEpisodeChapter>, Self::Error> {
-        self.inner.get_by_episode_id(episode_id).map_err(Into::into)
-    }
-
-    fn delete_by_episode_ids(&self, episode_ids: &[Uuid]) -> Result<(), Self::Error> {
-        self.inner
-            .delete_by_episode_ids(episode_ids)
-            .map_err(Into::into)
-    }
-}
-
 // ── PodcastSettings ─────────────────────────────────────────────────────────
 
 use crate::podcast_settings::DieselPodcastSettingsRepository;

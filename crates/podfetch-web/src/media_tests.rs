@@ -10,7 +10,8 @@ mod tests {
     use crate::usecases::podcast_episode::PodcastEpisodeUseCase;
     use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
     use diesel::{ExpressionMethods, RunQueryDsl};
-    use podfetch_domain::podcast_episode::PodcastEpisodeRepository;
+    use podfetch_catalog::domain::podcast_episode::PodcastEpisodeRepository;
+    use podfetch_catalog::persistence::podcast_episode::DieselPodcastEpisodeRepository;
     use podfetch_identity::events::UserDeleted;
     use podfetch_kernel::UserId;
     use podfetch_media::files::{EpisodeFile, EpisodeFileRepository};
@@ -18,7 +19,6 @@ mod tests {
     use podfetch_media::persistence::{DieselEpisodeFileRepository, DieselSponsorblockRepository};
     use podfetch_media::sponsorblock::{SkipPreferences, SponsorSegment, SponsorblockRepository};
     use podfetch_persistence::db::{database, get_connection};
-    use podfetch_persistence::podcast_episode::DieselPodcastEpisodeRepository;
     use podfetch_persistence::schema::podcast_episodes::dsl as pe;
     use serial_test::serial;
     use uuid::Uuid;
@@ -379,7 +379,7 @@ mod tests {
         let deleted = episode_with(&podcast_id, "deleted", "http://127.0.0.1:9/deleted.mp3");
         PodcastEpisodeUseCase::update_deleted(&deleted, true).unwrap();
 
-        crate::podcast_events::publish(&crate::podcast_events::PodcastRefreshed {
+        crate::podcast_events::publish(&podfetch_catalog::events::PodcastRefreshed {
             podcast_id: podcast_id.clone(),
             podcast_name: "auto".into(),
         });
@@ -412,7 +412,7 @@ mod tests {
         let podcast_id = podcast("manual");
         episode_with(&podcast_id, "manual-ep", "http://127.0.0.1:9/manual.mp3");
 
-        crate::podcast_events::publish(&crate::podcast_events::PodcastRefreshed {
+        crate::podcast_events::publish(&podfetch_catalog::events::PodcastRefreshed {
             podcast_id,
             podcast_name: "manual".into(),
         });
