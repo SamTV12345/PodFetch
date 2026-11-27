@@ -353,7 +353,7 @@ pub async fn add_podcast_by_feed(
             feed_url: rss_feed_url,
             title: channel.title.clone(),
             id,
-            image_url: crate::podcast::channel_image_url(&channel)
+            image_url: podfetch_catalog::feed::channel_image_url(&channel)
                 .unwrap_or_else(|| get_default_image(&server_url)),
         },
         Some(channel),
@@ -615,7 +615,7 @@ async fn fetch_and_insert_feed(
         .map_err(map_reqwest_error)?;
     let channel = parse_feed(&body)?;
     // An empty image URL makes the default image apply at response time.
-    let image_url = crate::podcast::channel_image_url(&channel).unwrap_or_default();
+    let image_url = podfetch_catalog::feed::channel_image_url(&channel).unwrap_or_default();
 
     PodcastService::handle_insert_of_podcast(
         PodcastInsertModel {

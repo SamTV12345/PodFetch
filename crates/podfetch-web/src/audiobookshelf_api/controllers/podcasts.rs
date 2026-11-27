@@ -135,7 +135,7 @@ pub async fn create_podcast(
         .metadata
         .image_url
         .clone()
-        .or_else(|| crate::podcast::channel_image_url(&channel))
+        .or_else(|| podfetch_catalog::feed::channel_image_url(&channel))
         .unwrap_or_else(|| crate::url_rewriting::resolve_image_url("", &server_url));
     let id = body
         .media
@@ -203,7 +203,7 @@ async fn fetch_and_parse_feed(feed_url: &str) -> Result<Channel, CustomError> {
 /// mobile-app's "New Podcast" form can prefill itself from the response.
 fn shape_feed(channel: &Channel, feed_url: &str) -> Value {
     let itunes = channel.itunes_ext();
-    let image = crate::podcast::channel_image_url(channel).unwrap_or_default();
+    let image = podfetch_catalog::feed::channel_image_url(channel).unwrap_or_default();
     let categories: Vec<Value> = itunes.map(|i| i.categories.clone()).map_or_default(|cats| {
         cats.into_iter()
             .map(|c| Value::from(c.text))

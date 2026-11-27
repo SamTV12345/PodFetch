@@ -1,24 +1,18 @@
 use crate::podcast_events;
 use crate::server::ChatServerHandle;
 use crate::services::file::service::FileService;
-use crate::services::podcast::metadata::PodcastBuilder;
 use crate::services::podcast_settings::service::PodcastSettingsService;
 use crate::services::settings::service::SettingsService;
 use crate::services::transcript::service::{FeedTranscriptTag, TranscriptService};
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::Utc;
 use common_infrastructure::config::FileHandlerType;
 use common_infrastructure::error::ErrorSeverity::{Critical, Warning};
-use common_infrastructure::error::{
-    CustomError, CustomErrorInner, ErrorSeverity, map_db_error, map_reqwest_error,
-};
-use common_infrastructure::http::COMMON_USER_AGENT;
-use common_infrastructure::http::get_sync_client;
+use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity, map_db_error};
 use common_infrastructure::mutex::LockResultExt;
 use common_infrastructure::retry::do_retry;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
-use common_infrastructure::time::opt_or_empty_string;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use podfetch_catalog::domain::podcast_episode::{NewPodcastEpisode, PodcastEpisodeRepository};
+use podfetch_catalog::domain::podcast_episode::PodcastEpisodeRepository;
 use podfetch_catalog::persistence::podcast::PodcastEntity as Podcast;
 use podfetch_catalog::persistence::podcast_episode::DieselPodcastEpisodeRepository;
 use podfetch_catalog::persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
@@ -28,15 +22,13 @@ use podfetch_media::events::{EpisodeDownloadFailed, EpisodeDownloaded};
 use podfetch_persistence::db::database;
 use podfetch_persistence::db::get_connection;
 use podfetch_storage::{FileHandleWrapper, FileRequest};
-use reqwest::header::{ACCEPT, HeaderMap};
-use reqwest::redirect::Policy;
-use rss::{Channel, Guid, Item};
+use rss::Guid;
 use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::io::Error;
 use std::path::Path;
 use std::sync::LazyLock;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use std::thread;
 use url::Url;
 use uuid::Uuid;
@@ -185,106 +177,6 @@ impl PodcastEpisodeUseCase {
             .query_by_url_like(url)
             .map(|episode| episode.map(Into::into))
             .map_err(Into::into)
-    }
-
-    /// Normalises an item's `pubDate` to RFC 3339; empty when it has none.
-    ///
-    /// Feeds are sloppy, so besides RFC 2822 and RFC 3339 this accepts an
-    /// RFC 2822 date with a non-standard weekday ("Thurs, 2 Jan 2025 …").
-    /// Unparseable dates fall back to 2021-01-01 so the episode is still kept.
-    fn parse_recording_date(item: &Item) -> String {
-        let Some(date) = item.pub_date.as_deref() else {
-            return String::new();
-        };
-        let without_weekday = |s: &str| {
-            let (_, rest) = s.split_once(',')?;
-            DateTime::parse_from_str(rest.trim(), "%d %b %Y %H:%M:%S %z").ok()
-        };
-        DateTime::parse_from_rfc2822(date)
-            .or_else(|_| DateTime::parse_from_rfc3339(date))
-            .ok()
-            .or_else(|| without_weekday(date))
-            .map_or_else(
-                || {
-                    Utc.with_ymd_and_hms(2021, 1, 1, 0, 0, 0)
-                        .unwrap()
-                        .to_rfc3339()
-                },
-                |parsed| parsed.with_timezone(&Utc).to_rfc3339(),
-            )
-    }
-
-    fn insert_podcast_episode(
-        podcast: &Podcast,
-        item: &Item,
-        enclosure_url: &str,
-        episode_image_url: &str,
-        duration: i32,
-    ) -> Result<PodcastEpisode, CustomError> {
-        let guid_to_insert = Guid {
-            value: Uuid::new_v4().to_string(),
-            ..Default::default()
-        };
-
-        let youtube_video_id = common_infrastructure::youtube::extract_youtube_video_id(
-            item.link.as_deref(),
-            item.guid.as_ref().map(|g| g.value.as_str()),
-            item.enclosure.as_ref().map(|e| e.url.as_str()),
-        );
-
-        Self::repo()
-            .create(NewPodcastEpisode {
-                podcast_id: Self::parse_id(&podcast.id)?,
-                episode_id: Uuid::new_v4().to_string(),
-                name: item
-                    .title
-                    .clone()
-                    .unwrap_or_else(|| "No title given".to_string()),
-                url: enclosure_url.to_owned(),
-                date_of_recording: Self::parse_recording_date(item),
-                image_url: episode_image_url.to_string(),
-                total_time: duration,
-                description: opt_or_empty_string(item.clone().description),
-                guid: item.guid.clone().unwrap_or(guid_to_insert).value,
-                youtube_video_id,
-            })
-            .map(Into::into)
-            .map_err(Into::into)
-    }
-
-    /// Bridges a feed item's `<podcast:transcript>` tags into transcript
-    /// bookkeeping (Task 6's `TranscriptService::upsert_from_feed`) right
-    /// after the episode row they belong to has been created or updated.
-    /// This is pure DB bookkeeping — no HTTP fetch happens here, that is the
-    /// download hook (Task 8). Feed refresh must never fail because of
-    /// transcripts, so any failure (an unparsable episode id, a DB error) is
-    /// only logged and never propagated.
-    fn sync_transcript_tags_for_episode(item: &Item, episode_id: &str) {
-        let tags = extract_transcript_tags(item);
-        if tags.is_empty() {
-            return;
-        }
-
-        let episode_uuid = match Self::parse_id(episode_id) {
-            Ok(id) => id,
-            Err(err) => {
-                tracing::error!(
-                    "Could not parse episode id '{}' while syncing feed transcript tags: {:?}",
-                    episode_id,
-                    err
-                );
-                return;
-            }
-        };
-
-        if let Err(err) = TranscriptService::default_service().upsert_from_feed(episode_uuid, &tags)
-        {
-            tracing::error!(
-                "Failed to upsert feed transcript tags for episode {}: {:?}",
-                episode_uuid,
-                err
-            );
-        }
     }
 
     /// One page (75) of a podcast's episodes with the user's latest action
@@ -559,167 +451,33 @@ impl PodcastEpisodeUseCase {
         Self::get_last_n_podcast_episodes_by_count(Self::parse_id(&podcast.id)?, n_episodes)
     }
 
-    // Used for creating/updating podcasts
-    #[tracing::instrument(skip_all, fields(podcast_id = podcast.id, podcast_name = %podcast.name))]
+    /// Refreshes the podcast from its feed (the catalog's `FeedSync`) and
+    /// hands on what the other contexts need from it: the feed transcript
+    /// tags to the transcripts, a newly found cover to the media library.
+    /// Returns the new episodes.
     pub fn insert_podcast_episodes(podcast: &Podcast) -> Result<Vec<PodcastEpisode>, CustomError> {
-        let is_redirected = Arc::new(Mutex::new(false)); // Variable to store the redirection status
-
-        let returned_data_from_podcast_insert =
-            Self::do_request_to_podcast_server(podcast.clone())?;
-
-        let channel = Channel::read_from(returned_data_from_podcast_insert.content.as_bytes());
-
-        match channel {
-            Ok(channel) => {
-                if *is_redirected.clone().lock().ignore_poison() {
-                    tracing::info!(
-                        "The podcast {} has moved to {}",
-                        podcast.name,
-                        returned_data_from_podcast_insert.url
-                    );
-                    crate::services::podcast::service::PodcastService::update_podcast_urls_on_redirect(
-                        Self::parse_id(&podcast.id)?,
-                        &returned_data_from_podcast_insert.url,
-                    )?;
-                    Self::update_episodes_on_redirect(channel.items())?;
-                }
-
-                Self::handle_itunes_extension(podcast, &channel)?;
-
-                Self::update_podcast_fields(channel.clone(), Self::parse_id(&podcast.id)?)?;
-
-                let mut podcast_inserted = Vec::new();
-
-                Self::handle_podcast_image_insert(podcast, &channel)?;
-
-                for item in &channel.items {
-                    let Some(enclosure) = &item.enclosure else {
-                        tracing::info!(
-                            "Skipping podcast episode {:?} as it has no enclosure",
-                            item.title
-                        );
-                        continue;
-                    };
-
-                    let itunes_ext = &item.itunes_ext;
-                    let opt_found_podcast_episode: Option<PodcastEpisode> = match &item.guid {
-                        Some(guid) => Self::get_podcast_episode_by_guid(&guid.value)?,
-                        None => Self::get_podcast_episode_by_url(
-                            &enclosure.url,
-                            Some(Self::parse_id(&podcast.id)?),
-                        )?,
-                    };
-
-                    if let Some(podcast_episode) = &opt_found_podcast_episode {
-                        let mut updated_podcast_episode = podcast_episode.clone();
-                        if let Some(title) = &item.title {
-                            updated_podcast_episode.name = title.clone();
-                        }
-
-                        updated_podcast_episode.url.clone_from(&enclosure.url);
-
-                        if let Some(description) = &item.description {
-                            updated_podcast_episode.description = description.clone();
-                        }
-
-                        // Backfill missing episode artwork with the parent
-                        // podcast's image so older rows that stored the
-                        // default fallback get repaired on next feed refresh.
-                        let episode_itunes_image =
-                            itunes_ext.as_ref().and_then(|ext| ext.image.clone());
-                        if let Some(itunes_image) = episode_itunes_image {
-                            updated_podcast_episode.image_url = itunes_image;
-                        } else if common_infrastructure::runtime::is_default_image_url(
-                            &updated_podcast_episode.image_url,
-                        ) && !common_infrastructure::runtime::is_default_image_url(
-                            &podcast.original_image_url,
-                        ) {
-                            updated_podcast_episode.image_url = podcast.original_image_url.clone();
-                        }
-
-                        if updated_podcast_episode.name != podcast_episode.name
-                            || updated_podcast_episode.url != podcast_episode.url
-                            || updated_podcast_episode.description != podcast_episode.description
-                            || updated_podcast_episode.image_url != podcast_episode.image_url
-                        {
-                            Self::update_podcast_episode(updated_podcast_episode.clone())?;
-                        }
-
-                        Self::sync_transcript_tags_for_episode(item, &podcast_episode.id);
-
-                        // Skip already existing episodes with insert
-                        continue;
-                    };
-
-                    let mut duration_of_podcast_episode = 0;
-                    // Fall back to the parent podcast's image (the one that
-                    // wraps all episodes) when an episode carries no image of
-                    // its own.
-                    let mut image_url = if podcast.original_image_url.is_empty() {
-                        String::new()
-                    } else {
-                        podcast.original_image_url.clone()
-                    };
-
-                    // itunes extension checking
-                    if let Some(itunes_ext) = &itunes_ext {
-                        // duration
-                        if let Some(duration_from_itunes) = &itunes_ext.duration {
-                            duration_of_podcast_episode =
-                                Self::parse_duration(duration_from_itunes);
-                        }
-                        if let Some(itunes_image) = &itunes_ext.image {
-                            image_url = itunes_image.clone();
-                        }
-                    }
-
-                    let inserted_episode = Self::insert_podcast_episode(
-                        podcast,
-                        item,
-                        &enclosure.url,
-                        &image_url,
-                        duration_of_podcast_episode as i32,
-                    )?;
-                    Self::sync_transcript_tags_for_episode(item, &inserted_episode.id);
-                    podcast_inserted.push(inserted_episode);
-                }
-                Ok(podcast_inserted)
-            }
-            Err(e) => {
-                tracing::info!(
-                    "Error parsing podcast {} {:?} with cause {:?}",
-                    podcast.name,
-                    returned_data_from_podcast_insert.content,
-                    e
+        let report = crate::catalog_ports::feed_sync().sync(&podcast.clone().into())?;
+        if let Some(cover) = report.new_cover {
+            Self::schedule_podcast_cover_download(podcast, cover);
+        }
+        let transcripts = TranscriptService::default_service();
+        for (episode_id, tags) in &report.transcripts {
+            let tags: Vec<FeedTranscriptTag> = tags
+                .iter()
+                .map(|tag| FeedTranscriptTag {
+                    url: tag.url.clone(),
+                    mime_type: tag.mime_type.clone(),
+                    language: tag.language.clone(),
+                })
+                .collect();
+            // Feed refresh must never fail because of transcripts.
+            if let Err(err) = transcripts.upsert_from_feed(*episode_id, &tags) {
+                tracing::error!(
+                    "Failed to upsert feed transcript tags for episode {episode_id}: {err:?}"
                 );
-                Err(CustomErrorInner::BadRequest(
-                    format!("Error parsing podcast {} with cause {:?}", podcast.name, e,),
-                    ErrorSeverity::Error,
-                )
-                .into())
             }
         }
-    }
-
-    fn handle_podcast_image_insert(
-        podcast: &Podcast,
-        channel: &Channel,
-    ) -> Result<(), CustomError> {
-        let image_url = crate::podcast::channel_image_url(channel);
-        crate::services::podcast::service::PodcastService::update_original_image_url(
-            image_url.as_deref().unwrap_or(""),
-            Self::parse_id(&podcast.id)?,
-        )?;
-
-        // Podcasts that were added without a usable image (e.g. a feed that
-        // only had <itunes:image>, which older versions ignored) got the
-        // default cover. Fetch the real one now that the feed provides it.
-        let had_no_image =
-            common_infrastructure::runtime::is_default_image_url(&podcast.original_image_url);
-        if had_no_image && let Some(image_url) = image_url {
-            Self::schedule_podcast_cover_download(podcast, image_url);
-        }
-        Ok(())
+        Ok(report.inserted.into_iter().map(Into::into).collect())
     }
 
     fn schedule_podcast_cover_download(podcast: &Podcast, image_url: String) {
@@ -748,47 +506,6 @@ impl PodcastEpisodeUseCase {
         });
     }
 
-    fn handle_itunes_extension(podcast: &Podcast, channel: &Channel) -> Result<(), CustomError> {
-        if let Some(extension) = &channel.itunes_ext
-            && let Some(new_feed) = &extension.new_feed_url
-        {
-            let new_url = new_feed;
-            crate::services::podcast::service::PodcastService::update_podcast_urls_on_redirect(
-                Self::parse_id(&podcast.id)?,
-                new_url,
-            )?;
-
-            let returned_data_from_server = Self::do_request_to_podcast_server(podcast.clone())?;
-
-            let channel = Channel::read_from(returned_data_from_server.content.as_bytes())
-                .map_err(|e| {
-                    CustomErrorInner::BadRequest(
-                        format!("Invalid podcast feed after redirect to {new_url}: {e}"),
-                        ErrorSeverity::Warning,
-                    )
-                })?;
-            Self::update_episodes_on_redirect(channel.items())?;
-        }
-        Ok(())
-    }
-
-    fn update_episodes_on_redirect(items: &[Item]) -> Result<(), CustomError> {
-        for item in items {
-            let (Some(guid), Some(enclosure)) = (&item.guid, &item.enclosure) else {
-                tracing::debug!(
-                    "Skipping redirected item {:?} without guid/enclosure",
-                    item.title
-                );
-                continue;
-            };
-            if let Some(mut podcast_episode) = Self::get_podcast_episode_by_guid(&guid.value)? {
-                podcast_episode.url.clone_from(&enclosure.url);
-                Self::update_podcast_episode(podcast_episode)?;
-            }
-        }
-        Ok(())
-    }
-
     pub fn get_podcast_episodes_by_guids(
         guids: &[String],
     ) -> Result<Vec<PodcastEpisode>, CustomError> {
@@ -805,32 +522,6 @@ impl PodcastEpisodeUseCase {
             .find_by_guid(guid_to_search)
             .map(|episode| episode.map(Into::into))
             .map_err(Into::into)
-    }
-
-    fn parse_duration(duration_str: &str) -> u32 {
-        let parts: Vec<&str> = duration_str.split(':').collect();
-        match parts.len() {
-            1 => parts[0].parse::<u32>().unwrap_or(0),
-            2 => {
-                let minutes = parts[0].parse::<u32>().unwrap_or(0);
-                let seconds = parts[1].parse::<u32>().unwrap_or(0);
-                minutes * 60 + seconds
-            }
-            3 => {
-                let hours = parts[0].parse::<u32>().unwrap_or(0);
-                let minutes = parts[1].parse::<u32>().unwrap_or(0);
-                let seconds = parts[2].parse::<u32>().unwrap_or(0);
-                hours * 3600 + minutes * 60 + seconds
-            }
-            4 => {
-                let days = parts[0].parse::<u32>().unwrap_or(0);
-                let hours = parts[1].parse::<u32>().unwrap_or(0);
-                let minutes = parts[2].parse::<u32>().unwrap_or(0);
-                let seconds = parts[3].parse::<u32>().unwrap_or(0);
-                days * 86400 + hours * 3600 + minutes * 60 + seconds
-            }
-            _ => 0,
-        }
     }
 
     #[inline]
@@ -870,33 +561,6 @@ impl PodcastEpisodeUseCase {
         podcast_id: Uuid,
     ) -> Result<Vec<PodcastEpisode>, CustomError> {
         Self::get_episodes_by_podcast_id(podcast_id)
-    }
-
-    fn update_podcast_fields(feed: Channel, podcast_id: Uuid) -> Result<(), CustomError> {
-        let itunes = feed.clone().itunes_ext;
-
-        let ext = feed
-            .extensions()
-            .get("podcast")
-            .and_then(|m| m.get("guid"))
-            .and_then(|v| v.first())
-            .and_then(|v| v.value.clone());
-
-        if let Some(itunes) = itunes {
-            let constructed_extra_fields = PodcastBuilder::new(podcast_id)
-                .author(itunes.author)
-                .last_build_date(feed.last_build_date.clone())
-                .description(feed.description.clone())
-                .guid(ext)
-                .language(feed.language.clone())
-                .keywords(itunes.categories)
-                .build();
-            crate::services::podcast::service::PodcastService::update_podcast_fields(
-                constructed_extra_fields,
-            )?;
-        }
-
-        Ok(())
     }
 
     pub fn cleanup_old_episodes(days_from_settings: i32) {
@@ -971,39 +635,6 @@ impl PodcastEpisodeUseCase {
                 }
             }
         }
-    }
-
-    fn do_request_to_podcast_server(podcast: Podcast) -> Result<RequestReturnType, CustomError> {
-        let is_redirected = Arc::new(Mutex::new(false)); // Variable to store the redirection status
-        let client = get_sync_client(&ENVIRONMENT_SERVICE)
-            .redirect(Policy::custom({
-                let is_redirected = Arc::clone(&is_redirected);
-
-                move |attempt| {
-                    if !attempt.previous().is_empty() {
-                        *is_redirected.lock().unwrap() = true;
-                    }
-                    attempt.follow()
-                }
-            }))
-            .build()
-            .map_err(map_reqwest_error)?;
-        let mut header_map = HeaderMap::new();
-        header_map.append(
-            ACCEPT,
-            // Safe as it is a standard header
-            "application/rss+xml,application/xml".parse().unwrap(),
-        );
-        header_map.append("User-Agent", COMMON_USER_AGENT.parse().unwrap());
-        let result = client
-            .get(podcast.clone().rssfeed)
-            .headers(header_map)
-            .send()
-            .map_err(map_reqwest_error)?;
-        let url = result.url().clone().to_string();
-        let content = result.text().map_err(map_reqwest_error)?;
-
-        Ok(RequestReturnType { url, content })
     }
 
     pub(crate) fn delete_podcast_episode_locally(
@@ -1222,86 +853,9 @@ impl PodcastEpisodeUseCase {
     }
 }
 
-struct RequestReturnType {
-    pub url: String,
-    pub content: String,
-}
-
-/// Reads `<podcast:transcript>` tags out of a feed item's extensions.
-///
-/// The `rss` crate keys parsed extensions by their local name, i.e. without
-/// the namespace prefix, so a `<podcast:transcript>` element normally lands
-/// under `extensions()["podcast"]["transcript"]`. Some feeds/tooling can
-/// still surface the qualified name as the map key instead, so both
-/// `"transcript"` and `"podcast:transcript"` are checked defensively. A tag
-/// without a `url` attribute is skipped — there is nothing to store or later
-/// download (Task 8) for it.
-fn extract_transcript_tags(item: &Item) -> Vec<FeedTranscriptTag> {
-    let Some(podcast_ns) = item.extensions().get("podcast") else {
-        return Vec::new();
-    };
-
-    ["transcript", "podcast:transcript"]
-        .into_iter()
-        .filter_map(|key| podcast_ns.get(key))
-        .flatten()
-        .filter_map(|ext| {
-            let url = ext.attrs().get("url")?.clone();
-            let mime_type = ext
-                .attrs()
-                .get("type")
-                .cloned()
-                .unwrap_or_else(|| "text/plain".to_string());
-            let language = ext.attrs().get("language").cloned();
-            Some(FeedTranscriptTag {
-                url,
-                mime_type,
-                language,
-            })
-        })
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
-    fn item_with_date(date: &str) -> Item {
-        Item {
-            pub_date: Some(date.to_owned()),
-            ..Default::default()
-        }
-    }
-
-    #[test]
-    fn recording_date_accepts_common_formats() {
-        let parse = |d| PodcastEpisodeUseCase::parse_recording_date(&item_with_date(d));
-        assert_eq!(
-            parse("Thu, 02 Jan 2025 10:00:00 +0000"),
-            "2025-01-02T10:00:00+00:00"
-        );
-        assert_eq!(
-            parse("2025-01-02T10:00:00+01:00"),
-            "2025-01-02T09:00:00+00:00"
-        );
-        assert_eq!(
-            parse("Thurs, 02 Jan 2025 10:00:00 +0000"),
-            "2025-01-02T10:00:00+00:00"
-        );
-        assert_eq!(
-            PodcastEpisodeUseCase::parse_recording_date(&Item::default()),
-            ""
-        );
-    }
-
-    #[test]
-    fn recording_date_never_panics_on_garbage() {
-        // Used to slice `&date[5..]`, which panicked on short or non-ASCII input.
-        for garbage in ["", "abc", "äöüäöü", "Mo., 1 Jän 2025"] {
-            assert_eq!(
-                PodcastEpisodeUseCase::parse_recording_date(&item_with_date(garbage)),
-                "2021-01-01T00:00:00+00:00"
-            );
-        }
-    }
+    use super::PodcastEpisodeUseCase;
 
     #[test]
     fn local_url_encodes_only_the_file_name() {
@@ -1310,136 +864,5 @@ mod tests {
             "http://host/podcasts/my show/ep%201.mp3"
         );
         assert_eq!(PodcastEpisodeUseCase::map_to_local_url("a b"), "a%20b");
-    }
-
-    use super::*;
-    use rss::extension::{Extension, ExtensionBuilder};
-    use std::collections::BTreeMap;
-
-    fn transcript_extension(
-        url: Option<&str>,
-        mime_type: Option<&str>,
-        language: Option<&str>,
-    ) -> Extension {
-        let mut builder = ExtensionBuilder::default();
-        builder.name("podcast:transcript");
-
-        let mut attrs = BTreeMap::new();
-        if let Some(url) = url {
-            attrs.insert("url".to_string(), url.to_string());
-        }
-        if let Some(mime_type) = mime_type {
-            attrs.insert("type".to_string(), mime_type.to_string());
-        }
-        if let Some(language) = language {
-            attrs.insert("language".to_string(), language.to_string());
-        }
-        builder.attrs(attrs);
-
-        builder.build()
-    }
-
-    fn item_with_transcripts(transcripts: Vec<Extension>) -> Item {
-        let mut podcast_ns = BTreeMap::new();
-        podcast_ns.insert("transcript".to_string(), transcripts);
-
-        let mut extensions = rss::extension::ExtensionMap::new();
-        extensions.insert("podcast".to_string(), podcast_ns);
-
-        Item {
-            extensions,
-            ..Default::default()
-        }
-    }
-
-    #[test]
-    fn extract_transcript_tags_reads_url_type_and_language() {
-        let item = item_with_transcripts(vec![
-            transcript_extension(
-                Some("https://example.com/ep1.vtt"),
-                Some("text/vtt"),
-                Some("en"),
-            ),
-            transcript_extension(
-                Some("https://example.com/ep1.json"),
-                Some("application/json"),
-                Some("en"),
-            ),
-        ]);
-
-        let tags = extract_transcript_tags(&item);
-
-        assert_eq!(tags.len(), 2);
-        assert_eq!(tags[0].url, "https://example.com/ep1.vtt");
-        assert_eq!(tags[0].mime_type, "text/vtt");
-        assert_eq!(tags[0].language.as_deref(), Some("en"));
-        assert_eq!(tags[1].url, "https://example.com/ep1.json");
-        assert_eq!(tags[1].mime_type, "application/json");
-        assert_eq!(tags[1].language.as_deref(), Some("en"));
-    }
-
-    #[test]
-    fn extract_transcript_tags_defaults_missing_type_to_text_plain() {
-        let item = item_with_transcripts(vec![transcript_extension(
-            Some("https://example.com/ep1.txt"),
-            None,
-            None,
-        )]);
-
-        let tags = extract_transcript_tags(&item);
-
-        assert_eq!(tags.len(), 1);
-        assert_eq!(tags[0].mime_type, "text/plain");
-        assert_eq!(tags[0].language, None);
-    }
-
-    #[test]
-    fn extract_transcript_tags_skips_tag_without_url() {
-        let item = item_with_transcripts(vec![
-            transcript_extension(None, Some("text/vtt"), Some("en")),
-            transcript_extension(
-                Some("https://example.com/ep1.vtt"),
-                Some("text/vtt"),
-                Some("en"),
-            ),
-        ]);
-
-        let tags = extract_transcript_tags(&item);
-
-        assert_eq!(tags.len(), 1);
-        assert_eq!(tags[0].url, "https://example.com/ep1.vtt");
-    }
-
-    #[test]
-    fn extract_transcript_tags_checks_qualified_name_key_too() {
-        let mut podcast_ns = BTreeMap::new();
-        podcast_ns.insert(
-            "podcast:transcript".to_string(),
-            vec![transcript_extension(
-                Some("https://example.com/ep1.vtt"),
-                Some("text/vtt"),
-                None,
-            )],
-        );
-        let mut extensions = rss::extension::ExtensionMap::new();
-        extensions.insert("podcast".to_string(), podcast_ns);
-        let item = Item {
-            extensions,
-            ..Default::default()
-        };
-
-        let tags = extract_transcript_tags(&item);
-
-        assert_eq!(tags.len(), 1);
-        assert_eq!(tags[0].url, "https://example.com/ep1.vtt");
-    }
-
-    #[test]
-    fn extract_transcript_tags_returns_empty_when_no_podcast_namespace() {
-        let item = Item::default();
-
-        let tags = extract_transcript_tags(&item);
-
-        assert!(tags.is_empty());
     }
 }
