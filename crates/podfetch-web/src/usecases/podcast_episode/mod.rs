@@ -1039,7 +1039,7 @@ impl PodcastEpisodeUseCase {
 
     /// Downloads every episode of the podcast whose DB row has no
     /// `download_location` (i.e. never downloaded) and is not soft-deleted.
-    /// Runs downloads in parallel chunks of 3, matching `schedule_episode_download`.
+    /// Runs downloads in parallel chunks of 3.
     /// Returns the number of episodes that were queued.
     pub fn download_missing_episodes_for_podcast(podcast: &Podcast) -> Result<usize, CustomError> {
         let episodes = Self::get_episodes_by_podcast_id(Self::parse_id(&podcast.id)?)?;

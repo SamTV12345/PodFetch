@@ -114,14 +114,7 @@ pub fn run_poll() -> Result<(), CustomError> {
                 );
                 continue;
             }
-            let schedule = PodcastService::schedule_episode_download(&podcast_clone);
-            if let Err(e) = schedule {
-                tracing::error!(
-                    "Could not schedule episode download for podcast: {} with cause {}",
-                    &podcast.name,
-                    e
-                );
-            }
+            PodcastService::announce_refreshed(&podcast_clone);
         }
     }
     Ok(())

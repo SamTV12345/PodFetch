@@ -79,6 +79,13 @@ impl EpisodeFileRepository for DieselEpisodeFileRepository {
     ) -> Result<(), CustomError> {
         let mut conn = self.database.connection()?;
         conn.transaction::<_, diesel::result::Error, _>(|conn| {
+            // Write first: a SQLite transaction that reads before it writes
+            // fails at once with "database is locked" (no busy wait) when
+            // another connection wrote in between. This no-op update takes
+            // the write lock up front (on Postgres: the row lock).
+            diesel::update(episode_files::table.filter(episode_files::episode_id.eq(episode_id)))
+                .set(episode_files::deleted.eq(episode_files::deleted))
+                .execute(conn)?;
             let mut file = episode_files::table
                 .filter(episode_files::episode_id.eq(episode_id))
                 .first::<FileRow>(conn)

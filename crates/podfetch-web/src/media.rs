@@ -21,6 +21,7 @@ use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity}
 use common_infrastructure::http::get_http_client;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use podfetch_media::audio::Chapter;
+use podfetch_media::auto_download::{AutoDownload, DownloadRunner};
 use podfetch_media::catalog::{Catalog, MediaEpisode, MediaPodcast};
 use podfetch_media::download::{DownloadListener, Downloader, DurationProbe};
 use podfetch_media::files::{EpisodeFile, EpisodeFileService};
@@ -44,6 +45,7 @@ pub struct MediaServices {
     pub nfo: Arc<NfoWriter>,
     pub downloader: Arc<Downloader>,
     pub rescanner: Arc<EpisodeRescanner>,
+    pub auto_download: Arc<AutoDownload>,
 }
 
 impl MediaServices {
@@ -55,6 +57,7 @@ impl MediaServices {
         let catalog: Arc<dyn Catalog> = Arc::new(CatalogAdapter);
         let media_settings: Arc<dyn MediaSettingsSource> =
             Arc::new(SettingsAdapter(settings.clone()));
+        let settings_for_queue = settings.clone();
         let files = Arc::new(EpisodeFileService::new(Arc::new(
             DieselEpisodeFileRepository::new(database.clone()),
         )));
@@ -79,12 +82,18 @@ impl MediaServices {
             Arc::new(Ffprobe),
         ));
         let rescanner = Arc::new(EpisodeRescanner::new(downloader.clone()));
+        let auto_download = Arc::new(AutoDownload::new(
+            Arc::new(CatalogAdapter),
+            Arc::new(SettingsAdapter(settings_for_queue)),
+            Arc::new(DownloadIfMissing),
+        ));
         Self {
             files,
             sponsorblock,
             nfo,
             downloader,
             rescanner,
+            auto_download,
         }
     }
 }
@@ -96,6 +105,19 @@ pub fn services() -> MediaServices {
         Arc::new(ENVIRONMENT_SERVICE.clone()),
         Arc::new(SettingsService::shared()),
     )
+}
+
+/// Auto-downloads the podcast's latest episodes now and waits until they
+/// are done. For one-shot processes (the command line) that run no event
+/// processor; the server reacts to `podcast.refreshed` instead.
+pub fn auto_download_now(podcast_id: &str) -> Result<(), CustomError> {
+    let auto_download = services().auto_download;
+    auto_download.podcast_refreshed(podcast_id)?;
+    while !auto_download
+        .queue()
+        .wait_idle(std::time::Duration::from_secs(60))
+    {}
+    Ok(())
 }
 
 /// The file state of the episodes.
@@ -184,6 +206,15 @@ impl Catalog for CatalogAdapter {
         )
     }
 
+    fn latest_episodes(&self, podcast_id: &str, n: i32) -> Result<Vec<MediaEpisode>, CustomError> {
+        Ok(
+            PodcastEpisodeUseCase::get_last_n_podcast_episodes_by_count(parse_id(podcast_id)?, n)?
+                .iter()
+                .map(media_episode)
+                .collect(),
+        )
+    }
+
     fn position_of_episode(
         &self,
         podcast_id: &str,
@@ -240,13 +271,21 @@ impl MediaSettingsSource for SettingsAdapter {
         let own = PodcastSettingsService::get_settings_for_podcast(parse_id(podcast_id)?)?;
         Ok(resolve_media_settings(&global, own.as_ref()))
     }
+
+    fn max_parallel_downloads(&self) -> Result<usize, CustomError> {
+        Ok(self.0.get_settings()?.map_or(1, |settings| {
+            settings.max_parallel_downloads.max(1) as usize
+        }))
+    }
 }
 
 /// How the instance-wide and the podcast's own settings combine. Naming,
 /// cover, NFO and "one cover" follow the podcast's settings only when they
 /// are activated; numbering is on when either layer turns it on; the
 /// existing-file-name, direct-path and transcoding options are
-/// instance-wide; auto-transcription is per podcast.
+/// instance-wide; auto-transcription is per podcast; auto-download is on
+/// when either layer turns it on, and how many episodes it keeps follows
+/// the activated podcast settings.
 pub fn resolve_media_settings(
     global: &crate::settings::Setting,
     own: Option<&PodcastSetting>,
@@ -274,6 +313,8 @@ pub fn resolve_media_settings(
         cover_filename,
         nfo_format: NfoFormat::from_str(nfo_format).unwrap_or_default(),
         auto_transcribe: own.is_some_and(|s| s.auto_transcribe),
+        auto_download: own.is_some_and(|s| s.auto_download) || global.auto_download,
+        prefill: activated.map_or(global.podcast_prefill, |s| s.podcast_prefill),
     }
 }
 
@@ -342,5 +383,24 @@ impl DurationProbe for Ffprobe {
         ))
         .map(|probed| probed.duration)
         .map_err(|err| CustomErrorInner::Conflict(err.to_string(), ErrorSeverity::Warning).into())
+    }
+}
+
+/// Downloads an episode for the auto-download queue, unless its file is
+/// there already or the user deleted it in the meantime.
+pub struct DownloadIfMissing;
+
+impl DownloadRunner for DownloadIfMissing {
+    fn download(&self, episode_id: &str) -> Result<(), CustomError> {
+        let Some(episode) =
+            PodcastEpisodeUseCase::get_podcast_episode_by_internal_id(parse_id(episode_id)?)?
+        else {
+            return Ok(());
+        };
+        if episode.deleted {
+            return Ok(());
+        }
+        let podcast = PodcastService::get_podcast(parse_id(&episode.podcast_id)?)?;
+        PodcastEpisodeUseCase::download_podcast_episode_if_not_locally_available(episode, podcast)
     }
 }

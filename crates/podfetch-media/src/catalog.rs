@@ -59,6 +59,8 @@ pub struct MediaPodcast {
 pub trait Catalog: Send + Sync {
     fn podcast(&self, podcast_id: &str) -> Result<MediaPodcast, CustomError>;
     fn episodes_of_podcast(&self, podcast_id: &str) -> Result<Vec<MediaEpisode>, CustomError>;
+    /// The podcast's `n` most recent episodes.
+    fn latest_episodes(&self, podcast_id: &str, n: i32) -> Result<Vec<MediaEpisode>, CustomError>;
     /// The episode's position in its podcast, by recording date.
     fn position_of_episode(
         &self,

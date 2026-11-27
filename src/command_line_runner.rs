@@ -51,7 +51,7 @@ pub async fn start_command_line(state: &AppState, mut args: Args) -> Result<(), 
                                 .expect("Error getting podcast");
 
                             PodcastEpisodeService::insert_podcast_episodes(&podcast)?;
-                            PodcastService::schedule_episode_download(&podcast)
+                            podfetch_web::media::auto_download_now(&podcast.id)
                         }
                         None => {
                             println!("Please provide a podcast rss feed url");
@@ -65,7 +65,7 @@ pub async fn start_command_line(state: &AppState, mut args: Args) -> Result<(), 
                         println!("Refreshing podcast {}", podcast.name);
 
                         PodcastEpisodeService::insert_podcast_episodes(&podcast)?;
-                        PodcastService::schedule_episode_download(&podcast)?;
+                        podfetch_web::media::auto_download_now(&podcast.id)?;
                     }
                     Ok(())
                 }

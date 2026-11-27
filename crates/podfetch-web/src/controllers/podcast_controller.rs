@@ -501,14 +501,9 @@ pub async fn download_podcast(
     require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
 
     let (_podcast_uuid, podcast) = resolve_podcast(&id)?;
-    thread::spawn(move || {
-        match PodcastService::refresh_podcast(&podcast) {
-            Ok(_) => tracing::info!("Successfully refreshed podcast {}", podcast.name),
-            Err(e) => tracing::error!("Error refreshing podcast {}: {e}", podcast.name),
-        }
-        if let Err(e) = PodcastService::schedule_episode_download(&podcast) {
-            tracing::error!("Error downloading episodes of {}: {e}", podcast.name);
-        }
+    thread::spawn(move || match PodcastService::refresh_podcast(&podcast) {
+        Ok(_) => tracing::info!("Successfully refreshed podcast {}", podcast.name),
+        Err(e) => tracing::error!("Error refreshing podcast {}: {e}", podcast.name),
     });
 
     Ok("Refreshing podcast")

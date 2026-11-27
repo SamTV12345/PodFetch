@@ -9,11 +9,13 @@
 //! the ports in [`catalog`], [`settings`] and [`download`].
 
 pub mod audio;
+pub mod auto_download;
 pub mod catalog;
 pub mod download;
 pub mod files;
 pub mod handlers;
 pub mod images;
+pub mod inbound;
 pub mod naming;
 pub mod nfo;
 pub mod persistence;
