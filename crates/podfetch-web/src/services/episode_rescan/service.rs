@@ -136,7 +136,7 @@ impl EpisodeRescanService {
             && settings.auto_transcode_opus
             && extension_lower(&working_audio_path).as_deref() == Some("mp3")
         {
-            match DownloadService::transcode_to_opus(&working_audio_path) {
+            match podfetch_media::audio::convert::transcode_to_opus(&working_audio_path) {
                 Ok(new_path) => {
                     working_audio_path = new_path;
                     stats.transcoded += 1;

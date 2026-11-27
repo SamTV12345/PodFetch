@@ -1,10 +1,6 @@
-use std::collections::HashMap;
-
 use podfetch_persistence::podcast::PodcastEntity as Podcast;
 
 use std::path::Path;
-use std::str::FromStr;
-use std::sync::LazyLock;
 
 use crate::podcast::PodcastInsertModel;
 use crate::podcast_settings::PodcastSetting;
@@ -18,18 +14,16 @@ use common_infrastructure::error::{
     CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error,
 };
 use common_infrastructure::http::get_http_client;
-use common_infrastructure::rss::{PodcastParsed, RSSFeedParser};
+use common_infrastructure::rss::RSSFeedParser;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
-use podfetch_domain::settings::{ReplacementStrategy, Setting};
+use podfetch_media::naming::{EpisodeNaming, NamingRules, Replacement};
 use podfetch_persistence::db::DBType as DbConnection;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use podfetch_storage::FileHandleWrapper;
 use podfetch_storage::{FileRequest, resolve_file_handler_type};
 use podfetch_storage::{
-    FileType, Options, Sanitizer, build_podcast_image_paths, create_available_directory,
-    determine_file_extension,
+    FileType, build_podcast_image_paths, create_available_directory, determine_file_extension,
 };
-use regex::Regex;
 use rss::Channel;
 use tokio::task::spawn_blocking;
 
@@ -268,85 +262,46 @@ pub async fn prepare_podcast_title_to_directory(
         }
     };
 
-    perform_podcast_variable_replacement(
-        retrieved_settings.into(),
-        podcast.clone(),
-        opt_podcast_settings,
+    podfetch_media::naming::podcast_directory_name(
+        &naming_rules(&retrieved_settings, opt_podcast_settings.as_ref()),
+        &podcast,
     )
 }
 
-fn replace_date_of_str(date: &str) -> String {
-    if date.contains('T') {
-        let splitted_date = date.split('T').collect::<Vec<&str>>();
-        splitted_date[0].to_string()
-    } else {
-        date.to_string()
+/// The naming scheme in effect: the podcast's own settings when they are
+/// activated, the instance-wide ones otherwise.
+pub fn naming_rules(
+    settings: &crate::settings::Setting,
+    podcast_settings: Option<&PodcastSetting>,
+) -> NamingRules {
+    let (replacement, podcast_format, episode_format) = match podcast_settings {
+        Some(own) if own.activated => (
+            &own.replacement_strategy,
+            &own.podcast_format,
+            &own.episode_format,
+        ),
+        _ => (
+            &settings.replacement_strategy,
+            &settings.podcast_format,
+            &settings.episode_format,
+        ),
+    };
+    NamingRules {
+        replacement: Replacement::from_setting(replacement),
+        podcast_format: podcast_format.clone(),
+        episode_format: episode_format.clone(),
     }
 }
 
-pub fn perform_podcast_variable_replacement(
-    retrieved_settings: Setting,
-    podcast: PodcastParsed,
-    podcast_setting: Option<PodcastSetting>,
-) -> Result<String, CustomError> {
-    let sanitizer = Sanitizer::new(None);
-    let escaped_podcast_title = perform_replacement(
-        &podcast.title,
-        retrieved_settings.clone(),
-        podcast_setting.clone(),
-    );
-    let podcast_format;
-
-    if podcast_setting.is_none() {
-        podcast_format = retrieved_settings.podcast_format.clone();
-    } else if let Some(e) = &podcast_setting {
-        if e.activated {
-            podcast_format = e.podcast_format.clone();
-        } else {
-            podcast_format = retrieved_settings.podcast_format.clone();
-        }
-    } else {
-        podcast_format = retrieved_settings.podcast_format.clone();
-    }
-
-    if podcast_format.is_empty() || podcast_format.trim() == "{}" {
-        return Ok(sanitizer.sanitize(podcast.title));
-    }
-
-    let mut vars: HashMap<String, &str> = HashMap::new();
-
-    let podcast_summary = podcast.summary;
-    let podcast_language = podcast.language;
-    let podcast_explicit = podcast.explicit;
-    let podcast_keyword = podcast.keywords;
-    let podcast_date = replace_date_of_str(&podcast.date);
-
-    // Insert variables
-    vars.insert("podcastTitle".to_string(), &escaped_podcast_title);
-    vars.insert("podcastDescription".to_string(), &podcast_summary);
-    vars.insert("podcastLanguage".to_string(), &podcast_language);
-    vars.insert("podcastExplicit".to_string(), &podcast_explicit);
-    vars.insert("podcastKeywords".to_string(), &podcast_keyword);
-    vars.insert("date".to_string(), &podcast_date);
-
-    let fixed_string = podcast_format
-        .replace("{title}", "{podcastTitle}")
-        .replace("{description}", "{podcastDescription}")
-        .replace("{language}", "{podcastLanguage}")
-        .replace("{explicit}", "{podcastExplicit}")
-        .replace("{keywords}", "{podcastKeywords}")
-        .chars()
-        .filter(|&c| c as u32 != 44)
-        .collect::<String>();
-
-    let result = strfmt::strfmt(fixed_string.trim(), &vars);
-
-    match result {
-        Ok(res) => Ok(sanitizer.sanitize(res)),
-        Err(err) => {
-            tracing::error!("Error formatting podcast title: {err}");
-            Err(CustomErrorInner::Conflict(err.to_string(), ErrorSeverity::Error).into())
-        }
+/// What the episode's file is named after.
+pub fn episode_naming(episode: &PodcastEpisode) -> EpisodeNaming {
+    EpisodeNaming {
+        name: episode.name.clone(),
+        date_of_recording: episode.date_of_recording.clone(),
+        guid: episode.guid.clone(),
+        url: episode.url.clone(),
+        description: episode.description.clone(),
+        total_time: episode.total_time,
     }
 }
 
@@ -354,11 +309,10 @@ pub fn prepare_podcast_episode_title_to_directory(
     podcast_episode: PodcastEpisode,
 ) -> Result<String, CustomError> {
     let retrieved_settings = required_settings()?;
-    if retrieved_settings.use_existing_filename {
-        let res_of_filename = get_filename_of_url(&podcast_episode.url);
-        if let Ok(res_unwrapped) = res_of_filename {
-            return Ok(res_unwrapped);
-        }
+    if retrieved_settings.use_existing_filename
+        && let Some(filename) = podfetch_media::naming::filename_of_url(&podcast_episode.url)
+    {
+        return Ok(filename);
     }
     let podcast_uuid = uuid::Uuid::parse_str(&podcast_episode.podcast_id)
         .map_err(|_| CustomError::from(CustomErrorInner::NotFound(ErrorSeverity::Warning)))?;
@@ -372,139 +326,12 @@ pub fn prepare_podcast_episode_title_to_directory(
         crate::usecases::podcast_episode::PodcastEpisodeUseCase::get_total_episode_count(
             podcast_uuid,
         )?;
-    perform_episode_variable_replacement(
-        retrieved_settings.into(),
-        podcast_episode,
-        podcast_settings,
+    podfetch_media::naming::episode_file_stem(
+        &naming_rules(&retrieved_settings, podcast_settings.as_ref()),
+        &episode_naming(&podcast_episode),
         episode_number,
         Some(total_episode_count),
     )
-}
-
-pub fn perform_episode_variable_replacement(
-    retrieved_settings: Setting,
-    podcast_episode: PodcastEpisode,
-    podcast_settings: Option<PodcastSetting>,
-    episode_number: i64,
-    total_episode_count: Option<usize>,
-) -> Result<String, CustomError> {
-    let escaped_episode_title = perform_replacement(
-        &podcast_episode.name,
-        retrieved_settings.clone(),
-        podcast_settings.clone(),
-    );
-    let episode_format;
-
-    if podcast_settings.is_none() {
-        episode_format = retrieved_settings.episode_format.clone();
-    } else if let Some(e) = &podcast_settings {
-        if e.activated {
-            episode_format = e.episode_format.clone();
-        } else {
-            episode_format = retrieved_settings.episode_format.clone();
-        }
-    } else {
-        episode_format = retrieved_settings.episode_format.clone();
-    }
-
-    if episode_format.is_empty() || episode_format.trim() == "{}" {
-        return Ok(escaped_episode_title);
-    }
-
-    let mut vars: HashMap<String, &str> = HashMap::new();
-
-    let total_time = podcast_episode.total_time.to_string();
-    let episode_number_str = match total_episode_count {
-        Some(total) if total > 0 => {
-            let digits = (total as f64).log10().floor() as usize + 1;
-            format!("{episode_number:0>digits$}")
-        }
-        _ => episode_number.to_string(),
-    };
-    let episode_date = replace_date_of_str(&podcast_episode.date_of_recording);
-    // Insert variables
-    vars.insert("episodeTitle".to_string(), &escaped_episode_title);
-    vars.insert("episodeDate".to_string(), &episode_date);
-    vars.insert("episodeGuid".to_string(), &podcast_episode.guid);
-    vars.insert("episodeUrl".to_string(), &podcast_episode.url);
-    vars.insert(
-        "episodeDescription".to_string(),
-        &podcast_episode.description,
-    );
-    vars.insert("episodeDuration".to_string(), &total_time);
-    vars.insert("episodeNumber".to_string(), &episode_number_str);
-
-    let fixed_string = episode_format
-        .replace("{title}", "{episodeTitle}")
-        .replace("{date}", "{episodeDate}")
-        .replace("{description}", "{episodeDescription}")
-        .replace("{duration}", "{episodeDuration}")
-        .replace("{guid}", "{episodeGuid}")
-        .replace("{url}", "{episodeUrl}")
-        .chars()
-        .filter(|&c| c as u32 != 44)
-        .collect::<String>();
-
-    let result = strfmt::strfmt(fixed_string.trim(), &vars);
-
-    match result {
-        Ok(res) => Ok(res.clone()),
-        Err(err) => {
-            tracing::error!("Error formatting episode title: {err}");
-            Err(CustomErrorInner::Conflict(err.to_string(), ErrorSeverity::Error).into())
-        }
-    }
-}
-
-fn perform_replacement(
-    title: &str,
-    retrieved_settings: Setting,
-    podcast_settings: Option<PodcastSetting>,
-) -> String {
-    let mut final_string: String = title.to_string();
-    let replacement_strategy;
-    if podcast_settings.is_none() {
-        replacement_strategy = retrieved_settings.replacement_strategy.clone();
-    } else if let Some(e) = &podcast_settings {
-        if e.activated {
-            replacement_strategy = e.replacement_strategy.clone();
-        } else {
-            replacement_strategy = retrieved_settings.replacement_strategy.clone();
-        }
-    } else {
-        replacement_strategy = retrieved_settings.replacement_strategy.clone();
-    }
-
-    // Colon replacement strategy
-    let strategy = ReplacementStrategy::from_str(&replacement_strategy).unwrap_or_else(|()| {
-        tracing::warn!("Unknown replacement strategy '{replacement_strategy}', using the default");
-        ReplacementStrategy::ReplaceWithDashAndUnderscore
-    });
-    match strategy {
-        ReplacementStrategy::ReplaceWithDashAndUnderscore => {
-            let sanitizer = Sanitizer::new(Some(Options::default_with_replacement("-_")));
-            final_string = sanitizer.sanitize(&final_string);
-        }
-        ReplacementStrategy::Remove => {
-            let sanitizer = Sanitizer::new(Some(Options::default_with_replacement("")));
-            final_string = sanitizer.sanitize(&final_string);
-        }
-        ReplacementStrategy::ReplaceWithDash => {
-            let sanitizer = Sanitizer::new(Some(Options::default_with_replacement("-")));
-            final_string = sanitizer.sanitize(&final_string);
-        }
-    }
-    final_string
-}
-
-fn get_filename_of_url(url: &str) -> Result<String, String> {
-    static FILENAME: LazyLock<Regex> =
-        LazyLock::new(|| Regex::new(r"/([^/?]+)\.\w+(?:\?.*)?$").expect("static regex is valid"));
-    FILENAME
-        .captures(url)
-        .and_then(|captures| captures.get(1))
-        .map(|name| remove_extension(name.as_str()).to_owned())
-        .ok_or_else(|| "Could not get filename".to_owned())
 }
 
 /// The global settings row is created at startup, so a missing one is a bug.
@@ -513,426 +340,4 @@ fn required_settings() -> Result<crate::settings::Setting, CustomError> {
         tracing::error!("Global settings are missing");
         CustomErrorInner::Unknown(ErrorSeverity::Error).into()
     })
-}
-
-fn remove_extension(filename: &str) -> &str {
-    if let Some(dot_idx) = filename.rfind('.') {
-        &filename[..dot_idx]
-    } else {
-        filename
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::services::file::service::{
-        perform_episode_variable_replacement, perform_podcast_variable_replacement,
-        perform_replacement,
-    };
-    use common_infrastructure::rss::PodcastParsed;
-    use podfetch_domain::settings::Setting;
-    use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
-    use serial_test::serial;
-
-    #[test]
-    #[serial]
-    fn test_remove_file_suffix() {
-        let filename = "test.mp3";
-        let filename_without_suffix = super::remove_extension(filename);
-        assert_eq!(filename_without_suffix, "test");
-    }
-
-    #[test]
-    #[serial]
-    fn test_remove_file_suffix_long_name() {
-        let filename = "testz398459345z!?234.mp3";
-        let filename_without_suffix = super::remove_extension(filename);
-        assert_eq!(filename_without_suffix, "testz398459345z!?234");
-    }
-
-    #[test]
-    #[serial]
-    fn get_filename_of_url_test() {
-        let url = "https://www.example.com/test.mp3";
-        let filename = super::get_filename_of_url(url);
-        assert_eq!(filename.unwrap(), "test");
-    }
-
-    #[test]
-    #[serial]
-    fn get_filename_of_url_test_with_numbers() {
-        let url = "https://www.example823459274892347.com234/mypodcast.mp3";
-        let filename = super::get_filename_of_url(url);
-        assert_eq!(filename.unwrap(), "mypodcast");
-    }
-
-    #[test]
-    #[serial]
-    fn test_perform_replacement_dash_and_underscore() {
-        let title = "test: test";
-        let settings = Setting {
-            id: uuid::Uuid::nil(),
-            episode_numbering: false,
-            auto_download: false,
-            auto_update: false,
-            auto_cleanup: false,
-            auto_cleanup_days: 0,
-            podcast_format: "test{podcasttitle}".to_string(),
-            episode_format: "test123{episodetitle}".to_string(),
-            replacement_strategy: "replace-with-dash-and-underscore".to_string(),
-            replace_invalid_characters: true,
-            use_existing_filename: false,
-
-            podcast_prefill: 0,
-            direct_paths: false,
-            auto_transcode_opus: false,
-            use_one_cover_for_all_episodes: false,
-            max_parallel_downloads: 3,
-            sponsorblock_enabled: true,
-            nfo_format: "off".to_string(),
-            cover_filename: "image".to_string(),
-        };
-
-        let result = perform_replacement(title, settings, None);
-
-        assert_eq!(result, "test-_ test");
-    }
-
-    #[test]
-    #[serial]
-    fn test_perform_replacement_remove() {
-        let title = "test: test";
-        let settings = Setting {
-            id: uuid::Uuid::nil(),
-            episode_numbering: false,
-            auto_download: false,
-            auto_update: false,
-            auto_cleanup: false,
-            auto_cleanup_days: 0,
-            podcast_format: "test{podcasttitle}".to_string(),
-            episode_format: "test123{episodetitle}".to_string(),
-            replacement_strategy: "remove".to_string(),
-            replace_invalid_characters: true,
-            use_existing_filename: false,
-
-            podcast_prefill: 0,
-            direct_paths: false,
-            auto_transcode_opus: false,
-            use_one_cover_for_all_episodes: false,
-            max_parallel_downloads: 3,
-            sponsorblock_enabled: true,
-            nfo_format: "off".to_string(),
-            cover_filename: "image".to_string(),
-        };
-
-        let result = perform_replacement(title, settings, None);
-
-        assert_eq!(result, "test test");
-    }
-
-    #[test]
-    #[serial]
-    fn test_perform_replacement_replace_with_dash() {
-        let title = "test: test";
-        let settings = Setting {
-            id: uuid::Uuid::nil(),
-            episode_numbering: false,
-            auto_download: false,
-            auto_update: false,
-            auto_cleanup: false,
-            auto_cleanup_days: 0,
-            podcast_format: "test{podcasttitle}".to_string(),
-            episode_format: "test123{episodetitle}".to_string(),
-            replacement_strategy: "replace-with-dash".to_string(),
-            replace_invalid_characters: true,
-            use_existing_filename: false,
-
-            podcast_prefill: 0,
-            direct_paths: false,
-            auto_transcode_opus: false,
-            use_one_cover_for_all_episodes: false,
-            max_parallel_downloads: 3,
-            sponsorblock_enabled: true,
-            nfo_format: "off".to_string(),
-            cover_filename: "image".to_string(),
-        };
-
-        let result = perform_replacement(title, settings, None);
-
-        assert_eq!(result, "test- test");
-    }
-
-    #[test]
-    #[serial]
-    fn test_podcast_episode_replacement_guid() {
-        let settings = Setting {
-            id: uuid::Uuid::nil(),
-            episode_numbering: false,
-            auto_download: false,
-            auto_update: false,
-            auto_cleanup: false,
-            auto_cleanup_days: 0,
-            podcast_format: "test{guid}".to_string(),
-            episode_format: "test123{guid}".to_string(),
-            replacement_strategy: "replace-with-dash".to_string(),
-            replace_invalid_characters: true,
-            use_existing_filename: false,
-            podcast_prefill: 0,
-            direct_paths: false,
-            auto_transcode_opus: false,
-            use_one_cover_for_all_episodes: false,
-            max_parallel_downloads: 3,
-            sponsorblock_enabled: true,
-            nfo_format: "off".to_string(),
-            cover_filename: "image".to_string(),
-        };
-
-        let podcast_episode = PodcastEpisode {
-            id: uuid::Uuid::nil().to_string(),
-            legacy_id: None,
-            name: "test".to_string(),
-            description: "test".to_string(),
-            url: "test".to_string(),
-            guid: "test".to_string(),
-            total_time: 0,
-            date_of_recording: "2022".to_string(),
-            podcast_id: uuid::Uuid::nil().to_string(),
-            file_episode_path: None,
-            file_image_path: None,
-            episode_id: String::new(),
-            image_url: String::new(),
-            download_time: None,
-            deleted: false,
-            episode_numbering_processed: false,
-            download_location: None,
-            youtube_video_id: None,
-        };
-
-        let result = perform_episode_variable_replacement(settings, podcast_episode, None, 1, None);
-        assert_eq!(result.unwrap(), "test123test");
-    }
-
-    #[test]
-    #[serial]
-    fn test_podcast_episode_replacement_title() {
-        let settings = Setting {
-            id: uuid::Uuid::nil(),
-            episode_numbering: false,
-            auto_download: false,
-            auto_update: false,
-            auto_cleanup: false,
-            auto_cleanup_days: 0,
-            podcast_format: "{date}{title}".to_string(),
-            episode_format: "{date}{title}{guid}".to_string(),
-            replacement_strategy: "replace-with-dash".to_string(),
-            replace_invalid_characters: true,
-            use_existing_filename: false,
-            podcast_prefill: 0,
-            direct_paths: false,
-            auto_transcode_opus: false,
-            use_one_cover_for_all_episodes: false,
-            max_parallel_downloads: 3,
-            sponsorblock_enabled: true,
-            nfo_format: "off".to_string(),
-            cover_filename: "image".to_string(),
-        };
-
-        let podcast_episode = PodcastEpisode {
-            id: uuid::Uuid::nil().to_string(),
-            legacy_id: None,
-            name: "MyPodcast".to_string(),
-            description: "test".to_string(),
-            url: "test".to_string(),
-            guid: "test".to_string(),
-            total_time: 0,
-            date_of_recording: "2022".to_string(),
-            podcast_id: uuid::Uuid::nil().to_string(),
-            file_episode_path: None,
-            file_image_path: None,
-            episode_id: String::new(),
-            image_url: String::new(),
-            download_time: None,
-            deleted: false,
-            episode_numbering_processed: false,
-            download_location: None,
-            youtube_video_id: None,
-        };
-
-        let result = perform_episode_variable_replacement(settings, podcast_episode, None, 1, None);
-        assert_eq!(result.unwrap(), "2022MyPodcasttest");
-    }
-
-    #[test]
-    #[serial]
-    fn test_podcast_episode_replacement_old_format() {
-        let settings = Setting {
-            id: uuid::Uuid::nil(),
-            episode_numbering: false,
-            auto_download: false,
-            auto_update: false,
-            auto_cleanup: false,
-            auto_cleanup_days: 0,
-            podcast_format: "{date}{title}".to_string(),
-            episode_format: "{}".to_string(),
-            replacement_strategy: "replace-with-dash".to_string(),
-            replace_invalid_characters: true,
-            use_existing_filename: false,
-            podcast_prefill: 0,
-            direct_paths: false,
-            auto_transcode_opus: false,
-            use_one_cover_for_all_episodes: false,
-            max_parallel_downloads: 3,
-            sponsorblock_enabled: true,
-            nfo_format: "off".to_string(),
-            cover_filename: "image".to_string(),
-        };
-
-        let podcast_episode = PodcastEpisode {
-            id: uuid::Uuid::nil().to_string(),
-            legacy_id: None,
-            name: "MyPodcast".to_string(),
-            description: "test".to_string(),
-            url: "test2".to_string(),
-            guid: "test".to_string(),
-            total_time: 0,
-            date_of_recording: "2022".to_string(),
-            podcast_id: uuid::Uuid::nil().to_string(),
-            file_episode_path: None,
-            file_image_path: None,
-            episode_id: String::new(),
-            image_url: String::new(),
-            download_time: None,
-            deleted: false,
-            episode_numbering_processed: false,
-            download_location: None,
-            youtube_video_id: None,
-        };
-
-        let result = perform_episode_variable_replacement(settings, podcast_episode, None, 1, None);
-        assert_eq!(result.unwrap(), "MyPodcast");
-    }
-
-    #[test]
-    #[serial]
-    fn episode_format_supports_episode_number_token() {
-        let settings = Setting {
-            id: uuid::Uuid::nil(),
-            episode_numbering: false,
-            auto_download: false,
-            auto_update: false,
-            auto_cleanup: false,
-            auto_cleanup_days: 0,
-            podcast_format: "{date}{title}".to_string(),
-            episode_format: "{episodeNumber:0>3} - {episodeTitle}".to_string(),
-            replacement_strategy: "replace-with-dash".to_string(),
-            replace_invalid_characters: true,
-            use_existing_filename: false,
-            podcast_prefill: 0,
-            direct_paths: false,
-            auto_transcode_opus: false,
-            use_one_cover_for_all_episodes: false,
-            max_parallel_downloads: 3,
-            sponsorblock_enabled: true,
-            nfo_format: "off".to_string(),
-            cover_filename: "image".to_string(),
-        };
-
-        let podcast_episode = PodcastEpisode {
-            id: uuid::Uuid::nil().to_string(),
-            legacy_id: None,
-            name: "Hello".to_string(),
-            description: "test".to_string(),
-            url: "test".to_string(),
-            guid: "test".to_string(),
-            total_time: 0,
-            date_of_recording: "2022".to_string(),
-            podcast_id: uuid::Uuid::nil().to_string(),
-            file_episode_path: None,
-            file_image_path: None,
-            episode_id: String::new(),
-            image_url: String::new(),
-            download_time: None,
-            deleted: false,
-            episode_numbering_processed: false,
-            download_location: None,
-            youtube_video_id: None,
-        };
-
-        let result = perform_episode_variable_replacement(settings, podcast_episode, None, 7, None);
-        assert_eq!(result.unwrap(), "007 - Hello");
-    }
-
-    #[test]
-    #[serial]
-    pub fn perform_podcast_variable_replacement_date_title() {
-        let settings = Setting {
-            id: uuid::Uuid::nil(),
-            episode_numbering: false,
-            auto_download: false,
-            auto_update: false,
-            auto_cleanup: false,
-            auto_cleanup_days: 0,
-            podcast_format: "{date}-{title}".to_string(),
-            episode_format: "{date}{}".to_string(),
-            replacement_strategy: "replace-with-dash".to_string(),
-            replace_invalid_characters: true,
-            use_existing_filename: false,
-            podcast_prefill: 0,
-            direct_paths: false,
-            auto_transcode_opus: false,
-            use_one_cover_for_all_episodes: false,
-            max_parallel_downloads: 3,
-            sponsorblock_enabled: true,
-            nfo_format: "off".to_string(),
-            cover_filename: "image".to_string(),
-        };
-
-        let podcast_episode = PodcastParsed {
-            title: "Test".to_string(),
-            language: String::new(),
-            explicit: "false".to_string(),
-            keywords: "test,test2".to_string(),
-            summary: "test123".to_string(),
-            date: "2022-12".to_string(),
-        };
-        let result = perform_podcast_variable_replacement(settings, podcast_episode, None);
-        assert_eq!(result.unwrap(), "2022-12-Test");
-    }
-
-    #[test]
-    #[serial]
-    pub fn perform_podcast_variable_replacement_old_format() {
-        let settings = Setting {
-            id: uuid::Uuid::nil(),
-            episode_numbering: false,
-            auto_download: false,
-            auto_update: false,
-            auto_cleanup: false,
-            auto_cleanup_days: 0,
-            podcast_format: "{}".to_string(),
-            episode_format: "{date}{title}".to_string(),
-            replacement_strategy: "replace-with-dash".to_string(),
-            replace_invalid_characters: true,
-            use_existing_filename: false,
-            podcast_prefill: 0,
-            direct_paths: false,
-            auto_transcode_opus: false,
-            use_one_cover_for_all_episodes: false,
-            max_parallel_downloads: 3,
-            sponsorblock_enabled: true,
-            nfo_format: "off".to_string(),
-            cover_filename: "image".to_string(),
-        };
-
-        let podcast_episode = PodcastParsed {
-            title: "Test".to_string(),
-            language: "en".to_string(),
-            explicit: "false".to_string(),
-            keywords: "test,test2".to_string(),
-            summary: "test123".to_string(),
-            date: "2022-12".to_string(),
-        };
-        let result = perform_podcast_variable_replacement(settings, podcast_episode, None);
-        assert_eq!(result.unwrap(), "Test");
-    }
 }

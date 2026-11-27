@@ -5,10 +5,15 @@
 //! name, feed URL, YouTube video id) comes from the catalog, translated at
 //! the boundary.
 //!
-//! So far it holds the episodes' file state and SponsorBlock; the
-//! download pipeline, rescans and NFO files follow (migration step 5.2c).
+//! So far it holds the episodes' file state, SponsorBlock and the building
+//! blocks of the download pipeline (tags, chapters, conversion, naming);
+//! the download, file, rescan and NFO services follow (migration step
+//! 5.2c-2).
 
+pub mod audio;
 pub mod files;
 pub mod handlers;
+pub mod naming;
 pub mod persistence;
+pub mod rules;
 pub mod sponsorblock;

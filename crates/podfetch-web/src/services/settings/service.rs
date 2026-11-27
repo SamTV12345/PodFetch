@@ -1,13 +1,10 @@
-use crate::services::file::service::{
-    perform_episode_variable_replacement, perform_podcast_variable_replacement,
-};
 use crate::settings::{Setting, SettingsApplicationService, UpdateNameSettings};
 use common_infrastructure::error::CustomError;
 use common_infrastructure::rss::PodcastParsed;
 use podfetch_domain::settings::SettingRepository;
+use podfetch_media::naming::{EpisodeNaming, NamingRules, Replacement};
 use podfetch_persistence::adapters::SettingsRepositoryImpl;
 use podfetch_persistence::db::database;
-use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -63,55 +60,26 @@ impl SettingsService {
             explicit: "false".to_string(),
         };
 
-        let sample_episode = PodcastEpisode {
-            id: uuid::Uuid::nil().to_string(),
-            legacy_id: None,
-            podcast_id: uuid::Uuid::nil().to_string(),
-            episode_id: "2".to_string(),
+        let sample_episode = EpisodeNaming {
             name: "My Homelab".to_string(),
             url: "http://podigee.com/rss/123".to_string(),
             date_of_recording: "2023-12-24".to_string(),
-            image_url: "http://podigee.com/rss/123/image".to_string(),
             total_time: 1200,
             description: "My description".to_string(),
-            download_time: None,
             guid: "081923123".to_string(),
-            deleted: false,
-            file_episode_path: None,
-            file_image_path: None,
-            episode_numbering_processed: false,
-            download_location: None,
-            youtube_video_id: None,
         };
 
-        let transient_setting = build_name_only_setting(&update_settings);
-        perform_podcast_variable_replacement(transient_setting.clone(), sample_podcast, None)?;
-        perform_episode_variable_replacement(transient_setting, sample_episode, None, 1, None)?;
+        // Only checks that both formats work; nothing is stored here.
+        let rules = NamingRules {
+            replacement: Replacement::from_setting(
+                &update_settings.replacement_strategy.to_string(),
+            ),
+            podcast_format: update_settings.podcast_format.clone(),
+            episode_format: update_settings.episode_format.clone(),
+        };
+        podfetch_media::naming::podcast_directory_name(&rules, &sample_podcast)?;
+        podfetch_media::naming::episode_file_stem(&rules, &sample_episode, 1, None)?;
         Ok(update_settings)
-    }
-}
-
-fn build_name_only_setting(update: &UpdateNameSettings) -> podfetch_domain::settings::Setting {
-    podfetch_domain::settings::Setting {
-        id: uuid::Uuid::nil(),
-        episode_numbering: false,
-        auto_download: false,
-        auto_update: false,
-        auto_cleanup: false,
-        auto_cleanup_days: 0,
-        podcast_prefill: 0,
-        replace_invalid_characters: update.replace_invalid_characters,
-        use_existing_filename: update.use_existing_filename,
-        replacement_strategy: update.replacement_strategy.to_string(),
-        episode_format: update.episode_format.clone(),
-        podcast_format: update.podcast_format.clone(),
-        direct_paths: update.direct_paths,
-        auto_transcode_opus: false,
-        use_one_cover_for_all_episodes: false,
-        max_parallel_downloads: 3,
-        sponsorblock_enabled: true,
-        nfo_format: "off".to_string(),
-        cover_filename: "image".to_string(),
     }
 }
 

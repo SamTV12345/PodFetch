@@ -1,14 +1,12 @@
-use crate::services::download::chapter::{Chapter, Link};
 use crate::services::file::service::{FileService, prepare_podcast_episode_title_to_directory};
 use crate::services::podcast_episode_chapter::service::PodcastEpisodeChapterService;
 use crate::services::podcast_settings::service::PodcastSettingsService;
 use crate::services::settings::service::SettingsService;
+use podfetch_media::audio::{Chapter, EpisodeTags, TagFormat};
 use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
-use std::fs::File;
 
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
-use chrono::Duration;
 use common_infrastructure::config::FileHandlerType;
 use common_infrastructure::error::{
     CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error,
@@ -16,8 +14,6 @@ use common_infrastructure::error::{
 use common_infrastructure::http::COMMON_USER_AGENT;
 use common_infrastructure::http::{get_async_sync_client, get_sync_client};
 use common_infrastructure::runtime::{DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, PODCAST_FILENAME};
-use file_format::FileFormat;
-use id3::{ErrorKind, Tag, TagLike};
 use podfetch_persistence::db::get_connection;
 use podfetch_storage::FileHandleWrapper;
 use podfetch_storage::FileRequest;
@@ -26,7 +22,6 @@ use podfetch_storage::{
     determine_file_extension,
 };
 use reqwest::header::{ACCEPT_ENCODING, HeaderMap, HeaderValue, USER_AGENT};
-use std::io::Read;
 use std::path::Path;
 use std::thread::sleep;
 use std::time::Duration as StdDuration;
@@ -201,19 +196,20 @@ impl DownloadService {
             determine_file_extension(&podcast_episode.url, &client, FileType::Audio),
             &podcast_episode.url,
         )?;
-        if Self::is_hls_playlist(&podcast_data.1) {
+        if podfetch_media::audio::convert::is_hls_playlist(&podcast_data.1) {
             tracing::info!(
                 "Episode {} is served as an HLS playlist, downloading via ffmpeg",
                 podcast_episode.episode_id
             );
-            podcast_data = Self::download_hls_episode(&podcast_episode.url)?;
+            podcast_data =
+                podfetch_media::audio::convert::download_hls_episode(&podcast_episode.url)?;
         }
         let settings_in_db = SettingsService::shared()
             .get_settings()?
             .ok_or_else(|| CustomError::from(CustomErrorInner::Unknown(ErrorSeverity::Error)))?;
         let podcast_settings_override =
             PodcastSettingsService::get_settings_for_podcast(parse_id(&podcast.id)?)?;
-        let use_one_cover_for_all_episodes = Self::use_one_cover_from(
+        let use_one_cover_for_all_episodes = podfetch_media::rules::use_one_cover_from(
             podcast_settings_override
                 .as_ref()
                 .map(|s| (s.activated, s.use_one_cover_for_all_episodes)),
@@ -228,7 +224,7 @@ impl DownloadService {
 
         // Download when: episode has its own image, or the podcast main image
         // hasn't been downloaded yet (and we're not forced to use one cover).
-        let should_download_main_image = Self::should_download_image(
+        let should_download_main_image = podfetch_media::rules::should_download_image(
             use_one_cover_for_all_episodes,
             episode_has_own_image,
             podcast_main_image_downloaded,
@@ -390,7 +386,7 @@ impl DownloadService {
         Self::sync_total_time_with_file(&podcast_episode, &paths.filename);
 
         let final_episode_path = if settings_in_db.auto_transcode_opus {
-            match Self::transcode_to_opus(&paths.filename) {
+            match podfetch_media::audio::convert::transcode_to_opus(&paths.filename) {
                 Ok(opus_path) => opus_path,
                 Err(e) => {
                     tracing::warn!("Opus transcoding failed, keeping original file: {e}");
@@ -422,20 +418,6 @@ impl DownloadService {
         Ok(())
     }
 
-    /// Returns the whole-second duration to store when the probed duration is
-    /// valid and differs from the stored `total_time`.
-    fn duration_to_store(current_total_time: i32, probed_seconds: f64) -> Option<i32> {
-        if !probed_seconds.is_finite() || probed_seconds <= 0.0 {
-            return None;
-        }
-        let rounded = probed_seconds.round();
-        if rounded < 1.0 || rounded > f64::from(i32::MAX) {
-            return None;
-        }
-        let rounded = rounded as i32;
-        (rounded != current_total_time).then_some(rounded)
-    }
-
     fn sync_total_time_with_file(podcast_episode: &PodcastEpisode, file_path: &str) {
         let probed = match podfetch_audiobooks::services::audio_probe::probe_audio_file(
             std::path::Path::new(file_path),
@@ -450,7 +432,7 @@ impl DownloadService {
             }
         };
         if let Some(total_time) =
-            Self::duration_to_store(podcast_episode.total_time, probed.duration)
+            podfetch_media::rules::duration_to_store(podcast_episode.total_time, probed.duration)
             && let Err(err) =
                 PodcastEpisodeService::update_total_time(&podcast_episode.episode_id, total_time)
         {
@@ -461,138 +443,9 @@ impl DownloadService {
         }
     }
 
-    /// True when the downloaded body is an HLS playlist (`#EXTM3U`) instead of
-    /// audio — some hosts (e.g. podtoo.com, issue #1402) serve HLS behind a
-    /// `.mp3` enclosure URL, so the suffix check never sees it.
-    pub(crate) fn is_hls_playlist(bytes: &[u8]) -> bool {
-        let bytes = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(bytes);
-        let start = bytes
-            .iter()
-            .position(|b| !b.is_ascii_whitespace())
-            .unwrap_or(0);
-        bytes[start..].starts_with(b"#EXTM3U")
-    }
-
-    /// Let ffmpeg fetch the HLS segments and remux them into a single audio
-    /// file. Returns `(suffix, bytes)` like `handle_suffix_response`, so the
-    /// rest of the download flow (tagging, S3 upload, opus transcode) runs
-    /// unchanged.
-    fn download_hls_episode(url: &str) -> Result<(String, Vec<u8>), CustomError> {
-        // Pick a lossless remux container from the segment codec: raw MP3
-        // segments stay .mp3, everything else (usually ADTS AAC) goes into
-        // .m4a — ffmpeg inserts the aac_adtstoasc filter automatically.
-        let codec = std::process::Command::new("ffprobe")
-            .args([
-                "-user_agent",
-                COMMON_USER_AGENT,
-                "-v",
-                "error",
-                "-select_streams",
-                "a:0",
-                "-show_entries",
-                "stream=codec_name",
-                "-of",
-                "csv=p=0",
-                url,
-            ])
-            .output()
-            .ok()
-            .filter(|o| o.status.success())
-            // ffprobe lists HLS streams once per section (programs + streams),
-            // so the codec line can appear twice — take the first.
-            .and_then(|o| {
-                String::from_utf8_lossy(&o.stdout)
-                    .lines()
-                    .next()
-                    .map(|l| l.trim().to_string())
-            });
-        let suffix = match codec.as_deref() {
-            Some("mp3") => "mp3",
-            _ => "m4a",
-        };
-
-        let tmp_path = std::env::temp_dir()
-            .join(format!("podfetch-hls-{}.{suffix}", uuid::Uuid::new_v4()))
-            .to_string_lossy()
-            .to_string();
-
-        let output = std::process::Command::new("ffmpeg")
-            .args([
-                "-user_agent",
-                COMMON_USER_AGENT,
-                "-i",
-                url,
-                "-c",
-                "copy",
-                "-vn",
-                "-y",
-                &tmp_path,
-            ])
-            .output()
-            .map_err(|e| {
-                CustomErrorInner::Conflict(
-                    format!("Episode is served as HLS; ffmpeg is required to download it: {e}"),
-                    ErrorSeverity::Error,
-                )
-            })?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let _ = std::fs::remove_file(&tmp_path);
-            return Err(CustomErrorInner::Conflict(
-                format!("ffmpeg HLS download failed for {url}: {stderr}"),
-                ErrorSeverity::Error,
-            )
-            .into());
-        }
-
-        let bytes = std::fs::read(&tmp_path);
-        let _ = std::fs::remove_file(&tmp_path);
-        let bytes = bytes.map_err(|e| {
-            CustomErrorInner::Conflict(
-                format!("Could not read ffmpeg HLS output: {e}"),
-                ErrorSeverity::Error,
-            )
-        })?;
-        Ok((suffix.to_string(), bytes))
-    }
-
-    pub(crate) fn transcode_to_opus(input_path: &str) -> Result<String, CustomError> {
-        let opus_path = {
-            let p = std::path::Path::new(input_path);
-            p.with_extension("opus").to_string_lossy().to_string()
-        };
-
-        let output = std::process::Command::new("ffmpeg")
-            .args([
-                "-i", input_path, "-c:a", "libopus", "-b:a", "48k", "-vn", "-y", &opus_path,
-            ])
-            .output()
-            .map_err(|e| {
-                CustomErrorInner::Conflict(
-                    format!("Failed to run ffmpeg: {e}"),
-                    ErrorSeverity::Warning,
-                )
-            })?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(CustomErrorInner::Conflict(
-                format!("ffmpeg transcode failed: {stderr}"),
-                ErrorSeverity::Warning,
-            )
-            .into());
-        }
-
-        // Remove the original file after successful transcoding
-        if let Err(e) = std::fs::remove_file(input_path) {
-            tracing::warn!("Could not remove original file after opus transcode: {e}");
-        }
-
-        tracing::info!("Transcoded to opus: {opus_path}");
-        Ok(opus_path)
-    }
-
+    /// Tags the downloaded file with the episode's metadata and returns the
+    /// chapters embedded in it. Files on S3 are left alone. A failure to
+    /// tag is logged; only an unreadable or unsupported file is an error.
     pub fn handle_metadata_insertion(
         paths: &FilenameBuilderReturn,
         podcast_episode: &PodcastEpisode,
@@ -602,202 +455,58 @@ impl DownloadService {
             return Ok(vec![]);
         }
 
-        let chapters: Vec<Chapter>;
-
-        let detected_file = FileFormat::from_file(&paths.filename).map_err(|e| {
-            CustomErrorInner::Conflict(
-                format!("Failed to detect file format for {}: {e}", paths.filename),
-                ErrorSeverity::Warning,
+        let format = TagFormat::of_file(&paths.filename)?;
+        let chapters = format.read_chapters(&paths.filename)?;
+        let written = Self::episode_tags(podcast_episode, podcast).and_then(|tags| {
+            format.write(
+                &paths.filename,
+                &paths.image_filename,
+                &tags,
+                &mut |numbered| {
+                    PodcastEpisodeService::update_episode_numbering_processed(
+                        numbered,
+                        &podcast_episode.episode_id,
+                    )
+                },
             )
-        })?;
-        match detected_file {
-            FileFormat::Mpeg12AudioLayer3
-            | FileFormat::Mpeg12AudioLayer2
-            | FileFormat::Id3v2
-            | FileFormat::WaveformAudio => {
-                chapters = Self::read_chapters_from_mp3(&paths.filename)?;
-                let result_of_update = Self::update_meta_data_mp3(paths, podcast_episode, podcast);
-                if let Some(err) = result_of_update.err() {
-                    tracing::error!("Error updating metadata: {err:?}");
-                }
-            }
-            FileFormat::Mpeg4Part14
-            | FileFormat::Mpeg4Part14Audio
-            | FileFormat::AppleItunesAudio => {
-                chapters = Self::read_chapters_from_mp4(&paths.filename);
-                let result_of_update = Self::update_meta_data_mp4(paths, podcast_episode, podcast);
-                if let Some(err) = result_of_update.err() {
-                    tracing::error!("Error updating metadata: {err:?}");
-                }
-            }
-            _ => {
-                tracing::error!("File format not supported: {detected_file:?}");
-                return Err(CustomErrorInner::Conflict(
-                    "File format not supported".to_string(),
-                    ErrorSeverity::Error,
-                )
-                .into());
-            }
+        });
+        if let Err(err) = written {
+            tracing::error!("Error updating metadata: {err:?}");
         }
         Ok(chapters)
     }
 
-    fn update_meta_data_mp3(
-        paths: &FilenameBuilderReturn,
+    /// What goes into the file's tags, translated from the catalog.
+    fn episode_tags(
         podcast_episode: &PodcastEpisode,
         podcast: &Podcast,
-    ) -> Result<(), CustomError> {
-        let mut tag = match Tag::read_from_path(&paths.filename) {
-            Ok(tag) => tag,
-            Err(id3::Error {
-                kind: ErrorKind::NoTag,
-                ..
-            }) => Tag::new(),
-            Err(err) => {
-                return Err(
-                    CustomErrorInner::Conflict(err.to_string(), ErrorSeverity::Error).into(),
-                );
-            }
-        };
-
-        if let 0 = tag.pictures().count()
-            && let Ok(mut image_file) = File::open(&paths.image_filename)
-        {
-            let mut image_data = Vec::new();
-            let _ = image_file.read_to_end(&mut image_data);
-            tag.add_frame(id3::frame::Picture {
-                mime_type: "image/jpeg".to_string(),
-                picture_type: id3::frame::PictureType::CoverFront,
-                description: "Cover".to_string(),
-                data: image_data,
-            });
-        }
-
+    ) -> Result<EpisodeTags, CustomError> {
         let index = PodcastEpisodeService::get_position_of_episode(
             &podcast_episode.date_of_recording,
             parse_id(&podcast_episode.podcast_id)?,
         )?;
-
         let numbering_enabled = Self::episode_numbering_enabled(parse_id(&podcast.id)?)?;
-        if let Some((title, processed)) = Self::resolve_episode_title(
-            &podcast_episode.name,
-            podcast_episode.episode_numbering_processed,
-            numbering_enabled,
-            index,
-        ) {
-            tag.set_title(title);
-            PodcastEpisodeService::update_episode_numbering_processed(
-                processed,
-                &podcast_episode.episode_id,
-            )?;
-        }
-
-        if let Some(author) = &podcast.author {
-            tag.set_artist(author);
-        }
-
-        tag.set_album(&podcast.name);
-
-        if let Some(recorded) = id3_timestamp(&podcast_episode.date_of_recording) {
-            tag.set_date_recorded(recorded);
-        }
-
-        if tag.genres().is_none()
-            && let Some(keywords) = &podcast.keywords
-        {
-            tag.set_genre(keywords);
-        }
-
-        if tag.clone().comments().next().is_none() {
-            tag.add_frame(id3::frame::Comment {
-                lang: podcast.clone().language.unwrap_or("eng".to_string()),
-                description: "Comment".to_string(),
-                text: podcast_episode.clone().description,
-            });
-        }
-
         let track_number = PodcastEpisodeService::get_track_number_for_episode(
             parse_id(&podcast.id)?,
             &podcast_episode.date_of_recording,
-        );
-
-        if tag.track().is_none()
-            && let Ok(track_number) = track_number
-        {
-            tag.set_track(track_number as u32);
-        }
-
-        // Always write ID3v2.4 because otherwise there are compatibility issues with
-        // embedded tags. A failed tag write must not fail the download.
-        if let Err(e) = tag.write_to_path(&paths.filename, id3::Version::Id3v24) {
-            tracing::error!("Error writing metadata to {}: {e}", paths.filename);
-        }
-        Ok(())
-    }
-
-    fn update_meta_data_mp4(
-        paths: &FilenameBuilderReturn,
-        podcast_episode: &PodcastEpisode,
-        podcast: &Podcast,
-    ) -> Result<(), CustomError> {
-        let tag = mp4ameta::Tag::read_from_path(&paths.filename);
-        match tag {
-            Ok(mut tag) => {
-                let index = PodcastEpisodeService::get_position_of_episode(
-                    &podcast_episode.date_of_recording,
-                    parse_id(&podcast_episode.podcast_id)?,
-                )?;
-                let numbering_enabled = Self::episode_numbering_enabled(parse_id(&podcast.id)?)?;
-                if let Some((title, processed)) = Self::resolve_episode_title(
-                    &podcast_episode.name,
-                    podcast_episode.episode_numbering_processed,
-                    numbering_enabled,
-                    index,
-                ) {
-                    tag.set_title(&title);
-                    PodcastEpisodeService::update_episode_numbering_processed(
-                        processed,
-                        &podcast_episode.episode_id,
-                    )?;
-                }
-                tag.set_artist(podcast.clone().author.unwrap_or("Unknown".to_string()));
-                tag.set_album(&podcast.name);
-                tag.set_genre(podcast.clone().keywords.unwrap_or("Unknown".to_string()));
-
-                tag.set_comment(&podcast_episode.description);
-                let track_number = PodcastEpisodeService::get_track_number_for_episode(
-                    parse_id(&podcast.id)?,
-                    &podcast_episode.date_of_recording,
-                );
-
-                match track_number {
-                    Ok(track_number) => {
-                        tag.set_track_number(track_number as u16);
-                    }
-                    Err(e) => {
-                        tracing::error!("Error getting track number: {e:?}");
-                    }
-                }
-
-                if let Err(e) = tag.write_to_path(&paths.filename) {
-                    tracing::error!(
-                        "Error writing MP4 metadata for episode {}, file may use an unsupported atom layout: {e}",
-                        podcast_episode.name
-                    );
-                }
-                Ok(())
-            }
-            Err(e) => {
-                // Many M4A files (especially from Anchor/Spotify) have non-standard
-                // atom layouts that mp4ameta can't parse. This is not fatal - the
-                // audio file itself is fine, we just skip metadata writing.
-                tracing::warn!(
-                    "Could not read MP4 metadata for episode {}, skipping metadata update: {e}",
-                    podcast_episode.name
-                );
-                Ok(())
-            }
-        }
+        )
+        .inspect_err(|e| tracing::error!("Error getting track number: {e:?}"))
+        .ok();
+        Ok(EpisodeTags {
+            title: podfetch_media::rules::resolve_episode_title(
+                &podcast_episode.name,
+                podcast_episode.episode_numbering_processed,
+                numbering_enabled,
+                index,
+            ),
+            artist: podcast.author.clone(),
+            album: podcast.name.clone(),
+            genre: podcast.keywords.clone(),
+            language: podcast.language.clone(),
+            comment: podcast_episode.description.clone(),
+            date_of_recording: podcast_episode.date_of_recording.clone(),
+            track_number,
+        })
     }
 
     /// Resolve whether episode-number title prefixing applies to a podcast.
@@ -813,286 +522,14 @@ impl DownloadService {
         let global = SettingsService::shared()
             .get_settings()?
             .map(|s| s.episode_numbering);
-        Ok(Self::numbering_from(per_podcast, global))
+        Ok(podfetch_media::rules::numbering_from(per_podcast, global))
     }
-
-    /// Combine the per-podcast and instance-wide `episode_numbering` flags.
-    /// Numbering applies when either layer turns it on; a missing settings row
-    /// counts as "off" for that layer.
-    fn numbering_from(per_podcast: Option<bool>, global: Option<bool>) -> bool {
-        per_podcast.unwrap_or(false) || global.unwrap_or(false)
-    }
-
-    /// Resolve the effective `use_one_cover_for_all_episodes`. The per-podcast
-    /// value is honoured only when its settings row is activated; otherwise the
-    /// instance-wide default applies. This mirrors `resolve_nfo_format` /
-    /// `resolve_cover_filename` so every per-podcast download option shares the
-    /// same `activated`-gated override rule. `per_podcast` is `(activated, value)`.
-    fn use_one_cover_from(per_podcast: Option<(bool, bool)>, global: bool) -> bool {
-        match per_podcast {
-            Some((activated, value)) if activated => value,
-            _ => global,
-        }
-    }
-
-    /// Whether an image should be downloaded for this episode.
-    ///
-    /// Always `false` when `use_one_cover` is forced. Otherwise downloads
-    /// when the episode carries its own `<itunes:image>` or the podcast
-    /// main image hasn't been fetched yet.
-    fn should_download_image(
-        use_one_cover: bool,
-        episode_has_own_image: bool,
-        podcast_main_image_downloaded: bool,
-    ) -> bool {
-        !use_one_cover && (episode_has_own_image || !podcast_main_image_downloaded)
-    }
-
-    /// Decide the title to embed and whether to (re)write the
-    /// `episode_numbering_processed` flag. Returns `None` when numbering is on
-    /// and the episode was already processed (leave the existing title alone).
-    pub(crate) fn resolve_episode_title(
-        name: &str,
-        episode_numbering_processed: bool,
-        numbering_enabled: bool,
-        index: usize,
-    ) -> Option<(String, bool)> {
-        if numbering_enabled {
-            if episode_numbering_processed {
-                None
-            } else {
-                Some((format!("{index} - {name}"), true))
-            }
-        } else {
-            Some((name.to_string(), false))
-        }
-    }
-
-    pub fn read_chapters_from_mp3(path: &String) -> Result<Vec<Chapter>, CustomError> {
-        let tag = Tag::read_from_path(path)
-            .map_err(|e| format!("Error reading ID3 tag from `{path}`: {e}"));
-
-        let tag = match tag {
-            Ok(tag) => tag,
-            Err(err) => {
-                tracing::error!("Error reading ID3 tag: {}", err);
-                return Ok(Vec::new());
-            }
-        };
-
-        let mut chapters = Vec::new();
-
-        for id3_chapter in tag.chapters() {
-            let start = Duration::milliseconds(id3_chapter.start_time as i64);
-
-            let temp_end = Duration::milliseconds(id3_chapter.end_time as i64);
-            // Some programs might encode chapters as instants, i.e., with the start and end time being the same.
-            let end = if temp_end == start {
-                None
-            } else {
-                Some(temp_end)
-            };
-
-            let mut title = None;
-            let mut link = None;
-
-            for subframe in &id3_chapter.frames {
-                match subframe.content() {
-                    id3::Content::Text(text) => {
-                        title = Some(text.clone());
-                    }
-                    id3::Content::Link(url) => {
-                        link = Some(Link {
-                            url: url::Url::parse(url)
-                                .map_err(<url::ParseError as Into<CustomError>>::into)?,
-                            title: None,
-                        });
-                    }
-                    id3::Content::ExtendedLink(extended_link) => {
-                        link = Some(Link {
-                            url: url::Url::parse(&extended_link.link)
-                                .map_err(<url::ParseError as Into<CustomError>>::into)?,
-                            title: match extended_link.description.trim() {
-                                "" => None,
-                                description => Some(description.to_string()),
-                            },
-                        });
-                    }
-                    _ => {}
-                }
-            }
-
-            chapters.push(Chapter {
-                start,
-                end,
-                title,
-                link,
-                ..Default::default()
-            });
-        }
-
-        // Order chapters by start time.
-        chapters.sort_by_key(|a| a.start);
-
-        Ok(chapters)
-    }
-
-    pub fn read_chapters_from_mp4(path: &String) -> Vec<Chapter> {
-        let tag = mp4ameta::Tag::read_from_path(path);
-        let tag = match tag {
-            Ok(tag) => tag,
-            Err(err) => {
-                tracing::error!("Error reading MP4 tag: {}", err);
-                return Vec::new();
-            }
-        };
-        let chapters_list: Vec<_> = tag.chapter_list().iter().collect();
-        let mut chapters = Vec::new();
-        for (index, id3_chapter) in chapters_list.iter().enumerate() {
-            let start = Duration::milliseconds(id3_chapter.start.as_millis() as i64);
-
-            let end = if index + 1 < chapters_list.len() {
-                Some(Duration::milliseconds(
-                    chapters_list[index + 1].start.as_millis() as i64,
-                ))
-            } else {
-                None
-            };
-
-            let title = if id3_chapter.title.is_empty() {
-                None
-            } else {
-                Some(id3_chapter.title.clone())
-            };
-
-            chapters.push(Chapter {
-                title,
-                link: None,
-                start,
-                end,
-                ..Default::default()
-            });
-        }
-        chapters
-    }
-}
-
-/// Converts a stored RFC 3339 recording date into an ID3 timestamp.
-///
-/// ID3 timestamps carry no time zone, so the date is taken in UTC. Episodes
-/// without a (parseable) date get no recording date tag.
-fn id3_timestamp(date_of_recording: &str) -> Option<id3::Timestamp> {
-    let date = chrono::DateTime::parse_from_rfc3339(date_of_recording)
-        .ok()?
-        .with_timezone(&chrono::Utc);
-    date.format("%Y-%m-%dT%H:%M:%S").to_string().parse().ok()
 }
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn id3_timestamp_from_stored_dates() {
-        let ts = super::id3_timestamp("2025-01-02T10:30:00+01:00").unwrap();
-        assert_eq!(ts.to_string(), "2025-01-02T09:30:00");
-        // Episodes without a pubDate store an empty string.
-        assert!(super::id3_timestamp("").is_none());
-        assert!(super::id3_timestamp("garbage").is_none());
-    }
 
     use super::{DownloadService, FilenameBuilderReturn, Podcast, PodcastEpisode};
-
-    #[test]
-    fn duration_to_store_uses_probed_value_when_it_differs() {
-        assert_eq!(DownloadService::duration_to_store(1397, 1593.6), Some(1594));
-        assert_eq!(DownloadService::duration_to_store(0, 90.2), Some(90));
-        assert_eq!(DownloadService::duration_to_store(1594, 1593.7), None);
-        assert_eq!(DownloadService::duration_to_store(1397, 0.0), None);
-        assert_eq!(DownloadService::duration_to_store(1397, -5.0), None);
-        assert_eq!(DownloadService::duration_to_store(1397, f64::NAN), None);
-        assert_eq!(
-            DownloadService::duration_to_store(1397, f64::INFINITY),
-            None
-        );
-    }
-
-    #[test]
-    fn resolve_episode_title_handles_all_numbering_states() {
-        // numbering on, not yet processed -> prefix + mark processed
-        assert_eq!(
-            DownloadService::resolve_episode_title("Ep", false, true, 5),
-            Some(("5 - Ep".to_string(), true))
-        );
-        // numbering on, already processed -> leave as-is
-        assert_eq!(
-            DownloadService::resolve_episode_title("Ep", true, true, 5),
-            None
-        );
-        // numbering off -> plain title, mark not-processed
-        assert_eq!(
-            DownloadService::resolve_episode_title("Ep", false, false, 5),
-            Some(("Ep".to_string(), false))
-        );
-        assert_eq!(
-            DownloadService::resolve_episode_title("Ep", true, false, 5),
-            Some(("Ep".to_string(), false))
-        );
-    }
-
-    #[test]
-    fn numbering_from_ors_per_podcast_and_global_default() {
-        // global default forces numbering even with no per-podcast row or an explicit off
-        assert!(DownloadService::numbering_from(None, Some(true)));
-        assert!(DownloadService::numbering_from(Some(false), Some(true)));
-        // per-podcast enables it regardless of the (off/absent) global default
-        assert!(DownloadService::numbering_from(Some(true), Some(false)));
-        assert!(DownloadService::numbering_from(Some(true), None));
-        // both layers off / absent -> disabled
-        assert!(!DownloadService::numbering_from(Some(false), Some(false)));
-        assert!(!DownloadService::numbering_from(None, None));
-    }
-
-    #[test]
-    fn use_one_cover_from_respects_activated_gate() {
-        // no per-podcast row -> instance-wide default applies
-        assert!(DownloadService::use_one_cover_from(None, true));
-        assert!(!DownloadService::use_one_cover_from(None, false));
-        // per-podcast row but NOT activated -> still falls back to the global
-        // default (mirrors NFO/cover resolution; the activated flag is the
-        // explicit-override switch).
-        assert!(DownloadService::use_one_cover_from(
-            Some((false, false)),
-            true
-        ));
-        assert!(!DownloadService::use_one_cover_from(
-            Some((false, true)),
-            false
-        ));
-        // per-podcast row activated -> the per-podcast value wins
-        assert!(DownloadService::use_one_cover_from(
-            Some((true, true)),
-            false
-        ));
-        assert!(!DownloadService::use_one_cover_from(
-            Some((true, false)),
-            true
-        ));
-    }
-
-    #[test]
-    fn is_hls_playlist_detects_m3u8_bodies_only() {
-        // plain playlist, with UTF-8 BOM, and with leading whitespace
-        assert!(DownloadService::is_hls_playlist(
-            b"#EXTM3U\n#EXT-X-VERSION:3\n"
-        ));
-        assert!(DownloadService::is_hls_playlist(b"\xEF\xBB\xBF#EXTM3U\n"));
-        assert!(DownloadService::is_hls_playlist(b"\n  #EXTM3U\n"));
-        // real audio bodies must not match
-        assert!(!DownloadService::is_hls_playlist(
-            b"ID3\x04\x00\x00\x00\x00\x00\x00"
-        ));
-        assert!(!DownloadService::is_hls_playlist(b"\xFF\xFB\x90\x00"));
-        assert!(!DownloadService::is_hls_playlist(b""));
-    }
 
     #[test]
     fn empty_stored_value_is_treated_as_default_image() {
@@ -1156,82 +593,6 @@ mod tests {
              not panic — otherwise the download thread dies and the episode is \
              re-downloaded/re-transcoded on every poll",
         );
-    }
-
-    // ── should_download_image decision matrix ────────────────────────────
-
-    #[test]
-    fn decision_matrix_all_combinations() {
-        struct Case {
-            use_one_cover: bool,
-            episode_own: bool,
-            main_downloaded: bool,
-            expected: bool,
-        }
-        let cases = [
-            // use_one_cover = true → never download
-            Case {
-                use_one_cover: true,
-                episode_own: true,
-                main_downloaded: true,
-                expected: false,
-            },
-            Case {
-                use_one_cover: true,
-                episode_own: true,
-                main_downloaded: false,
-                expected: false,
-            },
-            Case {
-                use_one_cover: true,
-                episode_own: false,
-                main_downloaded: true,
-                expected: false,
-            },
-            Case {
-                use_one_cover: true,
-                episode_own: false,
-                main_downloaded: false,
-                expected: false,
-            },
-            // use_one_cover = false → download when episode has own image OR main not yet downloaded
-            Case {
-                use_one_cover: false,
-                episode_own: true,
-                main_downloaded: true,
-                expected: true,
-            },
-            Case {
-                use_one_cover: false,
-                episode_own: true,
-                main_downloaded: false,
-                expected: true,
-            },
-            Case {
-                use_one_cover: false,
-                episode_own: false,
-                main_downloaded: true,
-                expected: false,
-            },
-            Case {
-                use_one_cover: false,
-                episode_own: false,
-                main_downloaded: false,
-                expected: true,
-            },
-        ];
-        for c in &cases {
-            let got = DownloadService::should_download_image(
-                c.use_one_cover,
-                c.episode_own,
-                c.main_downloaded,
-            );
-            assert_eq!(
-                got, c.expected,
-                "cover={} own={} main_downloaded={} → expected {} got {}",
-                c.use_one_cover, c.episode_own, c.main_downloaded, c.expected, got,
-            );
-        }
     }
 
     // ── check_if_podcast_main_image_downloaded integration tests ─────────
