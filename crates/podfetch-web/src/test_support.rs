@@ -213,19 +213,27 @@ END $$;
         .into()
     }
 
-    /// Changes the file state of a seeded episode (stored in `episode_files`)
-    /// and returns the episode as stored.
+    /// Changes the file state of a seeded episode (owned by the media
+    /// library) and returns the episode as stored.
     pub fn change_episode_files(
         episode: &podfetch_persistence::podcast_episode::PodcastEpisodeEntity,
         change: impl FnOnce(&mut podfetch_persistence::podcast_episode::PodcastEpisodeEntity),
     ) -> podfetch_persistence::podcast_episode::PodcastEpisodeEntity {
-        use podfetch_domain::podcast_episode::PodcastEpisodeRepository;
+        use podfetch_media::files::{EpisodeFile, EpisodeFileRepository};
         let mut changed = episode_by_id(&episode.id);
         change(&mut changed);
-        podfetch_persistence::podcast_episode::DieselPodcastEpisodeRepository::new(
+        let file = EpisodeFile {
+            episode_id: changed.id.clone(),
+            download_time: changed.download_time,
+            file_episode_path: changed.file_episode_path.clone(),
+            file_image_path: changed.file_image_path.clone(),
+            download_location: changed.download_location.clone(),
+            deleted: changed.deleted,
+        };
+        podfetch_media::persistence::DieselEpisodeFileRepository::new(
             podfetch_persistence::db::database(),
         )
-        .update(&changed.clone().into())
+        .modify(&episode.id, &mut |stored| *stored = file.clone())
         .unwrap();
         episode_by_id(&episode.id)
     }

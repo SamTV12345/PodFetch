@@ -168,7 +168,7 @@ impl EpisodeRescanService {
                 )
             {
                 PodcastEpisodeService::update_local_paths(
-                    &episode.episode_id,
+                    &episode.id,
                     &new_cover,
                     &working_audio_path,
                 )?;
@@ -261,7 +261,7 @@ impl EpisodeRescanService {
                 && Some(&final_image_path) != episode.file_image_path.as_ref())
         {
             PodcastEpisodeService::update_local_paths(
-                &episode.episode_id,
+                &episode.id,
                 &final_image_path,
                 &final_audio_path,
             )?;
@@ -348,7 +348,7 @@ impl EpisodeRescanService {
                         );
                         let new_image_db_value = shared_cover_fs_path.as_deref().unwrap_or("");
                         if let Err(err) = PodcastEpisodeService::update_local_paths(
-                            &episode.episode_id,
+                            &episode.id,
                             new_image_db_value,
                             &final_audio_path,
                         ) {

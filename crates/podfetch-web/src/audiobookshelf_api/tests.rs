@@ -826,12 +826,13 @@ fn insert_test_episode_with_path(
         guid: format!("guid-{}", uuid::Uuid::new_v4().simple()),
         youtube_video_id: None,
     };
-    let mut domain_ep: podfetch_domain::podcast_episode::PodcastEpisode =
+    let created: podfetch_domain::podcast_episode::PodcastEpisode =
         repo.create(new).expect("create episode");
-    domain_ep.file_episode_path = Some(file_path.to_string());
-    domain_ep.download_location = Some(file_path.to_string());
-    repo.update(&domain_ep).expect("update episode local path");
-    domain_ep
+    crate::test_support::tests::change_episode_files(&created.into(), |e| {
+        e.file_episode_path = Some(file_path.to_string());
+        e.download_location = Some(file_path.to_string());
+    })
+    .into()
 }
 
 fn generate_pseudo_audio_bytes(len: usize) -> Vec<u8> {
