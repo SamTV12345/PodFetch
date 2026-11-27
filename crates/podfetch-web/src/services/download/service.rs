@@ -411,7 +411,7 @@ impl DownloadService {
         );
 
         PodcastEpisodeService::update_local_paths(
-            &podcast_episode.episode_id,
+            &podcast_episode.id,
             if image_written {
                 &paths.image_filename
             } else {

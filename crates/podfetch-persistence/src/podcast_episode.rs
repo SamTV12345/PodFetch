@@ -171,40 +171,6 @@ impl From<&PodcastEpisodeEntity> for CatalogChangeset {
     }
 }
 
-/// The file state of one episode.
-#[derive(Queryable, Insertable, Debug, Clone, Default, PartialEq, Eq)]
-#[diesel(table_name = episode_files)]
-struct FileRow {
-    episode_id: String,
-    download_time: Option<NaiveDateTime>,
-    file_episode_path: Option<String>,
-    file_image_path: Option<String>,
-    download_location: Option<String>,
-    deleted: bool,
-}
-
-impl FileRow {
-    fn of(entity: &PodcastEpisodeEntity) -> Self {
-        Self {
-            episode_id: entity.id.clone(),
-            download_time: entity.download_time,
-            file_episode_path: entity.file_episode_path.clone(),
-            file_image_path: entity.file_image_path.clone(),
-            download_location: entity.download_location.clone(),
-            deleted: entity.deleted,
-        }
-    }
-
-    /// No file state at all: the row is not stored.
-    fn is_empty(&self) -> bool {
-        self.download_time.is_none()
-            && self.file_episode_path.is_none()
-            && self.file_image_path.is_none()
-            && self.download_location.is_none()
-            && !self.deleted
-    }
-}
-
 #[derive(Insertable, Debug, Clone)]
 #[diesel(table_name = podcast_episodes)]
 struct NewPodcastEpisodeEntity {
@@ -339,69 +305,6 @@ impl DieselPodcastEpisodeRepository {
             .map(Into::into)
             .map_err(Into::into)
     }
-
-    /// Changes the file state of every episode matching `target` and returns
-    /// their ids.
-    fn modify_files_where(
-        &self,
-        target: Episodes<'_>,
-        change: impl Fn(&mut FileRow),
-    ) -> Result<Vec<String>, PersistenceError> {
-        let mut conn = self.database.connection()?;
-        conn.transaction::<_, diesel::result::Error, _>(|conn| {
-            let ids: Vec<String> = match target {
-                Episodes::Id(id) => podcast_episodes::table
-                    .filter(podcast_episodes::id.eq(id))
-                    .select(podcast_episodes::id)
-                    .load(conn)?,
-                Episodes::FeedEpisodeId(episode_id) => podcast_episodes::table
-                    .filter(podcast_episodes::episode_id.eq(episode_id))
-                    .select(podcast_episodes::id)
-                    .load(conn)?,
-                Episodes::Url(url) => podcast_episodes::table
-                    .filter(podcast_episodes::url.eq(url))
-                    .select(podcast_episodes::id)
-                    .load(conn)?,
-            };
-            for id in &ids {
-                let mut files = episode_files::table
-                    .filter(episode_files::episode_id.eq(id))
-                    .first::<FileRow>(conn)
-                    .optional()?
-                    .unwrap_or_else(|| FileRow {
-                        episode_id: id.clone(),
-                        ..FileRow::default()
-                    });
-                change(&mut files);
-                write_file_row(conn, files)?;
-            }
-            Ok(ids)
-        })
-        .map_err(Into::into)
-    }
-}
-
-/// Which episodes a file state change applies to.
-enum Episodes<'a> {
-    Id(&'a str),
-    FeedEpisodeId(&'a str),
-    Url(&'a str),
-}
-
-/// Stores `files` as the episode's file state: replaces the row, or removes
-/// it when there is no state left.
-fn write_file_row(
-    conn: &mut common_infrastructure::db::DBType,
-    files: FileRow,
-) -> Result<(), diesel::result::Error> {
-    diesel::delete(episode_files::table.filter(episode_files::episode_id.eq(&files.episode_id)))
-        .execute(conn)?;
-    if !files.is_empty() {
-        diesel::insert_into(episode_files::table)
-            .values(files)
-            .execute(conn)?;
-    }
-    Ok(())
 }
 
 impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
@@ -589,14 +492,11 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
 
     fn update(&self, episode: &PodcastEpisode) -> Result<(), Self::Error> {
         let entity = PodcastEpisodeEntity::from(episode);
-        let mut conn = self.database.connection()?;
-        conn.transaction(|conn| {
-            diesel::update(podcast_episodes::table.filter(podcast_episodes::id.eq(&entity.id)))
-                .set(CatalogChangeset::from(&entity))
-                .execute(conn)?;
-            write_file_row(conn, FileRow::of(&entity))
-        })
-        .map_err(Into::into)
+        diesel::update(podcast_episodes::table.filter(podcast_episodes::id.eq(&entity.id)))
+            .set(CatalogChangeset::from(&entity))
+            .execute(&mut self.database.connection()?)
+            .map(|_| ())
+            .map_err(Into::into)
     }
 
     fn delete(&self, id: Uuid) -> Result<(), Self::Error> {
@@ -835,58 +735,12 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
         Ok(found)
     }
 
-    fn update_local_paths(
-        &self,
-        episode_id: &str,
-        file_image_path: &str,
-        file_episode_path: &str,
-    ) -> Result<(), Self::Error> {
-        let image = (!file_image_path.is_empty()).then(|| file_image_path.to_owned());
-        self.modify_files_where(Episodes::FeedEpisodeId(episode_id), |files| {
-            files.file_episode_path = Some(file_episode_path.to_owned());
-            files.file_image_path = image.clone();
-        })
-        .map(|_| ())
-    }
-
-    fn update_download_status(
-        &self,
-        url: &str,
-        download_location: Option<String>,
-        download_time: NaiveDateTime,
-    ) -> Result<PodcastEpisode, Self::Error> {
-        let ids = self.modify_files_where(Episodes::Url(url), |files| {
-            files.download_location = download_location.clone();
-            files.download_time = Some(download_time);
-        })?;
-        let id = ids.first().ok_or(diesel::result::Error::NotFound)?;
-        self.load_by_id(id)
-    }
-
-    fn remove_download_status(&self, id: Uuid) -> Result<(), Self::Error> {
-        let id = id.to_string();
-        self.modify_files_where(Episodes::Id(&id), |files| {
-            files.download_location = None;
-            files.download_time = None;
-            files.file_episode_path = None;
-            files.file_image_path = None;
-        })
-        .map(|_| ())
-    }
-
     fn update_guid(&self, episode_id: &str, guid: &str) -> Result<(), Self::Error> {
         diesel::update(podcast_episodes::table.filter(podcast_episodes::episode_id.eq(episode_id)))
             .set(podcast_episodes::guid.eq(guid))
             .execute(&mut self.database.connection()?)
             .map(|_| ())
             .map_err(Into::into)
-    }
-
-    fn update_deleted(&self, episode_id: &str, deleted: bool) -> Result<usize, Self::Error> {
-        self.modify_files_where(Episodes::FeedEpisodeId(episode_id), |files| {
-            files.deleted = deleted;
-        })
-        .map(|ids| ids.len())
     }
 
     fn update_total_time(&self, episode_id: &str, total_time: i32) -> Result<(), Self::Error> {

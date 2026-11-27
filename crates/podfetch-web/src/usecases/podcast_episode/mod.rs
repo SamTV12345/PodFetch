@@ -364,14 +364,15 @@ impl PodcastEpisodeUseCase {
             .map_err(Into::into)
     }
 
+    /// Records the paths of a downloaded episode (by its catalog id). An
+    /// empty image path clears the stored image.
     pub fn update_local_paths(
-        episode_id: &str,
+        id: &str,
         file_image_path: &str,
         file_episode_path: &str,
     ) -> Result<(), CustomError> {
-        Self::repo()
-            .update_local_paths(episode_id, file_image_path, file_episode_path)
-            .map_err(Into::into)
+        let image = (!file_image_path.is_empty()).then_some(file_image_path);
+        crate::media::episode_files().set_paths(id, image, file_episode_path)
     }
 
     pub fn update_total_time(episode_id: &str, total_time: i32) -> Result<(), CustomError> {
@@ -413,18 +414,21 @@ impl PodcastEpisodeUseCase {
             .map_err(Into::into)
     }
 
+    /// Records that `episode` was downloaded to `download_location_to_set`
+    /// and returns it as stored now.
     pub fn update_podcast_episode_status(
-        download_url_of_episode: &str,
+        episode: &PodcastEpisode,
         download_location_to_set: Option<FileHandlerType>,
     ) -> Result<PodcastEpisode, CustomError> {
+        crate::media::episode_files().record_download(
+            &episode.id,
+            download_location_to_set.map(|d| d.to_string()),
+            Utc::now().naive_utc(),
+        )?;
         Self::repo()
-            .update_download_status(
-                download_url_of_episode,
-                download_location_to_set.map(|d| d.to_string()),
-                Utc::now().naive_utc(),
-            )
+            .find_by_id(Self::parse_id(&episode.id)?)?
             .map(Into::into)
-            .map_err(Into::into)
+            .ok_or_else(|| CustomErrorInner::NotFound(Warning).into())
     }
 
     pub fn get_episodes() -> Result<Vec<PodcastEpisode>, CustomError> {
@@ -445,7 +449,7 @@ impl PodcastEpisodeUseCase {
     }
 
     pub fn remove_download_status_of_episode(id: Uuid) -> Result<(), CustomError> {
-        do_retry(|| Self::repo().remove_download_status(id).map_err(Into::into))
+        do_retry(|| crate::media::episode_files().clear_download(&id.to_string()))
     }
 
     pub fn get_episodes_by_podcast_id(id: Uuid) -> Result<Vec<PodcastEpisode>, CustomError> {
@@ -470,10 +474,10 @@ impl PodcastEpisodeUseCase {
             .map_err(Into::into)
     }
 
-    pub fn update_deleted(episode_id: &str, deleted: bool) -> Result<usize, CustomError> {
-        Self::repo()
-            .update_deleted(episode_id, deleted)
-            .map_err(Into::into)
+    /// Marks the file of the episode (by its catalog id) as deleted by the
+    /// user, or lifts that mark.
+    pub fn update_deleted(id: &str, deleted: bool) -> Result<(), CustomError> {
+        crate::media::episode_files().set_deleted(id, deleted)
     }
 
     pub fn get_podcast_episodes_by_podcast_to_k(
@@ -532,7 +536,7 @@ impl PodcastEpisodeUseCase {
             return Err(err);
         }
         let podcast = Self::update_podcast_episode_status(
-            &podcast_episode.url,
+            podcast_episode,
             Some(ENVIRONMENT_SERVICE.default_file_handler.clone()),
         )?;
         podcast_events::publish(&EpisodeDownloaded {
@@ -1026,7 +1030,7 @@ impl PodcastEpisodeUseCase {
             Some(episode) => {
                 FileService::cleanup_old_episode(&episode)?;
                 Self::remove_download_status_of_episode(Self::parse_id(&episode.id)?)?;
-                Self::update_deleted(episode_id, true)?;
+                Self::update_deleted(&episode.id, true)?;
                 Ok(episode)
             }
             None => Err(CustomErrorInner::NotFound(Warning).into()),

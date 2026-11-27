@@ -316,10 +316,9 @@ pub(crate) fn spawn_single_episode_download(episode_id: String) {
                             );
                             return;
                         }
-                        if let Err(err) = PodcastEpisodeService::update_deleted(
-                            &podcast_episode.episode_id,
-                            false,
-                        ) {
+                        if let Err(err) =
+                            PodcastEpisodeService::update_deleted(&podcast_episode.id, false)
+                        {
                             tracing::error!(
                                 "Error updating deleted status for episode {}: {}",
                                 podcast_episode.episode_id,

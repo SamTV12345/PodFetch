@@ -167,28 +167,11 @@ pub trait PodcastEpisodeRepository: Send + Sync {
     // Get top K episodes per podcast (latest K per podcast)
     fn get_episodes_by_podcast_to_k(&self, top_k: i64) -> Result<Vec<PodcastEpisode>, Self::Error>;
 
-    // Update methods
-    fn update_local_paths(
-        &self,
-        episode_id: &str,
-        file_image_path: &str,
-        file_episode_path: &str,
-    ) -> Result<(), Self::Error>;
-
-    fn update_download_status(
-        &self,
-        url: &str,
-        download_location: Option<String>,
-        download_time: NaiveDateTime,
-    ) -> Result<PodcastEpisode, Self::Error>;
-
-    fn remove_download_status(&self, id: Uuid) -> Result<(), Self::Error>;
-
+    // Update methods. The file state belongs to the media library and is
+    // written there (`podfetch_media::files`).
     fn update_guid(&self, episode_id: &str, guid: &str) -> Result<(), Self::Error>;
 
     fn update_total_time(&self, episode_id: &str, total_time: i32) -> Result<(), Self::Error>;
-
-    fn update_deleted(&self, episode_id: &str, deleted: bool) -> Result<usize, Self::Error>;
 
     fn update_episode_numbering_processed(
         &self,

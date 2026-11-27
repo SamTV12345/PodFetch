@@ -2,14 +2,15 @@
 //! and the ports the media library needs from this crate.
 //!
 //! Transitional: downloads and rescans are still associated functions.
-//! Once they move into `podfetch_media` (migration step 5.2b), they get the
-//! SponsorBlock service injected and the accessors here go away.
+//! Once they move into `podfetch_media` (migration step 5.2c), they get the
+//! media services injected and the accessors here go away.
 
 use crate::services::settings::service::SettingsService;
 use common_infrastructure::error::CustomError;
 use common_infrastructure::http::get_http_client;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
-use podfetch_media::persistence::DieselSponsorblockRepository;
+use podfetch_media::files::EpisodeFileService;
+use podfetch_media::persistence::{DieselEpisodeFileRepository, DieselSponsorblockRepository};
 use podfetch_media::sponsorblock::{
     EpisodeToCheck, SponsorblockClient, SponsorblockService, SponsorblockSwitch,
 };
@@ -27,6 +28,11 @@ impl SponsorblockSwitch for SettingsSponsorblockSwitch {
             .get_settings()?
             .is_none_or(|settings| settings.sponsorblock_enabled))
     }
+}
+
+/// The file state of the episodes.
+pub fn episode_files() -> EpisodeFileService {
+    EpisodeFileService::new(Arc::new(DieselEpisodeFileRepository::new(database())))
 }
 
 pub fn sponsorblock() -> SponsorblockService {
