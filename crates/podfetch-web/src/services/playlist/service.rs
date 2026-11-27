@@ -9,8 +9,8 @@ use common_infrastructure::error::CustomError;
 use podfetch_identity::api::Principal;
 use podfetch_library::domain::playlist::{Playlist, PlaylistItem, PlaylistRepository};
 use podfetch_library::persistence::PlaylistRepositoryImpl;
+use podfetch_listening::domain::episode::Episode;
 use podfetch_persistence::db::database;
-use podfetch_persistence::episode::EpisodeEntity as Episode;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -56,10 +56,7 @@ impl PlaylistService {
                             None,
                             "",
                         ),
-                        podcast_history_item: history
-                            .map(Into::into)
-                            .as_ref()
-                            .map(map_episode_to_dto),
+                        podcast_history_item: history.as_ref().map(map_episode_to_dto),
                     }
                 },
             )

@@ -1,10 +1,6 @@
+use crate::domain::listening_event::{ListeningEvent, ListeningEventRepository, NewListeningEvent};
 use chrono::NaiveDateTime;
 use common_infrastructure::error::CustomError;
-use podfetch_domain::listening_event::{
-    ListeningEvent, ListeningEventRepository, NewListeningEvent,
-};
-use podfetch_persistence::adapters::ListeningEventRepositoryImpl;
-use podfetch_persistence::db::database;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -16,14 +12,6 @@ pub struct ListeningEventService {
 impl ListeningEventService {
     pub fn new(repository: Arc<dyn ListeningEventRepository<Error = CustomError>>) -> Self {
         Self { repository }
-    }
-
-    pub fn default_service() -> Self {
-        Self::new(Arc::new(ListeningEventRepositoryImpl::new(database())))
-    }
-
-    pub fn create_event(event: NewListeningEvent) -> Result<ListeningEvent, CustomError> {
-        Self::default_service().create(event)
     }
 
     pub fn create(&self, event: NewListeningEvent) -> Result<ListeningEvent, CustomError> {

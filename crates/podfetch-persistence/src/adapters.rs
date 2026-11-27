@@ -1,4 +1,5 @@
 use crate::db::Database;
+use chrono::NaiveDateTime;
 use common_infrastructure::error::CustomError;
 use uuid::Uuid;
 
@@ -99,55 +100,6 @@ impl GpodderSettingRepository for GpodderSettingRepositoryImpl {
 
     fn save_setting(&self, setting: GpodderSetting) -> Result<GpodderSetting, Self::Error> {
         self.inner.save_setting(setting).map_err(Into::into)
-    }
-}
-
-// ── ListeningEvent ──────────────────────────────────────────────────────────
-
-use crate::listening_event::DieselListeningEventRepository;
-use chrono::NaiveDateTime;
-use podfetch_domain::listening_event::{
-    ListeningEvent, ListeningEventRepository, NewListeningEvent,
-};
-
-pub struct ListeningEventRepositoryImpl {
-    inner: DieselListeningEventRepository,
-}
-
-impl ListeningEventRepositoryImpl {
-    pub fn new(database: Database) -> Self {
-        Self {
-            inner: DieselListeningEventRepository::new(database),
-        }
-    }
-}
-
-impl ListeningEventRepository for ListeningEventRepositoryImpl {
-    type Error = CustomError;
-
-    fn create(&self, event: NewListeningEvent) -> Result<ListeningEvent, Self::Error> {
-        self.inner.create(event).map_err(Into::into)
-    }
-
-    fn get_by_user_and_range(
-        &self,
-        user_id: Uuid,
-        from: Option<NaiveDateTime>,
-        to: Option<NaiveDateTime>,
-    ) -> Result<Vec<ListeningEvent>, Self::Error> {
-        self.inner
-            .get_by_user_and_range(user_id, from, to)
-            .map_err(Into::into)
-    }
-
-    fn delete_by_user_id(&self, user_id: Uuid) -> Result<usize, Self::Error> {
-        self.inner.delete_by_user_id(user_id).map_err(Into::into)
-    }
-
-    fn delete_by_podcast_id(&self, podcast_id: Uuid) -> Result<usize, Self::Error> {
-        self.inner
-            .delete_by_podcast_id(podcast_id)
-            .map_err(Into::into)
     }
 }
 

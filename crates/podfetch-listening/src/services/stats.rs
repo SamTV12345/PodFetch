@@ -1,25 +1,38 @@
-use crate::services::listening_event::service::ListeningEventService;
-use crate::stats::{StatsApplicationService, StatsOverview, TopPodcastStats, WeekdayStats};
+use crate::dto::stats::{StatsApplicationService, StatsOverview, TopPodcastStats, WeekdayStats};
+use crate::services::listening_event::ListeningEventService;
 use chrono::{Datelike, NaiveDateTime};
 use common_infrastructure::error::CustomError;
-use common_infrastructure::error::CustomErrorInner;
-use common_infrastructure::error::ErrorSeverity::Warning;
-use podfetch_identity::domain::user_admin::UserAdminRepository;
-use podfetch_identity::persistence::user_admin::DieselUserAdminRepository;
-use podfetch_persistence::db::database;
 use std::cmp::Reverse;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use uuid::Uuid;
+
+/// Name and cover of a podcast, as the statistics show them.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PodcastInfo {
+    pub name: String,
+    pub image_url: String,
+}
+
+/// Port to the catalog: the statistics know podcasts only by id.
+pub trait PodcastLookup: Send + Sync {
+    fn describe(&self, podcast_ids: &[Uuid]) -> Result<HashMap<Uuid, PodcastInfo>, CustomError>;
+}
 
 #[derive(Clone)]
 pub struct StatsService {
     listening_event_service: Arc<ListeningEventService>,
+    podcasts: Arc<dyn PodcastLookup>,
 }
 
 impl StatsService {
-    pub fn new(listening_event_service: Arc<ListeningEventService>) -> Self {
+    pub fn new(
+        listening_event_service: Arc<ListeningEventService>,
+        podcasts: Arc<dyn PodcastLookup>,
+    ) -> Self {
         Self {
             listening_event_service,
+            podcasts,
         }
     }
 }
@@ -30,15 +43,11 @@ impl StatsApplicationService for StatsService {
 
     fn get_stats_overview(
         &self,
-        username: &str,
+        user_id: Uuid,
         from: Option<NaiveDateTime>,
         to: Option<NaiveDateTime>,
         top_limit: usize,
     ) -> Result<Self::StatsOverview, Self::Error> {
-        let user_id = DieselUserAdminRepository::new(database())
-            .find_by_username(username)?
-            .map(|user| user.id)
-            .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Warning)))?;
         let events = self
             .listening_event_service
             .get_by_user_and_range(user_id, from, to)?;
@@ -47,8 +56,7 @@ impl StatsApplicationService for StatsService {
             .map(|event| i64::from(event.delta_seconds))
             .sum::<i64>();
 
-        let mut podcast_aggregation: HashMap<uuid::Uuid, (i64, HashSet<uuid::Uuid>)> =
-            HashMap::new();
+        let mut podcast_aggregation: HashMap<Uuid, (i64, HashSet<Uuid>)> = HashMap::new();
         let mut weekday_seconds = [0i64; 7];
 
         for event in events {
@@ -68,16 +76,13 @@ impl StatsApplicationService for StatsService {
             .map(|(_, episodes)| episodes.len() as i64)
             .sum::<i64>();
 
-        let podcasts = crate::services::podcast::service::PodcastService::get_all_podcasts_raw()?;
-        let podcast_index = podcasts
-            .into_iter()
-            .map(|podcast| (podcast.id.clone(), podcast))
-            .collect::<HashMap<String, _>>();
+        let podcast_ids: Vec<Uuid> = podcast_aggregation.keys().copied().collect();
+        let podcast_index = self.podcasts.describe(&podcast_ids)?;
 
         let mut top_podcasts = podcast_aggregation
             .into_iter()
             .map(|(podcast_id, (seconds, episodes))| {
-                let podcast = podcast_index.get(&podcast_id.to_string());
+                let podcast = podcast_index.get(&podcast_id);
                 TopPodcastStats {
                     podcast_id: podcast_id.to_string(),
                     podcast_name: podcast.map_or_else(

@@ -1,8 +1,6 @@
 use chrono::NaiveDateTime;
 use uuid::Uuid;
 
-use crate::episode::Episode;
-
 /// A podcast episode - technology-agnostic domain entity.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct PodcastEpisode {
@@ -47,8 +45,14 @@ pub struct NewPodcastEpisode {
     pub youtube_video_id: Option<String>,
 }
 
-/// Result type for paginated episode queries with the user's history.
-pub type PodcastEpisodeWithHistory = Vec<(PodcastEpisode, Option<Episode>)>;
+/// Which episodes a cross-podcast listing (the timeline) shows.
+#[derive(Debug, Clone, Default)]
+pub struct EpisodeFilter {
+    /// Only episodes of these podcasts.
+    pub podcast_ids: Option<Vec<Uuid>>,
+    /// Only these episodes.
+    pub episode_ids: Option<Vec<Uuid>>,
+}
 
 /// Repository trait for PodcastEpisode persistence operations.
 pub trait PodcastEpisodeRepository: Send + Sync {
@@ -67,6 +71,24 @@ pub trait PodcastEpisodeRepository: Send + Sync {
         url: &str,
         podcast_id: Option<Uuid>,
     ) -> Result<Option<PodcastEpisode>, Self::Error>;
+    /// The newest episodes across podcasts matching `filter`, older than
+    /// `before` (a `date_of_recording`) when given.
+    fn find_newest(
+        &self,
+        filter: &EpisodeFilter,
+        before: Option<&str>,
+        limit: i64,
+    ) -> Result<Vec<PodcastEpisode>, Self::Error>;
+
+    /// How many episodes match `filter`, restricted to `guids` when given.
+    fn count_matching(
+        &self,
+        filter: &EpisodeFilter,
+        guids: Option<&[String]>,
+    ) -> Result<i64, Self::Error>;
+
+    /// Episodes with any of the given guids.
+    fn find_by_guids(&self, guids: &[String]) -> Result<Vec<PodcastEpisode>, Self::Error>;
     fn find_by_guid(&self, guid: &str) -> Result<Option<PodcastEpisode>, Self::Error>;
     fn find_by_podcast_id(&self, podcast_id: Uuid) -> Result<Vec<PodcastEpisode>, Self::Error>;
     fn find_by_file_path(&self, path: &str) -> Result<Option<PodcastEpisode>, Self::Error>;
@@ -80,16 +102,14 @@ pub trait PodcastEpisodeRepository: Send + Sync {
     // Pagination methods
     fn get_nth_page(&self, last_id: Uuid, limit: i64) -> Result<Vec<PodcastEpisode>, Self::Error>;
 
-    /// Get episodes of a podcast with the user's watch history, paginated by
-    /// date_of_recording.
-    fn get_episodes_with_history(
+    /// One page of a podcast's episodes, newest first, older than
+    /// `last_date` when given.
+    fn get_episodes_page(
         &self,
         podcast_id: Uuid,
-        username: &str,
         last_date: Option<&str>,
-        only_unlistened: bool,
         limit: i64,
-    ) -> Result<PodcastEpisodeWithHistory, Self::Error>;
+    ) -> Result<Vec<PodcastEpisode>, Self::Error>;
 
     // Get position of episode in podcast (count of episodes with date <= given date)
     fn get_position_of_episode(

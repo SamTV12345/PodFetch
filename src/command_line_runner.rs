@@ -10,7 +10,6 @@ use podfetch_web::controllers::sys_info_controller::built_info;
 use podfetch_web::services::device::service::DeviceService;
 use podfetch_web::services::podcast::service::PodcastService;
 use podfetch_web::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
-use podfetch_web::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
 use sha256::digest;
 use std::env::Args;
 use std::io::{Error, ErrorKind, stdin};
@@ -181,13 +180,9 @@ pub async fn start_command_line(state: &AppState, mut args: Args) -> Result<(), 
                     match available_users.iter().find(|u| u.username == username) {
                         Some(user) => {
                             let user_id = user.id;
-                            WatchtimeService::delete_by_username(&username)
-                                .expect("Error deleting entries for podcast history item");
                             device_service
                                 .delete_by_user_id(user_id)
                                 .expect("Error deleting devices");
-                            WatchtimeService::delete_by_username_and_episode(&username)
-                                .expect("Error deleting episodes");
                             PodcastService::delete_favorites_by_user_id(user_id)
                                 .expect("Error deleting favorites");
                             state
@@ -198,6 +193,9 @@ pub async fn start_command_line(state: &AppState, mut args: Args) -> Result<(), 
                                 .subscription_service
                                 .delete_by_user_id(user_id)
                                 .expect("Error deleting subscriptions");
+                            // Publishes `identity.user_deleted`; the listening
+                            // context removes the user's episode actions and
+                            // listening events when it handles the event.
                             state
                                 .user_admin_service
                                 .delete_user_by_username(&trim_string(&username))

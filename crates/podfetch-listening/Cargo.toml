@@ -1,0 +1,25 @@
+[package]
+name = "podfetch-listening"
+version = "0.1.0"
+edition = "2024"
+description = "Listening bounded context: episode actions and progress, listening events, statistics"
+
+[lints]
+workspace = true
+
+[features]
+default = []
+sqlite = ["common-infrastructure/sqlite", "podfetch-events/sqlite", "podfetch-identity/sqlite"]
+postgresql = ["common-infrastructure/postgresql", "podfetch-events/postgresql", "podfetch-identity/postgresql"]
+
+[dependencies]
+common-infrastructure = { workspace = true }
+podfetch-events = { workspace = true }
+podfetch-identity = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+diesel = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+utoipa = { workspace = true }
+uuid = { workspace = true }

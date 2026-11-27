@@ -3,24 +3,23 @@ use crate::history::map_episode_to_dto;
 use crate::podcast::PodcastDto;
 use crate::podcast::map_podcast_to_dto;
 use crate::podcast_episode_dto::PodcastEpisodeDto;
-use crate::services::listening_event::service::ListeningEventService;
 use crate::watchtime::{
     PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
     WatchtimeApplicationService,
 };
 use chrono::{NaiveDateTime, Utc};
 use common_infrastructure::error::CustomError;
-use podfetch_domain::episode::{EpisodeRepository, NewEpisode};
-use podfetch_domain::listening_event::NewListeningEvent;
 use podfetch_identity::api::Principal;
-use podfetch_identity::domain::user_admin::UserAdminRepository;
-use podfetch_identity::persistence::user_admin::DieselUserAdminRepository;
+use podfetch_identity::persistence::adapters::UserAdminRepositoryImpl;
 use podfetch_library::domain::favorite_podcast_episode::FavoritePodcastEpisode;
+use podfetch_listening::domain::episode::Episode;
+use podfetch_listening::domain::episode::{EpisodeRepository, Listener, NewEpisode};
+use podfetch_listening::domain::listening_event::NewListeningEvent;
+use podfetch_listening::persistence::episode::DieselEpisodeRepository;
 use podfetch_persistence::db::database;
-use podfetch_persistence::episode::DieselEpisodeRepository;
-use podfetch_persistence::episode::EpisodeEntity as Episode;
 use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
+use std::sync::Arc;
 
 use common_infrastructure::error::CustomErrorInner;
 use common_infrastructure::error::ErrorSeverity::Warning;
@@ -38,14 +37,25 @@ impl WatchtimeUseCase {
     }
 
     fn repo() -> DieselEpisodeRepository {
-        DieselEpisodeRepository::new(database())
+        crate::listening::episode_actions()
     }
 
     fn get_user_id_by_username(username: &str) -> Result<Uuid, CustomError> {
-        DieselUserAdminRepository::new(database())
-            .find_by_username(username)?
-            .map(|user| user.id)
+        Self::listener(username).map(|listener| listener.id)
+    }
+
+    /// The listener behind a username (gPodder clients and the CLI speak in
+    /// usernames, the listening context stores user ids).
+    pub fn listener(username: &str) -> Result<Listener, CustomError> {
+        use podfetch_identity::api::IdentityApi;
+        podfetch_identity::api::Identity::new(Arc::new(UserAdminRepositoryImpl::new(database())))
+            .principal_by_username(username)?
+            .map(|principal| Listener::new(principal.id.as_uuid(), principal.username))
             .ok_or_else(|| CustomErrorInner::NotFound(Warning).into())
+    }
+
+    fn listener_of(action: &podfetch_listening::domain::episode::Episode) -> Listener {
+        Listener::new(action.user_id, action.username.clone())
     }
 
     /// Parse a stored podfetch id (entity rows carry the canonical UUID as a
@@ -55,12 +65,9 @@ impl WatchtimeUseCase {
     }
 
     pub fn insert_episode(
-        episode: podfetch_domain::episode::Episode,
+        episode: podfetch_listening::domain::episode::Episode,
     ) -> Result<Episode, CustomError> {
-        Self::repo()
-            .insert_episode(&episode)
-            .map(Into::into)
-            .map_err(Into::into)
+        Self::repo().insert_episode(&episode).map_err(Into::into)
     }
 
     /// Insert or update an episode action with GUID-based fallback matching.
@@ -73,13 +80,13 @@ impl WatchtimeUseCase {
     /// Every new `play` action is additionally recorded as a listening event so
     /// that listening done in GPodder clients shows up on the statistics page.
     pub fn upsert_episode_by_guid(
-        episode: podfetch_domain::episode::Episode,
+        episode: podfetch_listening::domain::episode::Episode,
     ) -> Result<Episode, CustomError> {
         let repo = Self::repo();
 
         if let Some(ref guid) = episode.guid
             && let Some(existing) = repo
-                .find_by_username_and_guid(&episode.username, guid)
+                .find_latest_by_guid(&Self::listener_of(&episode), guid)
                 .map_err(CustomError::from)?
         {
             let is_duplicate =
@@ -92,8 +99,8 @@ impl WatchtimeUseCase {
                     .map_err(CustomError::from)?;
             }
             return repo
-                .find_by_username_and_guid(&episode.username, guid)
-                .map(|opt| opt.unwrap().into())
+                .find_latest_by_guid(&Self::listener_of(&episode), guid)
+                .map(|opt| opt.unwrap())
                 .map_err(Into::into);
         }
 
@@ -101,12 +108,12 @@ impl WatchtimeUseCase {
             .find_duplicate_action(&episode)
             .map_err(CustomError::from)?
         {
-            return Ok(existing.into());
+            return Ok(existing);
         }
 
         let inserted = repo.insert_episode(&episode).map_err(CustomError::from)?;
         Self::record_gpodder_listening_event(&episode, None);
-        Ok(inserted.into())
+        Ok(inserted)
     }
 
     /// Create a listening event for a `play` action uploaded by a GPodder client.
@@ -114,8 +121,8 @@ impl WatchtimeUseCase {
     /// Failures are logged and swallowed: a missing statistics entry must never
     /// make the client's sync request fail.
     fn record_gpodder_listening_event(
-        action: &podfetch_domain::episode::Episode,
-        previous: Option<&podfetch_domain::episode::Episode>,
+        action: &podfetch_listening::domain::episode::Episode,
+        previous: Option<&podfetch_listening::domain::episode::Episode>,
     ) {
         if let Err(err) = Self::try_record_gpodder_listening_event(action, previous) {
             tracing::warn!(
@@ -126,8 +133,8 @@ impl WatchtimeUseCase {
     }
 
     fn try_record_gpodder_listening_event(
-        action: &podfetch_domain::episode::Episode,
-        previous: Option<&podfetch_domain::episode::Episode>,
+        action: &podfetch_listening::domain::episode::Episode,
+        previous: Option<&podfetch_listening::domain::episode::Episode>,
     ) -> Result<(), CustomError> {
         if !action.action.eq_ignore_ascii_case("play") {
             return Ok(());
@@ -150,7 +157,7 @@ impl WatchtimeUseCase {
         };
         let user_id = Self::get_user_id_by_username(&action.username)?;
 
-        ListeningEventService::create_event(NewListeningEvent {
+        crate::listening::listening_events().create(NewListeningEvent {
             user_id,
             device: action.device.clone(),
             podcast_episode_id: podcast_episode.episode_id.clone(),
@@ -165,7 +172,7 @@ impl WatchtimeUseCase {
     }
 
     fn find_podcast_episode_for_action(
-        action: &podfetch_domain::episode::Episode,
+        action: &podfetch_listening::domain::episode::Episode,
     ) -> Result<Option<PodcastEpisode>, CustomError> {
         use crate::usecases::podcast_episode::PodcastEpisodeUseCase;
 
@@ -206,64 +213,76 @@ impl WatchtimeUseCase {
         opt_podcast: Option<String>,
     ) -> Result<Vec<Episode>, CustomError> {
         Self::repo()
-            .find_actions_by_username(
-                username,
+            .find_actions(
+                &Self::listener(username)?,
                 since_date,
                 opt_device.as_deref(),
                 opt_podcast.as_deref(),
                 Some(DEFAULT_DEVICE),
             )
-            .map(|rows| rows.into_iter().map(Into::into).collect())
+            .map(|rows| rows.into_iter().collect())
             .map_err(Into::into)
     }
 
     pub fn get_watchtime(episode_id: &str, username: &str) -> Result<Option<Episode>, CustomError> {
+        use crate::usecases::podcast_episode::PodcastEpisodeUseCase;
+        let Some(podcast_episode) = PodcastEpisodeUseCase::get_podcast_episode_by_id(episode_id)?
+        else {
+            return Ok(None);
+        };
+        let Ok(listener) = Self::listener(username) else {
+            return Ok(None);
+        };
         Self::repo()
-            .find_watchtime(episode_id, username)
-            .map(|episode| episode.map(Into::into))
+            .find_latest_by_guid(&listener, &podcast_episode.guid)
             .map_err(Into::into)
     }
 
+    /// Episodes the user played last, newest first, with their podcast.
+    /// API composition: the actions come from listening, episode and
+    /// podcast from the catalog; actions without a known episode are left
+    /// out.
     pub fn get_last_watched_episodes(
         user: &Principal,
     ) -> Result<Vec<(PodcastEpisode, Episode, Podcast)>, CustomError> {
-        Self::repo()
-            .find_last_watched_episodes(&user.username)
-            .map(|items| {
-                items
-                    .into_iter()
-                    .map(|item| {
-                        (
-                            item.podcast_episode.into(),
-                            item.episode_action.into(),
-                            item.podcast.into(),
-                        )
-                    })
-                    .collect()
-            })
-            .map_err(Into::into)
-    }
+        use crate::usecases::podcast_episode::PodcastEpisodeUseCase;
+        use std::collections::HashMap;
 
-    pub fn delete_by_username_and_episode(username: &str) -> Result<(), CustomError> {
-        let user_id = Self::get_user_id_by_username(username)?;
-        ListeningEventService::default_service().delete_by_user_id(user_id)?;
-        Self::repo()
-            .delete_by_username(username)
-            .map_err(Into::into)
+        let listener = Listener::new(user.id.as_uuid(), user.username.clone());
+        let played = Self::repo()
+            .find_last_played(&listener)
+            .map_err(CustomError::from)?;
+        let guids: Vec<String> = played.iter().filter_map(|a| a.guid.clone()).collect();
+        let episodes: HashMap<String, PodcastEpisode> =
+            PodcastEpisodeUseCase::get_podcast_episodes_by_guids(&guids)?
+                .into_iter()
+                .map(|episode| (episode.guid.clone(), episode))
+                .collect();
+        let podcast_ids: Vec<Uuid> = episodes
+            .values()
+            .filter_map(|episode| Uuid::parse_str(&episode.podcast_id).ok())
+            .collect();
+        let podcasts: HashMap<String, Podcast> =
+            crate::services::podcast::service::PodcastService::get_podcasts_by_ids(&podcast_ids)?
+                .into_iter()
+                .map(|podcast| (podcast.id.clone(), podcast))
+                .collect();
+        Ok(played
+            .into_iter()
+            .filter_map(|action| {
+                let episode = episodes.get(action.guid.as_ref()?)?.clone();
+                let podcast = podcasts.get(&episode.podcast_id)?.clone();
+                Some((episode, action, podcast))
+            })
+            .collect())
     }
 
     pub fn delete_watchtime(podcast_id: Uuid) -> Result<(), CustomError> {
-        ListeningEventService::default_service().delete_by_podcast_id(podcast_id)?;
+        crate::listening::listening_events().delete_by_podcast_id(podcast_id)?;
+        let podcast = crate::services::podcast::service::PodcastService::get_podcast(podcast_id)?;
         Self::repo()
-            .delete_by_podcast_id(podcast_id)
-            .map_err(Into::into)
-    }
-
-    pub fn delete_by_username(username: &str) -> Result<(), CustomError> {
-        let user_id = Self::get_user_id_by_username(username)?;
-        ListeningEventService::default_service().delete_by_user_id(user_id)?;
-        Self::repo()
-            .delete_by_username(username)
+            .delete_by_podcast_feed(&podcast.rssfeed)
+            .map(|_| ())
             .map_err(Into::into)
     }
 
@@ -300,7 +319,7 @@ impl WatchtimeUseCase {
                     now,
                 );
                 if listened_delta_seconds > 0 {
-                    ListeningEventService::create_event(NewListeningEvent {
+                    crate::listening::listening_events().create(NewListeningEvent {
                         user_id,
                         device: DEFAULT_DEVICE.to_string(),
                         podcast_episode_id: found_episode.episode_id.clone(),
@@ -320,7 +339,7 @@ impl WatchtimeUseCase {
             None => {
                 Self::repo()
                     .create(NewEpisode {
-                        username,
+                        listener: Listener::new(user_id, username),
                         device: DEFAULT_DEVICE.to_string(),
                         podcast: podcast.rssfeed,
                         episode: found_episode.url,
@@ -354,6 +373,7 @@ impl WatchtimeUseCase {
             )?;
         let now = Utc::now().naive_utc();
         let repo = Self::repo();
+        let listener = Self::listener(username)?;
         let mut changed = 0;
 
         for (index, episode) in episodes.into_iter().enumerate() {
@@ -377,7 +397,7 @@ impl WatchtimeUseCase {
                         // Never started on this device: nothing to reset
                         // unless another device has progress.
                         if Self::repo()
-                            .find_by_username_and_guid(username, &episode.guid)
+                            .find_latest_by_guid(&listener, &episode.guid)
                             .map_err(CustomError::from)?
                             .is_none()
                         {
@@ -385,7 +405,7 @@ impl WatchtimeUseCase {
                         }
                     }
                     repo.create(NewEpisode {
-                        username: username.to_string(),
+                        listener: listener.clone(),
                         device: DEFAULT_DEVICE.to_string(),
                         podcast: podcast.rssfeed.clone(),
                         episode: episode.url.clone(),
@@ -409,9 +429,11 @@ impl WatchtimeUseCase {
         episode_guid: &str,
         device_id: &str,
     ) -> Result<Option<Episode>, CustomError> {
+        let Ok(listener) = Self::listener(username) else {
+            return Ok(None);
+        };
         Self::repo()
-            .find_by_username_device_guid(username, device_id, episode_guid)
-            .map(|episode| episode.map(Into::into))
+            .find_by_device_and_guid(&listener, device_id, episode_guid)
             .map_err(Into::into)
     }
 
@@ -475,7 +497,7 @@ impl WatchtimeApplicationService for WatchtimeUseCase {
                             server_url,
                         ),
                         podcast: map_podcast_to_dto(podcast.into(), server_url),
-                        episode: map_episode_to_dto(&episode.into()),
+                        episode: map_episode_to_dto(&episode),
                     }
                 })
                 .collect()
@@ -488,7 +510,7 @@ impl WatchtimeApplicationService for WatchtimeUseCase {
         username: &str,
     ) -> Result<Option<Self::EpisodeDto>, Self::Error> {
         Self::get_watchtime(episode_id, username)
-            .map(|episode| episode.map(Into::into).as_ref().map(map_episode_to_dto))
+            .map(|episode| episode.as_ref().map(map_episode_to_dto))
     }
 }
 
