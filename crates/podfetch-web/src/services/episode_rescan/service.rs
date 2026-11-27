@@ -382,9 +382,7 @@ impl EpisodeRescanService {
                         Some(&episode.url),
                     );
             }
-            match crate::services::sponsorblock::service::fetch_and_store_blocking(
-                &episode_for_fetch,
-            ) {
+            match crate::media::fetch_sponsor_segments_blocking(&episode_for_fetch) {
                 Ok(n) if n > 0 => tracing::info!(
                     "Refetched {n} SponsorBlock segments for episode {}",
                     episode.id

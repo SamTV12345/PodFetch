@@ -10,4 +10,3 @@ pub mod podcast_episode_chapter;
 pub mod podcast_episode_transcript;
 pub mod podcast_settings;
 pub mod settings;
-pub mod sponsorblock;

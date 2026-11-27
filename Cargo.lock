@@ -3363,6 +3363,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "podfetch-media"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "chrono",
+ "common-infrastructure",
+ "diesel",
+ "podfetch-events",
+ "podfetch-identity",
+ "podfetch-kernel",
+ "reqwest 0.13.5",
+ "serde",
+ "serde_json",
+ "sha256",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "podfetch-notifications"
 version = "0.1.0"
 dependencies = [
@@ -3450,6 +3470,7 @@ dependencies = [
  "podfetch-kernel",
  "podfetch-library",
  "podfetch-listening",
+ "podfetch-media",
  "podfetch-notifications",
  "podfetch-persistence",
  "podfetch-storage",

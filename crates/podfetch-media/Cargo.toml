@@ -1,0 +1,31 @@
+[package]
+name = "podfetch-media"
+version = "0.1.0"
+edition = "2024"
+description = "Media library bounded context: episode files, downloads, SponsorBlock"
+
+[lints]
+workspace = true
+
+[features]
+default = []
+sqlite = ["common-infrastructure/sqlite", "podfetch-events/sqlite", "podfetch-identity/sqlite"]
+postgresql = ["common-infrastructure/postgresql", "podfetch-events/postgresql", "podfetch-identity/postgresql"]
+
+[dev-dependencies]
+axum = { workspace = true }
+tokio = { workspace = true }
+
+[dependencies]
+common-infrastructure = { workspace = true }
+podfetch-events = { workspace = true }
+podfetch-identity = { workspace = true }
+podfetch-kernel = { workspace = true }
+chrono = { workspace = true }
+diesel = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha256 = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
