@@ -194,7 +194,7 @@ mod tests {
     use axum::extract::{Path, State};
     use chrono::Utc;
     use diesel::ExpressionMethods;
-    use diesel::QueryDsl;
+
     use diesel::RunQueryDsl;
     use podfetch_identity::api::Principal;
     use podfetch_identity::domain::user::User;
@@ -244,22 +244,19 @@ mod tests {
                 pe_dsl::total_time.eq(1800),
                 pe_dsl::description.eq("triage test".to_string()),
                 pe_dsl::guid.eq(guid.to_string()),
-                pe_dsl::deleted.eq(false),
                 pe_dsl::episode_numbering_processed.eq(false),
-            ))
-            .get_result::<PodcastEpisode>(&mut get_connection())
-            .unwrap()
-    }
-
-    fn mark_downloaded(episode: &PodcastEpisode) {
-        diesel::update(pe_dsl::podcast_episodes.filter(pe_dsl::id.eq(episode.id.clone())))
-            .set((
-                pe_dsl::download_location.eq("Local".to_string()),
-                pe_dsl::download_time.eq(Some(Utc::now().naive_utc())),
-                pe_dsl::file_episode_path.eq(format!("./podcasts/{}.mp3", episode.episode_id)),
             ))
             .execute(&mut get_connection())
             .unwrap();
+        crate::test_support::tests::episode_by_feed_id(episode_id)
+    }
+
+    fn mark_downloaded(episode: &PodcastEpisode) {
+        crate::test_support::tests::change_episode_files(episode, |e| {
+            e.download_location = Some("Local".to_string());
+            e.download_time = Some(Utc::now().naive_utc());
+            e.file_episode_path = Some(format!("./podcasts/{}.mp3", episode.episode_id));
+        });
     }
 
     fn contains_episode(payload: &Value, episode: &PodcastEpisode) -> bool {

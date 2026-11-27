@@ -154,14 +154,20 @@ diesel::table! {
         image_url -> Text,
         total_time -> Integer,
         description -> Text,
-        download_time -> Nullable<Timestamp>,
         guid -> Text,
-        deleted -> Bool,
+        episode_numbering_processed -> Bool,
+        youtube_video_id -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
+    episode_files (episode_id) {
+        episode_id -> Text,
+        download_time -> Nullable<Timestamp>,
         file_episode_path -> Nullable<Text>,
         file_image_path -> Nullable<Text>,
-        episode_numbering_processed -> Bool,
         download_location -> Nullable<Text>,
-        youtube_video_id -> Nullable<Text>,
+        deleted -> Bool,
     }
 }
 
@@ -326,7 +332,10 @@ diesel::joinable!(podcast_episodes -> podcasts (podcast_id));
 diesel::joinable!(tags_podcasts -> podcasts (podcast_id));
 diesel::joinable!(tags_podcasts -> tags (tag_id));
 
+diesel::joinable!(episode_files -> podcast_episodes (episode_id));
+
 diesel::allow_tables_to_appear_in_same_query!(
+    episode_files,
     device_sync_groups,
     devices,
     episode_sponsor_segments,

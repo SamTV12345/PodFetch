@@ -159,7 +159,6 @@ mod sponsorblock_tests {
                 total_time -> Integer,
                 description -> Text,
                 guid -> Text,
-                deleted -> Bool,
                 episode_numbering_processed -> Bool,
             }
         }
@@ -201,7 +200,6 @@ mod sponsorblock_tests {
         total_time: i32,
         description: String,
         guid: String,
-        deleted: bool,
         episode_numbering_processed: bool,
     }
 
@@ -260,7 +258,6 @@ mod sponsorblock_tests {
                 total_time: 3600,
                 description: "Test description".to_string(),
                 guid: uuid::Uuid::new_v4().to_string(),
-                deleted: false,
                 episode_numbering_processed: false,
             })
             .execute(&mut conn)

@@ -274,7 +274,7 @@ pub mod tests {
     fn insert_podcast_episode(podcast_id: &str, guid: &str) -> String {
         use diesel::{ExpressionMethods, RunQueryDsl};
         use podfetch_persistence::db::get_connection;
-        use podfetch_persistence::podcast_episode::PodcastEpisodeEntity;
+
         use podfetch_persistence::schema::podcast_episodes::dsl as pe_dsl;
 
         let episode_id = format!("gpodder-stats-{guid}");
@@ -290,12 +290,11 @@ pub mod tests {
                 pe_dsl::total_time.eq(1800),
                 pe_dsl::description.eq("test description".to_string()),
                 pe_dsl::guid.eq(guid.to_string()),
-                pe_dsl::deleted.eq(false),
                 pe_dsl::episode_numbering_processed.eq(false),
             ))
-            .get_result::<PodcastEpisodeEntity>(&mut get_connection())
-            .unwrap()
-            .episode_id
+            .execute(&mut get_connection())
+            .unwrap();
+        episode_id
     }
 
     #[serial]

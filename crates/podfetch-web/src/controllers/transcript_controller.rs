@@ -537,7 +537,6 @@ mod tests {
                 pe_dsl::total_time.eq(1800),
                 pe_dsl::description.eq("transcript controller test".to_string()),
                 pe_dsl::guid.eq(unique("guid")),
-                pe_dsl::deleted.eq(false),
                 pe_dsl::episode_numbering_processed.eq(false),
             ))
             .execute(&mut get_connection())

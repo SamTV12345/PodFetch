@@ -197,11 +197,11 @@ mod tests {
                 pe_dsl::total_time.eq(1800),
                 pe_dsl::description.eq("playlist test".to_string()),
                 pe_dsl::guid.eq(guid.to_string()),
-                pe_dsl::deleted.eq(false),
                 pe_dsl::episode_numbering_processed.eq(false),
             ))
-            .get_result::<PodcastEpisode>(&mut get_connection())
-            .unwrap()
+            .execute(&mut get_connection())
+            .unwrap();
+        crate::test_support::tests::episode_by_feed_id(episode_id)
     }
 
     fn build_other_user() -> User {
