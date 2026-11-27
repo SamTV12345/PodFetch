@@ -13,7 +13,7 @@ use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use common_infrastructure::error::ErrorSeverity::Debug;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
-use podfetch_domain::audiobookshelf::library_item_id::{EpisodeId, LibraryItemId};
+use podfetch_audiobooks::domain::library_item_id::{EpisodeId, LibraryItemId};
 use std::path::PathBuf;
 use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, SeekFrom};

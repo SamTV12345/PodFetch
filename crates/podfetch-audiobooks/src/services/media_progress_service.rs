@@ -1,5 +1,5 @@
+use crate::domain::media_progress::{MediaProgress, MediaProgressRepository};
 use common_infrastructure::error::CustomError;
-use podfetch_domain::audiobookshelf::media_progress::{MediaProgress, MediaProgressRepository};
 use std::sync::Arc;
 
 #[derive(Clone)]

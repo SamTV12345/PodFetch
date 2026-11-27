@@ -437,7 +437,7 @@ impl DownloadService {
     }
 
     fn sync_total_time_with_file(podcast_episode: &PodcastEpisode, file_path: &str) {
-        let probed = match crate::services::audiobookshelf::audio_probe::probe_audio_file(
+        let probed = match podfetch_audiobooks::services::audio_probe::probe_audio_file(
             std::path::Path::new(file_path),
         ) {
             Ok(probed) => probed,

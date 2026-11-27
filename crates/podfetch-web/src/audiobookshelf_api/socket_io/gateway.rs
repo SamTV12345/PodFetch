@@ -13,7 +13,7 @@
 //! `users.api_key`, looked up via `AudiobookshelfLoginService`.
 
 use crate::audiobookshelf_api::socket_io::events::{self, EVENT_INIT};
-use crate::services::audiobookshelf::login_service::AudiobookshelfLoginService;
+use podfetch_audiobooks::services::login_service::AudiobookshelfLoginService;
 use serde_json::Value;
 use socketioxide::extract::{Data, SocketRef};
 use std::sync::Arc;

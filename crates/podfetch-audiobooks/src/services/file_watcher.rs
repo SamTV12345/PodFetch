@@ -10,10 +10,10 @@
 //! Only enabled when `AUDIOBOOKSHELF_INTEGRATION_ENABLED=true` and the
 //! library has at least one folder_path.
 
-use crate::services::audiobookshelf::audiobook_scanner::AudiobookScanner;
-use crate::services::audiobookshelf::library_service::AudiobookshelfLibraryService;
+use crate::domain::library::{Library, MediaType};
+use crate::services::audiobook_scanner::AudiobookScanner;
+use crate::services::library_service::AudiobookshelfLibraryService;
 use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use podfetch_domain::audiobookshelf::library::{Library, MediaType};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;

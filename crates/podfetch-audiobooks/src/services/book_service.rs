@@ -1,10 +1,10 @@
 //! Aggregates a book with its joined authors/narrators/series/audio_files/chapters.
 
-use common_infrastructure::error::CustomError;
-use podfetch_domain::audiobookshelf::book::{
+use crate::domain::book::{
     AuthorRepository, Book, BookAggregate, BookAudioFileRepository, BookChapterRepository,
     BookRepository, NarratorRepository, SeriesRepository,
 };
+use common_infrastructure::error::CustomError;
 use std::sync::Arc;
 
 #[derive(Clone)]

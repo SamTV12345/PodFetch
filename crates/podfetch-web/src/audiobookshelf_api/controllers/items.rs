@@ -13,7 +13,7 @@ use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
 use axum::response::{IntoResponse, Json, Response};
 use common_infrastructure::error::ErrorSeverity::Debug;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
-use podfetch_domain::audiobookshelf::library::MediaType;
+use podfetch_audiobooks::domain::library::MediaType;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::path::PathBuf;

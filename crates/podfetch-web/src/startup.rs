@@ -60,7 +60,7 @@ use podfetch_identity::services::user_auth::service::UserAuthService;
 use std::sync::Arc;
 
 static AUDIOBOOKSHELF_FILE_WATCHER: OnceLock<
-    Arc<crate::services::audiobookshelf::file_watcher::AudiobookFileWatcher>,
+    Arc<podfetch_audiobooks::services::file_watcher::AudiobookFileWatcher>,
 > = OnceLock::new();
 
 fn start_audiobookshelf_file_watcher(state: &AppState) {
@@ -68,7 +68,7 @@ fn start_audiobookshelf_file_watcher(state: &AppState) {
         return;
     }
     let watcher = Arc::new(
-        crate::services::audiobookshelf::file_watcher::AudiobookFileWatcher::new(
+        podfetch_audiobooks::services::file_watcher::AudiobookFileWatcher::new(
             state.audiobookshelf_library_service.clone(),
             state.audiobookshelf_scanner.clone(),
         ),

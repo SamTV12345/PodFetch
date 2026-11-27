@@ -3204,6 +3204,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "podfetch-audiobooks"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "common-infrastructure",
+ "diesel",
+ "notify",
+ "podfetch-events",
+ "podfetch-identity",
+ "quick-xml 0.42.0",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "podfetch-cast"
 version = "0.1.0"
 dependencies = [
@@ -3420,6 +3440,7 @@ dependencies = [
  "notify",
  "opml",
  "podfetch-agent-protocol",
+ "podfetch-audiobooks",
  "podfetch-cast",
  "podfetch-casting",
  "podfetch-domain",

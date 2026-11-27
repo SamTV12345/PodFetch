@@ -1,11 +1,3 @@
-use crate::services::audiobookshelf::audiobook_scanner::AudiobookScanner;
-use crate::services::audiobookshelf::book_service::AudiobookshelfBookService;
-use crate::services::audiobookshelf::hls_transcoder::HlsTranscoder;
-use crate::services::audiobookshelf::library_service::AudiobookshelfLibraryService;
-use crate::services::audiobookshelf::listening_session_service::AudiobookshelfListeningSessionService;
-use crate::services::audiobookshelf::login_service::AudiobookshelfLoginService;
-use crate::services::audiobookshelf::media_progress_service::AudiobookshelfMediaProgressService;
-use crate::services::audiobookshelf::playback_session_service::AudiobookshelfPlaybackSessionService;
 use crate::services::episode_triage::service::EpisodeTriageService;
 use crate::services::playlist::service::PlaylistService;
 use crate::services::podcast_episode_chapter::service::PodcastEpisodeChapterService;
@@ -14,6 +6,24 @@ use crate::services::settings::service::SettingsService;
 use crate::services::transcript::service::TranscriptService;
 use crate::usecases::watchtime::WatchtimeUseCase;
 use common_infrastructure::config::EnvironmentService;
+use podfetch_audiobooks::persistence::AuthorRepositoryImpl;
+use podfetch_audiobooks::persistence::BookAudioFileRepositoryImpl;
+use podfetch_audiobooks::persistence::BookChapterRepositoryImpl;
+use podfetch_audiobooks::persistence::BookRepositoryImpl;
+use podfetch_audiobooks::persistence::LibraryRepositoryImpl;
+use podfetch_audiobooks::persistence::ListeningSessionRepositoryImpl;
+use podfetch_audiobooks::persistence::MediaProgressRepositoryImpl;
+use podfetch_audiobooks::persistence::NarratorRepositoryImpl;
+use podfetch_audiobooks::persistence::PlaybackSessionRepositoryImpl;
+use podfetch_audiobooks::persistence::SeriesRepositoryImpl;
+use podfetch_audiobooks::services::audiobook_scanner::AudiobookScanner;
+use podfetch_audiobooks::services::book_service::AudiobookshelfBookService;
+use podfetch_audiobooks::services::hls_transcoder::HlsTranscoder;
+use podfetch_audiobooks::services::library_service::AudiobookshelfLibraryService;
+use podfetch_audiobooks::services::listening_session_service::AudiobookshelfListeningSessionService;
+use podfetch_audiobooks::services::login_service::AudiobookshelfLoginService;
+use podfetch_audiobooks::services::media_progress_service::AudiobookshelfMediaProgressService;
+use podfetch_audiobooks::services::playback_session_service::AudiobookshelfPlaybackSessionService;
 use podfetch_cast::StubCastDriver;
 use podfetch_casting::agent::dispatcher::AgentDispatcher;
 use podfetch_casting::agent::registry::AgentRegistry;
@@ -49,19 +59,9 @@ use podfetch_listening::persistence::ListeningEventRepositoryImpl;
 use podfetch_listening::services::stats::StatsService;
 use podfetch_notifications::persistence::NotificationRepositoryImpl;
 use podfetch_notifications::service::NotificationService;
-use podfetch_persistence::adapters::AuthorRepositoryImpl;
-use podfetch_persistence::adapters::BookAudioFileRepositoryImpl;
-use podfetch_persistence::adapters::BookChapterRepositoryImpl;
-use podfetch_persistence::adapters::BookRepositoryImpl;
-use podfetch_persistence::adapters::LibraryRepositoryImpl;
-use podfetch_persistence::adapters::ListeningSessionRepositoryImpl;
-use podfetch_persistence::adapters::MediaProgressRepositoryImpl;
-use podfetch_persistence::adapters::NarratorRepositoryImpl;
-use podfetch_persistence::adapters::PlaybackSessionRepositoryImpl;
 use podfetch_persistence::adapters::PodcastEpisodeChapterRepositoryImpl;
 use podfetch_persistence::adapters::PodcastEpisodeTranscriptRepositoryImpl;
 use podfetch_persistence::adapters::PodcastSettingsRepositoryImpl;
-use podfetch_persistence::adapters::SeriesRepositoryImpl;
 use podfetch_persistence::adapters::SettingsRepositoryImpl;
 use podfetch_persistence::adapters::TranscriptionJobRepositoryImpl;
 use std::sync::Arc;
@@ -258,6 +258,7 @@ impl AppState {
                 Arc::new(crate::catalog_ports::CatalogFeeds),
             );
         }
+        podfetch_audiobooks::handlers::subscribe(&event_bus, database.clone());
         crate::podcast_events::install(event_bus.clone());
         let user_admin_service = Arc::new(UserAdminService::new(
             Arc::new(UserAdminRepositoryImpl::new(database.clone())),
@@ -313,10 +314,8 @@ impl AppState {
             Arc::new(AudiobookshelfListeningSessionService::new(Arc::new(
                 ListeningSessionRepositoryImpl::new(database),
             )));
-        let audiobookshelf_login_service = Arc::new(AudiobookshelfLoginService::new(
-            user_auth_service.clone(),
-            user_admin_service.clone(),
-        ));
+        let audiobookshelf_login_service =
+            Arc::new(AudiobookshelfLoginService::new(user_auth_service.clone()));
         let audiobookshelf_hls_transcoder = Arc::new(HlsTranscoder::new(environment.clone()));
 
         Self {

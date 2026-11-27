@@ -1,0 +1,29 @@
+[package]
+name = "podfetch-audiobooks"
+version = "0.1.0"
+edition = "2024"
+description = "Audiobooks bounded context: Audiobookshelf libraries, books, sessions and progress"
+
+[lints]
+workspace = true
+
+[features]
+default = []
+sqlite = ["common-infrastructure/sqlite", "podfetch-events/sqlite", "podfetch-identity/sqlite"]
+postgresql = ["common-infrastructure/postgresql", "podfetch-events/postgresql", "podfetch-identity/postgresql"]
+
+[dependencies]
+common-infrastructure = { workspace = true }
+podfetch-events = { workspace = true }
+podfetch-identity = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+diesel = { workspace = true }
+notify = { workspace = true }
+quick-xml = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }

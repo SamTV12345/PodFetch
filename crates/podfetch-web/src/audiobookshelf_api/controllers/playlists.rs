@@ -18,7 +18,7 @@ use axum::extract::{Path, State};
 use chrono::Utc;
 use common_infrastructure::error::ErrorSeverity::{Debug, Warning};
 use common_infrastructure::error::{CustomError, CustomErrorInner};
-use podfetch_domain::audiobookshelf::library_item_id::{EpisodeId, LibraryItemId};
+use podfetch_audiobooks::domain::library_item_id::{EpisodeId, LibraryItemId};
 use podfetch_library::domain::playlist::{Playlist, PlaylistItem, PlaylistRepository};
 use podfetch_library::persistence::PlaylistRepositoryImpl;
 use podfetch_persistence::db::database;

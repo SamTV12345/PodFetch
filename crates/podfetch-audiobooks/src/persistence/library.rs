@@ -1,8 +1,8 @@
-use crate::db::{Database, PersistenceError};
+use crate::domain::library::{Library, LibraryRepository, MediaType};
 use chrono::NaiveDateTime;
+use common_infrastructure::db::{Database, PersistenceError};
 use diesel::prelude::{AsChangeset, Insertable, Queryable};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
-use podfetch_domain::audiobookshelf::library::{Library, LibraryRepository, MediaType};
 
 diesel::table! {
     audiobookshelf_libraries (id) {

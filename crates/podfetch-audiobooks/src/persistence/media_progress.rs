@@ -1,8 +1,8 @@
-use crate::db::{Database, PersistenceError};
+use crate::domain::media_progress::{MediaProgress, MediaProgressRepository};
 use chrono::NaiveDateTime;
+use common_infrastructure::db::{Database, PersistenceError};
 use diesel::prelude::{AsChangeset, Insertable, Queryable};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
-use podfetch_domain::audiobookshelf::media_progress::{MediaProgress, MediaProgressRepository};
 use uuid::Uuid;
 
 diesel::table! {

@@ -1,4 +1,4 @@
-use podfetch_domain::audiobookshelf::library::Library;
+use podfetch_audiobooks::domain::library::Library;
 use serde::Serialize;
 
 #[derive(Serialize, utoipa::ToSchema)]

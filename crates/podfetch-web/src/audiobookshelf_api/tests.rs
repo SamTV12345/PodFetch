@@ -1020,7 +1020,7 @@ async fn recent_episodes_rejects_non_podcast_library() {
         .find(|l| {
             matches!(
                 l.media_type,
-                podfetch_domain::audiobookshelf::library::MediaType::Book
+                podfetch_audiobooks::domain::library::MediaType::Book
             )
         })
         .unwrap();
@@ -1249,7 +1249,7 @@ async fn book_playback_session_carries_book_id() {
         .find(|l| {
             matches!(
                 l.media_type,
-                podfetch_domain::audiobookshelf::library::MediaType::Book
+                podfetch_audiobooks::domain::library::MediaType::Book
             )
         })
         .unwrap();
@@ -1696,7 +1696,7 @@ async fn item_file_endpoint_honors_range() {
 #[tokio::test]
 #[serial]
 async fn file_watcher_starts_clean_when_no_book_library_has_folders() {
-    use crate::services::audiobookshelf::file_watcher::AudiobookFileWatcher;
+    use podfetch_audiobooks::services::file_watcher::AudiobookFileWatcher;
     let _server = handle_test_startup().await;
     let state = crate::test_support::tests::app_state();
     let watcher = AudiobookFileWatcher::new(
@@ -1709,7 +1709,7 @@ async fn file_watcher_starts_clean_when_no_book_library_has_folders() {
 #[tokio::test]
 #[serial]
 async fn file_watcher_attaches_to_existing_folder_without_panicking() {
-    use crate::services::audiobookshelf::file_watcher::AudiobookFileWatcher;
+    use podfetch_audiobooks::services::file_watcher::AudiobookFileWatcher;
     let _server = handle_test_startup().await;
     let state = crate::test_support::tests::app_state();
 
@@ -1725,14 +1725,14 @@ async fn file_watcher_attaches_to_existing_folder_without_panicking() {
         .find(|l| {
             matches!(
                 l.media_type,
-                podfetch_domain::audiobookshelf::library::MediaType::Book
+                podfetch_audiobooks::domain::library::MediaType::Book
             )
         })
         .unwrap();
     let mut updated = lib.clone();
     updated.folder_paths = vec![tmp.to_string_lossy().to_string()];
-    use podfetch_domain::audiobookshelf::library::LibraryRepository;
-    use podfetch_persistence::adapters::LibraryRepositoryImpl;
+    use podfetch_audiobooks::domain::library::LibraryRepository;
+    use podfetch_audiobooks::persistence::LibraryRepositoryImpl;
     use podfetch_persistence::db::database;
     LibraryRepositoryImpl::new(database())
         .upsert(updated)
@@ -1763,7 +1763,7 @@ async fn upload_writes_file_and_returns_target_dir() {
         .find(|l| {
             matches!(
                 l.media_type,
-                podfetch_domain::audiobookshelf::library::MediaType::Book
+                podfetch_audiobooks::domain::library::MediaType::Book
             )
         })
         .unwrap();
@@ -1773,8 +1773,8 @@ async fn upload_writes_file_and_returns_target_dir() {
     std::fs::create_dir_all(&upload_root).unwrap();
     let mut repo_lib = lib.clone();
     repo_lib.folder_paths = vec![upload_root.to_string_lossy().to_string()];
-    use podfetch_domain::audiobookshelf::library::LibraryRepository;
-    use podfetch_persistence::adapters::LibraryRepositoryImpl;
+    use podfetch_audiobooks::domain::library::LibraryRepository;
+    use podfetch_audiobooks::persistence::LibraryRepositoryImpl;
     use podfetch_persistence::db::database;
     LibraryRepositoryImpl::new(database())
         .upsert(repo_lib)
@@ -1858,7 +1858,7 @@ async fn upload_without_files_returns_4xx() {
         .find(|l| {
             matches!(
                 l.media_type,
-                podfetch_domain::audiobookshelf::library::MediaType::Book
+                podfetch_audiobooks::domain::library::MediaType::Book
             )
         })
         .unwrap();
@@ -1886,14 +1886,14 @@ async fn scan_report_exposes_added_updated_counters() {
         .find(|l| {
             matches!(
                 l.media_type,
-                podfetch_domain::audiobookshelf::library::MediaType::Book
+                podfetch_audiobooks::domain::library::MediaType::Book
             )
         })
         .unwrap();
     login_audiobookshelf(&mut server, &user).await;
 
-    use podfetch_domain::audiobookshelf::library::LibraryRepository;
-    use podfetch_persistence::adapters::LibraryRepositoryImpl;
+    use podfetch_audiobooks::domain::library::LibraryRepository;
+    use podfetch_audiobooks::persistence::LibraryRepositoryImpl;
     use podfetch_persistence::db::database;
     let empty = std::env::temp_dir()
         .join("podfetch-abs-empty-scan")
@@ -2222,7 +2222,7 @@ async fn list_audiobooks_library_items_returns_books() {
         .find(|l| {
             matches!(
                 l.media_type,
-                podfetch_domain::audiobookshelf::library::MediaType::Book
+                podfetch_audiobooks::domain::library::MediaType::Book
             )
         })
         .expect("audiobooks library bootstrapped");
@@ -2264,7 +2264,7 @@ async fn get_book_item_includes_chapters_and_audio_files() {
         .find(|l| {
             matches!(
                 l.media_type,
-                podfetch_domain::audiobookshelf::library::MediaType::Book
+                podfetch_audiobooks::domain::library::MediaType::Book
             )
         })
         .unwrap();
@@ -2303,7 +2303,7 @@ async fn play_book_session_returns_tracks_per_audio_file() {
         .find(|l| {
             matches!(
                 l.media_type,
-                podfetch_domain::audiobookshelf::library::MediaType::Book
+                podfetch_audiobooks::domain::library::MediaType::Book
             )
         })
         .unwrap();
@@ -2341,7 +2341,7 @@ async fn stream_book_track_serves_correct_audio_file() {
         .find(|l| {
             matches!(
                 l.media_type,
-                podfetch_domain::audiobookshelf::library::MediaType::Book
+                podfetch_audiobooks::domain::library::MediaType::Book
             )
         })
         .unwrap();
@@ -2384,11 +2384,11 @@ fn insert_test_book(
     library_id: &str,
     title: &str,
     author: &str,
-) -> podfetch_domain::audiobookshelf::book::Book {
+) -> podfetch_audiobooks::domain::book::Book {
     use chrono::Utc;
-    use podfetch_domain::audiobookshelf::book::{AuthorRepository, Book, BookRepository};
-    use podfetch_persistence::adapters::{AuthorRepositoryImpl, BookRepositoryImpl};
-    use podfetch_persistence::audiobookshelf::book::new_book_id;
+    use podfetch_audiobooks::domain::book::{AuthorRepository, Book, BookRepository};
+    use podfetch_audiobooks::persistence::book::new_book_id;
+    use podfetch_audiobooks::persistence::{AuthorRepositoryImpl, BookRepositoryImpl};
     use podfetch_persistence::db::database;
     use std::sync::Arc;
 
@@ -2428,8 +2428,8 @@ fn insert_test_book(
 }
 
 fn insert_test_audio_file_row(book_id: &str, idx: i32, path: &str, duration: f64) {
-    use podfetch_domain::audiobookshelf::book::{BookAudioFile, BookAudioFileRepository};
-    use podfetch_persistence::adapters::BookAudioFileRepositoryImpl;
+    use podfetch_audiobooks::domain::book::{BookAudioFile, BookAudioFileRepository};
+    use podfetch_audiobooks::persistence::BookAudioFileRepositoryImpl;
     use podfetch_persistence::db::database;
     use std::sync::Arc;
 
@@ -2458,8 +2458,8 @@ fn insert_test_audio_file_row(book_id: &str, idx: i32, path: &str, duration: f64
 }
 
 fn insert_test_chapter_row(book_id: &str, idx: i32, start: f64, end: f64, title: &str) {
-    use podfetch_domain::audiobookshelf::book::{BookChapter, BookChapterRepository};
-    use podfetch_persistence::adapters::BookChapterRepositoryImpl;
+    use podfetch_audiobooks::domain::book::{BookChapter, BookChapterRepository};
+    use podfetch_audiobooks::persistence::BookChapterRepositoryImpl;
     use podfetch_persistence::db::database;
     use std::sync::Arc;
 

@@ -2,7 +2,7 @@
 //! LibraryItem JSON for books (`mediaType: "book"`).
 
 use chrono::Utc;
-use podfetch_domain::audiobookshelf::book::BookAggregate;
+use podfetch_audiobooks::domain::book::BookAggregate;
 use serde_json::{Value, json};
 use std::path::Path;
 

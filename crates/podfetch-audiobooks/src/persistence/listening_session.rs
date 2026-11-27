@@ -1,10 +1,8 @@
-use crate::db::{Database, PersistenceError};
+use crate::domain::listening_session::{ListeningSession, ListeningSessionRepository};
 use chrono::NaiveDateTime;
+use common_infrastructure::db::{Database, PersistenceError};
 use diesel::prelude::{Insertable, Queryable};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use podfetch_domain::audiobookshelf::listening_session::{
-    ListeningSession, ListeningSessionRepository,
-};
 use uuid::Uuid;
 
 diesel::table! {

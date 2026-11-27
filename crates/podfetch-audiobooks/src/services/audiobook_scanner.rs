@@ -1,20 +1,20 @@
 //! Walks a library's folder paths, groups files into books, probes metadata,
 //! and persists to the audiobookshelf-domain tables.
 
-use crate::services::audiobookshelf::audio_probe::{
-    self, ProbedAudioFile, ProbedTags, is_supported_audio, mime_for_ext,
-};
-use crate::services::audiobookshelf::cover_extractor;
-use crate::services::audiobookshelf::library_service::AudiobookshelfLibraryService;
-use crate::services::audiobookshelf::metadata_resolver;
-use chrono::Utc;
-use common_infrastructure::config::EnvironmentService;
-use common_infrastructure::error::CustomError;
-use podfetch_domain::audiobookshelf::book::{
+use crate::domain::book::{
     AuthorRepository, Book, BookAudioFile, BookAudioFileRepository, BookChapter,
     BookChapterRepository, BookRepository, NarratorRepository, SeriesRepository,
 };
-use podfetch_persistence::audiobookshelf::book::new_book_id;
+use crate::persistence::book::new_book_id;
+use crate::services::audio_probe::{
+    self, ProbedAudioFile, ProbedTags, is_supported_audio, mime_for_ext,
+};
+use crate::services::cover_extractor;
+use crate::services::library_service::AudiobookshelfLibraryService;
+use crate::services::metadata_resolver;
+use chrono::Utc;
+use common_infrastructure::config::EnvironmentService;
+use common_infrastructure::error::CustomError;
 use regex::Regex;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -449,7 +449,7 @@ fn file_title(path: &Path, tags: &ProbedTags) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::services::audiobookshelf::audio_probe::SUPPORTED_AUDIO_EXTENSIONS;
+    use crate::services::audio_probe::SUPPORTED_AUDIO_EXTENSIONS;
     use std::collections::HashSet;
 
     #[test]

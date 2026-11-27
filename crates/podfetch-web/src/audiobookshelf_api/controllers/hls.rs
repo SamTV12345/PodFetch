@@ -3,9 +3,6 @@
 
 use crate::app_state::AppState;
 use crate::audiobookshelf_api::auth_middleware::AuthenticatedUser;
-use crate::services::audiobookshelf::hls_transcoder::{
-    build_master_playlist, build_media_playlist,
-};
 use crate::services::podcast::service::PodcastService;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use axum::body::Body;
@@ -14,7 +11,8 @@ use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use common_infrastructure::error::ErrorSeverity::Debug;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
-use podfetch_domain::audiobookshelf::library_item_id::{EpisodeId, LibraryItemId};
+use podfetch_audiobooks::domain::library_item_id::{EpisodeId, LibraryItemId};
+use podfetch_audiobooks::services::hls_transcoder::{build_master_playlist, build_media_playlist};
 use std::path::PathBuf;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -63,7 +61,7 @@ pub async fn hls_dispatch(
 
 async fn serve_segment(
     state: AppState,
-    session: podfetch_domain::audiobookshelf::playback_session::PlaybackSession,
+    session: podfetch_audiobooks::domain::playback_session::PlaybackSession,
     stream_id: String,
     segment_idx: u32,
 ) -> Result<Response, CustomError> {
@@ -88,7 +86,7 @@ async fn serve_segment(
 
 async fn resolve_source_audio(
     state: &AppState,
-    session: &podfetch_domain::audiobookshelf::playback_session::PlaybackSession,
+    session: &podfetch_audiobooks::domain::playback_session::PlaybackSession,
 ) -> Result<PathBuf, CustomError> {
     let parsed = LibraryItemId::parse(&session.library_item_id)
         .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
