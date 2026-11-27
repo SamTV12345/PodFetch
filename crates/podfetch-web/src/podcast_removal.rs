@@ -126,22 +126,30 @@ mod tests {
     /// from the schema: a new table with such a foreign key is covered
     /// without touching this test.
     fn references() -> Vec<(String, String, String)> {
-        #[cfg(not(feature = "postgresql"))]
-        let sql = "SELECT m.name AS table_name, f.\"from\" AS column_name, f.\"table\" AS target \
-                   FROM sqlite_master m, pragma_foreign_key_list(m.name) f \
-                   WHERE m.type = 'table' AND f.\"table\" IN ('podcasts', 'podcast_episodes')";
-        #[cfg(feature = "postgresql")]
-        let sql = "SELECT tc.table_name::text AS table_name, kcu.column_name::text AS column_name, \
-                   ccu.table_name::text AS target \
-                   FROM information_schema.table_constraints tc \
-                   JOIN information_schema.key_column_usage kcu \
-                     ON tc.constraint_name = kcu.constraint_name \
-                   JOIN information_schema.constraint_column_usage ccu \
-                     ON tc.constraint_name = ccu.constraint_name \
-                   WHERE tc.constraint_type = 'FOREIGN KEY' \
-                     AND ccu.table_name IN ('podcasts', 'podcast_episodes')";
+        const SQLITE: &str = "SELECT m.name AS table_name, f.\"from\" AS column_name, \
+             f.\"table\" AS target \
+             FROM sqlite_master m, pragma_foreign_key_list(m.name) f \
+             WHERE m.type = 'table' AND f.\"table\" IN ('podcasts', 'podcast_episodes')";
+        const POSTGRES: &str = "SELECT tc.table_name::text AS table_name, \
+             kcu.column_name::text AS column_name, ccu.table_name::text AS target \
+             FROM information_schema.table_constraints tc \
+             JOIN information_schema.key_column_usage kcu \
+               ON tc.constraint_name = kcu.constraint_name \
+             JOIN information_schema.constraint_column_usage ccu \
+               ON tc.constraint_name = ccu.constraint_name \
+             WHERE tc.constraint_type = 'FOREIGN KEY' \
+               AND ccu.table_name IN ('podcasts', 'podcast_episodes')";
+        // The backend in use, not the compiled features: builds with both
+        // features run against whichever database is configured.
+        let mut conn = get_connection();
+        let sql = match &mut *conn {
+            #[cfg(feature = "sqlite")]
+            common_infrastructure::db::DBType::Sqlite(_) => SQLITE,
+            #[cfg(feature = "postgresql")]
+            common_infrastructure::db::DBType::Postgresql(_) => POSTGRES,
+        };
         let mut found: Vec<(String, String, String)> = diesel::sql_query(sql)
-            .load::<Reference>(&mut get_connection())
+            .load::<Reference>(&mut conn)
             .unwrap()
             .into_iter()
             .map(|r| (r.table_name, r.column_name, r.target))
