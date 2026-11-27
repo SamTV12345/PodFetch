@@ -7,7 +7,6 @@ use crate::podcast::map_podcast_with_context_to_dto;
 use crate::podcast::{ItunesWrapper, PodcastDto, PodcastInsertModel, PodindexResponse};
 use crate::server::ChatServerHandle;
 use crate::services::file::service::FileService;
-use crate::services::podcast::metadata::PodcastExtra;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use common_infrastructure::error::ErrorSeverity::Error;
 use common_infrastructure::error::{
@@ -17,13 +16,10 @@ use common_infrastructure::http::COMMON_USER_AGENT;
 use common_infrastructure::http::get_http_client;
 use common_infrastructure::runtime::{ENVIRONMENT_SERVICE, ITUNES_URL};
 use podfetch_catalog::domain::ordering::{OrderCriteria, OrderOption};
-use podfetch_catalog::domain::podcast::{
-    NewPodcast, PodcastMetadataUpdate, PodcastQuery, PodcastRepository,
-};
+use podfetch_catalog::domain::podcast::{NewPodcast, PodcastQuery, PodcastRepository};
 use podfetch_catalog::persistence::podcast::DieselPodcastRepository;
 use podfetch_library::domain::favorite::FavoriteRepository;
 use podfetch_library::persistence::favorite::DieselFavoriteRepository;
-use podfetch_persistence::db::PersistenceError;
 use podfetch_persistence::db::database;
 use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue, USER_AGENT};
 use rss::Channel;
@@ -378,42 +374,6 @@ impl PodcastService {
             })
             .map(Into::into)
             .map_err(CustomError::from)
-    }
-
-    pub fn update_podcast_fields(podcast_extra: PodcastExtra) -> Result<usize, CustomError> {
-        podcast_repo()
-            .update_metadata(PodcastMetadataUpdate {
-                id: podcast_extra.id,
-                author: if podcast_extra.author.is_empty() {
-                    None
-                } else {
-                    Some(podcast_extra.author)
-                },
-                keywords: if podcast_extra.keywords.is_empty() {
-                    None
-                } else {
-                    Some(podcast_extra.keywords)
-                },
-                explicit: Some(podcast_extra.explicit.to_string()),
-                language: if podcast_extra.language.is_empty() {
-                    None
-                } else {
-                    Some(podcast_extra.language)
-                },
-                description: if podcast_extra.description.is_empty() {
-                    None
-                } else {
-                    Some(podcast_extra.description)
-                },
-                last_build_date: if podcast_extra.last_build_date.is_empty() {
-                    None
-                } else {
-                    Some(podcast_extra.last_build_date)
-                },
-                guid: podcast_extra.guid,
-            })
-            .map(|_| 1)
-            .map_err(|e: PersistenceError| e.into())
     }
 
     pub fn update_original_image_url(
