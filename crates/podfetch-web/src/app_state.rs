@@ -99,7 +99,7 @@ pub struct AppState {
     pub podcast_settings_service: Arc<PodcastSettingsService>,
     pub session_service: Arc<SessionService>,
     pub settings_service: Arc<SettingsService>,
-    pub sponsorblock_service: Arc<podfetch_media::sponsorblock::SponsorblockService>,
+    pub media: crate::media::MediaServices,
     pub stats_service: Arc<StatsService>,
     pub subscription_service: Arc<SubscriptionService>,
     pub tag_service: Arc<TagService>,
@@ -176,20 +176,11 @@ impl AppState {
         let settings_service = Arc::new(SettingsService::new(Arc::new(
             SettingsRepositoryImpl::new(database.clone()),
         )));
-        let sponsorblock_service =
-            Arc::new(podfetch_media::sponsorblock::SponsorblockService::new(
-                Arc::new(
-                    podfetch_media::persistence::DieselSponsorblockRepository::new(
-                        database.clone(),
-                    ),
-                ),
-                podfetch_media::sponsorblock::SponsorblockClient::new(
-                    common_infrastructure::http::get_http_client(&environment),
-                ),
-                Arc::new(crate::media::SettingsSponsorblockSwitch(
-                    settings_service.clone(),
-                )),
-            ));
+        let media = crate::media::MediaServices::build(
+            database.clone(),
+            environment.clone(),
+            settings_service.clone(),
+        );
         let listening_events = Arc::new(
             podfetch_listening::services::listening_event::ListeningEventService::new(Arc::new(
                 ListeningEventRepositoryImpl::new(database.clone()),
@@ -274,7 +265,7 @@ impl AppState {
             );
         }
         podfetch_audiobooks::handlers::subscribe(&event_bus, database.clone());
-        podfetch_media::handlers::subscribe_user_cleanup(&event_bus, sponsorblock_service.clone());
+        podfetch_media::handlers::subscribe_user_cleanup(&event_bus, media.sponsorblock.clone());
         crate::podcast_events::install(event_bus.clone());
         let user_admin_service = Arc::new(UserAdminService::new(
             Arc::new(UserAdminRepositoryImpl::new(database.clone())),
@@ -364,7 +355,7 @@ impl AppState {
             podcast_settings_service,
             session_service,
             settings_service,
-            sponsorblock_service,
+            media,
             stats_service,
             subscription_service,
             tag_service,

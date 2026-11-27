@@ -3377,6 +3377,7 @@ dependencies = [
  "podfetch-identity",
  "podfetch-kernel",
  "podfetch-storage",
+ "quick-xml 0.42.0",
  "regex",
  "reqwest 0.13.5",
  "serde",
@@ -3386,6 +3387,8 @@ dependencies = [
  "tokio",
  "tracing",
  "url",
+ "urlencoding",
+ "utoipa",
  "uuid",
 ]
 

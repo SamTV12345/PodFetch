@@ -1,16 +1,16 @@
-use crate::services::download::service::DownloadService;
-use crate::services::file::service::{FileService, prepare_podcast_episode_title_to_directory};
-use crate::services::podcast::service::PodcastService;
-use crate::services::settings::service::SettingsService;
-use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
+//! Re-applying the current settings to episodes downloaded earlier:
+//! transcode, rename/move, re-tag, consolidate covers, re-fetch
+//! SponsorBlock, rewrite NFO files.
+
+use crate::catalog::{MediaEpisode as PodcastEpisode, MediaPodcast as Podcast};
+use crate::download::Downloader;
 use common_infrastructure::config::FileHandlerType;
-use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
+use common_infrastructure::error::CustomError;
 use common_infrastructure::runtime::PODCAST_FILENAME;
-use podfetch_persistence::podcast::PodcastEntity as Podcast;
-use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use podfetch_storage::{FileHandleWrapper, FileRequest, FilenameBuilder, FilenameBuilderReturn};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use std::sync::Arc;
 
 /// Toggles for re-applying the current settings to already-downloaded
 /// episodes. Each field is opt-in so an empty body keeps the historical
@@ -59,9 +59,15 @@ pub struct RescanApplyStats {
     pub errors: usize,
 }
 
-pub struct EpisodeRescanService;
+pub struct EpisodeRescanner {
+    downloader: Arc<Downloader>,
+}
 
-impl EpisodeRescanService {
+impl EpisodeRescanner {
+    pub fn new(downloader: Arc<Downloader>) -> Self {
+        Self { downloader }
+    }
+
     /// Re-apply the current settings to a single downloaded episode. Steps
     /// run in the order
     ///   transcode -> rename/move -> metadata -> cover consolidation
@@ -72,17 +78,18 @@ impl EpisodeRescanService {
     /// location is S3, and missing files are skipped silently — the caller
     /// just won't see them in the per-step counters.
     pub fn apply_to_episode(
+        &self,
         episode: &PodcastEpisode,
         opts: &RescanOptions,
         stats: &mut RescanApplyStats,
     ) -> Result<(), CustomError> {
-        let Some(current_audio_path) = episode.file_episode_path.clone() else {
+        let Some(current_audio_path) = episode.file.file_episode_path.clone() else {
             return Ok(());
         };
-        let podcast_uuid = uuid::Uuid::parse_str(&episode.podcast_id)
-            .map_err(|_| CustomError::from(CustomErrorInner::NotFound(ErrorSeverity::Warning)))?;
+        let catalog = &self.downloader.catalog;
 
         let download_location = episode
+            .file
             .download_location
             .as_deref()
             .map_or(Ok(FileHandlerType::Local), str::parse)?;
@@ -107,7 +114,7 @@ impl EpisodeRescanService {
             // pass. If it's truly empty, clean it up so the user doesn't
             // accumulate dead directories.
             if opts.apply_filenames && download_location == FileHandlerType::Local {
-                let podcast_root = PodcastService::get_podcast(podcast_uuid)?.directory_name;
+                let podcast_root = catalog.podcast(&episode.podcast_id)?.directory_name;
                 if let Some(parent) = Path::new(&current_audio_path).parent()
                     && let Some(parent_str) = parent.to_str()
                 {
@@ -117,17 +124,8 @@ impl EpisodeRescanService {
             return Ok(());
         }
 
-        let mut podcast = PodcastService::get_podcast(podcast_uuid)?;
-        let settings =
-            SettingsService::shared()
-                .get_settings()?
-                .ok_or_else(|| -> CustomError {
-                    CustomErrorInner::Conflict(
-                        "settings row missing".to_string(),
-                        ErrorSeverity::Error,
-                    )
-                    .into()
-                })?;
+        let mut podcast = catalog.podcast(&episode.podcast_id)?;
+        let settings = self.downloader.settings.for_podcast(&episode.podcast_id)?;
 
         let mut working_audio_path = current_audio_path.clone();
 
@@ -136,7 +134,7 @@ impl EpisodeRescanService {
             && settings.auto_transcode_opus
             && extension_lower(&working_audio_path).as_deref() == Some("mp3")
         {
-            match podfetch_media::audio::convert::transcode_to_opus(&working_audio_path) {
+            match crate::audio::convert::transcode_to_opus(&working_audio_path) {
                 Ok(new_path) => {
                     working_audio_path = new_path;
                     stats.transcoded += 1;
@@ -151,14 +149,14 @@ impl EpisodeRescanService {
             }
         }
 
-        let mut working_image_path = episode.file_image_path.clone().unwrap_or_default();
+        let mut working_image_path = episode.file.file_image_path.clone().unwrap_or_default();
 
         // Rename the podcast's shared cover to the configured cover filename
         // (e.g. image.jpg -> cover.jpg) and repoint episodes that still use
         // the shared cover under its old name.
         if opts.apply_filenames || opts.regenerate_nfo {
-            crate::services::nfo::service::ensure_cover_filename(&podcast);
-            podcast = PodcastService::get_podcast(podcast_uuid)?;
+            self.downloader.nfo.ensure_cover_filename(&podcast);
+            podcast = catalog.podcast(&episode.podcast_id)?;
             if let Some(new_cover) = shared_cover_fs_path(&podcast)
                 && Self::is_stale_shared_cover(
                     &working_image_path,
@@ -167,9 +165,9 @@ impl EpisodeRescanService {
                     &download_location,
                 )
             {
-                PodcastEpisodeService::update_local_paths(
+                self.downloader.files.set_paths(
                     &episode.id,
-                    &new_cover,
+                    Some(&new_cover),
                     &working_audio_path,
                 )?;
                 working_image_path = new_cover;
@@ -183,12 +181,12 @@ impl EpisodeRescanService {
         let mut final_image_path = working_image_path.clone();
 
         if opts.apply_filenames {
-            let target = Self::compute_target_paths(
+            let target = self.compute_target_paths(
                 episode,
                 &podcast,
+                &settings,
                 &working_audio_path,
                 &working_image_path,
-                settings.direct_paths,
             )?;
 
             // Remember parents we moved files out of so we can clean up
@@ -258,11 +256,11 @@ impl EpisodeRescanService {
         // transcode or rename).
         if final_audio_path != current_audio_path
             || (!final_image_path.is_empty()
-                && Some(&final_image_path) != episode.file_image_path.as_ref())
+                && Some(&final_image_path) != episode.file.file_image_path.as_ref())
         {
-            PodcastEpisodeService::update_local_paths(
+            self.downloader.files.set_paths(
                 &episode.id,
-                &final_image_path,
+                (!final_image_path.is_empty()).then_some(final_image_path.as_str()),
                 &final_audio_path,
             )?;
         }
@@ -283,7 +281,10 @@ impl EpisodeRescanService {
                     &download_location,
                 );
             if cover_ok {
-                match DownloadService::handle_metadata_insertion(&paths, episode, &podcast) {
+                match self
+                    .downloader
+                    .tag_file(&paths, episode, &podcast, &settings)
+                {
                     Ok(_chapters) => {
                         stats.metadata_refreshed += 1;
                     }
@@ -346,10 +347,9 @@ impl EpisodeRescanService {
                             final_image_path,
                             episode.episode_id
                         );
-                        let new_image_db_value = shared_cover_fs_path.as_deref().unwrap_or("");
-                        if let Err(err) = PodcastEpisodeService::update_local_paths(
+                        if let Err(err) = self.downloader.files.set_paths(
                             &episode.id,
-                            new_image_db_value,
+                            shared_cover_fs_path.as_deref(),
                             &final_audio_path,
                         ) {
                             tracing::warn!(
@@ -373,16 +373,14 @@ impl EpisodeRescanService {
         // SponsorBlock re-fetch. Backfill the video id in-memory for episodes
         // ingested before the feature existed (not persisted here — best-effort).
         if opts.refetch_sponsorblock {
-            let mut episode_for_fetch = episode.clone();
-            if episode_for_fetch.youtube_video_id.is_none() {
-                episode_for_fetch.youtube_video_id =
-                    crate::services::sponsorblock::video_id::extract_youtube_video_id(
-                        None,
-                        Some(&episode.guid),
-                        Some(&episode.url),
-                    );
-            }
-            match crate::media::fetch_sponsor_segments_blocking(&episode_for_fetch) {
+            let video_id = episode.youtube_video_id.clone().or_else(|| {
+                common_infrastructure::youtube::extract_youtube_video_id(
+                    None,
+                    Some(&episode.guid),
+                    Some(&episode.url),
+                )
+            });
+            match self.downloader.fetch_sponsor_segments(episode, video_id) {
                 Ok(n) if n > 0 => tracing::info!(
                     "Refetched {n} SponsorBlock segments for episode {}",
                     episode.id
@@ -396,12 +394,10 @@ impl EpisodeRescanService {
         }
 
         if opts.regenerate_nfo {
-            crate::services::nfo::service::regenerate_for_episode(
-                &podcast,
-                episode,
-                &final_audio_path,
-            );
-            crate::services::nfo::service::ensure_cover_filename(&podcast);
+            self.downloader
+                .nfo
+                .regenerate_for_episode(&podcast, episode, &final_audio_path);
+            self.downloader.nfo.ensure_cover_filename(&podcast);
         }
 
         Ok(())
@@ -426,7 +422,7 @@ impl EpisodeRescanService {
         let is_cover_name = path
             .file_stem()
             .and_then(|stem| stem.to_str())
-            .is_some_and(|stem| crate::services::nfo::service::COVER_CANDIDATES.contains(&stem));
+            .is_some_and(|stem| crate::nfo::writer::COVER_CANDIDATES.contains(&stem));
         in_podcast_dir
             && is_cover_name
             && !FileHandleWrapper::path_exists(image_path, FileRequest::File, download_location)
@@ -434,21 +430,19 @@ impl EpisodeRescanService {
     }
 
     fn compute_target_paths(
+        &self,
         episode: &PodcastEpisode,
         podcast: &Podcast,
+        settings: &crate::settings::MediaSettings,
         current_audio_path: &str,
         current_image_path: &str,
-        direct_paths: bool,
     ) -> Result<FilenameBuilderReturn, CustomError> {
+        let direct_paths = settings.direct_paths;
         let suffix = extension_lower(current_audio_path).unwrap_or_else(|| "mp3".to_string());
         let image_suffix = extension_lower(current_image_path).unwrap_or_else(|| "jpg".to_string());
 
-        let episode_stem = prepare_podcast_episode_title_to_directory(episode.clone())?;
-        let cover_filename = crate::services::nfo::service::resolve_cover_filename(
-            uuid::Uuid::parse_str(&episode.podcast_id).map_err(|_| {
-                CustomError::from(CustomErrorInner::NotFound(ErrorSeverity::Warning))
-            })?,
-        );
+        let episode_stem = self.downloader.episode_stem(episode, settings)?;
+        let cover_filename = &settings.cover_filename;
 
         // When `direct_paths` is off, FilenameBuilder calls into our
         // resolver to find a free `<stem>-<n>` directory. If the episode
@@ -464,6 +458,7 @@ impl EpisodeRescanService {
         };
 
         let download_location = episode
+            .file
             .download_location
             .as_deref()
             .map_or(Ok(FileHandlerType::Local), str::parse)?;
@@ -473,7 +468,7 @@ impl EpisodeRescanService {
             .with_episode_stem(&episode_stem)
             .with_suffix(&suffix)
             .with_image_suffix(&image_suffix)
-            .with_image_filename(&cover_filename)
+            .with_image_filename(cover_filename)
             .with_filename(PODCAST_FILENAME)
             .with_direct_paths(direct_paths)
             .build(|directory| -> Result<String, CustomError> {
@@ -487,7 +482,7 @@ impl EpisodeRescanService {
                 {
                     return Ok(existing.clone());
                 }
-                FileService::ensure_podcast_episode_directory_available(&directory, podcast)
+                crate::download::episode_directory_available(&directory, podcast)
             })
     }
 
@@ -615,23 +610,13 @@ mod tests {
     fn make_podcast(image_url: &str, directory_name: &str) -> Podcast {
         Podcast {
             id: uuid::Uuid::nil().to_string(),
-            legacy_id: None,
             name: "p".into(),
             directory_id: "1".into(),
-            rssfeed: "https://x".into(),
             image_url: image_url.into(),
-            summary: None,
-            language: None,
-            explicit: None,
-            keywords: None,
-            last_build_date: None,
-            author: None,
-            active: true,
             original_image_url: "https://x/img".into(),
             directory_name: directory_name.into(),
             download_location: Some("Local".into()),
-            guid: None,
-            added_by: None,
+            ..Podcast::default()
         }
     }
 
@@ -673,28 +658,28 @@ mod tests {
         let local = FileHandlerType::Local;
 
         // Old shared cover name, file renamed away -> stale.
-        assert!(EpisodeRescanService::is_stale_shared_cover(
+        assert!(EpisodeRescanner::is_stale_shared_cover(
             &format!("{podcast_dir}/image.jpg"),
             &new_cover,
             &podcast_dir,
             &local,
         ));
         // Already the current cover.
-        assert!(!EpisodeRescanService::is_stale_shared_cover(
+        assert!(!EpisodeRescanner::is_stale_shared_cover(
             &new_cover,
             &new_cover,
             &podcast_dir,
             &local,
         ));
         // Per-episode cover in a subfolder is not the shared cover.
-        assert!(!EpisodeRescanService::is_stale_shared_cover(
+        assert!(!EpisodeRescanner::is_stale_shared_cover(
             &format!("{podcast_dir}/Episode 1/image.jpg"),
             &new_cover,
             &podcast_dir,
             &local,
         ));
         // A per-episode cover named like the episode is left alone.
-        assert!(!EpisodeRescanService::is_stale_shared_cover(
+        assert!(!EpisodeRescanner::is_stale_shared_cover(
             &format!("{podcast_dir}/Episode 1.jpg"),
             &new_cover,
             &podcast_dir,
@@ -702,7 +687,7 @@ mod tests {
         ));
         // Old name still exists on disk -> nothing to repoint.
         std::fs::write(format!("{podcast_dir}/image.jpg"), b"jpg").unwrap();
-        assert!(!EpisodeRescanService::is_stale_shared_cover(
+        assert!(!EpisodeRescanner::is_stale_shared_cover(
             &format!("{podcast_dir}/image.jpg"),
             &new_cover,
             &podcast_dir,
@@ -726,10 +711,7 @@ mod tests {
         let level2 = level1.join("sub");
         std::fs::create_dir_all(&level2).unwrap();
 
-        EpisodeRescanService::remove_empty_dir_up_to(
-            level2.to_str().unwrap(),
-            root.to_str().unwrap(),
-        );
+        EpisodeRescanner::remove_empty_dir_up_to(level2.to_str().unwrap(), root.to_str().unwrap());
 
         assert!(!level2.exists());
         assert!(!level1.exists());
@@ -750,10 +732,7 @@ mod tests {
         std::fs::create_dir_all(&level2).unwrap();
         std::fs::write(level1.join("keepme.txt"), b"x").unwrap();
 
-        EpisodeRescanService::remove_empty_dir_up_to(
-            level2.to_str().unwrap(),
-            root.to_str().unwrap(),
-        );
+        EpisodeRescanner::remove_empty_dir_up_to(level2.to_str().unwrap(), root.to_str().unwrap());
 
         assert!(!level2.exists(), "empty leaf should be removed");
         assert!(level1.exists(), "non-empty parent must be kept");

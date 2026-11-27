@@ -4,7 +4,6 @@ use podfetch_domain::podcast_episode_chapter::PodcastEpisodeChapterRepository;
 use podfetch_media::audio::Chapter;
 use podfetch_persistence::adapters::PodcastEpisodeChapterRepositoryImpl;
 use podfetch_persistence::db::database;
-use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -26,11 +25,11 @@ impl PodcastEpisodeChapterService {
     pub fn save_chapter(
         &self,
         chapter_to_save: &Chapter,
-        podcast_episode: &PodcastEpisode,
+        episode_id: &str,
     ) -> Result<(), CustomError> {
         self.repository.upsert(
             UpsertPodcastEpisodeChapter {
-                episode_id: uuid::Uuid::parse_str(&podcast_episode.id).map_err(|_| {
+                episode_id: uuid::Uuid::parse_str(episode_id).map_err(|_| {
                     CustomError::from(common_infrastructure::error::CustomErrorInner::BadRequest(
                         "invalid episode id".to_string(),
                         common_infrastructure::error::ErrorSeverity::Warning,

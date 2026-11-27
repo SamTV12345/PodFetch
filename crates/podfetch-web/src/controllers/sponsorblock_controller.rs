@@ -104,7 +104,7 @@ pub async fn get_episode_sponsorblock(
     Extension(requester): Extension<Principal>,
 ) -> Result<Json<SponsorblockEpisodeResponse>, CustomError> {
     let episode_id = resolve_episode_uuid(&id)?.to_string();
-    let sponsorblock = &state.sponsorblock_service;
+    let sponsorblock = &state.media.sponsorblock;
 
     let segments = sponsorblock
         .segments(&episode_id)?
@@ -131,7 +131,7 @@ pub async fn get_sponsorblock_settings(
     State(state): State<AppState>,
     Extension(requester): Extension<Principal>,
 ) -> Result<Json<SponsorblockUserSettingsDto>, CustomError> {
-    let preferences = state.sponsorblock_service.preferences(requester.id)?;
+    let preferences = state.media.sponsorblock.preferences(requester.id)?;
     Ok(Json(preferences.into()))
 }
 
@@ -150,7 +150,8 @@ pub async fn update_sponsorblock_settings(
     Json(body): Json<SponsorblockUserSettingsDto>,
 ) -> Result<Json<SponsorblockUserSettingsDto>, CustomError> {
     state
-        .sponsorblock_service
+        .media
+        .sponsorblock
         .save_preferences(requester.id, &body.clone().into())?;
     Ok(Json(body))
 }

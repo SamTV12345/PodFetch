@@ -221,9 +221,7 @@ impl PodcastService {
         // Remember which image the cover was downloaded from, so the first
         // feed refresh doesn't treat the podcast as having no image yet.
         if let Ok(podcast_uuid) = Uuid::parse_str(&inserted_podcast.id)
-            && !crate::services::download::service::DownloadService::is_default_fallback_image_url(
-                &podcast_insert.image_url,
-            )
+            && !common_infrastructure::runtime::is_default_image_url(&podcast_insert.image_url)
         {
             Self::update_original_image_url(&podcast_insert.image_url, podcast_uuid)?;
         }
@@ -232,7 +230,7 @@ impl PodcastService {
         // is the feed/track id and can't be used to look up settings.
         let cover_filename = Uuid::parse_str(&inserted_podcast.id).map_or_else(
             |_| crate::settings::default_cover_filename(),
-            crate::services::nfo::service::resolve_cover_filename,
+            crate::media::cover_filename,
         );
         FileService::download_podcast_image(
             &inserted_podcast.directory_name.clone().clone(),

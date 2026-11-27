@@ -1,7 +1,7 @@
-//! Pure NFO XML builders. Domain types in, XML string out. No DB, no FS.
+//! Pure NFO XML builders. The media library's view of podcast and episode
+//! in, XML string out. No DB, no FS.
 
-use podfetch_domain::podcast::Podcast;
-use podfetch_domain::podcast_episode::PodcastEpisode;
+use crate::catalog::{MediaEpisode as PodcastEpisode, MediaPodcast as Podcast};
 use quick_xml::Writer;
 use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, BytesText, Event};
 use std::io::Cursor;
