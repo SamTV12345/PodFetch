@@ -1,6 +1,5 @@
 use crate::podcast_events::{self, EpisodeDownloadFailed, EpisodeDownloaded};
 use crate::server::ChatServerHandle;
-use crate::services::download::service::DownloadService;
 use crate::services::episode_triage::service::EpisodeTriageService;
 use crate::services::file::service::FileService;
 use crate::services::playlist::service::PlaylistService;
@@ -228,7 +227,7 @@ impl PodcastEpisodeUseCase {
             ..Default::default()
         };
 
-        let youtube_video_id = crate::services::sponsorblock::video_id::extract_youtube_video_id(
+        let youtube_video_id = common_infrastructure::youtube::extract_youtube_video_id(
             item.link.as_deref(),
             item.guid.as_ref().map(|g| g.value.as_str()),
             item.enclosure.as_ref().map(|e| e.url.as_str()),
@@ -524,9 +523,10 @@ impl PodcastEpisodeUseCase {
             return Ok(podcast_episode.clone());
         };
         tracing::info!("Downloading podcast episode: {}", podcast_episode.name);
-        if let Err(err) =
-            DownloadService::download_podcast_episode(podcast_episode.clone(), podcast_cloned)
-        {
+        if let Err(err) = crate::media::services().downloader.download(
+            &crate::media::media_episode(podcast_episode),
+            &crate::media::media_podcast(podcast_cloned),
+        ) {
             podcast_events::publish(&EpisodeDownloadFailed {
                 episode_id: podcast_episode.episode_id.clone(),
                 episode_name: podcast_episode.name.clone(),
@@ -641,9 +641,9 @@ impl PodcastEpisodeUseCase {
                             itunes_ext.as_ref().and_then(|ext| ext.image.clone());
                         if let Some(itunes_image) = episode_itunes_image {
                             updated_podcast_episode.image_url = itunes_image;
-                        } else if DownloadService::is_default_fallback_image_url(
+                        } else if common_infrastructure::runtime::is_default_image_url(
                             &updated_podcast_episode.image_url,
-                        ) && !DownloadService::is_default_fallback_image_url(
+                        ) && !common_infrastructure::runtime::is_default_image_url(
                             &podcast.original_image_url,
                         ) {
                             updated_podcast_episode.image_url = podcast.original_image_url.clone();
@@ -727,7 +727,7 @@ impl PodcastEpisodeUseCase {
         // only had <itunes:image>, which older versions ignored) got the
         // default cover. Fetch the real one now that the feed provides it.
         let had_no_image =
-            DownloadService::is_default_fallback_image_url(&podcast.original_image_url);
+            common_infrastructure::runtime::is_default_image_url(&podcast.original_image_url);
         if had_no_image && let Some(image_url) = image_url {
             Self::schedule_podcast_cover_download(podcast, image_url);
         }
@@ -742,7 +742,7 @@ impl PodcastEpisodeUseCase {
         let directory_id = podcast.directory_id.clone();
         let cover_filename = Uuid::parse_str(&podcast.id).map_or_else(
             |_| crate::settings::default_cover_filename(),
-            crate::services::nfo::service::resolve_cover_filename,
+            crate::media::cover_filename,
         );
         let name = podcast.name.clone();
         runtime.spawn(async move {

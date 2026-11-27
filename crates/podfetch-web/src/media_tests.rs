@@ -171,7 +171,8 @@ mod tests {
         let state = app_state();
         let (user, username) = admin();
         state
-            .sponsorblock_service
+            .media
+            .sponsorblock
             .save_preferences(
                 user,
                 &SkipPreferences {

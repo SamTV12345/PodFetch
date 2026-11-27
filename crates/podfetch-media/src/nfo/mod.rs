@@ -1,7 +1,11 @@
+//! Jellyfin/Kodi NFO sidecar files next to the downloaded episodes.
+
 use std::str::FromStr;
 
 pub mod builders;
-pub mod service;
+pub mod writer;
+
+pub use writer::NfoWriter;
 
 /// Which NFO layout to emit for a podcast.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

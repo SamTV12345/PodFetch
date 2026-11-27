@@ -1,16 +1,12 @@
 pub mod discover;
-pub mod download;
-pub mod episode_rescan;
 pub mod episode_scan;
 pub mod episode_triage;
 pub mod file;
 pub mod mopidy;
-pub mod nfo;
 pub mod oidc;
 pub mod playlist;
 pub mod podcast;
 pub mod podcast_episode_chapter;
 pub mod podcast_settings;
 pub mod settings;
-pub mod sponsorblock;
 pub mod transcript;

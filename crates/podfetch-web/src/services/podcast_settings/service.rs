@@ -1,13 +1,10 @@
 use crate::podcast_settings::PodcastSetting;
-use crate::services::download::service::DownloadService;
-use crate::services::podcast_episode_chapter::service::PodcastEpisodeChapterService;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use podfetch_domain::podcast_settings::PodcastSettingsRepository;
 use podfetch_persistence::adapters::PodcastSettingsRepositoryImpl;
 use podfetch_persistence::db::database;
-use podfetch_storage::FilenameBuilderReturn;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -60,49 +57,33 @@ impl PodcastSettingsService {
                 ))
             })?;
 
+        let media = crate::media::services();
+        let podcast = crate::media::media_podcast(&podcast);
         for episode in available_episodes {
             if episode.download_time.is_none() {
                 continue;
             }
-            let file_name_builder = FilenameBuilderReturn::new(
-                episode.file_episode_path.clone().unwrap(),
-                episode.file_image_path.clone().unwrap(),
-            );
-            match DownloadService::handle_metadata_insertion(&file_name_builder, &episode, &podcast)
-            {
-                Ok(chapters) => {
-                    for chapter in chapters {
-                        if let Err(error) = PodcastEpisodeChapterService::default_service()
-                            .save_chapter(&chapter, &episode)
-                        {
-                            tracing::error!(
-                                "Error while saving chapter for episode {}: {}",
-                                episode.id,
-                                error
-                            );
-                        }
-                    }
-                }
-                Err(error) => {
-                    tracing::error!(
-                        "Error while updating metadata for episode {}: {}",
-                        episode.id,
-                        error.inner
-                    );
-                }
+            let episode = crate::media::media_episode(&episode);
+            if let Err(error) = media.downloader.retag(&episode, &podcast) {
+                tracing::error!(
+                    "Error while updating metadata for episode {}: {}",
+                    episode.id,
+                    error.inner
+                );
             }
             if let Some(audio_path) = episode
+                .file
                 .file_episode_path
                 .as_deref()
                 .filter(|p| !p.is_empty())
             {
-                crate::services::nfo::service::regenerate_for_episode(
-                    &podcast, &episode, audio_path,
-                );
+                media
+                    .nfo
+                    .regenerate_for_episode(&podcast, &episode, audio_path);
             }
         }
 
-        crate::services::nfo::service::ensure_cover_filename(&podcast);
+        media.nfo.ensure_cover_filename(&podcast);
         Ok(updated_setting.into())
     }
 }

@@ -4,7 +4,6 @@ use std::path::Path;
 
 use crate::podcast::PodcastInsertModel;
 use crate::podcast_settings::PodcastSetting;
-use crate::services::download::service::DownloadService;
 use crate::services::podcast::service::PodcastService;
 use crate::services::podcast_settings::service::PodcastSettingsService;
 use crate::services::settings::service::SettingsService;
@@ -16,14 +15,11 @@ use common_infrastructure::error::{
 use common_infrastructure::http::get_http_client;
 use common_infrastructure::rss::RSSFeedParser;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
-use podfetch_media::naming::{EpisodeNaming, NamingRules, Replacement};
-use podfetch_persistence::db::DBType as DbConnection;
+use podfetch_media::naming::{NamingRules, Replacement};
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use podfetch_storage::FileHandleWrapper;
-use podfetch_storage::{FileRequest, resolve_file_handler_type};
-use podfetch_storage::{
-    FileType, build_podcast_image_paths, create_available_directory, determine_file_extension,
-};
+use podfetch_storage::FileRequest;
+use podfetch_storage::{FileType, build_podcast_image_paths, determine_file_extension};
 use rss::Channel;
 use tokio::task::spawn_blocking;
 
@@ -37,10 +33,9 @@ pub struct PodcastFiles {
 pub struct FileService {}
 
 impl FileService {
-    pub fn check_if_podcast_main_image_downloaded(
-        podcast_id: &str,
-        _conn: &mut DbConnection,
-    ) -> bool {
+    /// Whether the podcast's own cover is on disk already (its stored image
+    /// URL is a local path that exists).
+    pub fn check_if_podcast_main_image_downloaded(podcast_id: &str) -> bool {
         let podcast = PodcastService::get_podcast_by_directory_id(podcast_id).unwrap_or_else(|e| {
             tracing::error!("Could not load podcast {podcast_id}: {e}");
             None
@@ -128,11 +123,12 @@ impl FileService {
         directory_id: &str,
         cover_filename: &str,
     ) -> Result<(), CustomError> {
-        let mut image_suffix = if DownloadService::is_default_fallback_image_url(&image_url) {
-            DownloadService::get_default_fallback_image_data()
+        let mut image_suffix = if common_infrastructure::runtime::is_default_image_url(&image_url) {
+            podfetch_media::images::default_image()
         } else {
             let image_url_cloned = image_url.clone();
-            DownloadService::handle_suffix_response_async(
+            podfetch_media::images::fetch_with_suffix_async(
+                &ENVIRONMENT_SERVICE,
                 spawn_blocking(move || {
                     let client = reqwest::blocking::Client::new();
                     determine_file_extension(&image_url_cloned, &client, FileType::Image)
@@ -216,20 +212,6 @@ impl FileService {
     pub fn remove_podcast_files(files: &PodcastFiles) -> Result<(), CustomError> {
         FileHandleWrapper::remove_dir(&files.podcast, &files.episodes)
     }
-
-    pub fn ensure_podcast_episode_directory_available(
-        base_path: &str,
-        podcast: &Podcast,
-    ) -> Result<String, CustomError> {
-        let download_location = resolve_file_handler_type(podcast.download_location.clone());
-
-        create_available_directory(
-            base_path,
-            |path| FileHandleWrapper::path_exists(path, FileRequest::Directory, &download_location),
-            |path| FileHandleWrapper::path_exists(path, FileRequest::NoopS3, &download_location),
-            |path| FileHandleWrapper::create_dir(path, &download_location),
-        )
-    }
 }
 
 pub async fn prepare_podcast_title_to_directory(
@@ -293,51 +275,102 @@ pub fn naming_rules(
     }
 }
 
-/// What the episode's file is named after.
-pub fn episode_naming(episode: &PodcastEpisode) -> EpisodeNaming {
-    EpisodeNaming {
-        name: episode.name.clone(),
-        date_of_recording: episode.date_of_recording.clone(),
-        guid: episode.guid.clone(),
-        url: episode.url.clone(),
-        description: episode.description.clone(),
-        total_time: episode.total_time,
-    }
-}
-
-pub fn prepare_podcast_episode_title_to_directory(
-    podcast_episode: PodcastEpisode,
-) -> Result<String, CustomError> {
-    let retrieved_settings = required_settings()?;
-    if retrieved_settings.use_existing_filename
-        && let Some(filename) = podfetch_media::naming::filename_of_url(&podcast_episode.url)
-    {
-        return Ok(filename);
-    }
-    let podcast_uuid = uuid::Uuid::parse_str(&podcast_episode.podcast_id)
-        .map_err(|_| CustomError::from(CustomErrorInner::NotFound(ErrorSeverity::Warning)))?;
-    let podcast_settings = PodcastSettingsService::get_settings_for_podcast(podcast_uuid)?;
-    let episode_number =
-        crate::usecases::podcast_episode::PodcastEpisodeUseCase::get_position_of_episode(
-            &podcast_episode.date_of_recording,
-            podcast_uuid,
-        )? as i64;
-    let total_episode_count =
-        crate::usecases::podcast_episode::PodcastEpisodeUseCase::get_total_episode_count(
-            podcast_uuid,
-        )?;
-    podfetch_media::naming::episode_file_stem(
-        &naming_rules(&retrieved_settings, podcast_settings.as_ref()),
-        &episode_naming(&podcast_episode),
-        episode_number,
-        Some(total_episode_count),
-    )
-}
-
 /// The global settings row is created at startup, so a missing one is a bug.
 fn required_settings() -> Result<crate::settings::Setting, CustomError> {
     SettingsService::shared().get_settings()?.ok_or_else(|| {
         tracing::error!("Global settings are missing");
         CustomErrorInner::Unknown(ErrorSeverity::Error).into()
     })
+}
+
+#[cfg(test)]
+mod tests {
+    // ── check_if_podcast_main_image_downloaded integration tests ─────────
+
+    use super::FileService;
+    use podfetch_domain::podcast::NewPodcast;
+    use podfetch_domain::podcast::PodcastRepository;
+    use podfetch_persistence::db::database;
+    use podfetch_persistence::podcast::DieselPodcastRepository;
+    use std::io::Write;
+
+    fn seed_podcast(image_url: &str, directory_id: &str) -> String {
+        crate::test_support::tests::ensure_test_env_vars();
+        let repo = DieselPodcastRepository::new(database());
+        let id = uuid::Uuid::new_v4().to_string();
+        let podcast = NewPodcast {
+            name: "test-podcast".into(),
+            directory_id: directory_id.to_string(),
+            rssfeed: "https://example.com/feed.xml".into(),
+            image_url: image_url.to_string(),
+            directory_name: format!("podcasts/{directory_id}"),
+            added_by: None,
+        };
+        repo.create(podcast).expect("seed podcast");
+        id
+    }
+
+    fn cleanup_podcast(directory_id: &str) {
+        use diesel::RunQueryDsl;
+        use podfetch_persistence::db::get_connection;
+        let _ = diesel::sql_query(format!(
+            "DELETE FROM podcasts WHERE directory_id = '{directory_id}'"
+        ))
+        .execute(&mut get_connection());
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn main_image_not_downloaded_when_podcast_not_found() {
+        crate::test_support::tests::ensure_test_env_vars();
+        assert!(
+            !FileService::check_if_podcast_main_image_downloaded("nonexistent-id"),
+            "non-existent podcast → image not downloaded"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn main_image_not_downloaded_when_url_is_http() {
+        let dir_id = format!("test-http-{}", uuid::Uuid::new_v4().simple());
+        seed_podcast("https://example.com/cover.jpg", &dir_id);
+
+        crate::test_support::tests::ensure_test_env_vars();
+        let result = FileService::check_if_podcast_main_image_downloaded(&dir_id);
+        cleanup_podcast(&dir_id);
+        assert!(!result, "HTTP image_url → not downloaded");
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn main_image_not_downloaded_when_local_file_missing() {
+        let dir_id = format!("test-local-missing-{}", uuid::Uuid::new_v4().simple());
+        seed_podcast("/tmp/does-not-exist-928347.jpg", &dir_id);
+
+        crate::test_support::tests::ensure_test_env_vars();
+        let result = FileService::check_if_podcast_main_image_downloaded(&dir_id);
+        cleanup_podcast(&dir_id);
+        assert!(!result, "local path but file missing → not downloaded");
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn main_image_downloaded_when_local_file_exists() {
+        let dir_id = format!("test-local-exists-{}", uuid::Uuid::new_v4().simple());
+        let tmp = std::env::temp_dir().join(format!(
+            "podfetch-test-cover-{}.jpg",
+            uuid::Uuid::new_v4().simple()
+        ));
+        {
+            let mut f = std::fs::File::create(&tmp).expect("create temp file");
+            f.write_all(b"fake-image-data").expect("write");
+        }
+        seed_podcast(&tmp.to_string_lossy(), &dir_id);
+
+        crate::test_support::tests::ensure_test_env_vars();
+        let result = FileService::check_if_podcast_main_image_downloaded(&dir_id);
+        cleanup_podcast(&dir_id);
+        let _ = std::fs::remove_file(&tmp);
+        assert!(result, "local file exists → downloaded");
+    }
 }

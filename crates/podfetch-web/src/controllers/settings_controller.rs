@@ -1,8 +1,5 @@
 use crate::app_state::AppState;
 use crate::auth_middleware::FeedApiKey;
-use crate::services::episode_rescan::service::{
-    EpisodeRescanService, RescanApplyStats, RescanOptions,
-};
 use crate::services::episode_scan::service::EpisodeScanServiceImpl;
 use crate::services::podcast::service::PodcastService;
 use crate::settings::{
@@ -16,6 +13,7 @@ use axum::http::HeaderMap;
 use axum::http::Response;
 use axum::{Extension, Json};
 use podfetch_identity::api::Principal;
+use podfetch_media::rescan::{RescanApplyStats, RescanOptions};
 use reqwest::StatusCode;
 
 #[utoipa::path(
@@ -44,6 +42,7 @@ pub async fn get_settings(
     tag="podcast_episodes"
 )]
 pub async fn rescan_episodes(
+    State(state): State<AppState>,
     Extension(requester): Extension<Principal>,
     body: Option<Json<RescanOptions>>,
 ) -> Result<(), CustomError> {
@@ -57,7 +56,7 @@ pub async fn rescan_episodes(
         settings::rescan_episodes(&scan_service, requester.is_admin()).map_err(map_rescan_error)?;
 
     let apply_stats = if opts.any_enabled() {
-        apply_settings_to_downloaded_episodes(&opts)?
+        apply_settings_to_downloaded_episodes(&state.media.rescanner, &opts)?
     } else {
         RescanApplyStats::default()
     };
@@ -79,6 +78,7 @@ pub async fn rescan_episodes(
 }
 
 fn apply_settings_to_downloaded_episodes(
+    rescanner: &podfetch_media::rescan::EpisodeRescanner,
     opts: &RescanOptions,
 ) -> Result<RescanApplyStats, CustomError> {
     use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
@@ -94,9 +94,11 @@ fn apply_settings_to_downloaded_episodes(
             if episode.file_episode_path.is_none() {
                 continue;
             }
-            if let Err(err) =
-                EpisodeRescanService::apply_to_episode(episode, opts, &mut apply_stats)
-            {
+            if let Err(err) = rescanner.apply_to_episode(
+                &crate::media::media_episode(episode),
+                opts,
+                &mut apply_stats,
+            ) {
                 tracing::error!("apply_to_episode failed for {}: {err}", episode.episode_id);
                 apply_stats.errors += 1;
             }
@@ -657,7 +659,12 @@ mod tests {
             Ok(_) => panic!("expected forbidden error for update_name"),
         }
 
-        let rescan_result = super::rescan_episodes(Extension(Principal::from(&user)), None).await;
+        let rescan_result = super::rescan_episodes(
+            State(crate::test_support::tests::app_state()),
+            Extension(Principal::from(&user)),
+            None,
+        )
+        .await;
         match rescan_result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
             Ok(_) => panic!("expected forbidden error for rescan_episodes"),
