@@ -92,6 +92,11 @@ impl SponsorblockService {
         Ok(segments.len())
     }
 
+    /// Forgets the segments of episodes that leave the catalog.
+    pub fn forget_episodes(&self, episode_ids: &[String]) -> Result<(), CustomError> {
+        self.repository.forget_segments(episode_ids)
+    }
+
     /// The episode's segments, ordered by start.
     pub fn segments(&self, episode_id: &str) -> Result<Vec<SponsorSegment>, CustomError> {
         self.repository.segments(episode_id)
@@ -135,6 +140,14 @@ mod tests {
             let mut stored = self.segments.lock().unwrap();
             stored.retain(|(id, _)| id != episode_id);
             stored.extend(segments.iter().map(|s| (episode_id.to_string(), s.clone())));
+            Ok(())
+        }
+
+        fn forget_segments(&self, episode_ids: &[String]) -> Result<(), CustomError> {
+            self.segments
+                .lock()
+                .unwrap()
+                .retain(|(id, _)| !episode_ids.contains(id));
             Ok(())
         }
 

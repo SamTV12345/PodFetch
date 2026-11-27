@@ -539,6 +539,32 @@ impl PodcastEpisodeTranscriptRepository for DieselPodcastEpisodeTranscriptReposi
 
         Ok(rows.into_iter().map(Into::into).collect())
     }
+
+    fn delete_by_episode_ids(&self, episode_ids: &[Uuid]) -> Result<(), Self::Error> {
+        use self::podcast_episode_transcript_segments::dsl as seg_dsl;
+        use self::podcast_episode_transcripts::dsl as pet_dsl;
+        let ids: Vec<String> = episode_ids.iter().map(Uuid::to_string).collect();
+        let mut conn = self.database.connection()?;
+        conn.transaction(|conn| {
+            // Segments first (their delete trigger keeps the search index
+            // in step), not left to ON DELETE CASCADE.
+            let transcripts: Vec<String> = pet_dsl::podcast_episode_transcripts
+                .filter(pet_dsl::episode_id.eq_any(&ids))
+                .select(pet_dsl::id)
+                .load(conn)?;
+            diesel::delete(
+                seg_dsl::podcast_episode_transcript_segments
+                    .filter(seg_dsl::transcript_id.eq_any(transcripts)),
+            )
+            .execute(conn)?;
+            diesel::delete(
+                pet_dsl::podcast_episode_transcripts.filter(pet_dsl::episode_id.eq_any(&ids)),
+            )
+            .execute(conn)
+        })
+        .map(|_| ())
+        .map_err(Into::into)
+    }
 }
 
 // ── TranscriptionJob repository ─────────────────────────────────────────
@@ -685,6 +711,15 @@ impl TranscriptionJobRepository for DieselTranscriptionJobRepository {
             .first::<TranscriptionJobEntity>(&mut self.database.connection()?)
             .optional()
             .map(|row| row.map(Into::into))
+            .map_err(Into::into)
+    }
+
+    fn delete_by_episode_ids(&self, episode_ids: &[Uuid]) -> Result<(), Self::Error> {
+        use self::transcription_jobs::dsl as tj_dsl;
+        let ids: Vec<String> = episode_ids.iter().map(Uuid::to_string).collect();
+        diesel::delete(tj_dsl::transcription_jobs.filter(tj_dsl::episode_id.eq_any(ids)))
+            .execute(&mut self.database.connection()?)
+            .map(|_| ())
             .map_err(Into::into)
     }
 }

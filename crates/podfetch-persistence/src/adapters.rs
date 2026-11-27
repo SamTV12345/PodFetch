@@ -34,6 +34,12 @@ impl PodcastEpisodeChapterRepository for PodcastEpisodeChapterRepositoryImpl {
     ) -> Result<Vec<PodcastEpisodeChapter>, Self::Error> {
         self.inner.get_by_episode_id(episode_id).map_err(Into::into)
     }
+
+    fn delete_by_episode_ids(&self, episode_ids: &[Uuid]) -> Result<(), Self::Error> {
+        self.inner
+            .delete_by_episode_ids(episode_ids)
+            .map_err(Into::into)
+    }
 }
 
 // ── PodcastSettings ─────────────────────────────────────────────────────────
@@ -62,6 +68,10 @@ impl PodcastSettingsRepository for PodcastSettingsRepositoryImpl {
 
     fn upsert_settings(&self, setting: PodcastSetting) -> Result<PodcastSetting, Self::Error> {
         self.inner.upsert_settings(setting).map_err(Into::into)
+    }
+
+    fn delete_settings(&self, podcast_id: Uuid) -> Result<(), Self::Error> {
+        self.inner.delete_settings(podcast_id).map_err(Into::into)
     }
 }
 
@@ -188,6 +198,12 @@ impl PodcastEpisodeTranscriptRepository for PodcastEpisodeTranscriptRepositoryIm
             .search(query, podcast_id, page, page_size)
             .map_err(Into::into)
     }
+
+    fn delete_by_episode_ids(&self, episode_ids: &[Uuid]) -> Result<(), Self::Error> {
+        self.inner
+            .delete_by_episode_ids(episode_ids)
+            .map_err(Into::into)
+    }
 }
 
 // ── TranscriptionJob ──────────────────────────────────────────────────────────
@@ -239,5 +255,11 @@ impl TranscriptionJobRepository for TranscriptionJobRepositoryImpl {
 
     fn get_by_episode_id(&self, episode_id: Uuid) -> Result<Option<TranscriptionJob>, Self::Error> {
         self.inner.get_by_episode_id(episode_id).map_err(Into::into)
+    }
+
+    fn delete_by_episode_ids(&self, episode_ids: &[Uuid]) -> Result<(), Self::Error> {
+        self.inner
+            .delete_by_episode_ids(episode_ids)
+            .map_err(Into::into)
     }
 }

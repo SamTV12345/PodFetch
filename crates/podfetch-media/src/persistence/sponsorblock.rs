@@ -170,6 +170,14 @@ impl SponsorblockRepository for DieselSponsorblockRepository {
         Ok(())
     }
 
+    fn forget_segments(&self, episode_ids: &[String]) -> Result<(), CustomError> {
+        use episode_sponsor_segments::dsl as s;
+        diesel::delete(s::episode_sponsor_segments.filter(s::episode_id.eq_any(episode_ids)))
+            .execute(&mut self.database.connection()?)
+            .map_err(PersistenceError::from)?;
+        Ok(())
+    }
+
     fn segments(&self, episode_id: &str) -> Result<Vec<SponsorSegment>, CustomError> {
         use episode_sponsor_segments::dsl as s;
         let rows = s::episode_sponsor_segments

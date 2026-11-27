@@ -98,6 +98,8 @@ pub trait PodcastEpisodeTranscriptRepository: Send + Sync {
         page: i64,
         page_size: i64,
     ) -> Result<Vec<TranscriptSearchHit>, Self::Error>;
+    /// Removes the rows of the episodes (they leave the catalog).
+    fn delete_by_episode_ids(&self, episode_ids: &[Uuid]) -> Result<(), Self::Error>;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -131,6 +133,8 @@ pub trait TranscriptionJobRepository: Send + Sync {
     fn increment_attempts(&self, id: Uuid) -> Result<i32, Self::Error>;
     fn reset_running_to_pending(&self) -> Result<usize, Self::Error>;
     fn get_by_episode_id(&self, episode_id: Uuid) -> Result<Option<TranscriptionJob>, Self::Error>;
+    /// Removes the rows of the episodes (they leave the catalog).
+    fn delete_by_episode_ids(&self, episode_ids: &[Uuid]) -> Result<(), Self::Error>;
 }
 
 // String conversion implementations

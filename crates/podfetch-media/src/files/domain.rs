@@ -43,4 +43,7 @@ pub trait EpisodeFileRepository: Send + Sync {
         episode_id: &str,
         change: &mut dyn FnMut(&mut EpisodeFile),
     ) -> Result<(), CustomError>;
+
+    /// Forgets the file state of the episodes (they leave the catalog).
+    fn forget(&self, episode_ids: &[String]) -> Result<(), CustomError>;
 }

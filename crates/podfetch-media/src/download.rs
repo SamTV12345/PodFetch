@@ -546,6 +546,9 @@ mod tests {
             change(file);
             Ok(())
         }
+        fn forget(&self, _: &[String]) -> Result<(), CustomError> {
+            unreachable!("downloads don't forget files")
+        }
     }
 
     struct NoSegments;
@@ -553,6 +556,9 @@ mod tests {
     impl SponsorblockRepository for NoSegments {
         fn replace_segments(&self, _: &str, _: &[SponsorSegment]) -> Result<(), CustomError> {
             Ok(())
+        }
+        fn forget_segments(&self, _: &[String]) -> Result<(), CustomError> {
+            unreachable!("downloads don't forget segments")
         }
         fn segments(&self, _: &str) -> Result<Vec<SponsorSegment>, CustomError> {
             Ok(vec![])

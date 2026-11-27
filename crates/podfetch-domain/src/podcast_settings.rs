@@ -27,4 +27,5 @@ pub trait PodcastSettingsRepository: Send + Sync {
 
     fn get_settings(&self, podcast_id: Uuid) -> Result<Option<PodcastSetting>, Self::Error>;
     fn upsert_settings(&self, setting: PodcastSetting) -> Result<PodcastSetting, Self::Error>;
+    fn delete_settings(&self, podcast_id: Uuid) -> Result<(), Self::Error>;
 }

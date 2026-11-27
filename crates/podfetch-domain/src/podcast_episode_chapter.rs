@@ -33,4 +33,6 @@ pub trait PodcastEpisodeChapterRepository: Send + Sync {
         &self,
         episode_id: Uuid,
     ) -> Result<Vec<PodcastEpisodeChapter>, Self::Error>;
+    /// Removes the rows of the episodes (they leave the catalog).
+    fn delete_by_episode_ids(&self, episode_ids: &[Uuid]) -> Result<(), Self::Error>;
 }

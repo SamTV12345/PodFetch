@@ -150,4 +150,13 @@ impl PodcastEpisodeChapterRepository for DieselPodcastEpisodeChapterRepository {
             .map(|chapters| chapters.into_iter().map(Into::into).collect())
             .map_err(Into::into)
     }
+
+    fn delete_by_episode_ids(&self, episode_ids: &[Uuid]) -> Result<(), Self::Error> {
+        use self::podcast_episode_chapters::dsl as pec_dsl;
+        let ids: Vec<String> = episode_ids.iter().map(Uuid::to_string).collect();
+        diesel::delete(pec_dsl::podcast_episode_chapters.filter(pec_dsl::episode_id.eq_any(ids)))
+            .execute(&mut self.database.connection()?)
+            .map(|_| ())
+            .map_err(Into::into)
+    }
 }
