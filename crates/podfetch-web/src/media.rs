@@ -28,6 +28,7 @@ use podfetch_media::auto_download::{AutoDownload, DownloadRunner};
 use podfetch_media::catalog::{Catalog, MediaEpisode, MediaPodcast};
 use podfetch_media::download::{DownloadListener, Downloader, DurationProbe};
 use podfetch_media::files::{EpisodeFile, EpisodeFileService};
+use podfetch_media::library::{FileStateListener, MediaEvents, MediaLibrary};
 use podfetch_media::nfo::{NfoFormat, NfoWriter};
 use podfetch_media::persistence::{DieselEpisodeFileRepository, DieselSponsorblockRepository};
 use podfetch_media::rescan::EpisodeRescanner;
@@ -47,6 +48,7 @@ pub struct MediaServices {
     pub downloader: Arc<Downloader>,
     pub rescanner: Arc<EpisodeRescanner>,
     pub auto_download: Arc<AutoDownload>,
+    pub library: Arc<MediaLibrary>,
 }
 
 impl MediaServices {
@@ -54,6 +56,7 @@ impl MediaServices {
         database: Database,
         environment: Arc<EnvironmentService>,
         settings: Arc<SettingsService>,
+        events: Arc<dyn MediaEvents>,
     ) -> Self {
         let catalog_api: Arc<dyn CatalogApi> = Arc::new(LocalCatalog::new(database.clone()));
         let catalog: Arc<dyn Catalog> = Arc::new(CatalogAdapter(catalog_api.clone()));
@@ -84,10 +87,21 @@ impl MediaServices {
             Arc::new(Ffprobe),
         ));
         let rescanner = Arc::new(EpisodeRescanner::new(downloader.clone()));
+        let library = Arc::new(MediaLibrary::new(
+            catalog.clone(),
+            downloader.clone(),
+            files.clone(),
+            events,
+            Arc::new(UiFileListener),
+        ));
         let auto_download = Arc::new(AutoDownload::new(
             catalog.clone(),
             Arc::new(SettingsAdapter(settings_for_queue)),
-            Arc::new(DownloadIfMissing(catalog_api)),
+            Arc::new(DownloadIfMissing {
+                catalog: catalog_api,
+                files: files.clone(),
+                library: library.clone(),
+            }),
         ));
         Self {
             files,
@@ -96,6 +110,7 @@ impl MediaServices {
             downloader,
             rescanner,
             auto_download,
+            library,
         }
     }
 }
@@ -106,6 +121,7 @@ pub fn services() -> MediaServices {
         database(),
         Arc::new(ENVIRONMENT_SERVICE.clone()),
         Arc::new(SettingsService::shared()),
+        Arc::new(BusEvents(crate::podcast_events::bus())),
     )
 }
 
@@ -402,24 +418,87 @@ impl DurationProbe for Ffprobe {
 
 /// Downloads an episode for the auto-download queue, unless its file is
 /// there already or the user deleted it in the meantime.
-pub struct DownloadIfMissing(pub Arc<dyn CatalogApi>);
+pub struct DownloadIfMissing {
+    catalog: Arc<dyn CatalogApi>,
+    files: Arc<EpisodeFileService>,
+    library: Arc<MediaLibrary>,
+}
 
 impl DownloadRunner for DownloadIfMissing {
     fn download(&self, episode_id: &str) -> Result<(), CustomError> {
-        let Some(episode) = self.0.episode(parse_id(episode_id)?)? else {
+        let Some(episode) = self.catalog.episode(parse_id(episode_id)?)? else {
             return Ok(());
         };
-        let episode = PodcastEpisodeEntity::from(episode);
-        if episode.deleted {
+        if self.files.file(&episode.id.to_string())?.deleted {
             return Ok(());
         }
         let podcast = self
-            .0
-            .podcast(parse_id(&episode.podcast_id)?)?
+            .catalog
+            .podcast(episode.podcast_id)?
             .ok_or_else(not_found)?;
-        PodcastEpisodeUseCase::download_podcast_episode_if_not_locally_available(
-            episode,
-            PodcastEntity::from(podcast),
+        self.library.download_if_missing(
+            &media_episode(&PodcastEpisodeEntity::from(episode)),
+            &media_podcast(&PodcastEntity::from(podcast)),
         )
+    }
+}
+
+/// The media library's events, onto the event bus. Without a bus (a
+/// process that installed none) they are dropped with an error.
+pub struct BusEvents(pub Option<Arc<podfetch_events::EventBus>>);
+
+impl BusEvents {
+    fn publish<E: podfetch_events::Event>(&self, event: &E) {
+        let Some(bus) = &self.0 else {
+            tracing::error!("No event bus installed, dropping {}", E::TYPE);
+            return;
+        };
+        // A failure doesn't fail the download that caused it.
+        if let Err(err) = bus.publish(event) {
+            tracing::error!("Could not publish {}: {err}", E::TYPE);
+        }
+    }
+}
+
+impl MediaEvents for BusEvents {
+    fn downloaded(&self, event: podfetch_media::events::EpisodeDownloaded) {
+        self.publish(&event);
+    }
+
+    fn download_failed(&self, event: podfetch_media::events::EpisodeDownloadFailed) {
+        self.publish(&event);
+    }
+}
+
+/// Tells the UI about files coming and going.
+struct UiFileListener;
+
+impl FileStateListener for UiFileListener {
+    fn available(&self, episode_id: &str, podcast_id: &str) {
+        let episode = parse_id(episode_id)
+            .and_then(PodcastEpisodeUseCase::get_podcast_episode_by_internal_id);
+        let podcast = parse_id(podcast_id)
+            .and_then(crate::services::podcast::service::PodcastService::get_podcast);
+        match (episode, podcast) {
+            (Ok(Some(episode)), Ok(podcast)) => {
+                crate::server::ChatServerHandle::broadcast_podcast_episode_offline_available(
+                    &episode, &podcast,
+                );
+            }
+            _ => tracing::warn!("Could not announce the download of episode {episode_id}"),
+        }
+    }
+
+    fn removed(&self, episode_id: &str) {
+        match parse_id(episode_id)
+            .and_then(PodcastEpisodeUseCase::get_podcast_episode_by_internal_id)
+        {
+            Ok(Some(episode)) => {
+                crate::server::ChatServerHandle::broadcast_podcast_episode_deleted_locally(
+                    &episode,
+                );
+            }
+            _ => tracing::warn!("Could not announce the removal of episode {episode_id}"),
+        }
     }
 }

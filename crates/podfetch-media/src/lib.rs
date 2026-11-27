@@ -17,6 +17,7 @@ pub mod files;
 pub mod handlers;
 pub mod images;
 pub mod inbound;
+pub mod library;
 pub mod naming;
 pub mod nfo;
 pub mod persistence;

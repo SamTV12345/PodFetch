@@ -67,7 +67,7 @@ impl Downloader {
         }
     }
 
-    fn file_handler(&self) -> &FileHandlerType {
+    pub(crate) fn file_handler(&self) -> &FileHandlerType {
         &self.environment.default_file_handler
     }
 

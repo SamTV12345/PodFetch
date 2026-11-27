@@ -154,7 +154,7 @@ pub async fn set_episode_triage(
     // list; an admin's download then makes it playable for everyone.
     if status == TriageStatus::Queued && requester.is_privileged_user() && !episode.is_downloaded()
     {
-        spawn_single_episode_download(episode.episode_id);
+        spawn_single_episode_download(state.media.library.clone(), episode.episode_id);
     }
 
     Ok(StatusCode::OK)

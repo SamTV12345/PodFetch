@@ -61,6 +61,7 @@ fn spawn_scheduler(state: &AppState, config: &EnvironmentService, running: Arc<A
     let settings_for_polling = state.settings_service.clone();
     let settings_for_cleanup = state.settings_service.clone();
     let sessions = state.session_service.clone();
+    let library = state.media.library.clone();
     let polling_interval = config.get_polling_interval();
 
     let spawned = thread::Builder::new()
@@ -90,7 +91,10 @@ fn spawn_scheduler(state: &AppState, config: &EnvironmentService, running: Arc<A
                 }
                 match settings_for_cleanup.get_settings() {
                     Ok(Some(settings)) if settings.auto_cleanup => {
-                        PodcastEpisodeUseCase::cleanup_old_episodes(settings.auto_cleanup_days);
+                        PodcastEpisodeUseCase::cleanup_old_episodes(
+                            &library,
+                            settings.auto_cleanup_days,
+                        );
                     }
                     Ok(Some(_)) => {}
                     Ok(None) => tracing::error!("Could not get settings from database"),

@@ -16,7 +16,6 @@ use crate::podcast_episode::{
     require_privileged as web_require_privileged,
 };
 use crate::podcast_episode_dto::PodcastEpisodeDto;
-use crate::server::ChatServerHandle;
 use crate::services::podcast::service::PodcastService;
 use crate::url_rewriting::resolve_server_url_from_headers;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
@@ -275,13 +274,14 @@ responses(
 tag = "podcast_episodes"
 )]
 pub async fn download_podcast_episodes_of_podcast(
+    State(state): State<AppState>,
     Extension(requester): Extension<Principal>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, CustomError> {
     web_require_privileged::<CustomError>(requester.is_privileged_user())
         .map_err(map_podcast_episode_controller_error)?;
 
-    spawn_single_episode_download(id);
+    spawn_single_episode_download(state.media.library.clone(), id);
 
     Ok(StatusCode::from_u16(200).unwrap())
 }
@@ -289,61 +289,27 @@ pub async fn download_podcast_episodes_of_podcast(
 /// Download a single episode (identified by its RSS `episode_id`) on a blocking
 /// worker, then mark it available and broadcast the change. Shared by the
 /// per-episode download endpoint and the inbox "queue for download" action.
-pub(crate) fn spawn_single_episode_download(episode_id: String) {
+pub(crate) fn spawn_single_episode_download(
+    library: std::sync::Arc<podfetch_media::library::MediaLibrary>,
+    episode_id: String,
+) {
     tokio::task::spawn_blocking(move || {
-        match PodcastEpisodeService::get_podcast_episode_by_id(&episode_id) {
-            Ok(Some(podcast_episode)) => {
-                let Ok(podcast_uuid) = uuid::Uuid::parse_str(&podcast_episode.podcast_id) else {
-                    tracing::error!(
-                        "Invalid podcast id {} for episode {}",
-                        podcast_episode.podcast_id,
-                        podcast_episode.episode_id
-                    );
-                    return;
-                };
-                match PodcastService::get_podcast(podcast_uuid) {
-                    Ok(podcast_found) => {
-                        if let Err(err) = PodcastEpisodeService::perform_download(
-                            &podcast_episode,
-                            &podcast_found,
-                        ) {
-                            tracing::error!(
-                                "Error downloading episode {}: {}",
-                                podcast_episode.episode_id,
-                                err
-                            );
-                            return;
-                        }
-                        if let Err(err) =
-                            PodcastEpisodeService::update_deleted(&podcast_episode.id, false)
-                        {
-                            tracing::error!(
-                                "Error updating deleted status for episode {}: {}",
-                                podcast_episode.episode_id,
-                                err
-                            );
-                        }
-                        ChatServerHandle::broadcast_podcast_episode_offline_available(
-                            &podcast_episode,
-                            &podcast_found,
-                        );
-                    }
-                    Err(err) => {
-                        tracing::error!(
-                            "Could not load podcast {} for episode {}: {}",
-                            podcast_episode.podcast_id,
-                            podcast_episode.episode_id,
-                            err
-                        );
-                    }
-                }
-            }
-            Ok(None) => {
-                tracing::error!("Episode with id {} not found", episode_id);
-            }
-            Err(err) => {
-                tracing::error!("Error retrieving episode {}: {}", episode_id, err);
-            }
+        let found =
+            PodcastEpisodeService::get_podcast_episode_by_id(&episode_id).and_then(|episode| {
+                let episode = episode
+                    .ok_or_else(|| -> CustomError { CustomErrorInner::NotFound(Warning).into() })?;
+                let podcast =
+                    PodcastService::get_podcast(resolve_podcast_uuid(&episode.podcast_id)?)?;
+                Ok((episode, podcast))
+            });
+        let result = found.and_then(|(episode, podcast)| {
+            library.download_on_request(
+                &crate::media::media_episode(&episode),
+                &crate::media::media_podcast(&podcast),
+            )
+        });
+        if let Err(err) = result {
+            tracing::error!("Error downloading episode {episode_id}: {err}");
         }
     });
 }
@@ -360,19 +326,21 @@ won't be included in further checks/downloads unless done by user.")),
 tag = "podcast_episodes"
 )]
 pub async fn delete_podcast_episode_locally(
+    State(state): State<AppState>,
     id: Path<String>,
     requester: Extension<Principal>,
 ) -> Result<StatusCode, CustomError> {
     web_require_privileged::<CustomError>(requester.is_privileged_user())
         .map_err(map_podcast_episode_controller_error)?;
 
-    let delted_podcast_episode = tokio::task::spawn_blocking(move || {
-        PodcastEpisodeService::delete_podcast_episode_locally(&id)
+    let library = state.media.library.clone();
+    tokio::task::spawn_blocking(move || {
+        let episode = PodcastEpisodeService::get_podcast_episode_by_id(&id)?
+            .ok_or_else(|| -> CustomError { CustomErrorInner::NotFound(Warning).into() })?;
+        library.delete_on_request(&crate::media::media_episode(&episode))
     })
     .await
-    .unwrap()?;
-
-    ChatServerHandle::broadcast_podcast_episode_deleted_locally(&delted_podcast_episode);
+    .map_err(join_error)??;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -451,6 +419,7 @@ responses(
 tag = "podcast_episodes"
 )]
 pub async fn download_all_missing_episodes(
+    State(state): State<AppState>,
     Extension(requester): Extension<Principal>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, CustomError> {
@@ -458,9 +427,9 @@ pub async fn download_all_missing_episodes(
         .map_err(map_podcast_episode_controller_error)?;
     let podcast_id = resolve_podcast_uuid(&id)?;
 
-    let podcast = PodcastService::get_podcast(podcast_id)?;
+    let library = state.media.library.clone();
     tokio::task::spawn_blocking(move || {
-        if let Err(err) = PodcastEpisodeService::download_missing_episodes_for_podcast(&podcast) {
+        if let Err(err) = library.download_missing(&podcast_id.to_string()) {
             tracing::error!("download-all failed for podcast {podcast_id}: {err}");
         }
     });
@@ -484,6 +453,7 @@ responses(
 tag = "podcast_episodes"
 )]
 pub async fn download_episode_range(
+    State(state): State<AppState>,
     Extension(requester): Extension<Principal>,
     Path(id): Path<String>,
     Json(range): Json<DownloadRange>,
@@ -492,10 +462,10 @@ pub async fn download_episode_range(
         .map_err(map_podcast_episode_controller_error)?;
     let podcast_id = resolve_podcast_uuid(&id)?;
 
-    let podcast = PodcastService::get_podcast(podcast_id)?;
+    let library = state.media.library.clone();
     tokio::task::spawn_blocking(move || {
-        if let Err(err) = PodcastEpisodeService::download_episode_range_for_podcast(
-            &podcast,
+        if let Err(err) = library.download_range(
+            &podcast_id.to_string(),
             range.from as usize,
             range.to as usize,
         ) {
@@ -514,6 +484,7 @@ responses(
 tag = "podcast_episodes"
 )]
 pub async fn resync_files_for_podcast(
+    State(state): State<AppState>,
     Extension(requester): Extension<Principal>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, CustomError> {
@@ -521,9 +492,9 @@ pub async fn resync_files_for_podcast(
         .map_err(map_podcast_episode_controller_error)?;
     let podcast_id = resolve_podcast_uuid(&id)?;
 
-    let podcast = PodcastService::get_podcast(podcast_id)?;
+    let library = state.media.library.clone();
     tokio::task::spawn_blocking(move || {
-        if let Err(err) = PodcastEpisodeService::redownload_missing_files_for_podcast(&podcast) {
+        if let Err(err) = library.download_lost(&podcast_id.to_string()) {
             tracing::error!("resync-files failed for podcast {podcast_id}: {err}");
         }
     });
@@ -539,6 +510,7 @@ responses(
 tag = "podcast_episodes"
 )]
 pub async fn resync_db_for_podcast(
+    State(state): State<AppState>,
     Extension(requester): Extension<Principal>,
     Path(id): Path<String>,
 ) -> Result<Json<BatchActionResponse>, CustomError> {
@@ -546,11 +518,10 @@ pub async fn resync_db_for_podcast(
         .map_err(map_podcast_episode_controller_error)?;
     let podcast_id = resolve_podcast_uuid(&id)?;
 
-    let affected = tokio::task::spawn_blocking(move || {
-        PodcastEpisodeService::resync_db_for_podcast(podcast_id)
-    })
-    .await
-    .unwrap()?;
+    let library = state.media.library.clone();
+    let affected = tokio::task::spawn_blocking(move || library.resync(&podcast_id.to_string()))
+        .await
+        .map_err(join_error)??;
 
     Ok(Json(BatchActionResponse { affected }))
 }
@@ -563,6 +534,7 @@ responses(
 tag = "podcast_episodes"
 )]
 pub async fn delete_all_downloaded_files(
+    State(state): State<AppState>,
     Extension(requester): Extension<Principal>,
     Path(id): Path<String>,
 ) -> Result<Json<BatchActionResponse>, CustomError> {
@@ -570,11 +542,14 @@ pub async fn delete_all_downloaded_files(
         .map_err(map_podcast_episode_controller_error)?;
     let podcast_id = resolve_podcast_uuid(&id)?;
 
+    let library = state.media.library.clone();
     let affected = tokio::task::spawn_blocking(move || {
-        PodcastEpisodeService::delete_all_downloaded_files_for_podcast(podcast_id)
+        // Favorites keep their files, as with the automatic cleanup.
+        let keep = crate::library::liked_episodes_of_podcast(podcast_id)?;
+        library.remove_files(&podcast_id.to_string(), &keep)
     })
     .await
-    .unwrap()?;
+    .map_err(join_error)??;
 
     Ok(Json(BatchActionResponse { affected }))
 }
@@ -625,6 +600,11 @@ pub fn get_podcast_episode_router() -> OpenApiRouter<AppState> {
         .routes(routes!(delete_all_downloaded_files))
         .routes(routes!(retrieve_episode_sample_format))
         .routes(routes!(find_all_chapters_of_podcast_episode))
+}
+
+fn join_error(err: tokio::task::JoinError) -> CustomError {
+    tracing::error!("Blocking task failed: {err}");
+    CustomErrorInner::Unknown(common_infrastructure::error::ErrorSeverity::Error).into()
 }
 
 #[cfg(test)]
@@ -1023,6 +1003,7 @@ mod tests {
         }
 
         let download_result = super::download_podcast_episodes_of_podcast(
+            State(crate::test_support::tests::app_state()),
             Extension(Principal::from(&non_admin.clone())),
             Path("episode-id".to_string()),
         )
@@ -1033,6 +1014,7 @@ mod tests {
         }
 
         let delete_result = super::delete_podcast_episode_locally(
+            State(crate::test_support::tests::app_state()),
             Path("episode-id".to_string()),
             Extension(Principal::from(&non_admin)),
         )
@@ -1249,6 +1231,7 @@ mod tests {
 
         for caller in [regular_user, uploader] {
             let download_all = super::download_all_missing_episodes(
+                State(crate::test_support::tests::app_state()),
                 Extension(Principal::from(&caller.clone())),
                 Path("1".to_string()),
             )
@@ -1259,6 +1242,7 @@ mod tests {
             }
 
             let resync_files = super::resync_files_for_podcast(
+                State(crate::test_support::tests::app_state()),
                 Extension(Principal::from(&caller.clone())),
                 Path("1".to_string()),
             )
@@ -1269,6 +1253,7 @@ mod tests {
             }
 
             let resync_db = super::resync_db_for_podcast(
+                State(crate::test_support::tests::app_state()),
                 Extension(Principal::from(&caller.clone())),
                 Path("1".to_string()),
             )
@@ -1279,6 +1264,7 @@ mod tests {
             }
 
             let download_range = super::download_episode_range(
+                State(crate::test_support::tests::app_state()),
                 Extension(Principal::from(&caller.clone())),
                 Path("1".to_string()),
                 axum::Json(super::DownloadRange { from: 1, to: 5 }),
@@ -1290,6 +1276,7 @@ mod tests {
             }
 
             let delete_all = super::delete_all_downloaded_files(
+                State(crate::test_support::tests::app_state()),
                 Extension(Principal::from(&caller)),
                 Path("1".to_string()),
             )
