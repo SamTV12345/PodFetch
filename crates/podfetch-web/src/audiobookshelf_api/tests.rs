@@ -41,6 +41,31 @@ fn create_admin_for_audiobookshelf(state: &AppState) -> podfetch_identity::domai
     create_user_with_role(state, "admin")
 }
 
+enum UserColumn {
+    Password,
+    ApiKey,
+}
+
+/// Sets a nullable user column to NULL. The repository's update skips
+/// `None` fields, so it cannot be used to clear them.
+fn clear_user_column(username: &str, column: UserColumn) {
+    use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+    use podfetch_persistence::schema::users::dsl as users;
+
+    let target = users::users.filter(users::username.eq(username));
+    let mut conn = podfetch_persistence::db::get_connection();
+    match column {
+        UserColumn::Password => diesel::update(target)
+            .set(users::password.eq(None::<String>))
+            .execute(&mut conn),
+        UserColumn::ApiKey => diesel::update(target)
+            .set(users::api_key.eq(None::<String>))
+            .execute(&mut conn),
+    }
+    .map(|rows| assert_eq!(rows, 1, "user {username} not found"))
+    .expect("clear user column");
+}
+
 // ── /ping + /status (unauthenticated) ───────────────────────────────────────
 
 #[tokio::test]
@@ -177,6 +202,129 @@ async fn logout_returns_ok_for_authenticated_user() {
     login_audiobookshelf(&mut server, &user).await;
     let response = server.test_server.post("/logout").await;
     assert_eq!(response.status_code().as_u16(), 200);
+}
+
+/// Users without a local password (OIDC / reverse proxy) cannot use the
+/// password login; identity rejects them like a wrong password.
+#[tokio::test]
+#[serial]
+async fn login_user_without_local_password_is_rejected() {
+    let mut server = handle_test_startup().await;
+    let state = crate::test_support::tests::app_state();
+    let user = create_user_for_audiobookshelf(&state);
+    clear_user_column(&user.username, UserColumn::Password);
+
+    server.test_server.clear_headers();
+    let response = server
+        .test_server
+        .post("/login")
+        .json(&json!({ "username": user.username, "password": "password" }))
+        .await;
+    assert_eq!(response.status_code().as_u16(), 403);
+}
+
+/// A user without an api key gets one at login, and it is the Bearer token.
+#[tokio::test]
+#[serial]
+async fn login_mints_token_for_user_without_api_key() {
+    let mut server = handle_test_startup().await;
+    let state = crate::test_support::tests::app_state();
+    let user = create_user_for_audiobookshelf(&state);
+    clear_user_column(&user.username, UserColumn::ApiKey);
+
+    let token = login_audiobookshelf(&mut server, &user).await;
+    assert_ne!(
+        user.api_key.as_deref(),
+        Some(token.as_str()),
+        "a new token was minted"
+    );
+
+    let stored = state
+        .user_auth_service
+        .find_by_username(&user.username)
+        .expect("user still there")
+        .api_key;
+    assert_eq!(stored.as_deref(), Some(token.as_str()));
+    assert_eq!(
+        server
+            .test_server
+            .get("/api/me")
+            .await
+            .status_code()
+            .as_u16(),
+        200
+    );
+}
+
+/// Without `AUDIOBOOKSHELF_ROTATE_API_KEY_ON_LOGOUT` (the default) the
+/// token keeps working after logout.
+#[tokio::test]
+#[serial]
+async fn logout_keeps_token_without_rotation() {
+    let mut server = handle_test_startup().await;
+    let state = crate::test_support::tests::app_state();
+    assert!(!state.environment.audiobookshelf_rotate_api_key_on_logout);
+    let user = create_user_for_audiobookshelf(&state);
+    login_audiobookshelf(&mut server, &user).await;
+
+    assert_eq!(
+        server
+            .test_server
+            .post("/logout")
+            .await
+            .status_code()
+            .as_u16(),
+        200
+    );
+    assert_eq!(
+        server
+            .test_server
+            .post("/api/authorize")
+            .await
+            .status_code()
+            .as_u16(),
+        200
+    );
+}
+
+/// Rotating the token (what logout does with rotation enabled) makes the old
+/// token stop working and the new one work.
+#[tokio::test]
+#[serial]
+async fn rotated_token_replaces_the_old_one() {
+    let mut server = handle_test_startup().await;
+    let state = crate::test_support::tests::app_state();
+    let user = create_user_for_audiobookshelf(&state);
+    let old_token = login_audiobookshelf(&mut server, &user).await;
+    let account = state
+        .audiobookshelf_login_service
+        .require_user_for_token(&old_token)
+        .expect("token resolves");
+
+    let rotated = state
+        .audiobookshelf_login_service
+        .rotate_api_key(&account)
+        .expect("rotate");
+    let new_token = rotated.api_key.expect("new token");
+    assert_ne!(new_token, old_token);
+
+    assert_eq!(
+        server
+            .test_server
+            .post("/api/authorize")
+            .await
+            .status_code()
+            .as_u16(),
+        401
+    );
+    server.test_server.clear_headers();
+    server
+        .test_server
+        .add_header("Authorization", format!("Bearer {new_token}"));
+    let response = server.test_server.post("/api/authorize").await;
+    assert_eq!(response.status_code().as_u16(), 200);
+    let body: Value = response.json();
+    assert_eq!(body["user"]["username"], json!(user.username));
 }
 
 // ── /api/libraries ──────────────────────────────────────────────────────────
