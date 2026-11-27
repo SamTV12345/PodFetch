@@ -83,10 +83,10 @@ fn percent_decode(input: &str) -> String {
 /// extensions populated by the middleware above.
 pub fn require_authenticated_user(
     request: &Request,
-) -> Result<podfetch_identity::domain::user::User, CustomError> {
+) -> Result<podfetch_audiobooks::account::Account, CustomError> {
     request
         .extensions()
-        .get::<podfetch_identity::domain::user::User>()
+        .get::<podfetch_audiobooks::account::Account>()
         .cloned()
         .ok_or_else(|| {
             CustomError::from(CustomErrorInner::UnAuthorized(
@@ -100,7 +100,7 @@ pub fn require_authenticated_user(
 pub use require_authenticated_user as require_user;
 
 // Extractor wrapper so handlers can declare `AuthenticatedUser` as an extractor.
-pub struct AuthenticatedUser(pub podfetch_identity::domain::user::User);
+pub struct AuthenticatedUser(pub podfetch_audiobooks::account::Account);
 
 impl<S> axum::extract::FromRequestParts<S> for AuthenticatedUser
 where
@@ -114,7 +114,7 @@ where
     ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
         let user = parts
             .extensions
-            .get::<podfetch_identity::domain::user::User>()
+            .get::<podfetch_audiobooks::account::Account>()
             .cloned();
         async move {
             user.map(AuthenticatedUser).ok_or_else(|| {

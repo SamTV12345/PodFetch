@@ -5,9 +5,9 @@
 //!
 //! Each later source overrides earlier values whenever it defines them.
 
-use crate::services::audiobookshelf::audio_probe::ProbedTags;
-use crate::services::audiobookshelf::metadata_sources;
-use crate::services::audiobookshelf::metadata_sources::MetadataPatch;
+use crate::services::audio_probe::ProbedTags;
+use crate::services::metadata_sources;
+use crate::services::metadata_sources::MetadataPatch;
 use std::path::Path;
 
 #[derive(Debug, Clone, Default)]

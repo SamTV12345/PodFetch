@@ -1,7 +1,5 @@
+use crate::domain::listening_session::{ListeningSession, ListeningSessionRepository};
 use common_infrastructure::error::CustomError;
-use podfetch_domain::audiobookshelf::listening_session::{
-    ListeningSession, ListeningSessionRepository,
-};
 use std::sync::Arc;
 
 #[derive(Clone)]

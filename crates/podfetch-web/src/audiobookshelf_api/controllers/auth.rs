@@ -5,7 +5,7 @@ use crate::audiobookshelf_api::dto::user::{AbsUserDto, LoginResponse, ServerSett
 use axum::Json;
 use axum::extract::State;
 use common_infrastructure::error::CustomError;
-use podfetch_domain::audiobookshelf::library::MediaType;
+use podfetch_audiobooks::domain::library::MediaType;
 use serde::Deserialize;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -110,7 +110,7 @@ pub async fn logout(
     AuthenticatedUser(user): AuthenticatedUser,
 ) -> Result<Json<serde_json::Value>, CustomError> {
     if state.environment.audiobookshelf_rotate_api_key_on_logout {
-        state.audiobookshelf_login_service.rotate_api_key(user)?;
+        state.audiobookshelf_login_service.rotate_api_key(&user)?;
     }
     Ok(Json(serde_json::json!({ "success": true })))
 }

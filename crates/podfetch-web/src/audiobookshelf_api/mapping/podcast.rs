@@ -11,7 +11,7 @@
 //!   - `server/models/PodcastEpisode.js::getAudioTrack(libraryItemId)`
 
 use chrono::{NaiveDateTime, Utc};
-use podfetch_domain::audiobookshelf::library_item_id::{EpisodeId, LibraryItemId};
+use podfetch_audiobooks::domain::library_item_id::{EpisodeId, LibraryItemId};
 use podfetch_domain::podcast::Podcast;
 use podfetch_domain::podcast_episode::PodcastEpisode;
 use serde_json::{Value, json};

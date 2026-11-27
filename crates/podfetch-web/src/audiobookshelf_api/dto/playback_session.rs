@@ -1,4 +1,4 @@
-use podfetch_domain::audiobookshelf::playback_session::PlaybackSession;
+use podfetch_audiobooks::domain::playback_session::PlaybackSession;
 use serde::{Deserialize, Serialize};
 
 /// Audiobookshelf audio-track payload. Mirrors upstream

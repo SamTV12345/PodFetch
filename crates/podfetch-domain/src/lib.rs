@@ -1,4 +1,3 @@
-pub mod audiobookshelf;
 pub mod ids;
 pub mod ordering;
 pub mod podcast;

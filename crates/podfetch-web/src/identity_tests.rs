@@ -175,4 +175,76 @@ mod tests {
         assert_eq!(payload["username"], "leaving_user");
         assert_eq!(payload["user_id"], created.id.to_string());
     }
+
+    /// `authenticate` accepts the right password only and treats unknown
+    /// users and users without a local password alike.
+    #[tokio::test]
+    #[serial]
+    async fn authenticate_checks_the_local_password() {
+        let _ts = handle_test_startup().await;
+        let auth = UserAuthService::new(
+            Arc::new(UserAdminRepositoryImpl::new(database())),
+            Arc::new(EnvironmentService::for_tests()),
+        );
+        let created = auth
+            .create_user(
+                "auth_checked".to_string(),
+                "user".to_string(),
+                // Stored as the sha256 hash, like the onboarding does.
+                Some(sha256::digest("s3cret")),
+                false,
+            )
+            .unwrap();
+
+        assert_eq!(
+            auth.authenticate("auth_checked", "s3cret").unwrap().id,
+            created.id
+        );
+        let forbidden = |result: Result<_, common_infrastructure::error::CustomError>| {
+            matches!(
+                result.err().map(|e| e.inner),
+                Some(common_infrastructure::error::CustomErrorInner::Forbidden(_))
+            )
+        };
+        assert!(forbidden(auth.authenticate("auth_checked", "wrong")));
+        assert!(forbidden(auth.authenticate("nobody_here", "s3cret")));
+
+        // The repository's update skips `None` fields, so clear it directly.
+        {
+            use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+            use podfetch_persistence::schema::users::dsl as users;
+            diesel::update(users::users.filter(users::username.eq("auth_checked")))
+                .set(users::password.eq(None::<String>))
+                .execute(&mut podfetch_persistence::db::get_connection())
+                .unwrap();
+        }
+        assert!(forbidden(auth.authenticate("auth_checked", "s3cret")));
+    }
+
+    /// `rotate_api_key` replaces the key: the old one no longer finds the user.
+    #[tokio::test]
+    #[serial]
+    async fn rotate_api_key_invalidates_the_old_key() {
+        let _ts = handle_test_startup().await;
+        let auth = UserAuthService::new(
+            Arc::new(UserAdminRepositoryImpl::new(database())),
+            Arc::new(EnvironmentService::for_tests()),
+        );
+        auth.create_user("rotating".to_string(), "user".to_string(), None, false)
+            .unwrap();
+        let user = auth
+            .ensure_api_key(auth.find_by_username("rotating").unwrap())
+            .unwrap();
+        let old_key = user.api_key.clone().unwrap();
+
+        let rotated = auth.rotate_api_key(user).unwrap();
+        let new_key = rotated.api_key.unwrap();
+
+        assert_ne!(new_key, old_key);
+        assert!(auth.find_by_api_key(&old_key).unwrap().is_none());
+        assert_eq!(
+            auth.find_by_api_key(&new_key).unwrap().unwrap().username,
+            "rotating"
+        );
+    }
 }

@@ -1,7 +1,7 @@
-use crate::db::{Database, PersistenceError};
+use crate::domain::book::{Author, AuthorRepository};
+use common_infrastructure::db::{Database, PersistenceError};
 use diesel::prelude::{Insertable, Queryable};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
-use podfetch_domain::audiobookshelf::book::{Author, AuthorRepository};
 use uuid::Uuid;
 
 diesel::table! {

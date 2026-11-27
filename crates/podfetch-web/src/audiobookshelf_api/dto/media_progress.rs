@@ -1,4 +1,4 @@
-use podfetch_domain::audiobookshelf::media_progress::MediaProgress;
+use podfetch_audiobooks::domain::media_progress::MediaProgress;
 use serde::Serialize;
 
 /// audiobookshelf-shape MediaProgress payload (upstream User.toOldJSONForBrowser

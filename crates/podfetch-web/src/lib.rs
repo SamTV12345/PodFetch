@@ -55,6 +55,7 @@ pub mod startup;
 // Application state
 pub mod app_state;
 pub mod application;
+mod audiobooks_tests;
 mod casting_tests;
 mod gpodder_tests;
 mod identity_tests;

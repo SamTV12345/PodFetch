@@ -1,4 +1,3 @@
-pub mod audiobookshelf;
 pub mod discover;
 pub mod download;
 pub mod episode_rescan;

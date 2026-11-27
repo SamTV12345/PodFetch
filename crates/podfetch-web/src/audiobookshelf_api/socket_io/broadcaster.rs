@@ -11,9 +11,9 @@ use crate::audiobookshelf_api::socket_io::events::{
     EVENT_USER_ITEM_PROGRESS_UPDATED, EVENT_USER_UPDATED,
 };
 use crate::server::SOCKET_IO_LAYER;
-use podfetch_domain::audiobookshelf::library::Library;
-use podfetch_domain::audiobookshelf::media_progress::MediaProgress;
-use podfetch_identity::domain::user::User;
+use podfetch_audiobooks::account::Account as User;
+use podfetch_audiobooks::domain::library::Library;
+use podfetch_audiobooks::domain::media_progress::MediaProgress;
 
 pub fn user_room(user_id: uuid::Uuid) -> String {
     user_id.to_string()

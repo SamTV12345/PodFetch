@@ -1,8 +1,8 @@
-use crate::db::{Database, PersistenceError};
+use crate::domain::book::{Book, BookRepository};
 use chrono::NaiveDateTime;
+use common_infrastructure::db::{Database, PersistenceError};
 use diesel::prelude::{AsChangeset, Insertable, Queryable};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
-use podfetch_domain::audiobookshelf::book::{Book, BookRepository};
 use uuid::Uuid;
 
 diesel::table! {

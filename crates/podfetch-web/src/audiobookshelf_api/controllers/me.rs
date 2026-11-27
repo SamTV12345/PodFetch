@@ -10,9 +10,9 @@ use axum::Json;
 use axum::extract::{Path, Query, State};
 use chrono::{Datelike, Utc};
 use common_infrastructure::error::CustomError;
-use podfetch_domain::audiobookshelf::library_item_id::{EpisodeId, LibraryItemId};
-use podfetch_domain::audiobookshelf::listening_session::ListeningSession;
-use podfetch_domain::audiobookshelf::media_progress::MediaProgress;
+use podfetch_audiobooks::domain::library_item_id::{EpisodeId, LibraryItemId};
+use podfetch_audiobooks::domain::listening_session::ListeningSession;
+use podfetch_audiobooks::domain::media_progress::MediaProgress;
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
 use utoipa_axum::router::OpenApiRouter;
@@ -219,7 +219,7 @@ pub async fn patch_progress_batch(
 
 fn upsert_progress_from_payload(
     state: &AppState,
-    user: &podfetch_identity::domain::user::User,
+    user: &podfetch_audiobooks::account::Account,
     library_item_id: &str,
     episode_id: Option<String>,
     payload: ProgressUpdatePayload,

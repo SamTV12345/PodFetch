@@ -1,5 +1,5 @@
 use crate::audiobookshelf_api::dto::media_progress::MediaProgressDto;
-use podfetch_identity::domain::user::User;
+use podfetch_audiobooks::account::Account as User;
 use serde::Serialize;
 
 #[derive(Serialize, utoipa::ToSchema)]

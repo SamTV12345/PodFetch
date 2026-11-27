@@ -7,9 +7,9 @@
 //! in the spec.
 
 use chrono::{NaiveDateTime, Utc};
-use podfetch_domain::audiobookshelf::library::Library;
-use podfetch_domain::audiobookshelf::media_progress::MediaProgress;
-use podfetch_identity::domain::user::User;
+use podfetch_audiobooks::account::Account as User;
+use podfetch_audiobooks::domain::library::Library;
+use podfetch_audiobooks::domain::media_progress::MediaProgress;
 use serde_json::{Value, json};
 
 /// audiobookshelf event name for the connection-init payload.
@@ -194,12 +194,8 @@ mod tests {
             id: uuid::Uuid::from_u128(7),
             username: "sam".to_string(),
             role: "admin".to_string(),
-            password: None,
-            explicit_consent: true,
             created_at: created,
             api_key: Some("abs_token_xyz".to_string()),
-            country: None,
-            language: None,
         }
     }
 
@@ -294,7 +290,7 @@ mod tests {
         let library = Library {
             id: "lib_xyz".to_string(),
             name: "Audiobooks".to_string(),
-            media_type: podfetch_domain::audiobookshelf::library::MediaType::Book,
+            media_type: podfetch_audiobooks::domain::library::MediaType::Book,
             icon: "audiobookshelf".to_string(),
             display_order: 2,
             folder_paths: vec!["/audiobooks".to_string()],

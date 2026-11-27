@@ -11,7 +11,6 @@ use crate::audiobookshelf_api::id_resolution::{
 };
 use crate::audiobookshelf_api::mapping::podcast::map_podcast;
 use crate::audiobookshelf_api::socket_io::broadcaster;
-use crate::services::audiobookshelf::hls_transcoder::should_use_hls;
 use crate::services::podcast::service::PodcastService;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use axum::Json;
@@ -19,10 +18,11 @@ use axum::extract::{Path, State};
 use chrono::Utc;
 use common_infrastructure::error::ErrorSeverity::Debug;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
-use podfetch_domain::audiobookshelf::library_item_id::{EpisodeId, LibraryItemId};
-use podfetch_domain::audiobookshelf::listening_session::ListeningSession;
-use podfetch_domain::audiobookshelf::media_progress::MediaProgress;
-use podfetch_domain::audiobookshelf::playback_session::{PlayMethod, PlaybackSession};
+use podfetch_audiobooks::domain::library_item_id::{EpisodeId, LibraryItemId};
+use podfetch_audiobooks::domain::listening_session::ListeningSession;
+use podfetch_audiobooks::domain::media_progress::MediaProgress;
+use podfetch_audiobooks::domain::playback_session::{PlayMethod, PlaybackSession};
+use podfetch_audiobooks::services::hls_transcoder::should_use_hls;
 use serde::Deserialize;
 use std::path::Path as StdPath;
 use utoipa_axum::router::OpenApiRouter;
@@ -72,7 +72,7 @@ pub async fn play_item_episode(
 
 async fn start_session(
     state: AppState,
-    user: podfetch_identity::domain::user::User,
+    user: podfetch_audiobooks::account::Account,
     item_id: &str,
     episode_id: Option<&str>,
     _body: Option<PlayRequestBody>,
@@ -423,7 +423,7 @@ pub async fn close_session(
 
 async fn start_book_session(
     state: AppState,
-    user: podfetch_identity::domain::user::User,
+    user: podfetch_audiobooks::account::Account,
     item_id: &str,
     body: Option<PlayRequestBody>,
 ) -> Result<Json<PlaybackSessionDto>, CustomError> {

@@ -4,7 +4,6 @@ pub mod schema;
 pub use db::{database, get_connection, migrate, run_migrations};
 
 pub mod adapters;
-pub mod audiobookshelf;
 pub mod podcast;
 pub mod podcast_episode;
 pub mod podcast_episode_chapter;

@@ -9,7 +9,7 @@ use axum::Json;
 use axum::extract::{Path, Query, State};
 use common_infrastructure::error::ErrorSeverity::Debug;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
-use podfetch_domain::audiobookshelf::library::MediaType;
+use podfetch_audiobooks::domain::library::MediaType;
 use podfetch_library::domain::playlist::PlaylistRepository;
 use podfetch_library::persistence::PlaylistRepositoryImpl;
 use podfetch_persistence::db::database;

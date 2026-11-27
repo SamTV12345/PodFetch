@@ -62,6 +62,30 @@ impl UserAuthService {
         })
     }
 
+    /// Checks a username and local password. Users without a local password
+    /// (OIDC or proxy login) cannot authenticate this way. Every failure is
+    /// `Forbidden`, so callers cannot tell unknown users from wrong
+    /// passwords.
+    pub fn authenticate(&self, username: &str, password: &str) -> Result<User, CustomError> {
+        let forbidden = || CustomError::from(CustomErrorInner::Forbidden(Warning));
+        let user = self.find_by_username(username).map_err(|_| forbidden())?;
+        let Some(stored_hash) = user.password.as_deref() else {
+            tracing::warn!("login: user '{username}' has no local password (likely OIDC/proxy)");
+            return Err(forbidden());
+        };
+        if stored_hash != sha256::digest(password) {
+            tracing::warn!("login: password mismatch for user '{username}'");
+            return Err(forbidden());
+        }
+        Ok(user)
+    }
+
+    /// Replaces the user's api key with a new one.
+    pub fn rotate_api_key(&self, mut user: User) -> Result<User, CustomError> {
+        user.api_key = Some(Uuid::new_v4().simple().to_string());
+        self.repository.update(user)
+    }
+
     /// Generates and persists an api_key for users that don't have one yet.
     /// Users that already have a key are returned untouched, without a write.
     pub fn ensure_api_key(&self, mut user: User) -> Result<User, CustomError> {
