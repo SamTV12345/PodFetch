@@ -501,35 +501,22 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
 
     fn delete(&self, id: Uuid) -> Result<(), Self::Error> {
         let id = id.to_string();
-        let mut conn = self.database.connection()?;
-        conn.transaction(|conn| {
-            // Not left to ON DELETE CASCADE: SQLite only enforces it with
-            // foreign keys switched on.
-            diesel::delete(episode_files::table.filter(episode_files::episode_id.eq(&id)))
-                .execute(conn)?;
-            diesel::delete(podcast_episodes::table.filter(podcast_episodes::id.eq(&id)))
-                .execute(conn)
-        })
-        .map(|_| ())
-        .map_err(Into::into)
+        // The other contexts removed what they keep about the episode
+        // before (see `podcast_removal` in the web crate).
+        diesel::delete(podcast_episodes::table.filter(podcast_episodes::id.eq(&id)))
+            .execute(&mut self.database.connection()?)
+            .map(|_| ())
+            .map_err(Into::into)
     }
 
     fn delete_by_podcast_id(&self, podcast_id: Uuid) -> Result<(), Self::Error> {
         let podcast_id = podcast_id.to_string();
-        let mut conn = self.database.connection()?;
-        conn.transaction(|conn| {
-            let episodes = podcast_episodes::table
-                .filter(podcast_episodes::podcast_id.eq(&podcast_id))
-                .select(podcast_episodes::id);
-            diesel::delete(episode_files::table.filter(episode_files::episode_id.eq_any(episodes)))
-                .execute(conn)?;
-            diesel::delete(
-                podcast_episodes::table.filter(podcast_episodes::podcast_id.eq(&podcast_id)),
-            )
-            .execute(conn)
-        })
-        .map(|_| ())
-        .map_err(Into::into)
+        // The other contexts removed what they keep about the episodes
+        // before (see `podcast_removal` in the web crate).
+        diesel::delete(podcast_episodes::table.filter(podcast_episodes::podcast_id.eq(&podcast_id)))
+            .execute(&mut self.database.connection()?)
+            .map(|_| ())
+            .map_err(Into::into)
     }
 
     fn query_by_url_like(&self, url_pattern: &str) -> Result<Option<PodcastEpisode>, Self::Error> {

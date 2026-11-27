@@ -89,6 +89,14 @@ impl TranscriptService {
         )
     }
 
+    /// Removes the transcripts (with their segments) and transcription jobs
+    /// of episodes that leave the catalog. Transcript files stay on disk;
+    /// the media library removes the podcast's directory.
+    pub fn forget_episodes(&self, episode_ids: &[Uuid]) -> Result<(), CustomError> {
+        self.job_repo.delete_by_episode_ids(episode_ids)?;
+        self.transcript_repo.delete_by_episode_ids(episode_ids)
+    }
+
     /// Flow 1: upsert the transcript tags read straight out of the episode's
     /// feed entry. Pure DB bookkeeping — no HTTP, no parsing. The rows land
     /// as `status = 'pending'` and are picked up later by
@@ -1389,6 +1397,10 @@ mod tests {
         ) -> Result<Vec<TranscriptSearchHit>, Self::Error> {
             Ok(self.hits.clone())
         }
+
+        fn delete_by_episode_ids(&self, _: &[Uuid]) -> Result<(), Self::Error> {
+            Ok(())
+        }
     }
 
     struct StubJobRepo;
@@ -1419,6 +1431,10 @@ mod tests {
             _episode_id: Uuid,
         ) -> Result<Option<TranscriptionJob>, Self::Error> {
             unimplemented!()
+        }
+
+        fn delete_by_episode_ids(&self, _: &[Uuid]) -> Result<(), Self::Error> {
+            Ok(())
         }
     }
 

@@ -1,8 +1,6 @@
 use crate::podcast_events::{self, EpisodeDownloadFailed, EpisodeDownloaded};
 use crate::server::ChatServerHandle;
-use crate::services::episode_triage::service::EpisodeTriageService;
 use crate::services::file::service::FileService;
-use crate::services::playlist::service::PlaylistService;
 use crate::services::podcast::metadata::PodcastBuilder;
 use crate::services::podcast_settings::service::PodcastSettingsService;
 use crate::services::settings::service::SettingsService;
@@ -380,20 +378,9 @@ impl PodcastEpisodeUseCase {
             .map_err(Into::into)
     }
 
+    /// Deletes the podcast's episodes from the catalog. The other contexts
+    /// must have removed their data first (`crate::podcast_removal`).
     pub fn delete_episodes_of_podcast(podcast_id: Uuid) -> Result<(), CustomError> {
-        // Rows that reference the episodes without `ON DELETE CASCADE` have to
-        // go first, otherwise the bulk delete fails with a foreign key error.
-        let episode_ids = Self::get_episodes_by_podcast_id(podcast_id)?
-            .iter()
-            .map(|episode| Self::parse_id(&episode.id))
-            .collect::<Result<Vec<Uuid>, CustomError>>()?;
-        crate::library::favorite_episodes().delete_by_episode_ids(&episode_ids)?;
-        let triage_service = EpisodeTriageService::default_service();
-        episode_ids.iter().try_for_each(|&episode_uuid| {
-            PlaylistService::default_service().delete_playlist_items_by_episode_id(episode_uuid)?;
-            triage_service.delete_triage_for_episode(episode_uuid)
-        })?;
-
         Self::repo()
             .delete_by_podcast_id(podcast_id)
             .map_err(Into::into)

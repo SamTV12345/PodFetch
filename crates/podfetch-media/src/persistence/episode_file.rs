@@ -104,4 +104,11 @@ impl EpisodeFileRepository for DieselEpisodeFileRepository {
         .map_err(PersistenceError::from)?;
         Ok(())
     }
+
+    fn forget(&self, episode_ids: &[String]) -> Result<(), CustomError> {
+        diesel::delete(episode_files::table.filter(episode_files::episode_id.eq_any(episode_ids)))
+            .execute(&mut self.database.connection()?)
+            .map_err(PersistenceError::from)?;
+        Ok(())
+    }
 }

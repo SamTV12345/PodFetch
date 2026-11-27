@@ -30,6 +30,7 @@ pub trait FavoriteRepository: Send + Sync {
     ) -> Result<Option<Favorite>, Self::Error>;
     fn find_favored_by_user_id(&self, user_id: Uuid) -> Result<Vec<Favorite>, Self::Error>;
     fn delete_by_user_id(&self, user_id: Uuid) -> Result<(), Self::Error>;
+    fn delete_by_podcast_id(&self, podcast_id: Uuid) -> Result<(), Self::Error>;
 
     /// Update or insert a favorite status for a podcast.
     fn update_podcast_favor(

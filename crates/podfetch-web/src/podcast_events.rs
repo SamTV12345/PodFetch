@@ -58,6 +58,24 @@ impl Event for PodcastRefreshed {
     }
 }
 
+/// A podcast left the catalog. The other contexts removed what they kept
+/// about it before (see `crate::podcast_removal`); this is for reactions
+/// that may happen afterwards.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PodcastRemoved {
+    pub podcast_id: String,
+    pub podcast_name: String,
+    pub rssfeed: String,
+}
+
+impl Event for PodcastRemoved {
+    const TYPE: &'static str = "podcast.removed";
+
+    fn aggregate_id(&self) -> String {
+        self.podcast_id.clone()
+    }
+}
+
 /// The bus the download code and the static podcast service publish to
 /// (also the library's `PodcastFavorChanged` from `update_favor_podcast`).
 ///

@@ -58,6 +58,11 @@ impl EpisodeFileService {
         })
     }
 
+    /// Forgets the file state of episodes that leave the catalog.
+    pub fn forget(&self, episode_ids: &[String]) -> Result<(), CustomError> {
+        self.repository.forget(episode_ids)
+    }
+
     /// Marks the file as deleted by the user, or lifts that mark.
     pub fn set_deleted(&self, episode_id: &str, deleted: bool) -> Result<(), CustomError> {
         self.repository
@@ -94,6 +99,14 @@ mod tests {
                 files.remove(episode_id);
             } else {
                 files.insert(episode_id.to_string(), file);
+            }
+            Ok(())
+        }
+
+        fn forget(&self, episode_ids: &[String]) -> Result<(), CustomError> {
+            let mut files = self.0.lock().unwrap();
+            for id in episode_ids {
+                files.remove(id);
             }
             Ok(())
         }

@@ -401,6 +401,12 @@ impl FavoriteRepository for FavoriteRepositoryImpl {
         self.inner.delete_by_user_id(user_id).map_err(Into::into)
     }
 
+    fn delete_by_podcast_id(&self, podcast_id: Uuid) -> Result<(), Self::Error> {
+        self.inner
+            .delete_by_podcast_id(podcast_id)
+            .map_err(Into::into)
+    }
+
     fn update_podcast_favor(
         &self,
         podcast_id: Uuid,

@@ -15,6 +15,7 @@ pub mod podcast;
 pub mod podcast_episode;
 pub mod podcast_episode_dto;
 pub mod podcast_events;
+pub mod podcast_removal;
 pub mod podcast_settings;
 pub mod podcast_view;
 pub mod rss;

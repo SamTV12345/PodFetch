@@ -636,7 +636,6 @@ use crate::podcast::{map_podcast_to_dto, map_podcast_with_context_to_dto};
 use crate::podcast_episode_dto::PodcastEpisodeDto;
 use crate::rss::RSSAPiKey;
 use crate::server::ChatServerHandle;
-use crate::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -671,10 +670,7 @@ pub async fn delete_podcast(
         .delete_files
         .then(|| FileService::collect_podcast_files(&podcast));
 
-    WatchtimeService::delete_watchtime(podcast_uuid)?;
-    PodcastEpisodeService::delete_episodes_of_podcast(podcast_uuid)?;
-    state.tag_service.delete_podcast_tags(podcast_uuid)?;
-    PodcastService::delete_podcast(podcast_uuid)?;
+    crate::podcast_removal::remove_podcast(&state, podcast_uuid)?;
 
     if let Some(files) = files {
         let directory = files.podcast.directory_name.clone();

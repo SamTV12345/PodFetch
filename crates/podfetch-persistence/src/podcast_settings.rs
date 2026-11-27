@@ -143,4 +143,13 @@ impl PodcastSettingsRepository for DieselPodcastSettingsRepository {
         self.get_settings(podcast_id)?
             .ok_or_else(|| PersistenceError::Database(diesel::result::Error::NotFound))
     }
+
+    fn delete_settings(&self, podcast_id: Uuid) -> Result<(), Self::Error> {
+        diesel::delete(
+            podcast_settings::table.filter(podcast_settings::podcast_id.eq(podcast_id.to_string())),
+        )
+        .execute(&mut self.database.connection()?)
+        .map(|_| ())
+        .map_err(Into::into)
+    }
 }

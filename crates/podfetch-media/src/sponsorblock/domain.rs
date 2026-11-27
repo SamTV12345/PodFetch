@@ -59,6 +59,8 @@ pub trait SponsorblockRepository: Send + Sync {
         episode_id: &str,
         segments: &[SponsorSegment],
     ) -> Result<(), CustomError>;
+    /// Forgets the segments of the episodes (they leave the catalog).
+    fn forget_segments(&self, episode_ids: &[String]) -> Result<(), CustomError>;
     /// The episode's segments, ordered by start.
     fn segments(&self, episode_id: &str) -> Result<Vec<SponsorSegment>, CustomError>;
     fn preferences(&self, user_id: UserId) -> Result<Option<SkipPreferences>, CustomError>;

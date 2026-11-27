@@ -121,6 +121,13 @@ impl FavoriteRepository for DieselFavoriteRepository {
             .map_err(Into::into)
     }
 
+    fn delete_by_podcast_id(&self, podcast_id: Uuid) -> Result<(), Self::Error> {
+        diesel::delete(favorites::table.filter(favorites::podcast_id.eq(podcast_id.to_string())))
+            .execute(&mut self.database.connection()?)
+            .map(|_| ())
+            .map_err(Into::into)
+    }
+
     fn update_podcast_favor(
         &self,
         podcast_id: Uuid,
